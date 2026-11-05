@@ -20,7 +20,7 @@ import StatusTracker from './components/tracking/StatusTracker'
 import OrderSummary from './components/tracking/OrderSummary'
 import SlipPreviewModal from './components/tracking/SlipPreviewModal'
 import HausmadeShippingTracker from './components/tracking/HausmadeShippingTracker'
-import { getBookingHoldMinutes } from './utils/availabilityUtils'
+import { getBookingHoldMinutes, refundBookingLoyaltyIfNeeded, isPayAtStoreOrder, isCallConfirmOrder } from './utils/availabilityUtils'
 
 export default function TrackingPage() {
   const { token } = useParams()
@@ -197,8 +197,11 @@ export default function TrackingPage() {
               .from('bookings')
               .update({ status: 'cancelled' })
               .eq('id', data.id)
-              
+
           if (error) throw error
+
+          // Best effort from the customer's browser; returns false (no tag) if the profile write is not allowed
+          await refundBookingLoyaltyIfNeeded(data, supabase)
 
           await Promise.race([
               sendPOSBroadcast('online_order_status_updated', {
@@ -251,20 +254,26 @@ export default function TrackingPage() {
           ? 'seated'
           : currentStatus
   const currentStepIndex = steps.findIndex(s => s.key === normalizedStepStatus)
-  const isCancelled = ['cancelled', 'void', 'rejected'].includes(currentStatus)
+  const isNoShow = currentStatus === 'no_show'
+  const isCancelled = ['cancelled', 'void', 'rejected', 'no_show'].includes(currentStatus)
   const holdMinutes = getBookingHoldMinutes(data)
+  const isPayAtStore = isPayAtStoreOrder(data)
+  const isCallConfirm = isCallConfirmOrder(data)
+  const hasPaidDeposit = Number(data.deposit_amount || 0) > 0 || Boolean(data.payment_slip_url)
+  const hasOrderedItems = Array.isArray(data.items) && data.items.length > 0
 
   // Logic to Enable Slip Download
   const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'preparing', 'completed'].includes(currentStatus)
   const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
   const canSaveSlip = isBookingConfirmed || isPickupReady
 
-  // Cancellation Logic (24 hours rule)
+  // Cancellation Logic (24 hours rule for deposit-paid bookings; anytime before appointment for free bookings)
   const bookingTime = new Date(data.booking_time).getTime()
   const now = Date.now()
   const hoursUntilBooking = (bookingTime - now) / (1000 * 60 * 60)
-  const canCancelOnline = hoursUntilBooking > 24 && !isCancelled && !['completed', 'seated', 'ready'].includes(currentStatus)
-  const cannotCancelOnlineWarning = hoursUntilBooking <= 24 && !isCancelled && !['completed', 'seated', 'ready'].includes(currentStatus)
+  const minCancelHours = hasPaidDeposit ? 24 : 0
+  const canCancelOnline = hoursUntilBooking > minCancelHours && !isCancelled && !['completed', 'seated', 'ready', 'preparing'].includes(currentStatus)
+  const cannotCancelOnlineWarning = hoursUntilBooking <= minCancelHours && !isCancelled && !['completed', 'seated', 'ready'].includes(currentStatus)
 
   return (
     <div className="min-h-screen bg-[var(--color-paper)] pb-24 font-[var(--font-body)] text-[var(--color-ink)] overflow-x-clip select-none">
@@ -303,28 +312,58 @@ export default function TrackingPage() {
                     : 'bg-[oklch(92%_0.05_140)] text-[oklch(35%_0.12_140)] border-[oklch(80%_0.08_140)]'
               }`}>
                   {isCancelled ? <XCircle size={12} /> : <CheckCircle size={12} />}
-                  {isCancelled ? t('orderCancelled') : (isPickup ? t('orderReceived') : t('bookingReceived'))}
+                  {isCancelled
+                      ? (isNoShow ? 'เกินเวลาเก็บโต๊ะ (NO-SHOW)' : t('orderCancelled'))
+                      : (isPickup ? t('orderReceived') : t('bookingReceived'))}
               </span>
               
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--color-ink)] uppercase font-mono">
-                  {isCancelled ? t('orderCancelled') : (isPickup ? t('orderSuccess') : t('bookingSuccess'))}
+                  {isCancelled
+                      ? (isNoShow ? 'ปล่อยคิวจองโต๊ะแล้ว' : t('orderCancelled'))
+                      : (isPickup ? t('orderSuccess') : t('bookingSuccess'))}
               </h1>
               
               <p className="text-xs text-[var(--color-muted)] mt-1 font-sans">
-                 {isCancelled ? t('contactShop') : t('thankYouService')}
+                 {isCancelled
+                     ? (isNoShow ? 'เนื่องจากเกินเวลาเก็บโต๊ะที่กำหนด กรุณาติดต่อหน้าร้านหากต้องการจองใหม่' : t('contactShop'))
+                     : t('thankYouService')}
               </p>
 
               {!isPickup && !isCancelled && ['pending', 'confirmed'].includes(currentStatus) && holdMinutes !== null && (
-                  <p className="mt-3 inline-block text-sm leading-relaxed text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-2">
-                      {currentStatus === 'pending' && <>ร้านจะโทรยืนยันการจอง • </>}
-                      ร้านเก็บโต๊ะไว้ให้ {holdMinutes} นาทีหลังเวลาจอง
-                  </p>
+                  <div className="mt-3 inline-block text-sm leading-relaxed text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3.5 py-2.5 space-y-1">
+                      <p>
+                          {currentStatus === 'pending'
+                              ? <><strong>ต้องได้รับการยืนยันจากทางร้านเสมอ</strong> • ร้านกำลังติดต่อเพื่อยืนยันคิวจอง • </>
+                              : isCallConfirm
+                                  ? <>พนักงานยืนยันคิวจองแล้ว • </>
+                                  : null}
+                          ร้านเก็บโต๊ะไว้ให้ {holdMinutes} นาทีหลังเวลาจอง
+                          {!hasPaidDeposit && Number(data.total_amount || 0) > 0 && (
+                              <> • ชำระค่าอาหาร ฿{Number(data.total_amount).toLocaleString()}.- ที่ร้าน</>
+                          )}
+                      </p>
+                      {currentStatus === 'pending' && (
+                          <p className="text-xs font-mono text-[var(--color-accent)] font-bold">
+                              หากยังไม่ได้รับการติดต่อยืนยันจากทางร้าน กรุณาโทร <a href={`tel:${(settings.contact_phone || '0985284217').replace(/[^\d+]/g, '')}`} className="underline">{settings.contact_phone || '098-528-4217'}</a>
+                          </p>
+                      )}
+                  </div>
               )}
 
-              {isPickup && currentStatus === 'pending' && (data.staff_remark || '').includes('[PAY_AT_STORE]') && (
-                  <p className="mt-3 inline-block text-sm leading-relaxed text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-2">
-                      ร้านจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ก่อนเริ่มทำ • ชำระเงินที่หน้าร้านตอนมารับ
-                  </p>
+              {isPickup && !isCancelled && ['pending', 'confirmed', 'preparing', 'ready'].includes(currentStatus) && isPayAtStore && (
+                  <div className="mt-3 inline-block text-sm leading-relaxed text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3.5 py-2.5 space-y-1">
+                      <p>
+                          {currentStatus === 'pending'
+                              ? <><strong>ต้องได้รับการยืนยันจากทางร้านก่อนเริ่มทำอาหารเสมอ</strong> • </>
+                              : <>พนักงานยืนยันออเดอร์แล้ว • </>}
+                          ชำระเงินที่หน้าร้านตอนมารับ <strong>฿{Number(data.total_amount || 0).toLocaleString()}.-</strong>
+                      </p>
+                      {currentStatus === 'pending' && (
+                          <p className="text-xs font-mono text-[var(--color-accent)] font-bold">
+                              หากยังไม่ได้รับการติดต่อยืนยันจากทางร้าน กรุณาโทร <a href={`tel:${(settings.contact_phone || '0985284217').replace(/[^\d+]/g, '')}`} className="underline">{settings.contact_phone || '098-528-4217'}</a>
+                          </p>
+                      )}
+                  </div>
               )}
           </div>
       </div>
@@ -435,7 +474,14 @@ export default function TrackingPage() {
                         </div>
 
                         {/* Order Items Breakdown */}
-                        <OrderSummary data={data} optionMap={optionMap} />
+                        {hasOrderedItems || isPickup || Number(data.total_amount || 0) > 0 ? (
+                            <OrderSummary data={data} optionMap={optionMap} />
+                        ) : (
+                            <div className="bg-[var(--color-paper)] p-3.5 border border-[var(--color-rule)] flex items-center justify-between font-mono text-xs">
+                                <span className="text-[var(--color-muted)]">รูปแบบการจอง</span>
+                                <span className="font-bold text-[var(--color-ink)]">จองเฉพาะโต๊ะ · สั่งอาหารและชำระเงินที่ร้าน</span>
+                            </div>
+                        )}
                     </div>
                 )}
               </>
@@ -497,7 +543,7 @@ export default function TrackingPage() {
                               className="w-full bg-[var(--color-paper)] border border-[oklch(80%_0.10_25)] text-[oklch(40%_0.15_25)] hover:bg-[oklch(92%_0.06_25)]/20 py-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                               {cancelling ? <div className="w-4 h-4 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin"/> : <XCircle size={14} />}
-                              <span>{t('cancelBooking') || 'ยกเลิกการจอง (ขอเงินคืน)'}</span>
+                              <span>{hasPaidDeposit ? (t('cancelBooking') || 'ยกเลิกการจอง (ขอเงินคืน)') : (isPickup ? 'ยกเลิกออเดอร์' : 'ยกเลิกคิวจองโต๊ะ')}</span>
                           </button>
                       ) : cannotCancelOnlineWarning ? (
                           <div className="bg-[oklch(92%_0.06_25)]/20 p-4 text-center border border-[oklch(80%_0.10_25)]">

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { resolveMenuItemId } from './menuHelper';
+import { extractCarryOverTags } from './splitPaymentHelper';
 
 const OFFLINE_QUEUE_KEY = 'pos_offline_queue';
 const CACHE_MENU_ITEMS = 'pos_cache_menu_items';
@@ -412,7 +413,7 @@ export async function syncOfflineQueue(isManual = false) {
             } 
             
             else if (action.type === 'complete_checkout') {
-                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId, discountAmount, xhausEarned, xhausRedeemed, xhausDiscount, profileId } = action.payload;
+                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId, discountAmount, xhausEarned, xhausRedeemed, xhausDiscount, profileId, cashReceived, changeDue } = action.payload;
                 
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
@@ -438,6 +439,19 @@ export async function syncOfflineQueue(isManual = false) {
                 }
                 if (profileId) {
                     updatePayload.user_id = profileId;
+                }
+                try {
+                    const { data: curB } = await supabase.from('bookings').select('staff_remark').eq('id', bookingId).maybeSingle();
+                    const transferTags = extractCarryOverTags(curB?.staff_remark || '');
+                    const isCashMethod = String(paymentMethod || '').toLowerCase() === 'cash';
+                    const numCashRecv = Number(cashReceived) || 0;
+                    const numChangeDue = Number(changeDue) || 0;
+                    const cashTag = isCashMethod && numCashRecv > 0 ? ` [CASH: RECV=${numCashRecv}, CHANGE=${numChangeDue}]` : '';
+                    const baseRemark = rewardCode 
+                        ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag} (Offline Sync)`
+                        : `Paid by ${paymentMethod.toUpperCase()}${cashTag} (Offline Sync)`;
+                    updatePayload.staff_remark = transferTags ? `${baseRemark} ${transferTags}`.trim() : baseRemark;
+                } catch (e) {
                 }
 
                 const { error } = await supabase
@@ -535,6 +549,7 @@ export async function syncOfflineQueue(isManual = false) {
                 }
 
                 const updatedRemark = bookingMetadata?.staff_remark;
+                const resolvedTotal = Number(action.payload.fullOrderTotal ?? bookingMetadata?.total_amount) || 0;
 
                 if (isFullySettled) {
                     await supabase
@@ -543,6 +558,7 @@ export async function syncOfflineQueue(isManual = false) {
                             status: 'completed',
                             completed_at: new Date().toISOString(),
                             payment_method: 'split',
+                            ...(resolvedTotal > 0 ? { total_amount: resolvedTotal } : {}),
                             staff_remark: updatedRemark
                         })
                         .eq('id', bookingId);
@@ -550,6 +566,7 @@ export async function syncOfflineQueue(isManual = false) {
                     await supabase
                         .from('bookings')
                         .update({
+                            ...(resolvedTotal > 0 ? { total_amount: resolvedTotal } : {}),
                             staff_remark: updatedRemark
                         })
                         .eq('id', bookingId);

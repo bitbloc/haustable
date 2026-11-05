@@ -291,3 +291,104 @@ export async function refundBookingLoyaltyIfNeeded(booking, supabaseClient) {
 export const checkOverlap = (requestStart, requestEnd, bookingStart, bookingDurationHours = 2) => {
     return isBookingOverlap(requestStart, requestEnd, bookingStart, { defaultDurationHours: bookingDurationHours });
 };
+
+/**
+ * Formats an ISO date/time string into a complete, simple Thai POS Date & Time object.
+ * Always includes both calendar date (e.g., "5 พ.ย.") and 24-hour time ("18:30 น.").
+ *
+ * @param {string|Date} isoOrDate
+ * @param {Date} [now=new Date()]
+ * @returns {{
+ *   valid: boolean,
+ *   dateLabel: string,
+ *   dateWithYear: string,
+ *   timeLabel: string,
+ *   relativeDay: string,
+ *   isToday: boolean,
+ *   isTomorrow: boolean,
+ *   isFutureDay: boolean,
+ *   fullText: string,
+ *   shortText: string,
+ *   compactText: string
+ * }}
+ */
+export function formatPosDateTime(isoOrDate, now = new Date()) {
+    if (!isoOrDate) {
+        return {
+            valid: false,
+            dateLabel: '-',
+            dateWithYear: '-',
+            timeLabel: '--:-- น.',
+            relativeDay: '',
+            isToday: false,
+            isTomorrow: false,
+            isFutureDay: false,
+            fullText: '-',
+            shortText: '-',
+            compactText: '-'
+        };
+    }
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+    if (isNaN(d.getTime())) {
+        return {
+            valid: false,
+            dateLabel: '-',
+            dateWithYear: '-',
+            timeLabel: '--:-- น.',
+            relativeDay: '',
+            isToday: false,
+            isTomorrow: false,
+            isFutureDay: false,
+            fullText: '-',
+            shortText: '-',
+            compactText: '-'
+        };
+    }
+
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfTarget = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diffDays = Math.round((startOfTarget.getTime() - startOfToday.getTime()) / 86400000);
+
+    const isToday = diffDays === 0;
+    const isTomorrow = diffDays === 1;
+    const isFutureDay = diffDays > 0;
+
+    const dateLabel = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+    const dateWithYear = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+    const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const timeLabel = `${timeStr} น.`;
+
+    let relativeDay = '';
+    if (isToday) relativeDay = 'วันนี้';
+    else if (isTomorrow) relativeDay = 'พรุ่งนี้';
+    else if (diffDays === -1) relativeDay = 'เมื่อวาน';
+    else if (diffDays > 1) relativeDay = `อีก ${diffDays} วัน`;
+
+    const fullText = isToday
+        ? `วันนี้ (${dateLabel}) · ${timeLabel}`
+        : isTomorrow
+            ? `พรุ่งนี้ (${dateLabel}) · ${timeLabel}`
+            : `${dateWithYear} · ${timeLabel}`;
+
+    const shortText = isToday
+        ? `วันนี้ ${dateLabel} · ${timeLabel}`
+        : isTomorrow
+            ? `พรุ่งนี้ ${dateLabel} · ${timeLabel}`
+            : `${dateLabel} · ${timeLabel}`;
+
+    const compactText = `${dateLabel} · ${timeLabel}`;
+
+    return {
+        valid: true,
+        dateLabel,
+        dateWithYear,
+        timeLabel,
+        relativeDay,
+        isToday,
+        isTomorrow,
+        isFutureDay,
+        fullText,
+        shortText,
+        compactText
+    };
+}

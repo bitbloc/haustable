@@ -2147,6 +2147,13 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
 
     const otherDetails = Object.values(otherDetailsMap);
 
+    const getEffectiveBillAmount = (b) => {
+        const raw = Number(b?.total_amount || b?.total_price || 0);
+        if (raw > 0) return raw;
+        const br = getBookingPaymentBreakdown(b);
+        return (br.cash || 0) + (br.qr || 0) + (br.credit || 0);
+    };
+
     // 3. Order Types
     let dineInCount = 0;
     let dineInAmount = 0;
@@ -2154,7 +2161,7 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
     let pickupAmount = 0;
 
     completedBookings.forEach(b => {
-        const amt = Number(b.total_amount) || 0;
+        const amt = getEffectiveBillAmount(b);
         if (b.booking_type === 'pickup') {
             pickupCount++;
             pickupAmount += amt;
@@ -2171,7 +2178,7 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
     let walkinAmount = 0;
 
     completedBookings.forEach(b => {
-        const amt = Number(b.total_amount) || 0;
+        const amt = getEffectiveBillAmount(b);
         const remark = (b.staff_remark || '').toLowerCase();
         const note = (b.customer_note || '').toLowerCase();
         
@@ -2215,7 +2222,7 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
     const totalGuests = completedBookings.reduce((sum, b) => sum + (Number(b.pax) || 0), 0);
     
     // Total net sales (booking.total_amount is ALREADY net after discount!)
-    const netSales = completedBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
+    const netSales = completedBookings.reduce((sum, b) => sum + getEffectiveBillAmount(b), 0);
     const avgSalesPerBill = completedBookings.length > 0 ? (netSales / completedBookings.length) : 0;
     const avgSalesPerGuest = totalGuests > 0 ? (netSales / totalGuests) : 0;
 

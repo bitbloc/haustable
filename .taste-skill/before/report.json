@@ -1,0 +1,1291 @@
+{
+ "url": "http://localhost:4310/link?qa=1",
+ "at": "2026-10-27T14:32:13.248Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 4,
+   "filled": [
+    0.15,
+    0.18,
+    0.17,
+    0.17
+   ],
+   "motion": {
+    "elements": 0,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 2763,
+     "screens": 3.1,
+     "words": 301,
+     "img": 38,
+     "video": 0,
+     "canvas": 0,
+     "svg": 0,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 3,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "?url=https%3A%2F%2Flxfavbzmebqqsffgyyph.supabase",
+      "?url=https%3A%2F%2Flxfavbzmebqqsffgyyph.supabase",
+      "?url=https%3A%2F%2Flxfavbzmebqqsffgyyph.supabase"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🫐",
+      "✨"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "In the haus | ร้านในบ้าน นครพนม",
+     "words": 6,
+     "chars": 31,
+     "lines": 1,
+     "size": 20,
+     "vw": 1.4,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0.01,
+     "leading": 1.3,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.21,
+     "top": 49,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "In the haus | ร้านในบ้าน นครพนม",
+     "words": 6,
+     "lines": 1,
+     "size": 20,
+     "font": "IBM Plex Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.88,
+       "mono": false
+      },
+      {
+       "family": "IBM Plex Mono",
+       "share": 0.12,
+       "mono": true
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      16,
+      20
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 13,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 7.8
+     },
+     "measureChars": 55,
+     "max": {
+      "size": 20,
+      "vw": 1.4,
+      "font": "IBM Plex Sans Thai",
+      "text": "In the haus | ร้านในบ้าน นครพนม"
+     },
+     "monoShare": 0.12,
+     "monoProseShare": 0.12,
+     "monoFamilies": [
+      "IBM Plex Mono"
+     ],
+     "monoSamples": [
+      "We Make It Bold . จริตจัด รสชัดเต็ม 'กิน",
+      "→",
+      "฿530",
+      "฿680",
+      "→",
+      "฿159"
+     ],
+     "microLabels": 1,
+     "microLabelShare": 0.082,
+     "microSamples": [
+      "We Make It Bold . จริตจัด รสชัดเต็ม 'กิน"
+     ],
+     "upperShare": 0.1,
+     "centerShare": 0.13,
+     "smallText": 19
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#524b4a",
+       "share": 0.56
+      },
+      {
+       "color": "#17100f",
+       "share": 0.33
+      },
+      {
+       "color": "#776f6e",
+       "share": 0.03
+      },
+      {
+       "color": "#b33830",
+       "share": 0.03
+      },
+      {
+       "color": "#3c6034",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#17100f",
+      "hsl": {
+       "h": 8,
+       "s": 0.21,
+       "l": 0.07
+      },
+      "fg": "#faf3f2"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 7,
+     "inHero": 6,
+     "radius": 0,
+     "height": 48,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "แผนที่ →",
+      "2–4 คน 2 ชุด",
+      "นำทางมาร้าน",
+      "เมนู",
+      "นำทาง ห่าง 2 นาที จากลานพญานาค"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 31,
+     "hairlineSamples": [
+      "div.container 560px",
+      "div.marquee 558px",
+      "header.masthead 558px",
+      "div.facts 558px",
+      "div.fact.full 558px"
+     ],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": false,
+     "height": 97,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex mono",
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 2763,
+    "margins": {
+     "left": 441,
+     "right": 441
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "In the haus | ร้านในบ้าน นครพนม",
+      "size": 20,
+      "top": 49,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 457,
+      "n": 3
+     },
+     {
+      "x": 529,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 4,
+    "bodySize": 13,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.25,
+    "voidBox": {
+     "x": 0,
+     "y": 120,
+     "w": 420,
+     "h": 780
+    }
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 3,
+   "filled": [
+    0.25,
+    0.24,
+    0.29
+   ],
+   "motion": {
+    "elements": 0,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 2763,
+     "screens": 2.7,
+     "words": 301,
+     "img": 38,
+     "video": 0,
+     "canvas": 0,
+     "svg": 0,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 3,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "?url=https%3A%2F%2Flxfavbzmebqqsffgyyph.supabase",
+      "?url=https%3A%2F%2Flxfavbzmebqqsffgyyph.supabase",
+      "?url=https%3A%2F%2Flxfavbzmebqqsffgyyph.supabase"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🫐",
+      "✨"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "In the haus | ร้านในบ้าน นครพนม",
+     "words": 6,
+     "chars": 31,
+     "lines": 1,
+     "size": 20,
+     "vw": 2.6,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0.01,
+     "leading": 1.3,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.39,
+     "top": 49,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "In the haus | ร้านในบ้าน นครพนม",
+     "words": 6,
+     "lines": 1,
+     "size": 20,
+     "font": "IBM Plex Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.88,
+       "mono": false
+      },
+      {
+       "family": "IBM Plex Mono",
+       "share": 0.12,
+       "mono": true
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      16,
+      20
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 13,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 7.8
+     },
+     "measureChars": 55,
+     "max": {
+      "size": 20,
+      "vw": 2.6,
+      "font": "IBM Plex Sans Thai",
+      "text": "In the haus | ร้านในบ้าน นครพนม"
+     },
+     "monoShare": 0.12,
+     "monoProseShare": 0.12,
+     "monoFamilies": [
+      "IBM Plex Mono"
+     ],
+     "monoSamples": [
+      "We Make It Bold . จริตจัด รสชัดเต็ม 'กิน",
+      "→",
+      "฿530",
+      "฿680",
+      "→",
+      "฿159"
+     ],
+     "microLabels": 1,
+     "microLabelShare": 0.082,
+     "microSamples": [
+      "We Make It Bold . จริตจัด รสชัดเต็ม 'กิน"
+     ],
+     "upperShare": 0.1,
+     "centerShare": 0.13,
+     "smallText": 19
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#524b4a",
+       "share": 0.56
+      },
+      {
+       "color": "#17100f",
+       "share": 0.33
+      },
+      {
+       "color": "#776f6e",
+       "share": 0.03
+      },
+      {
+       "color": "#b33830",
+       "share": 0.03
+      },
+      {
+       "color": "#3c6034",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#17100f",
+      "hsl": {
+       "h": 8,
+       "s": 0.21,
+       "l": 0.07
+      },
+      "fg": "#faf3f2"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 7,
+     "inHero": 6,
+     "radius": 0,
+     "height": 48,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "แผนที่ →",
+      "2–4 คน 2 ชุด",
+      "นำทางมาร้าน",
+      "เมนู",
+      "นำทาง ห่าง 2 นาที จากลานพญานาค"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 31,
+     "hairlineSamples": [
+      "div.container 560px",
+      "div.marquee 558px",
+      "header.masthead 558px",
+      "div.facts 558px",
+      "div.fact.full 558px"
+     ],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": false,
+     "height": 97,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex mono",
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 2763,
+    "margins": {
+     "left": 105,
+     "right": 105
+    },
+    "sections": [
+     {
+      "sel": "div.facts",
+      "tag": "div",
+      "top": 123,
+      "height": 202,
+      "words": 25,
+      "media": 0,
+      "middle": 77,
+      "heading": null,
+      "left": 121,
+      "right": 152,
+      "textLeft": 121,
+      "textRight": 152,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#starter-card.sets",
+      "tag": "section",
+      "top": 325,
+      "height": 428,
+      "words": 51,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "เพิ่งมาครั้งแรก? เลือกชุดตามจำนวนคน",
+       "size": 20,
+       "tag": "h2"
+      },
+      "left": 105,
+      "right": 105,
+      "textLeft": 121,
+      "textRight": 121,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div#sec-menu",
+      "tag": "div",
+      "top": 870,
+      "height": 1513,
+      "words": 155,
+      "media": 3,
+      "middle": 0,
+      "heading": {
+       "text": "จานเด่นของร้าน",
+       "size": 16,
+       "tag": "h2"
+      },
+      "left": 105,
+      "right": 105,
+      "textLeft": 117,
+      "textRight": 121,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer",
+      "tag": "footer",
+      "top": 2473,
+      "height": 229,
+      "words": 55,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 121,
+      "right": 320,
+      "textLeft": 121,
+      "textRight": 320,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "In the haus | ร้านในบ้าน นครพนม",
+      "size": 20,
+      "top": 49,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 121,
+      "n": 3
+     },
+     {
+      "x": 193,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 4,
+    "bodySize": 13,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 4,
+   "filled": [
+    0.48,
+    0.6,
+    0.5,
+    0.59
+   ],
+   "motion": {
+    "elements": 0,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 2879,
+     "screens": 3.4,
+     "words": 301,
+     "img": 38,
+     "video": 0,
+     "canvas": 0,
+     "svg": 0,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🫐",
+      "✨"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "In the haus | ร้านในบ้าน นครพนม",
+     "words": 6,
+     "chars": 31,
+     "lines": 2,
+     "size": 20,
+     "vw": 5.1,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0.01,
+     "leading": 1.3,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "right",
+     "widthRatio": 0.73,
+     "top": 46,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "In the haus | ร้านในบ้าน นครพนม",
+     "words": 6,
+     "lines": 2,
+     "size": 20,
+     "font": "IBM Plex Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.88,
+       "mono": false
+      },
+      {
+       "family": "IBM Plex Mono",
+       "share": 0.12,
+       "mono": true
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      16,
+      20
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 13,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 7.8
+     },
+     "measureChars": 55,
+     "max": {
+      "size": 20,
+      "vw": 5.1,
+      "font": "IBM Plex Sans Thai",
+      "text": "In the haus | ร้านในบ้าน นครพนม"
+     },
+     "monoShare": 0.12,
+     "monoProseShare": 0.12,
+     "monoFamilies": [
+      "IBM Plex Mono"
+     ],
+     "monoSamples": [
+      "We Make It Bold . จริตจัด รสชัดเต็ม 'กิน",
+      "→",
+      "฿530",
+      "฿680",
+      "→",
+      "฿159"
+     ],
+     "microLabels": 1,
+     "microLabelShare": 0.082,
+     "microSamples": [
+      "We Make It Bold . จริตจัด รสชัดเต็ม 'กิน"
+     ],
+     "upperShare": 0.1,
+     "centerShare": 0.13,
+     "smallText": 19
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#524b4a",
+       "share": 0.56
+      },
+      {
+       "color": "#17100f",
+       "share": 0.33
+      },
+      {
+       "color": "#776f6e",
+       "share": 0.03
+      },
+      {
+       "color": "#b33830",
+       "share": 0.03
+      },
+      {
+       "color": "#3c6034",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#17100f",
+      "hsl": {
+       "h": 8,
+       "s": 0.21,
+       "l": 0.07
+      },
+      "fg": "#faf3f2"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 6,
+     "inHero": 5,
+     "radius": 0,
+     "height": 48,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "แผนที่ →",
+      "2–4 คน 2 ชุด",
+      "นำทางมาร้าน",
+      "นำทาง ห่าง 2 นาที จากลานพญานาค",
+      "แชท LINE"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 29,
+     "hairlineSamples": [
+      "div.container 390px",
+      "div.marquee 388px",
+      "header.masthead 388px",
+      "div.facts 388px",
+      "div.fact.full 388px"
+     ],
+     "outlinedBoxes": 0,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": false,
+     "height": 117,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex mono",
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 2879,
+    "margins": {
+     "left": 13,
+     "right": 1
+    },
+    "sections": [
+     {
+      "sel": "div.facts",
+      "tag": "div",
+      "top": 143,
+      "height": 219,
+      "words": 25,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 17,
+      "right": 48,
+      "textLeft": 17,
+      "textRight": 48,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#starter-card.sets",
+      "tag": "section",
+      "top": 362,
+      "height": 464,
+      "words": 51,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "เพิ่งมาครั้งแรก? เลือกชุดตามจำนวนคน",
+       "size": 20,
+       "tag": "h2"
+      },
+      "left": 1,
+      "right": 1,
+      "textLeft": 17,
+      "textRight": 17,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div.sig-grid",
+      "tag": "div",
+      "top": 1001,
+      "height": 236,
+      "words": 10,
+      "media": 0,
+      "middle": 1,
+      "heading": null,
+      "left": 1,
+      "right": 1,
+      "textLeft": 13,
+      "textRight": 16,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "div",
+      "tag": "div",
+      "top": 1365,
+      "height": 1082,
+      "words": 133,
+      "media": 0,
+      "middle": 14,
+      "heading": null,
+      "left": 17,
+      "right": 17,
+      "textLeft": 17,
+      "textRight": 95,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer",
+      "tag": "footer",
+      "top": 2589,
+      "height": 229,
+      "words": 55,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 17,
+      "right": 46,
+      "textLeft": 17,
+      "textRight": 46,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "In the haus | ร้านในบ้าน นครพนม",
+      "size": 20,
+      "top": 46,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [
+     {
+      "text": "แกงไตปลา (รสชัดเจน)",
+      "side": "left",
+      "px": 13
+     },
+     {
+      "text": "฿159",
+      "side": "left",
+      "px": 13
+     },
+     {
+      "text": "สะตอผัดกุ้งจริตจัด",
+      "side": "right",
+      "px": 16
+     },
+     {
+      "text": "ห่าง 2 นาที จากลานพญานาค",
+      "side": "left",
+      "px": 9
+     }
+    ],
+    "edges": [
+     {
+      "x": 17,
+      "n": 3
+     },
+     {
+      "x": 89,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 4,
+    "bodySize": 13,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "FAIL",
+   "id": "mono",
+   "width": 1440,
+   "message": "Monospace type outside code: IBM Plex Mono — e.g. \"We Make It Bold . จริตจัด รสชัดเต็ม 'กิน\", \"→\", \"฿530\", \"฿680\"",
+   "fix": "Set it in the text face. Monospace is for literal code inside <pre>/<code> only.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "micro-label",
+   "width": 1440,
+   "message": "1 tiny uppercase letter-spaced label(s): \"We Make It Bold . จริตจัด รสชัดเต็ม 'กิน\"",
+   "fix": "Prefer sentence case at body size.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "width": 1440,
+   "message": "Emoji in the page: 🫐 ✨",
+   "fix": "Remove. Use words or real imagery.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "hairline",
+   "width": 1440,
+   "message": "31 thin rule(s)/divider line(s): div.container 560px | div.marquee 558px | header.masthead 558px | div.facts 558px",
+   "fix": "Delete. Separate with space, a tone change, or scale. Lines are only for real tables and form fields.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "body-size",
+   "width": 1440,
+   "message": "Body text is 13px (the size most of the running text is set in).",
+   "fix": "Body copy 16–20px. Map small sizes from blueprints onto your body step.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "few-pictures",
+   "width": 1440,
+   "message": "Only 3 picture(s) on the page (3 photographs, footage or raster images, 0 interface fragments). Drawings in SVG do not count.",
+   "fix": "Find real pictures of the subject's world with scripts/assets.mjs (photographs, archival images, maps, engravings, footage), download them to assets/ and give them room: a hero picture, one per section that has a subject, a full-width band. At least four, usually six to twelve."
+  },
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  },
+  {
+   "level": "FAIL",
+   "id": "small-text",
+   "width": 1440,
+   "message": "19 text blocks under 13px.",
+   "fix": "Nothing meant to be read goes below 13px.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "focal-point",
+   "width": 1440,
+   "message": "The first screen has no dominant element: the largest type is 20px (1.4vw) and no single picture holds a third of the viewport.",
+   "fix": "Make one thing lead: the headline at display size, or one large picture. A grid of many small pictures is not one thing; in blind tests jurors marked a first screen without a headline down every time. On the strongest studied sites the largest type has a median of 8.4vw.",
+   "alsoAt": [
+    768
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "small-title",
+   "width": 1440,
+   "message": "The h1 is 20px (\"In the haus | ร้านในบ้าน นครพนม\").",
+   "fix": "Set the title at display size, or make the large text of the first screen the h1.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "still-page",
+   "width": 1440,
+   "message": "Only 0 element(s) moved while the page loaded and scrolled.",
+   "fix": "Build the motion layer (SKILL.md step 9, references/motion.md): the signature move, an entrance for the parts of every section, feedback on every control, and one moving picture. Transform and opacity only, with a reduced-motion fallback."
+  },
+  {
+   "level": "FAIL",
+   "id": "empty-screens",
+   "width": 1440,
+   "message": "4 of 4 desktop screens are almost empty ground (under 20% of the screen holds text, a picture or a colour field): screens 1, 2, 3, 4.",
+   "fix": "An empty screen is a rest only once per page. Elsewhere it means the section is underbuilt: set its content larger, give it the full information, put it on a colour field, or cut it."
+  },
+  {
+   "level": "WARN",
+   "id": "off-centre",
+   "width": 390,
+   "message": "The margins differ: 13px on the left, 1px on the right, at 390px.",
+   "fix": "Put the navigation and the content on one pair of margins; check for padding on one side only, a scrollbar gutter, or a header on another inset than the page."
+  },
+  {
+   "level": "FAIL",
+   "id": "edge-text",
+   "width": 390,
+   "message": "1 text block(s) sit within 12px of the screen edge: \"ห่าง 2 นาที จากลานพญานาค\" (9px from the left)",
+   "fix": "Keep text inside the page margin (16–20px). Only display type deliberately bled past the edge may touch it."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\before\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\before\\desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\before\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\before\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\before\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\before\\mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

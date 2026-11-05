@@ -170,16 +170,45 @@ export default function SalesTaxReportTab({
         }).join(', ');
     };
 
-    // In-memory lookup map of invoices by booking_id
+    // Helper: Convert ISO date string to local YYYY-MM-DD (Thailand time)
+    const toLocalDateKey = (rawDate) => {
+        if (!rawDate) return '';
+        const d = new Date(rawDate);
+        if (Number.isNaN(d.getTime())) return String(rawDate).slice(0, 10);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    // In-memory lookup map of bookings by id
+    const bookingById = useMemo(() => {
+        const map = new Map();
+        (allYearBookings || []).forEach(b => {
+            if (b?.id) map.set(b.id, b);
+        });
+        return map;
+    }, [allYearBookings]);
+
+    // In-memory lookup map of active invoices by booking_id (excluding void/cancelled)
     const invoiceByBookingId = useMemo(() => {
         const map = new Map();
         (invoices || []).forEach(inv => {
-            if (inv.booking_id) {
-                map.set(inv.booking_id, inv);
+            if (!inv.booking_id) return;
+            const s = String(inv.status || '').toLowerCase();
+            if (s === 'cancelled' || s === 'void' || s === 'voided' || s === 'deleted') return;
+            if (!map.has(inv.booking_id)) {
+                const linkedB = bookingById.get(inv.booking_id);
+                const syncedIssuedAt = linkedB?.booking_time || inv.issued_at || inv.created_at;
+                map.set(inv.booking_id, {
+                    ...inv,
+                    issued_at: syncedIssuedAt,
+                    booking_time: linkedB?.booking_time || inv.booking_time
+                });
             }
         });
         return map;
-    }, [invoices]);
+    }, [invoices, bookingById]);
 
     // Normalize & Compile Real POS Bookings into sequential Bill items (Excluding Voided/Cancelled)
     const compiledPosBills = useMemo(() => {
@@ -190,12 +219,12 @@ export default function SalesTaxReportTab({
             const isCancelled = b.status === 'cancelled' || b.status === 'void' || b.status === 'deleted';
             if (isCancelled) return false; // Completely exclude voided/cancelled bills
 
-            const rawDate = b.booking_time || b.created_at || '';
+            const localDate = toLocalDateKey(b.booking_time || b.created_at);
             if (timeFilterMode === 'day') {
-                return rawDate.startsWith(selectedDate);
+                return localDate === selectedDate;
             }
             if (timeFilterMode === 'month') {
-                return rawDate.startsWith(selectedMonth);
+                return localDate.startsWith(selectedMonth);
             }
             return true; // 'all'
         });
@@ -221,6 +250,7 @@ export default function SalesTaxReportTab({
 
             // Check if full tax invoice already exists via in-memory lookup
             const existingTaxInvoice = invoiceByBookingId.get(b.id) || null;
+            const orderTimestamp = b.booking_time || b.created_at;
 
             return {
                 id: b.id,
@@ -229,14 +259,15 @@ export default function SalesTaxReportTab({
                 invoice_number: existingTaxInvoice?.invoice_number || generatedBillNo,
                 tax_invoice_record: existingTaxInvoice,
                 has_tax_invoice: Boolean(existingTaxInvoice),
-                customer_name: customerName,
-                customer_phone: b.customer_phone || b.profiles?.phone_number || b.pickup_contact_phone || '',
-                customer_tax_id: b.customer_tax_id || '',
-                customer_branch_type: 'head_office',
-                customer_branch_code: '00000',
+                customer_name: existingTaxInvoice?.customer_name || customerName,
+                customer_phone: existingTaxInvoice?.customer_phone || b.customer_phone || b.profiles?.phone_number || b.pickup_contact_phone || '',
+                customer_tax_id: existingTaxInvoice?.customer_tax_id || b.customer_tax_id || '',
+                customer_branch_type: existingTaxInvoice?.customer_branch_type || 'head_office',
+                customer_branch_code: existingTaxInvoice?.customer_branch_code || '00000',
                 table_name: b.tables_layout?.table_name || null,
                 booking_type: b.booking_type || (b.tables_layout ? 'dine_in' : 'pickup'),
-                issued_at: b.booking_time || b.created_at,
+                booking_time: b.booking_time,
+                issued_at: orderTimestamp,
                 created_at: b.created_at,
                 pre_vat_amount: preVat,
                 vat_amount: vat,
@@ -248,22 +279,32 @@ export default function SalesTaxReportTab({
                 source_type: 'pos_bill'
             };
         });
-    }, [allYearBookings, timeFilterMode, selectedDate, selectedMonth, isVatRegistered]);
+    }, [allYearBookings, timeFilterMode, selectedDate, selectedMonth, isVatRegistered, invoiceByBookingId]);
 
     // Active Compiled Records based on Data Source Mode (Excluding Voided)
     const activeRawRecords = useMemo(() => {
         // Filter invoices by time AND exclude void/cancelled
         const timeFilteredInvoices = invoices.filter(inv => {
             if (inv.status === 'cancelled' || inv.status === 'void') return false; // Exclude voided invoices
-            const rawDate = inv.issued_at || inv.created_at || '';
+            const linkedB = inv.booking_id ? bookingById.get(inv.booking_id) : null;
+            const rawDate = linkedB?.booking_time || inv.issued_at || inv.created_at || '';
+            const localDate = toLocalDateKey(rawDate);
             if (timeFilterMode === 'day') {
-                return rawDate.startsWith(selectedDate);
+                return localDate === selectedDate;
             }
             if (timeFilterMode === 'month') {
-                return rawDate.startsWith(selectedMonth);
+                return localDate.startsWith(selectedMonth);
             }
             return true;
-        }).map(inv => ({ ...inv, source_type: 'tax_invoice' }));
+        }).map(inv => {
+            const linkedB = inv.booking_id ? bookingById.get(inv.booking_id) : null;
+            return {
+                ...inv,
+                issued_at: linkedB?.booking_time || inv.issued_at || inv.created_at,
+                booking_time: linkedB?.booking_time || inv.booking_time,
+                source_type: 'tax_invoice'
+            };
+        });
 
         if (dataSourceMode === 'invoices') {
             return timeFilteredInvoices;
@@ -635,7 +676,12 @@ export default function SalesTaxReportTab({
                                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'invoices' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
                             >
                                 <FileText size={13} />
-                                <span>เอกสารภาษี ({invoices.filter(i => (i.issued_at || '').startsWith(timeFilterMode === 'day' ? selectedDate : (timeFilterMode === 'month' ? selectedMonth : ''))).length})</span>
+                                <span>เอกสารภาษี ({invoices.filter(i => {
+                                    if (i.status === 'cancelled' || i.status === 'void') return false;
+                                    const linkedB = i.booking_id ? bookingById.get(i.booking_id) : null;
+                                    const localDate = toLocalDateKey(linkedB?.booking_time || i.issued_at || i.created_at);
+                                    return timeFilterMode === 'day' ? localDate === selectedDate : (timeFilterMode === 'month' ? localDate.startsWith(selectedMonth) : true);
+                                }).length})</span>
                             </button>
                         </div>
 
@@ -825,10 +871,18 @@ export default function SalesTaxReportTab({
                                         <td className="p-3 font-mono font-bold text-zinc-900">
                                             <div className="flex items-center gap-1.5">
                                                 <span>{docNo}</span>
-                                                {item.has_tax_invoice && (
-                                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-blue-100 text-blue-800">
+                                                {item.has_tax_invoice && item.tax_invoice_record && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActivePrintInvoice(item.tax_invoice_record);
+                                                        }}
+                                                        className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-blue-100 hover:bg-blue-200 text-blue-800 cursor-pointer transition-colors"
+                                                        title="คลิกเพื่อเปิดดู/ดาวน์โหลด PDF ใบเสร็จรับเงิน/ใบกำกับภาษี"
+                                                    >
                                                         TAX
-                                                    </span>
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -878,7 +932,17 @@ export default function SalesTaxReportTab({
                                                             <Eye size={14} />
                                                         </button>
 
-                                                        {!item.has_tax_invoice && (
+                                                        {item.has_tax_invoice && item.tax_invoice_record ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setActivePrintInvoice(item.tax_invoice_record)}
+                                                                className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-mono text-[9.5px] font-bold border border-emerald-200 transition-colors flex items-center gap-0.5 cursor-pointer"
+                                                                title="ดู/พิมพ์เอกสารใบเสร็จ/ใบกำกับภาษี (PDF)"
+                                                            >
+                                                                <FileText size={10} />
+                                                                <span>PDF</span>
+                                                            </button>
+                                                        ) : (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSelectedBookingForTaxModal(item.raw_booking)}

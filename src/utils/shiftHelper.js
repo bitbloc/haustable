@@ -30,7 +30,16 @@ export const getBookingPaymentBreakdown = (b) => {
     const splitMatch = remark.match(/\[split(?![_a-z0-9]):?\s*([^\]]+)\]/i) || remark.match(/\bsplit:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
     if (splitRoundsMatch || splitMatch) {
         let cash = 0, qr = 0, credit = 0;
-        
+        let parsedRoundsCount = 0;
+        if (splitRoundsMatch) {
+            try {
+                const parsedRounds = JSON.parse(splitRoundsMatch[1]);
+                if (Array.isArray(parsedRounds)) {
+                    parsedRoundsCount = parsedRounds.length;
+                }
+            } catch (e) {}
+        }
+
         if (splitMatch) {
             const splitText = splitMatch[1];
             const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
@@ -58,7 +67,18 @@ export const getBookingPaymentBreakdown = (b) => {
 
         // Split rounds record the partial payments only; whatever is left of the bill was settled at
         // the final checkout ("Paid by CASH/QR/CREDIT ..."), so it belongs to that method.
-        const remainder = Math.round((total - cash - qr - credit) * 100) / 100;
+        const depositAmt = parseFloat(b.deposit_amount || 0);
+        const isPrepaidDeposit = depositAmt > 0 && (
+            Boolean(b.payment_slip_url || b.slip_url || b.slip_verified) ||
+            isOnline ||
+            remark.includes('easyslip') ||
+            remark.includes('[slip_verified]')
+        );
+        if (isPrepaidDeposit && (cash + qr + credit + depositAmt <= total + 0.5 || total === 0)) {
+            qr += depositAmt;
+        }
+        const effectiveTotal = Math.max(total, cash + qr + credit);
+        const remainder = Math.round((effectiveTotal - cash - qr - credit) * 100) / 100;
         if (remainder > 0.5) {
             const finalCredit = remark.includes('paid by credit') || remark.includes('paid by card') || explicitMethod === 'credit' || explicitMethod === 'credit_card';
             const finalQr = remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('paid by promptpay') || remark.includes('paid by truewallet') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer';
@@ -67,6 +87,7 @@ export const getBookingPaymentBreakdown = (b) => {
             else cash += remainder;
         }
 
+        const totalRoundsCount = parsedRoundsCount + (remainder > 0.5 ? 1 : 0) + (isPrepaidDeposit ? 1 : 0);
         const activeMethods = [];
         if (cash > 0) activeMethods.push('cash');
         if (qr > 0) activeMethods.push('qr');
@@ -74,11 +95,16 @@ export const getBookingPaymentBreakdown = (b) => {
 
         let methodLabel = 'Split (ผสม)';
         let isSplit = true;
-        if (activeMethods.length === 1) {
+        if (activeMethods.length === 1 && totalRoundsCount <= 1) {
             isSplit = false;
             if (activeMethods[0] === 'cash') methodLabel = 'Cash';
             else if (activeMethods[0] === 'credit') methodLabel = 'Credit Card';
             else methodLabel = 'QR Transfer';
+        } else if (activeMethods.length === 1 && totalRoundsCount > 1) {
+            isSplit = true;
+            if (activeMethods[0] === 'cash') methodLabel = `Split (เงินสด ${totalRoundsCount} รอบ)`;
+            else if (activeMethods[0] === 'credit') methodLabel = `Split (บัตร ${totalRoundsCount} รอบ)`;
+            else methodLabel = `Split (QR ${totalRoundsCount} รอบ)`;
         }
 
         return {
@@ -87,6 +113,7 @@ export const getBookingPaymentBreakdown = (b) => {
             credit,
             isSplit,
             isOnline,
+            roundsCount: totalRoundsCount,
             methodLabel
         };
     }

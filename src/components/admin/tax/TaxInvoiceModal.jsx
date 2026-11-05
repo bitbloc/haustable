@@ -70,9 +70,27 @@ export default function TaxInvoiceModal({
     const activeCompanySettings = Object.keys(localCompanySettings).length > 0 ? localCompanySettings : companySettings;
     const isCompanyVatRegistered = activeCompanySettings?.tax_is_vat_registered === 'true' || activeCompanySettings?.tax_is_vat_registered === true;
     
+    // Helper: Convert ISO timestamp or Date to local YYYY-MM-DD
+    const toLocalDateInput = (rawDate) => {
+        const d = rawDate ? new Date(rawDate) : new Date();
+        if (Number.isNaN(d.getTime())) {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
     // Receipt Linking State
     const [linkedBooking, setLinkedBooking] = useState(booking);
     const [showReceiptPicker, setShowReceiptPicker] = useState(false);
+
+    // Document Date (defaults to customer's booking_time / order date)
+    const [issuedDate, setIssuedDate] = useState(() =>
+        toLocalDateInput(booking?.booking_time || existingInvoice?.issued_at || booking?.created_at)
+    );
 
     // Form State
     const [docType, setDocType] = useState(
@@ -142,6 +160,9 @@ export default function TaxInvoiceModal({
     // Handler when user selects a receipt from picker
     const handleSelectReceipt = (selectedBooking) => {
         setLinkedBooking(selectedBooking);
+        if (selectedBooking?.booking_time || selectedBooking?.created_at) {
+            setIssuedDate(toLocalDateInput(selectedBooking.booking_time || selectedBooking.created_at));
+        }
         const mappedItems = mapBookingOrderItems(selectedBooking);
         setItems(mappedItems);
         setDiscountAmount(Number(selectedBooking?.discount_amount || 0) + Number(selectedBooking?.xhaus_discount || 0));
@@ -264,13 +285,33 @@ export default function TaxInvoiceModal({
 
         setSaving(true);
         try {
+            // Resolve issued_at timestamp matching customer order date (or selected document date)
+            const activeBookingRef = linkedBooking || booking;
+            const bookingOrderTimestamp = activeBookingRef?.booking_time || activeBookingRef?.created_at;
+            let resolvedIssuedAt = new Date().toISOString();
+
+            if (issuedDate) {
+                if (bookingOrderTimestamp && toLocalDateInput(bookingOrderTimestamp) === issuedDate) {
+                    resolvedIssuedAt = new Date(bookingOrderTimestamp).toISOString();
+                } else if (existingInvoice?.issued_at && toLocalDateInput(existingInvoice.issued_at) === issuedDate) {
+                    resolvedIssuedAt = existingInvoice.issued_at;
+                } else {
+                    resolvedIssuedAt = new Date(`${issuedDate}T12:00:00+07:00`).toISOString();
+                }
+            } else if (bookingOrderTimestamp) {
+                resolvedIssuedAt = new Date(bookingOrderTimestamp).toISOString();
+            } else if (existingInvoice?.issued_at) {
+                resolvedIssuedAt = existingInvoice.issued_at;
+            }
+
             // Generate sequence number if new
             let invoiceNumber = existingInvoice?.invoice_number;
             if (!invoiceNumber) {
                 const prefix = isDocVat 
                     ? (activeCompanySettings?.tax_invoice_prefix || 'INV')
                     : (activeCompanySettings?.tax_receipt_prefix || 'REC');
-                const ym = new Date().toISOString().slice(0, 7).replace('-', '');
+                const ymSource = issuedDate || toLocalDateInput(resolvedIssuedAt);
+                const ym = ymSource.slice(0, 7).replace('-', '');
                 const randomSeq = Math.floor(Math.random() * 9000) + 1000;
                 invoiceNumber = `${prefix}-${ym}-${randomSeq}`;
             }
@@ -305,7 +346,7 @@ export default function TaxInvoiceModal({
                 issuer_phone: activeCompanySettings?.tax_phone || '',
                 status: existingInvoice?.status || 'issued',
                 notes: notes.trim(),
-                issued_at: existingInvoice?.issued_at || new Date().toISOString()
+                issued_at: resolvedIssuedAt
             };
 
             // 1. Try writing to Supabase
@@ -416,7 +457,7 @@ export default function TaxInvoiceModal({
                 {/* Body Content */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs bg-[var(--color-paper)]">
                     
-                    {/* Document Type Selector Banner */}
+                    {/* Document Type & Date Selector Banner */}
                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
                         <div>
                             <span className="text-[9px] font-bold text-[var(--color-neutral)] uppercase tracking-wider block">
@@ -427,7 +468,16 @@ export default function TaxInvoiceModal({
                             </span>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] px-2.5 py-1">
+                                <span className="text-[10px] font-bold text-[var(--color-neutral)] uppercase">วันที่เอกสาร:</span>
+                                <input
+                                    type="date"
+                                    value={issuedDate}
+                                    onChange={(e) => setIssuedDate(e.target.value)}
+                                    className="text-xs font-mono font-bold text-[var(--color-ink)] focus:outline-none bg-transparent cursor-pointer"
+                                />
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => setDocType('receipt')}

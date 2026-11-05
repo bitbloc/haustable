@@ -250,14 +250,35 @@ export default function AdminTaxHub() {
 
     const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
 
+    const toLocalDateKey = (rawDate) => {
+        if (!rawDate) return '';
+        const d = new Date(rawDate);
+        if (Number.isNaN(d.getTime())) return String(rawDate).slice(0, 10);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    const bookingById = React.useMemo(() => {
+        const map = new Map();
+        (allYearBookings || []).forEach(b => {
+            if (b?.id) map.set(b.id, b);
+        });
+        return map;
+    }, [allYearBookings]);
+
     // Filter Invoices
     const filteredInvoices = invoices.filter(inv => {
-        const rawDate = inv.issued_at || inv.created_at || '';
+        const linkedB = inv.booking_id ? bookingById.get(inv.booking_id) : null;
+        const effectiveIssuedAt = linkedB?.booking_time || inv.issued_at || inv.created_at || '';
+        const localIssuedDate = toLocalDateKey(effectiveIssuedAt);
+        const localCreatedDate = toLocalDateKey(inv.created_at || '');
         let matchesTime = true;
         if (invoiceTimeMode === 'day') {
-            matchesTime = rawDate.startsWith(invoiceDateFilter);
+            matchesTime = localIssuedDate === invoiceDateFilter || localCreatedDate === invoiceDateFilter;
         } else if (invoiceTimeMode === 'month') {
-            matchesTime = !monthFilter || rawDate.startsWith(monthFilter);
+            matchesTime = !monthFilter || localIssuedDate.startsWith(monthFilter) || localCreatedDate.startsWith(monthFilter);
         }
 
         const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
@@ -670,7 +691,9 @@ export default function AdminTaxHub() {
                                     <tbody className="divide-y divide-[var(--color-rule)]">
                                         {filteredInvoices.map((inv, idx) => {
                                             const isCancelled = inv.status === 'cancelled';
-                                            const dateStr = inv.issued_at ? new Date(inv.issued_at).toISOString().slice(0, 10) : '-';
+                                            const linkedB = inv.booking_id ? bookingById.get(inv.booking_id) : null;
+                                            const effectiveIssuedAt = linkedB?.booking_time || inv.issued_at || inv.created_at;
+                                            const dateStr = effectiveIssuedAt ? toLocalDateKey(effectiveIssuedAt) : '-';
                                             const isVatDoc = inv.doc_type === 'tax_invoice';
 
                                             return (

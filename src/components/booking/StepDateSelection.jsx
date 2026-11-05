@@ -47,6 +47,16 @@ export default function StepDateSelection() {
         <div className="h-full flex flex-col">
             <BookingHeader title={t('reservation')} subtitle={t('stepDate')} />
 
+            {!settings.bookingDepositRequired && (
+                <div className="mb-4 px-3.5 py-2.5 bg-paper border border-[var(--color-rule)] rounded-rams text-xs leading-relaxed text-ink">
+                    <span className="font-mono font-bold uppercase mr-1.5">[ จองฟรี ไม่มีค่าใช้จ่าย ]</span>
+                    <span>
+                        การจองฟรี<strong>ต้องได้รับการยืนยันจากทางร้านเสมอ</strong> หากยังไม่ได้รับการติดต่อ กรุณาโทร{' '}
+                        <a href="tel:0985284217" className="font-mono font-bold underline">098-528-4217</a>
+                    </span>
+                </div>
+            )}
+
             <div className="space-y-6 flex-1 overflow-y-auto px-1 py-1">
                 {/* Custom Calendar */}
                 <div className="animate-fade-in-up">

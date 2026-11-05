@@ -25,10 +25,10 @@ const qaData = [
   },
   {
     id: 4,
-    thQ: "จองโต๊ะมีค่ามัดจำไหม?",
-    thA: "ตอบ: มีค่ามัดจำในการจอง 150 บาทต่อท่านครับ โดยยอดมัดจำทั้งหมดจะถูกนำไปใช้เป็นเครดิตค่าอาหารและเครื่องดื่มในวันที่มาใช้บริการ (หักออกจากบิลเต็มจำนวน)",
-    enQ: "Is a deposit required for reservations?",
-    enA: "A: Yes, there is a deposit of 150 THB per person. The total deposit will be credited towards your food and beverage bill on the date of your visit."
+    thQ: "จองโต๊ะมีค่าใช้จ่ายไหม และสั่งรับกลับจ่ายที่ร้านได้ไหม?",
+    thA: "ตอบ: สามารถจองโต๊ะล่วงหน้าได้แบบไม่มีค่าใช้จ่าย และสั่งอาหารกลับบ้าน (Pickup) แบบเลือกชำระเงินที่หน้าร้านตอนมารับได้ครับ ทั้งนี้การจองฟรีหรือรับหน้าร้านต้องได้รับการยืนยันจากทางร้านเสมอ หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ 098-528-4217 ครับ",
+    enQ: "Is table booking free & can I pay at the store for pickup?",
+    enA: "A: Yes! You can book a table free of charge, and for Pickup orders you can choose to pay at the store upon collection. Please note that free bookings and pay-at-store pickup orders always require confirmation from our staff—if you haven't heard from us, please call 098-528-4217."
   },
   {
     id: 5,

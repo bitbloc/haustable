@@ -114,6 +114,26 @@ export default function SalesTaxLedgerPrintView({
         window.print();
     };
 
+    const activePeriodTag = filterMode === 'day'
+        ? (periodDate || periodMonth || 'Period')
+        : (filterMode === 'month' ? (periodMonth || 'Period') : 'All');
+
+    const reportDocumentDateStr = (() => {
+        if (filterMode === 'day' && periodDate) {
+            const d = new Date(`${periodDate}T12:00:00+07:00`);
+            if (!Number.isNaN(d.getTime())) return d.toLocaleDateString('th-TH');
+        }
+        if (activeRecords.length > 0) {
+            const lastItem = activeRecords[activeRecords.length - 1];
+            const raw = lastItem.booking_time || lastItem.issued_at || lastItem.created_at;
+            if (raw) {
+                const d = new Date(raw);
+                if (!Number.isNaN(d.getTime())) return d.toLocaleDateString('th-TH');
+            }
+        }
+        return new Date().toLocaleDateString('th-TH');
+    })();
+
     const handleDownloadDirectPdf = async () => {
         const sheetElement = document.getElementById('sales-tax-ledger-printable-container');
         if (!sheetElement) {
@@ -125,8 +145,8 @@ export default function SalesTaxLedgerPrintView({
         const toastId = toast.loading('กำลังสร้างเอกสาร PDF คุณภาพสูง...');
         try {
             const fileName = isVatRegistered 
-                ? `Sales_Tax_Report_${periodMonth || 'Period'}.pdf` 
-                : `Sales_Bill_Ledger_${periodMonth || 'Period'}.pdf`;
+                ? `Sales_Tax_Report_${activePeriodTag}.pdf` 
+                : `Sales_Bill_Ledger_${activePeriodTag}.pdf`;
 
             const { blob } = await generateTaxDocumentPdf(sheetElement, { fileName });
             downloadTaxPdf(blob, fileName);
@@ -140,10 +160,10 @@ export default function SalesTaxLedgerPrintView({
     };
 
     const handleExportCsv = () => {
-        const csv = exportUnifiedSalesLedgerCsv(records, periodMonth, isVatRegistered);
+        const csv = exportUnifiedSalesLedgerCsv(records, activePeriodTag, isVatRegistered);
         const filename = isVatRegistered 
-            ? `Sales_Tax_Report_${periodMonth || 'Period'}.csv` 
-            : `Sales_Bill_Ledger_${periodMonth || 'Period'}.csv`;
+            ? `Sales_Tax_Report_${activePeriodTag}.csv` 
+            : `Sales_Bill_Ledger_${activePeriodTag}.csv`;
         downloadCsvFile(csv, filename);
         toast.success(`ดาวน์โหลดรายงาน ${filename} เรียบร้อยแล้ว`);
     };
@@ -225,7 +245,7 @@ export default function SalesTaxLedgerPrintView({
                             [ {reportTitle} ]
                         </div>
                         <div className="text-[10px] text-zinc-400">
-                            งวด: {periodMonth || periodDate || 'All'} • รวม {records.length} รายการ (ปกติ {activeRecords.length} / ยกเลิก {cancelledCount})
+                            งวด: {activePeriodTag} • รวม {records.length} รายการ (ปกติ {activeRecords.length} / ยกเลิก {cancelledCount})
                         </div>
                     </div>
                 </div>
@@ -293,7 +313,7 @@ export default function SalesTaxLedgerPrintView({
                                         </div>
                                         <div className="text-right font-mono text-[10pt] text-zinc-600">
                                             <div>หน้า / Page: <strong className="text-zinc-950">{pageIdx + 1} / {pages.length}</strong></div>
-                                            <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH')} {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            <div>วันที่เอกสาร: {reportDocumentDateStr}</div>
                                         </div>
                                     </div>
 
@@ -365,7 +385,7 @@ export default function SalesTaxLedgerPrintView({
                                         {pageRows.map((item, rowIdx) => {
                                             const globalIndex = pageStartOffset + rowIdx + 1;
                                             const isCancelled = item.status === 'cancelled';
-                                            const rawDate = item.issued_at || item.created_at || item.booking_time;
+                                            const rawDate = item.booking_time || item.issued_at || item.created_at;
                                             const dateObj = rawDate ? new Date(rawDate) : null;
                                             const dateStr = dateObj ? dateObj.toLocaleDateString('th-TH') : '-';
                                             const docNo = item.invoice_number || item.bill_number || item.order_number || (item.id ? `POS-${String(item.id).slice(0, 8).toUpperCase()}` : '-');
@@ -462,14 +482,14 @@ export default function SalesTaxLedgerPrintView({
                                         <div className="text-center">
                                             <div className="w-48 border-b border-zinc-950 mx-auto pb-6 mb-1"></div>
                                             <div className="font-bold text-zinc-950 text-[11pt]">ผู้จัดทำรายงาน</div>
-                                            <div className="text-[9.5pt] text-zinc-600">วันที่: {new Date().toLocaleDateString('th-TH')}</div>
+                                            <div className="text-[9.5pt] text-zinc-600">วันที่: {reportDocumentDateStr}</div>
                                         </div>
                                         <div className="text-center">
                                             <div className="w-48 border-b border-zinc-950 mx-auto pb-6 mb-1"></div>
                                             <div className="font-bold text-zinc-950 text-[11pt]">
                                                 {companySettings?.tax_signature_name || 'ผู้มีอำนาจลงนาม / เจ้าของกิจการ'}
                                             </div>
-                                            <div className="text-[9.5pt] text-zinc-600">วันที่: {new Date().toLocaleDateString('th-TH')}</div>
+                                            <div className="text-[9.5pt] text-zinc-600">วันที่: {reportDocumentDateStr}</div>
                                         </div>
                                     </div>
                                 </div>

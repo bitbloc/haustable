@@ -1,0 +1,2689 @@
+{
+ "url": "http://localhost:5173/table/H6",
+ "at": "2026-10-29T06:08:42.602Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.97,
+    0.96,
+    0.97,
+    0.96,
+    0.98,
+    0.98,
+    0.97,
+    0.96,
+    0.96,
+    0.96,
+    0.96,
+    0.96
+   ],
+   "motion": {
+    "elements": 3,
+    "css": 3,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 15467,
+     "screens": 17.2,
+     "words": 1756,
+     "img": 130,
+     "video": 0,
+     "canvas": 0,
+     "svg": 139,
+     "sections": 19,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 100,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "menu_1783397734043_opt_1784209092845.webp",
+      "menu_1783398077486_opt_1784209047640.webp",
+      "menu_1781949178248_opt_1784209062815.webp",
+      "menu_1781949139167_opt_1784209053646.webp",
+      "menu_1781950070189_opt_1784209070842.webp",
+      "menu_1783397300271_opt_1784209039524.webp",
+      "1791468150307_xe1yn6.jpg",
+      "menu_1783397734043_opt_1784209092845.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🍻",
+      "🌶",
+      "🍃",
+      "✨",
+      "🥭",
+      "🫐",
+      "🤩",
+      "🥛",
+      "🍨",
+      "🐄"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "chars": 7,
+     "lines": 1,
+     "size": 18,
+     "vw": 1.3,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0,
+     "leading": 1.38,
+     "top": 24,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "lines": 1,
+     "size": 18,
+     "font": "IBM Plex Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.95,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.05,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      10,
+      11,
+      12,
+      14,
+      16,
+      18,
+      20
+     ],
+     "sizeCount": 7,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 12,
+      "leading": 1.63,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 31,
+     "max": {
+      "size": 20,
+      "vw": 1.4,
+      "font": "IBM Plex Sans Thai",
+      "text": "-"
+     },
+     "monoShare": 0.05,
+     "monoProseShare": 0.05,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "SIGNATURE",
+      "฿530",
+      "SIGNATURE",
+      "฿899",
+      "SIGNATURE",
+      "฿189"
+     ],
+     "microLabels": 22,
+     "microLabelShare": 0.016,
+     "microSamples": [
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE"
+     ],
+     "upperShare": 0.03,
+     "centerShare": 0.05,
+     "smallText": 104
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#f2e9e7",
+       "top": 259,
+       "hsl": {
+        "h": 11,
+        "s": 0.3,
+        "l": 0.93
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#776f6e",
+       "share": 0.67
+      },
+      {
+       "color": "#17100f",
+       "share": 0.3
+      },
+      {
+       "color": "#faf3f2",
+       "share": 0.02
+      },
+      {
+       "color": "#524b4a",
+       "share": 0.01
+      },
+      {
+       "color": "#b33830",
+       "share": 0
+      }
+     ],
+     "button": {
+      "bg": "#faf3f2",
+      "hsl": {
+       "h": 7,
+       "s": 0.44,
+       "l": 0.96
+      },
+      "fg": "#776f6e"
+     },
+     "lowContrast": [
+      {
+       "text": "สั่งไปแล้ว",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 14,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 23,
+     "inHero": 23,
+     "radius": 4,
+     "height": 30,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 1,
+     "upper": 1,
+     "heroLabels": [
+      "สมัคร / เข้าสู่ระบบ",
+      "ทั้งหมด (125)",
+      "เมนูแนะนำ (15)",
+      "Vegetarian (1)",
+      "Set : จับคู่จานเดียว + Set : ใหญ่ (7)"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 1,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 7,
+     "hairlineSamples": [
+      "header.sticky.top-0 1440px",
+      "div.max-w-2xl.mx-auto 672px",
+      "div.px-4.py-2 672px",
+      "div.px-3.pt-3 672px",
+      "div.fixed.bottom-0 1440px"
+     ],
+     "outlinedBoxes": 264,
+     "dashed": 0,
+     "blurred": 1,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 308
+      },
+      {
+       "count": 7,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 1303
+      },
+      {
+       "count": 14,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 2287
+      },
+      {
+       "count": 18,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 3801
+      },
+      {
+       "count": 8,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 6046
+      },
+      {
+       "count": 9,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 7256
+      },
+      {
+       "count": 11,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 8160
+      },
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 9333
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 60,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 15467,
+    "margins": {
+     "left": 396,
+     "right": 408
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "โต๊ะ H6",
+      "size": 18,
+      "top": 24,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 396,
+      "n": 18
+     },
+     {
+      "x": 411,
+      "n": 1
+     },
+     {
+      "x": 430,
+      "n": 1
+     },
+     {
+      "x": 478,
+      "n": 1
+     },
+     {
+      "x": 539,
+      "n": 1
+     },
+     {
+      "x": 590,
+      "n": 1
+     },
+     {
+      "x": 615,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 24,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.22,
+    "voidBox": {
+     "x": 0,
+     "y": 120,
+     "w": 360,
+     "h": 780
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#faf3f2",
+    "sidebar": null,
+    "topbar": {
+     "h": 60
+    },
+    "canvas": {
+     "left": 396,
+     "right": -1124
+    },
+    "hero": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "chars": 7,
+     "lines": 1,
+     "size": 18,
+     "vw": 1.3,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0,
+     "leading": 1.38,
+     "top": 24,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 127,
+     "firstScreen": 2,
+     "ragged": [],
+     "voids": [
+      {
+       "gap": 54,
+       "at": 15206,
+       "panel": "Keychain (small)"
+      },
+      {
+       "gap": 54,
+       "at": 15206,
+       "panel": "Haus duo color keytag"
+      },
+      {
+       "gap": 52,
+       "at": 2469,
+       "panel": "ใบเหลียงผัดไข่ในบ้าน"
+      },
+      {
+       "gap": 52,
+       "at": 2764,
+       "panel": "สะตอผัดกุ้งจริตจัด"
+      }
+     ]
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 155,
+     "radii": [
+      [
+       4,
+       155
+      ]
+     ],
+     "heavyBorders": 132,
+     "borderSamples": [
+      "#d5cbc9 on #faf3f2 (1.45:1)",
+      "#d5cbc9 on #faf3f2 (1.45:1)",
+      "#d5cbc9 on #faf3f2 (1.45:1)"
+     ],
+     "heavyShadows": 1,
+     "softShadows": 0,
+     "shadowSamples": [
+      "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px"
+     ],
+     "glass": 0
+    },
+    "chips": {
+     "count": 132,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 8,
+       "size": 28,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 5,
+     "tabularShare": 0,
+     "kpiMax": 14
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.71,
+     "tiny": 23,
+     "tinySamples": [
+      "SIGNATURE 10px",
+      "SIGNATURE 10px",
+      "SIGNATURE 10px",
+      "SIGNATURE 10px"
+     ],
+     "sizes": [
+      10,
+      11,
+      12,
+      14,
+      16,
+      18
+     ]
+    },
+    "title": {
+     "text": "โต๊ะ H6",
+     "size": 18,
+     "top": 24
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.95,
+    0.96,
+    0.94,
+    0.94,
+    0.95,
+    0.95,
+    0.94,
+    0.94,
+    0.95,
+    0.94,
+    0.94,
+    0.95
+   ],
+   "motion": {
+    "elements": 3,
+    "css": 3,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 15467,
+     "screens": 15.1,
+     "words": 1756,
+     "img": 130,
+     "video": 0,
+     "canvas": 0,
+     "svg": 139,
+     "sections": 19,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 115,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "menu_1783397734043_opt_1784209092845.webp",
+      "menu_1783398077486_opt_1784209047640.webp",
+      "menu_1781949178248_opt_1784209062815.webp",
+      "menu_1781949139167_opt_1784209053646.webp",
+      "menu_1781950070189_opt_1784209070842.webp",
+      "menu_1783397300271_opt_1784209039524.webp",
+      "1791468150307_xe1yn6.jpg",
+      "menu_1783397734043_opt_1784209092845.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🍻",
+      "🌶",
+      "🍃",
+      "✨",
+      "🥭",
+      "🫐",
+      "🤩",
+      "🥛",
+      "🍨",
+      "🐄"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "chars": 7,
+     "lines": 1,
+     "size": 18,
+     "vw": 2.3,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0,
+     "leading": 1.38,
+     "top": 24,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "lines": 1,
+     "size": 18,
+     "font": "IBM Plex Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.95,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.05,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      10,
+      11,
+      12,
+      14,
+      16,
+      18,
+      20
+     ],
+     "sizeCount": 7,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 12,
+      "leading": 1.63,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 31,
+     "max": {
+      "size": 20,
+      "vw": 2.6,
+      "font": "IBM Plex Sans Thai",
+      "text": "-"
+     },
+     "monoShare": 0.05,
+     "monoProseShare": 0.05,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "SIGNATURE",
+      "฿530",
+      "SIGNATURE",
+      "฿899",
+      "SIGNATURE",
+      "฿189"
+     ],
+     "microLabels": 22,
+     "microLabelShare": 0.016,
+     "microSamples": [
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE"
+     ],
+     "upperShare": 0.03,
+     "centerShare": 0.05,
+     "smallText": 104
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#f2e9e7",
+       "top": 259,
+       "hsl": {
+        "h": 11,
+        "s": 0.3,
+        "l": 0.93
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#776f6e",
+       "share": 0.67
+      },
+      {
+       "color": "#17100f",
+       "share": 0.3
+      },
+      {
+       "color": "#faf3f2",
+       "share": 0.02
+      },
+      {
+       "color": "#524b4a",
+       "share": 0.01
+      },
+      {
+       "color": "#b33830",
+       "share": 0
+      }
+     ],
+     "button": {
+      "bg": "#faf3f2",
+      "hsl": {
+       "h": 7,
+       "s": 0.44,
+       "l": 0.96
+      },
+      "fg": "#776f6e"
+     },
+     "lowContrast": [
+      {
+       "text": "สั่งไปแล้ว",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 14,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 23,
+     "inHero": 23,
+     "radius": 4,
+     "height": 30,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 1,
+     "upper": 1,
+     "heroLabels": [
+      "สมัคร / เข้าสู่ระบบ",
+      "ทั้งหมด (125)",
+      "เมนูแนะนำ (15)",
+      "Vegetarian (1)",
+      "Set : จับคู่จานเดียว + Set : ใหญ่ (7)"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 1,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 7,
+     "hairlineSamples": [
+      "header.sticky.top-0 768px",
+      "div.max-w-2xl.mx-auto 672px",
+      "div.px-4.py-2 672px",
+      "div.px-3.pt-3 672px",
+      "div.fixed.bottom-0 768px"
+     ],
+     "outlinedBoxes": 264,
+     "dashed": 0,
+     "blurred": 1,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 308
+      },
+      {
+       "count": 7,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 1303
+      },
+      {
+       "count": 14,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 2287
+      },
+      {
+       "count": 18,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 3801
+      },
+      {
+       "count": 8,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 6046
+      },
+      {
+       "count": 9,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 7256
+      },
+      {
+       "count": 11,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 8160
+      },
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 9333
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 60,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 15467,
+    "margins": {
+     "left": 60,
+     "right": 72
+    },
+    "sections": [
+     {
+      "sel": "section.mb-8.bg-[var(--color-paper-2)]",
+      "tag": "section",
+      "top": 259,
+      "height": 672,
+      "words": 141,
+      "media": 6,
+      "middle": 33,
+      "heading": {
+       "text": "เมนูแนะนำ",
+       "size": 16,
+       "tag": "h3"
+      },
+      "left": 75,
+      "right": 87,
+      "textLeft": 75,
+      "textRight": 89,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 962,
+      "height": 274,
+      "words": 2,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "ผัดผักเต้าหู้ทอดซอสในบ้าน",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 511,
+      "textLeft": 71,
+      "textRight": 540,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 1269,
+      "height": 952,
+      "words": 213,
+      "media": 7,
+      "middle": 33,
+      "heading": {
+       "text": "Set Size L สำหรับ 2-4 ท่าน ต้มจิ๋ว • คอหมูย่างในบ้",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 75,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 2253,
+      "height": 1482,
+      "words": 129,
+      "media": 14,
+      "middle": 33,
+      "heading": {
+       "text": "14",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 73,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 3767,
+      "height": 1840,
+      "words": 231,
+      "media": 18,
+      "middle": 33,
+      "heading": {
+       "text": "18",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 74,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 5640,
+      "height": 340,
+      "words": 19,
+      "media": 2,
+      "middle": 33,
+      "heading": {
+       "text": "สปาเก็ตตี้เขียวหวานเนื้อโคขุน (เผ็ด)",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 291,
+      "textLeft": 71,
+      "textRight": 322,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 6012,
+      "height": 871,
+      "words": 64,
+      "media": 8,
+      "middle": 33,
+      "heading": {
+       "text": "ทาทากิ(ยำเนื้อญี่ปุ่น)",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 137,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 6916,
+      "height": 274,
+      "words": 4,
+      "media": 2,
+      "middle": 33,
+      "heading": {
+       "text": "เม็ดมะม่วงหิมพานต์คั่วเกลือ",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 291,
+      "textLeft": 71,
+      "textRight": 409,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 7222,
+      "height": 871,
+      "words": 46,
+      "media": 9,
+      "middle": 33,
+      "heading": {
+       "text": "แอโร่กาโน่",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 109,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 8126,
+      "height": 1141,
+      "words": 75,
+      "media": 10,
+      "middle": 33,
+      "heading": {
+       "text": "11",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 72,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 9299,
+      "height": 591,
+      "words": 191,
+      "media": 6,
+      "middle": 33,
+      "heading": {
+       "text": "อาซาฮีแก้วเล็ก S",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 73,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 9922,
+      "height": 525,
+      "words": 11,
+      "media": 4,
+      "middle": 33,
+      "heading": {
+       "text": "เบียร์ Singha",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 182,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 10479,
+      "height": 615,
+      "words": 74,
+      "media": 6,
+      "middle": 33,
+      "heading": {
+       "text": "หอมอ้ายหมากเม่า",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 76,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 11126,
+      "height": 636,
+      "words": 243,
+      "media": 4,
+      "middle": 33,
+      "heading": {
+       "text": "ฟัดจ์บราวนี่ครีมชีสสด✨",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 74,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 11794,
+      "height": 1026,
+      "words": 36,
+      "media": 11,
+      "middle": 33,
+      "heading": {
+       "text": "11",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 153,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 12852,
+      "height": 826,
+      "words": 32,
+      "media": 7,
+      "middle": 33,
+      "heading": {
+       "text": "ข้าวสวย",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 109,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 13710,
+      "height": 952,
+      "words": 111,
+      "media": 9,
+      "middle": 33,
+      "heading": {
+       "text": "จับคู่ : Honey Lager & Passion Fruit Wheat",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 86,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 14695,
+      "height": 616,
+      "words": 303,
+      "media": 6,
+      "middle": 33,
+      "heading": {
+       "text": "Naga in haus",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 79,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "โต๊ะ H6",
+      "size": 18,
+      "top": 24,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 60,
+      "n": 18
+     },
+     {
+      "x": 75,
+      "n": 1
+     },
+     {
+      "x": 94,
+      "n": 1
+     },
+     {
+      "x": 142,
+      "n": 1
+     },
+     {
+      "x": 203,
+      "n": 1
+     },
+     {
+      "x": 254,
+      "n": 1
+     },
+     {
+      "x": 279,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 24,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#faf3f2",
+    "sidebar": null,
+    "topbar": {
+     "h": 60
+    },
+    "canvas": {
+     "left": 60,
+     "right": -1460
+    },
+    "hero": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "chars": 7,
+     "lines": 1,
+     "size": 18,
+     "vw": 2.3,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0,
+     "leading": 1.38,
+     "top": 24,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 127,
+     "firstScreen": 2,
+     "ragged": [],
+     "voids": [
+      {
+       "gap": 54,
+       "at": 15206,
+       "panel": "Keychain (small)"
+      },
+      {
+       "gap": 54,
+       "at": 15206,
+       "panel": "Haus duo color keytag"
+      },
+      {
+       "gap": 52,
+       "at": 2469,
+       "panel": "ใบเหลียงผัดไข่ในบ้าน"
+      },
+      {
+       "gap": 52,
+       "at": 2764,
+       "panel": "สะตอผัดกุ้งจริตจัด"
+      }
+     ]
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 155,
+     "radii": [
+      [
+       4,
+       155
+      ]
+     ],
+     "heavyBorders": 132,
+     "borderSamples": [
+      "#d5cbc9 on #faf3f2 (1.45:1)",
+      "#d5cbc9 on #faf3f2 (1.45:1)",
+      "#d5cbc9 on #faf3f2 (1.45:1)"
+     ],
+     "heavyShadows": 1,
+     "softShadows": 0,
+     "shadowSamples": [
+      "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px"
+     ],
+     "glass": 0
+    },
+    "chips": {
+     "count": 132,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 8,
+       "size": 28,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 5,
+     "tabularShare": 0,
+     "kpiMax": 14
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.71,
+     "tiny": 23,
+     "tinySamples": [
+      "SIGNATURE 10px",
+      "SIGNATURE 10px",
+      "SIGNATURE 10px",
+      "SIGNATURE 10px"
+     ],
+     "sizes": [
+      10,
+      11,
+      12,
+      14,
+      16,
+      18
+     ]
+    },
+    "title": {
+     "text": "โต๊ะ H6",
+     "size": 18,
+     "top": 24
+    },
+    "colourShare": 0.006
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.78,
+    0.78,
+    0.92,
+    0.76,
+    0.79,
+    0.8,
+    0.76,
+    0.77,
+    0.76,
+    0.82,
+    0.79,
+    0.78
+   ],
+   "motion": {
+    "elements": 3,
+    "css": 3,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 19550,
+     "screens": 23.2,
+     "words": 1756,
+     "img": 130,
+     "video": 0,
+     "canvas": 0,
+     "svg": 139,
+     "sections": 19,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🍻",
+      "🌶",
+      "🍃",
+      "✨",
+      "🥭",
+      "🫐",
+      "🤩",
+      "🥛",
+      "🍨",
+      "🐄"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "chars": 7,
+     "lines": 1,
+     "size": 18,
+     "vw": 4.6,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0,
+     "leading": 1.38,
+     "top": 24,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "lines": 1,
+     "size": 18,
+     "font": "IBM Plex Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.95,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.05,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      10,
+      11,
+      12,
+      14,
+      16,
+      18,
+      20
+     ],
+     "sizeCount": 7,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 12,
+      "leading": 1.63,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 26,
+     "max": {
+      "size": 20,
+      "vw": 5.1,
+      "font": "IBM Plex Sans Thai",
+      "text": "-"
+     },
+     "monoShare": 0.05,
+     "monoProseShare": 0.05,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "SIGNATURE",
+      "฿530",
+      "SIGNATURE",
+      "฿899",
+      "SIGNATURE",
+      "฿189"
+     ],
+     "microLabels": 22,
+     "microLabelShare": 0.016,
+     "microSamples": [
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE",
+      "SIGNATURE"
+     ],
+     "upperShare": 0.03,
+     "centerShare": 0.05,
+     "smallText": 104
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#f2e9e7",
+       "top": 259,
+       "hsl": {
+        "h": 11,
+        "s": 0.3,
+        "l": 0.93
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#776f6e",
+       "share": 0.67
+      },
+      {
+       "color": "#17100f",
+       "share": 0.3
+      },
+      {
+       "color": "#faf3f2",
+       "share": 0.02
+      },
+      {
+       "color": "#524b4a",
+       "share": 0.01
+      },
+      {
+       "color": "#b33830",
+       "share": 0
+      }
+     ],
+     "button": {
+      "bg": "#faf3f2",
+      "hsl": {
+       "h": 7,
+       "s": 0.44,
+       "l": 0.96
+      },
+      "fg": "#776f6e"
+     },
+     "lowContrast": [
+      {
+       "text": "สั่งไปแล้ว",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 14,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 23,
+     "inHero": 23,
+     "radius": 4,
+     "height": 30,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 1,
+     "upper": 1,
+     "heroLabels": [
+      "สมัคร / เข้าสู่ระบบ",
+      "ทั้งหมด (125)",
+      "เมนูแนะนำ (15)",
+      "Vegetarian (1)",
+      "Set : จับคู่จานเดียว + Set : ใหญ่ (7)"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 1,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 7,
+     "hairlineSamples": [
+      "header.sticky.top-0 390px",
+      "div.max-w-2xl.mx-auto 390px",
+      "div.px-4.py-2 390px",
+      "div.px-3.pt-3 390px",
+      "div.fixed.bottom-0 390px"
+     ],
+     "outlinedBoxes": 258,
+     "dashed": 0,
+     "blurred": 1,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 308
+      },
+      {
+       "count": 7,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 1507
+      },
+      {
+       "count": 14,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 2735
+      },
+      {
+       "count": 18,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 4716
+      },
+      {
+       "count": 8,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 7633
+      },
+      {
+       "count": 9,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 8997
+      },
+      {
+       "count": 11,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 10284
+      },
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 11888
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 60,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 19550,
+    "margins": {
+     "left": 12,
+     "right": 24
+    },
+    "sections": [
+     {
+      "sel": "section.mb-8.bg-[var(--color-paper-2)]",
+      "tag": "section",
+      "top": 259,
+      "height": 878,
+      "words": 141,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "เมนูแนะนำ",
+       "size": 16,
+       "tag": "h3"
+      },
+      "left": 27,
+      "right": 38,
+      "textLeft": 27,
+      "textRight": 38,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 1169,
+      "height": 272,
+      "words": 2,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "ผัดผักเต้าหู้ทอดซอสในบ้าน",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 212,
+      "textLeft": 23,
+      "textRight": 235,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 1473,
+      "height": 1196,
+      "words": 213,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "Set Size L สำหรับ 2-4 ท่าน ต้มจิ๋ว • คอหมูย่างในบ้",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 25,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 2701,
+      "height": 1949,
+      "words": 129,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "14",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 29,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 4682,
+      "height": 2537,
+      "words": 231,
+      "media": 0,
+      "middle": 28,
+      "heading": {
+       "text": "18",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 24,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 7250,
+      "height": 317,
+      "words": 19,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "สปาเก็ตตี้เขียวหวานเนื้อโคขุน (เผ็ด)",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 23,
+      "textLeft": 23,
+      "textRight": 23,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 7599,
+      "height": 1028,
+      "words": 64,
+      "media": 0,
+      "middle": 32,
+      "heading": {
+       "text": "ทาทากิ(ยำเนื้อญี่ปุ่น)",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 28,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 8659,
+      "height": 272,
+      "words": 4,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "เม็ดมะม่วงหิมพานต์คั่วเกลือ",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 110,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 8963,
+      "height": 1255,
+      "words": 46,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "แอโร่กาโน่",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 56,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 10250,
+      "height": 1572,
+      "words": 75,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "11",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 27,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 11854,
+      "height": 816,
+      "words": 191,
+      "media": 0,
+      "middle": 32,
+      "heading": {
+       "text": "อาซาฮีแก้วเล็ก S",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 26,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 12702,
+      "height": 478,
+      "words": 11,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "เบียร์ Singha",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 39,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 13212,
+      "height": 840,
+      "words": 74,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "หอมอ้ายหมากเม่า",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 29,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 14084,
+      "height": 589,
+      "words": 243,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "ฟัดจ์บราวนี่ครีมชีสสด✨",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 23,
+      "textLeft": 23,
+      "textRight": 23,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 14705,
+      "height": 1386,
+      "words": 36,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "11",
+       "size": 14,
+       "tag": "h3"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 56,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 16123,
+      "height": 1009,
+      "words": 32,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "ข้าวสวย",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 61,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 17164,
+      "height": 1383,
+      "words": 111,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "จับคู่ : Honey Lager & Passion Fruit Wheat",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 27,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section",
+      "tag": "section",
+      "top": 18578,
+      "height": 816,
+      "words": 303,
+      "media": 0,
+      "middle": 33,
+      "heading": {
+       "text": "Naga in haus",
+       "size": 14,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 24,
+      "textLeft": 23,
+      "textRight": 25,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "โต๊ะ H6",
+      "size": 18,
+      "top": 24,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [
+     {
+      "text": "Set : จับคู่จานเดียว + Set : ใหญ่",
+      "side": "right",
+      "px": 12
+     },
+     {
+      "text": "Vegetarian",
+      "side": "left",
+      "px": 12
+     },
+     {
+      "text": "Set : จับคู่จานเดียว + Set : ใหญ่",
+      "side": "left",
+      "px": 12
+     },
+     {
+      "text": "กับข้าวถึงเครื่อง (Main Dishes)",
+      "side": "left",
+      "px": 12
+     },
+     {
+      "text": "จานเดียวรสชัด (Rice Bowl)",
+      "side": "left",
+      "px": 12
+     },
+     {
+      "text": "สปาเก็ตตี้ Spaghetti",
+      "side": "left",
+      "px": 12
+     },
+     {
+      "text": "ของทานเล่น (Appetizer&Snacks)",
+      "side": "left",
+      "px": 12
+     },
+     {
+      "text": "ของทานเล่นพร้อมเสริฟ์",
+      "side": "left",
+      "px": 12
+     }
+    ],
+    "edges": [
+     {
+      "x": 12,
+      "n": 18
+     },
+     {
+      "x": 27,
+      "n": 1
+     },
+     {
+      "x": 46,
+      "n": 1
+     },
+     {
+      "x": 94,
+      "n": 1
+     },
+     {
+      "x": 155,
+      "n": 1
+     },
+     {
+      "x": 206,
+      "n": 1
+     },
+     {
+      "x": 231,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 24,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#faf3f2",
+    "sidebar": null,
+    "topbar": {
+     "h": 60
+    },
+    "canvas": {
+     "left": 12,
+     "right": -1790
+    },
+    "hero": {
+     "text": "โต๊ะ H6",
+     "words": 2,
+     "chars": 7,
+     "lines": 1,
+     "size": 18,
+     "vw": 4.6,
+     "font": "IBM Plex Sans Thai",
+     "weight": 700,
+     "tracking": 0,
+     "leading": 1.38,
+     "top": 24,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 127,
+     "firstScreen": 2,
+     "ragged": [],
+     "voids": [
+      {
+       "gap": 52,
+       "at": 2893,
+       "panel": "ใบเหลียงผัดไข่ในบ้าน"
+      },
+      {
+       "gap": 52,
+       "at": 3437,
+       "panel": "สะตอผัดกุ้งจริตจัด"
+      },
+      {
+       "gap": 52,
+       "at": 9155,
+       "panel": "อเมริกาโน่ (เย็น,ร้อน)"
+      },
+      {
+       "gap": 52,
+       "at": 10986,
+       "panel": "โกโก้ (ร้อน,เย็น)"
+      }
+     ]
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 155,
+     "radii": [
+      [
+       4,
+       155
+      ]
+     ],
+     "heavyBorders": 132,
+     "borderSamples": [
+      "#d5cbc9 on #faf3f2 (1.45:1)",
+      "#d5cbc9 on #faf3f2 (1.45:1)",
+      "#d5cbc9 on #faf3f2 (1.45:1)"
+     ],
+     "heavyShadows": 1,
+     "softShadows": 0,
+     "shadowSamples": [
+      "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px"
+     ],
+     "glass": 0
+    },
+    "chips": {
+     "count": 132,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 8,
+       "size": 28,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 32,
+       "radius": "4px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 5,
+     "tabularShare": 0,
+     "kpiMax": 14
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.71,
+     "tiny": 23,
+     "tinySamples": [
+      "SIGNATURE 10px",
+      "SIGNATURE 10px",
+      "SIGNATURE 10px",
+      "SIGNATURE 10px"
+     ],
+     "sizes": [
+      10,
+      11,
+      12,
+      14,
+      16,
+      18
+     ]
+    },
+    "title": {
+     "text": "โต๊ะ H6",
+     "size": 18,
+     "top": 24
+    },
+    "colourShare": 0.009
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "FAIL",
+   "id": "micro-label",
+   "width": 1440,
+   "message": "22 tiny uppercase letter-spaced labels (e.g. \"SIGNATURE\", \"SIGNATURE\", \"SIGNATURE\", \"SIGNATURE\").",
+   "fix": "Use sentence-case text at a readable size, or delete the label.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "width": 1440,
+   "message": "Emoji in the page: 🍻 🌶 🍃 ✨ 🥭 🫐 🤩 🥛 🍨 🐄",
+   "fix": "Remove. Use words or real imagery.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "contrast",
+   "width": 1440,
+   "message": "Low-contrast text: \"สั่งไปแล้ว\" 4.1:1 needs 4.5:1",
+   "fix": "Darken or lighten the text colour.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "dev-server",
+   "width": 1440,
+   "message": "This page is served by a development server (Vite, webpack or Next in dev mode).",
+   "fix": "Run the last gate on the production build too (vite build && vite preview, next build && next start, or the built index.html): minifiers and bundlers change the CSS a visitor receives.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "heavy-shadow",
+   "width": 1440,
+   "message": "1 panel shadow(s) heavy enough to read as floating: rgba(0, 0, 0, 0.25) 0px 25px 50px -12px",
+   "fix": "Panels sit on the ground: separate them with a fill one step from the ground or a quiet 1px border. A shadow, if any, is under 8% black with a small blur. Real overlays (menus, dialogs, popovers) may float.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "heavy-borders",
+   "width": 1440,
+   "message": "132 panel borders are dark against their ground: #d5cbc9 on #faf3f2 (1.45:1) | #d5cbc9 on #faf3f2 (1.45:1) | #d5cbc9 on #faf3f2 (1.45:1)",
+   "fix": "A panel border is a whisper: about 1.1–1.3:1 against its ground on a light screen (#e5e7eb–#ededed on white), and about 1.2–1.5:1 on a dark one (#1a1a1a on #000, #2e2e2e on #111). Darker lines turn the screen into a grid of boxes; keep the stronger line for controls.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "icon-chips",
+   "width": 1440,
+   "message": "132 icons sit in tinted squares or circles.",
+   "fix": "This is the commonest tell of a generated dashboard. Drop the tinted square: a KPI is a label and a number; an icon, if it helps, is plain and in the text colour.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "tiny-text",
+   "width": 1440,
+   "message": "23 text blocks under 11px: SIGNATURE 10px, SIGNATURE 10px, SIGNATURE 10px, SIGNATURE 10px.",
+   "fix": "Nothing below 11px; secondary text 12px, data 13–14px.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "below-fold",
+   "width": 1440,
+   "message": "Only 2 of 127 blocks start on the first 1440px screen.",
+   "fix": "Every block the brief names shows its header and first rows on the first desktop screen: size the headline block to its question, cap long lists with \"View all\", and put time-sensitive blocks before long tables."
+  },
+  {
+   "level": "WARN",
+   "id": "panel-void",
+   "width": 1440,
+   "message": "4 card(s) hold a blank band inside: 54px in \"Keychain (small)\", 54px in \"Haus duo color keytag\", 52px in \"ใบเหลียงผัดไข่ในบ้าน\".",
+   "fix": "A card stretches to its neighbour only when it has content to fill. Keep a legend or a note directly under its chart (only an action or a total may sit at a stretched card's foot), let a short card keep its own height (align-items: start), and let a filtered block shrink to its rows."
+  },
+  {
+   "level": "WARN",
+   "id": "edge-text",
+   "width": 390,
+   "message": "8 text block(s) sit 12–15px from the phone's edge: \"Set : จับคู่จานเดียว + Set : ใ\" (12px); \"Vegetarian\" (12px); \"Set : จับคู่จานเดียว + Set : ใ\" (12px)",
+   "fix": "The page margin is 16–20px on a phone; the header and the corner labels sit on it too."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\desktop-page-01.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\desktop-page-02.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\desktop-page-03.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\tablet-page-01.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\tablet-page-02.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\mobile-page-01.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-after2\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

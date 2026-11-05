@@ -55,6 +55,24 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
     // Responsive scaling for mobile preview so 794px A4 sheet fits iPhone screen perfectly
     const [previewScale, setPreviewScale] = useState(1);
     const [isSmallScreen, setIsSmallScreen] = useState(false);
+    const [linkedBookingTime, setLinkedBookingTime] = useState(invoice?.booking_time || null);
+
+    useEffect(() => {
+        setLinkedBookingTime(invoice?.booking_time || null);
+        if (invoice?.booking_id && !invoice?.booking_time) {
+            supabase
+                .from('bookings')
+                .select('booking_time, created_at')
+                .eq('id', invoice.booking_id)
+                .maybeSingle()
+                .then(({ data }) => {
+                    if (data?.booking_time) {
+                        setLinkedBookingTime(data.booking_time);
+                    }
+                })
+                .catch(() => {});
+        }
+    }, [invoice?.booking_id, invoice?.booking_time]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -86,8 +104,9 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
         : '(เอกสารออกเป็นชุด: สำเนาสำหรับผู้ขาย / แผนกบัญชี)';
 
     const rawItems = Array.isArray(invoice.items) ? invoice.items : [];
-    const formattedDate = invoice.issued_at 
-        ? new Date(invoice.issued_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+    const effectiveIssuedAt = linkedBookingTime || invoice.booking_time || invoice.issued_at || invoice.created_at;
+    const formattedDate = effectiveIssuedAt 
+        ? new Date(effectiveIssuedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
         : new Date().toLocaleDateString('th-TH');
 
     const bahtWords = thaiBahtText(invoice.total_amount || invoice.net_payable || 0);

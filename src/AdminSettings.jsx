@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Power, FileText, Heart, Terminal, QrCode, Coins, Trash2, AlertTriangle, Download, ArrowLeft } from 'lucide-react';
+import { Power, FileText, Heart, Terminal, QrCode, Coins, Trash2, AlertTriangle, Download, ArrowLeft, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import { supabase } from './lib/supabaseClient';
@@ -15,6 +15,7 @@ import DataPurgePanel from './components/admin/DataPurgePanel';
 import GeneralBookingSettingsTab from './components/admin/settings/GeneralBookingSettingsTab';
 import LandingPageSettingsTab from './components/admin/settings/LandingPageSettingsTab';
 import IntegrationsTab from './components/admin/settings/IntegrationsTab';
+import TelegramReportTab from './components/admin/settings/TelegramReportTab';
 import HardwarePrintersTab from './components/admin/settings/HardwarePrintersTab';
 import CrmCoinsTab from './components/admin/settings/CrmCoinsTab';
 import DebugLogsTab from './components/admin/settings/DebugLogsTab';
@@ -387,6 +388,7 @@ export default function AdminSettings() {
         { id: 'link', label: 'Landing Page', desc: 'ลิงก์ /link & เมนู', icon: FileText },
         { id: 'checkins', label: 'Reviews Feed', desc: 'เช็กอิน & รีวิว', icon: Heart },
         { id: 'integrations', label: 'APIs & QR', desc: 'QR สั่ง & Spotify', icon: Terminal },
+        { id: 'telegram', label: 'Telegram', desc: 'รายงานเข้ากลุ่ม', icon: Send },
         { id: 'printers', label: 'Hardware & Slips', desc: 'เครื่องพิมพ์ & สลิป', icon: QrCode },
         { id: 'crm', label: 'CRM & Coins', desc: 'สมาชิกระดับ & xhaus', icon: Coins },
         { id: 'data_purge', label: 'Data Reset', desc: 'ล้างข้อมูลทดสอบ', icon: Trash2 },
@@ -422,7 +424,7 @@ export default function AdminSettings() {
             </div>
 
             {/* Neo-Brutalist Tabular Header Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 border border-[var(--color-rule)] divide-x divide-y sm:divide-y-0 divide-[var(--color-rule)] bg-[var(--color-paper)] rounded-xl overflow-hidden shadow-2xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 border border-[var(--color-rule)] divide-x divide-y sm:divide-y-0 divide-[var(--color-rule)] bg-[var(--color-paper)] rounded-xl overflow-hidden shadow-2xs">
                 {SETTINGS_TABS.map((tab) => {
                     const IconComp = tab.icon;
                     const isActive = activeSettingsTab === tab.id;
@@ -494,6 +496,11 @@ export default function AdminSettings() {
                     setAllCategories={setAllCategories}
                     defaultRouteCategory={defaultRouteCategory}
                 />
+            )}
+
+            {/* Telegram Reports */}
+            {activeSettingsTab === 'telegram' && (
+                <TelegramReportTab settings={settings} handleSave={handleSave} />
             )}
 
             {/* Tab 5: Hardware & Printers */}

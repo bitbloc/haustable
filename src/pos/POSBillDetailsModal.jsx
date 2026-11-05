@@ -3,32 +3,17 @@ import { FileText, X, Loader2, Receipt, Printer } from 'lucide-react';
 import { getShortBookingId, extractCashDetails } from '../utils/printerHelper';
 import { supabase } from '../lib/supabaseClient';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
+import { getBookingPaymentBreakdown } from '../utils/shiftHelper';
+import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
 import TaxInvoiceModal from '../components/admin/tax/TaxInvoiceModal';
 import TaxInvoicePrintView from '../components/admin/tax/TaxInvoicePrintView';
 
 const getBookingPaymentMethod = (b) => {
     if (!b) return 'CASH';
-    const remark = (b.staff_remark || '').toLowerCase();
-    const explicitMethod = (b.payment_method || '').toLowerCase();
-
-    // 1. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
-    if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
-        return 'CASH';
-    }
-
-    // 2. Explicit Credit Card Check
-    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
-        return 'CREDIT CARD';
-    }
-
-    // 3. QR / PromptPay / Bank Transfer Check
-    if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
-        return 'QR TRANSFER';
-    }
-
-    // 4. Online Deposit / Slip
-    if (b.payment_slip_url) return 'QR TRANSFER';
-
+    const breakdown = getBookingPaymentBreakdown(b);
+    if (breakdown.isSplit) return breakdown.methodLabel.toUpperCase();
+    if (breakdown.credit > 0) return 'CREDIT CARD';
+    if (breakdown.qr > 0) return 'QR TRANSFER';
     return 'CASH';
 };
 
@@ -366,90 +351,134 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                     </div>
 
                     {/* Payment Summary */}
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-4 flex flex-col gap-2 shadow-sm">
-                        <div className="flex justify-between items-center text-xs text-[#767673]">
-                            <span>Subtotal</span>
-                            <span className="font-mono">฿{((Number(booking.total_amount) || 0) + (Number(booking.discount_amount) || 0) + (Number(booking.xhaus_discount) || 0)).toLocaleString()}</span>
-                        </div>
-                        
-                        {Number(booking.xhaus_discount || 0) > 0 && (
-                            <div className="flex justify-between items-center text-xs text-amber-600">
-                                <span>xHaus Discount</span>
-                                <span className="font-mono">-฿{Number(booking.xhaus_discount).toLocaleString()}</span>
-                            </div>
-                        )}
-                        
-                        {Number(booking.discount_amount || 0) > 0 && (
-                            <div className="flex justify-between items-center text-xs text-emerald-600">
-                                <span>Other Discounts</span>
-                                <span className="font-mono">-฿{Number(booking.discount_amount).toLocaleString()}</span>
-                            </div>
-                        )}
+                    {(() => {
+                        const breakdown = getBookingPaymentBreakdown(booking);
+                        const splitRounds = getBookingSplitRounds(booking);
+                        const effectiveNetTotal = Math.max(
+                            Number(booking.total_amount) || 0,
+                            (breakdown.cash || 0) + (breakdown.qr || 0) + (breakdown.credit || 0)
+                        );
+                        const bStatus = (booking.status || '').toLowerCase();
+                        const isPaid = bStatus === 'completed' || bStatus === 'paid' || bStatus === 'success';
+                        const methodDisplay = getBookingPaymentMethod(booking);
 
-                        <div className="border-t border-[#D1D1CD] my-1"></div>
-                        
-                        <div className="flex justify-between items-center">
-                            <span className="font-bold text-[#1A1A1A] text-sm">Net Total</span>
-                            <span className="font-mono font-black text-[#ff0000] text-lg">
-                                ฿{(Number(booking.total_amount) || 0).toLocaleString()}
-                            </span>
-                        </div>
+                        return (
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-4 flex flex-col gap-2 shadow-sm">
+                                <div className="flex justify-between items-center text-xs text-[#767673]">
+                                    <span>Subtotal</span>
+                                    <span className="font-mono">฿{(effectiveNetTotal + (Number(booking.discount_amount) || 0) + (Number(booking.xhaus_discount) || 0)).toLocaleString()}</span>
+                                </div>
+                                
+                                {Number(booking.xhaus_discount || 0) > 0 && (
+                                    <div className="flex justify-between items-center text-xs text-amber-600">
+                                        <span>xHaus Discount</span>
+                                        <span className="font-mono">-฿{Number(booking.xhaus_discount).toLocaleString()}</span>
+                                    </div>
+                                )}
+                                
+                                {Number(booking.discount_amount || 0) > 0 && (
+                                    <div className="flex justify-between items-center text-xs text-emerald-600">
+                                        <span>Other Discounts</span>
+                                        <span className="font-mono">-฿{Number(booking.discount_amount).toLocaleString()}</span>
+                                    </div>
+                                )}
 
-                        {(() => {
-                            const bStatus = (booking.status || '').toLowerCase();
-                            const isPaid = bStatus === 'completed' || bStatus === 'paid' || bStatus === 'success';
+                                <div className="border-t border-[#D1D1CD] my-1"></div>
+                                
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-[#1A1A1A] text-sm">Net Total</span>
+                                    <span className="font-mono font-black text-[#ff0000] text-lg">
+                                        ฿{effectiveNetTotal.toLocaleString()}
+                                    </span>
+                                </div>
 
-                            if (!isPaid) {
-                                return (
+                                {!isPaid ? (
                                     <div className="flex justify-between items-center mt-2">
                                         <span className="text-[10px] font-mono font-bold text-[#767673] uppercase">สถานะชำระเงิน</span>
                                         <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border bg-amber-50 text-amber-800 border-amber-200">
                                             {bStatus === 'seated' ? 'กำลังทาน (ยังไม่ชำระ)' : 'ยังไม่ชำระเงิน'}
                                         </span>
                                     </div>
-                                );
-                            }
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between items-center mt-2">
+                                            <span className="text-[10px] font-mono font-bold text-[#767673] uppercase">Pay Method</span>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${breakdown.isSplit ? 'bg-purple-50 text-purple-900 border-purple-200' : 'bg-white text-[#1A1A1A] border-[#D1D1CD]'}`}>
+                                                {methodDisplay}
+                                            </span>
+                                        </div>
 
-                            return (
-                                <>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <span className="text-[10px] font-mono font-bold text-[#767673] uppercase">Pay Method</span>
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border bg-white text-[#1A1A1A] border-[#D1D1CD]">
-                                            {getBookingPaymentMethod(booking)}
-                                        </span>
-                                    </div>
-
-                                    {getBookingPaymentMethod(booking) === 'CASH' && (() => {
-                                        const totalAmt = Number(booking.total_amount) || 0;
-                                        const cashDetails = extractCashDetails(booking, totalAmt);
-                                        if (cashDetails && cashDetails.received !== null && cashDetails.received > 0) {
-                                            return (
-                                                <div className="bg-white border border-[#D1D1CD] rounded-lg p-2.5 mt-2 space-y-1 font-mono text-xs">
-                                                    <div className="flex justify-between text-[#767673]">
-                                                        <span>รับเงินสดมา (Cash Received):</span>
-                                                        <span className="font-bold text-[#1A1A1A]">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
-                                                    </div>
-                                                    <div className="flex justify-between font-black text-emerald-700 border-t border-dashed border-[#ECECE9] pt-1">
-                                                        <span>เงินทอน (Change Due):</span>
-                                                        <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
-                                                    </div>
+                                        {/* Split Payment Breakdown Box */}
+                                        {(breakdown.isSplit || splitRounds.length > 0) && (
+                                            <div className="bg-white border border-[#D1D1CD] rounded-lg p-2.5 mt-2 space-y-1.5 font-mono text-xs">
+                                                <div className="text-[9px] font-bold uppercase tracking-wider text-[#767673] border-b border-[#ECECE9] pb-1">
+                                                    สรุปยอดแยกตามช่องทางชำระ (Split Breakdown)
                                                 </div>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                </>
-                            );
-                        })()}
-                    </div>
+                                                {breakdown.cash > 0 && (
+                                                    <div className="flex justify-between text-[#1A1A1A]">
+                                                        <span className="text-[#767673]">เงินสด (Cash):</span>
+                                                        <span className="font-bold text-emerald-700">฿{breakdown.cash.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                {breakdown.qr > 0 && (
+                                                    <div className="flex justify-between text-[#1A1A1A]">
+                                                        <span className="text-[#767673]">สแกนจ่าย (QR Transfer):</span>
+                                                        <span className="font-bold text-blue-700">฿{breakdown.qr.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                {breakdown.credit > 0 && (
+                                                    <div className="flex justify-between text-[#1A1A1A]">
+                                                        <span className="text-[#767673]">บัตรเครดิต (Credit Card):</span>
+                                                        <span className="font-bold text-amber-700">฿{breakdown.credit.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                {splitRounds.length > 0 && (
+                                                    <div className="border-t border-dashed border-[#ECECE9] pt-1.5 mt-1 space-y-1">
+                                                        <div className="text-[9px] font-bold uppercase tracking-wider text-[#767673]">
+                                                            ประวัติการแบ่งจ่าย ({splitRounds.length} รอบ)
+                                                        </div>
+                                                        {splitRounds.map((r, idx) => {
+                                                            const mLabel = (r.method || '').toLowerCase() === 'cash' ? 'เงินสด' : (r.method || '').toLowerCase() === 'credit' ? 'บัตรเครดิต' : 'QR';
+                                                            const tStr = r.paidAt ? new Date(r.paidAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
+                                                            return (
+                                                                <div key={idx} className="flex justify-between items-center text-[11px] text-[#555552]">
+                                                                    <span>รอบที่ {r.round || idx + 1} · {mLabel}{tStr ? ` (${tStr} น.)` : ''}</span>
+                                                                    <span className="font-bold text-[#1A1A1A]">฿{Number(r.amount || 0).toLocaleString()}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {methodDisplay === 'CASH' && (() => {
+                                            const cashDetails = extractCashDetails(booking, effectiveNetTotal);
+                                            if (cashDetails && cashDetails.received !== null && cashDetails.received > 0) {
+                                                return (
+                                                    <div className="bg-white border border-[#D1D1CD] rounded-lg p-2.5 mt-2 space-y-1 font-mono text-xs">
+                                                        <div className="flex justify-between text-[#767673]">
+                                                            <span>รับเงินสดมา (Cash Received):</span>
+                                                            <span className="font-bold text-[#1A1A1A]">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex justify-between font-black text-emerald-700 border-t border-dashed border-[#ECECE9] pt-1">
+                                                            <span>เงินทอน (Change Due):</span>
+                                                            <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
                     
                     {transfer.cleanRemark ? (
                         <div className="text-[10px] text-[#767673] italic bg-white border border-[#ECECE9] p-2 rounded-lg">
                             * Remark: {transfer.cleanRemark}
-                        </div>
-                    ) : booking.staff_remark && !transfer.isMergedSource && !transfer.isMergedTarget && !transfer.isMoved ? (
-                        <div className="text-[10px] text-[#767673] italic bg-white border border-[#ECECE9] p-2 rounded-lg">
-                            * Remark: {booking.staff_remark}
                         </div>
                     ) : null}
                 </div>

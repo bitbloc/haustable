@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
-import { getBookingHoldMinutes, isHoldExpired, refundBookingLoyaltyIfNeeded } from '../utils/availabilityUtils';
+import { getBookingHoldMinutes, isHoldExpired, refundBookingLoyaltyIfNeeded, formatPosDateTime } from '../utils/availabilityUtils';
 import { 
     playOrderAlert, 
     playSystemAlertSound, 
@@ -514,27 +514,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         const isPickup = order.booking_type === 'pickup' || isHausmadePickup;
         const isCustomerArrived = (order.customer_note || '').includes('[CUSTOMER_ARRIVED]') || (order.staff_remark || '').includes('[CUSTOMER_ARRIVED]');
         
-        // Order submission timestamp (when created)
-        const orderDate = order.created_at ? new Date(order.created_at) : new Date(order.booking_time);
-        const orderTimeStr = orderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-        
-        // Scheduled appointment / Pickup / Table reservation date & time
-        const bookingDate = new Date(order.booking_time);
-        const bookingTimeOnly = bookingDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-        
-        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-        const bDateStr = bookingDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-        let dateLabel = 'วันนี้';
-        if (todayStr !== bDateStr) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = tomorrow.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
-            if (tomorrowStr === bDateStr) {
-                dateLabel = 'พรุ่งนี้';
-            } else {
-                dateLabel = bookingDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
-            }
-        }
+        // Order submission timestamp (when created) & Scheduled appointment date/time
+        const orderCreatedDt = formatPosDateTime(order.created_at || order.booking_time);
+        const apptDt = formatPosDateTime(order.booking_time);
 
         const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer', 'ลูกค้าทั่วไป'];
         const name = order.profiles?.display_name 
@@ -566,88 +548,93 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
                 }`}
             >
-                {/* Header: Short ID, Channel, Status */}
-                <div className="flex justify-between items-start gap-2 border-b border-[oklch(85%_0.012_28)] pb-2.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
-                            #{shortId}
-                        </span>
+                {/* Header: Short ID, Channel, Status & Clean Complete Date/Time Strip */}
+                <div className="flex flex-col gap-2 border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                    <div className="flex justify-between items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
+                                #{shortId}
+                            </span>
 
-                        {isLineman ? (
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)]/40">
-                                LINE MAN
-                            </span>
-                        ) : isHausmade ? (
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/40">
-                                {isHausmadeShipping ? '📦 HAUSMADE SHIP' : '🏪 HAUSMADE PICKUP'}
-                            </span>
-                        ) : (
-                            <span className={`font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                                isPickup ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-[#1A1A1A] text-white'
+                            {isLineman ? (
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)]/40">
+                                    LINE MAN
+                                </span>
+                            ) : isHausmade ? (
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/40">
+                                    {isHausmadeShipping ? 'HAUSMADE SHIP' : 'HAUSMADE PICKUP'}
+                                </span>
+                            ) : (
+                                <span className={`font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                                    isPickup ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-[#1A1A1A] text-white'
+                                }`}>
+                                    {isPickup ? 'PICK-UP' : `TABLE ${tableName || 'TBA'}`}
+                                </span>
+                            )}
+
+                            {order.slip_verified ? (
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <CheckCircle2 size={10} className="text-emerald-700" />
+                                    <span>{order.slip_provider === 'truewallet' ? 'AUTO-WALLET' : 'AUTO-SLIP'}</span>
+                                </span>
+                            ) : order.payment_slip_url ? (
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
+                                    SLIP (MANUAL)
+                                </span>
+                            ) : null}
+
+                            <span className={`font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                isPaid 
+                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
+                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
                             }`}>
-                                {isPickup ? 'PICK-UP' : `TABLE ${tableName || 'TBA'}`}
+                                {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : (isPayAtStore ? 'PAY AT STORE' : 'UNPAID')}
                             </span>
-                        )}
 
-                        {order.slip_verified ? (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                <CheckCircle2 size={10} className="text-emerald-700" />
-                                <span>{order.slip_provider === 'truewallet' ? 'AUTO-WALLET' : 'AUTO-SLIP'}</span>
-                            </span>
-                        ) : order.payment_slip_url ? (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
-                                SLIP (MANUAL)
-                            </span>
-                        ) : null}
+                            {awaitingCallConfirm && (
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded">
+                                    รอโทรยืนยัน
+                                </span>
+                            )}
 
-                        <span className={`font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                            isPaid 
-                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
-                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
-                        }`}>
-                            {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : (isPayAtStore ? 'PAY AT STORE' : 'UNPAID')}
+                            {holdExpired ? (
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded">
+                                    เลยเวลา {holdMinutes} นาที · ปล่อยโต๊ะแล้ว
+                                </span>
+                            ) : holdMinutes !== null && order.booking_type === 'dine_in' && (isPending || order.status === 'confirmed') && (
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded">
+                                    เก็บโต๊ะ {holdMinutes} นาที
+                                </span>
+                            )}
+
+                            {isCustomerArrived && (
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded animate-pulse">
+                                    ARRIVED · มาถึงร้านแล้ว
+                                </span>
+                            )}
+                        </div>
+
+                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] shrink-0">
+                            สั่งเมื่อ: {orderCreatedDt.compactText}
                         </span>
-
-                        {awaitingCallConfirm && (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded">
-                                รอโทรยืนยัน
-                            </span>
-                        )}
-
-                        {holdExpired ? (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded">
-                                เลยเวลา {holdMinutes} นาที · ปล่อยโต๊ะแล้ว
-                            </span>
-                        ) : holdMinutes !== null && order.booking_type === 'dine_in' && (isPending || order.status === 'confirmed') && (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded">
-                                เก็บโต๊ะ {holdMinutes} นาที
-                            </span>
-                        )}
-
-                        {isCustomerArrived && (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded animate-pulse">
-                                ARRIVED · มาถึงร้านแล้ว
-                            </span>
-                        )}
                     </div>
 
-                    <div className="text-right font-mono shrink-0 flex flex-col items-end gap-0.5">
-                        <span className="text-[10px] text-[oklch(55%_0.010_28)]">
-                            สั่ง: {orderTimeStr} น.
+                    {/* Clear, Scannable Appointment Date & Time Row */}
+                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border font-mono text-xs ${
+                        isPickup
+                            ? 'bg-amber-100/70 border-amber-300/80 text-amber-950'
+                            : isLineman
+                                ? 'bg-emerald-50/80 border-emerald-200 text-[oklch(45%_0.08_140)]'
+                                : apptDt.isFutureDay
+                                    ? 'bg-[oklch(52%_0.16_28)]/10 border-[oklch(52%_0.16_28)]/30 text-[oklch(52%_0.16_28)]'
+                                    : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                    }`}>
+                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                            {isPickup ? 'วัน-เวลานัดรับ' : isLineman ? 'วัน-เวลารับอาหาร' : 'วัน-เวลาจองโต๊ะ'}
                         </span>
-                        {isPickup ? (
-                            <span className="text-[11px] font-bold text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-300/80">
-                                รับ: {dateLabel} {bookingTimeOnly} น.
-                            </span>
-                        ) : isLineman ? (
-                            <span className="text-[11px] font-bold text-[oklch(45%_0.08_140)] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                เวลารับ: {bookingTimeOnly} น.
-                            </span>
-                        ) : (
-                            <span className="text-[11px] font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
-                                จอง: {dateLabel} {bookingTimeOnly} น.
-                            </span>
-                        )}
+                        <span className="font-black">
+                            {apptDt.shortText}
+                        </span>
                     </div>
                 </div>
 
@@ -1030,7 +1017,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     )}
 
                     {/* Cancel button */}
-                    {order.status !== 'cancelled' && order.status !== 'completed' && (
+                    {order.status !== 'cancelled' && order.status !== 'completed' && order.status !== 'no_show' && order.status !== 'void' && (
                         <button
                             type="button"
                             onClick={() => {
@@ -1411,52 +1398,75 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
             {/* Persistent Sound Alert Modal */}
             <AnimatePresence>
-                {persistentAlert && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-                    >
+                {persistentAlert && (() => {
+                    const alertApptDt = formatPosDateTime(persistentAlert.booking_time);
+                    const alertCreatedDt = formatPosDateTime(persistentAlert.created_at || persistentAlert.booking_time);
+                    const isPickupAlert = persistentAlert.booking_type === 'pickup';
+                    return (
                         <motion.div 
-                            initial={{ scale: 0.95, y: 10 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.95, y: 10 }}
-                            className="bg-[oklch(97%_0.008_28)] rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border-2 border-[oklch(52%_0.16_28)] font-sans"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
                         >
-                            <div className={`${isOrderLineman(persistentAlert) ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(52%_0.16_28)]'} p-5 text-center text-white flex flex-col items-center`}>
-                                <span className="font-mono text-[10px] font-bold uppercase tracking-widest bg-black/20 px-2 py-0.5 rounded mb-1">
-                                    {isOrderLineman(persistentAlert) ? 'LINE MAN DELIVERY' : 'INCOMING NOTIFICATION'}
-                                </span>
-                                <h2 className="text-xl font-bold tracking-tight uppercase">
-                                    {isOrderLineman(persistentAlert) ? '🛵 NEW DELIVERY ORDER' : 'NEW ONLINE ORDER'}
-                                </h2>
-                                <span className="font-mono text-sm font-bold mt-1">
-                                    #{getShortBookingId(persistentAlert)}
-                                </span>
-                            </div>
-                            
-                            <div className="p-5 flex flex-col items-center text-center gap-2 font-sans">
-                                <p className="text-[oklch(18%_0.012_28)] font-bold text-base">
-                                    {persistentAlert.profiles?.display_name || persistentAlert.pickup_contact_name || persistentAlert.customer_name || 'Online Customer'}
-                                </p>
-                                <p className="text-[oklch(55%_0.010_28)] font-mono text-xs">
-                                    {isOrderLineman(persistentAlert) 
-                                        ? `[LINE MAN PREPAID · ฿${(persistentAlert.total_amount || 0).toLocaleString()}]` 
-                                        : (persistentAlert.booking_type === 'pickup' ? '[PICK-UP ORDER]' : '[DINE-IN RESERVATION]')}
-                                    {persistentAlert.payment_slip_url ? ' · WITH SLIP' : ''}
-                                </p>
+                            <motion.div 
+                                initial={{ scale: 0.95, y: 10 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.95, y: 10 }}
+                                className="bg-[oklch(97%_0.008_28)] rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border-2 border-[oklch(52%_0.16_28)] font-sans"
+                            >
+                                <div className={`${isOrderLineman(persistentAlert) ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(52%_0.16_28)]'} p-5 text-center text-white flex flex-col items-center`}>
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest bg-black/20 px-2 py-0.5 rounded mb-1">
+                                        {isOrderLineman(persistentAlert) ? 'LINE MAN DELIVERY' : 'INCOMING NOTIFICATION'}
+                                    </span>
+                                    <h2 className="text-xl font-bold tracking-tight uppercase">
+                                        {isOrderLineman(persistentAlert) ? 'NEW DELIVERY ORDER' : (isPickupAlert ? 'NEW PICK-UP ORDER' : 'NEW TABLE BOOKING')}
+                                    </h2>
+                                    <span className="font-mono text-sm font-bold mt-1">
+                                        #{getShortBookingId(persistentAlert)}
+                                    </span>
+                                </div>
                                 
-                                <button 
-                                    onClick={handleAcknowledge}
-                                    className="mt-4 w-full py-3 rounded-xl bg-[oklch(18%_0.012_28)] text-white font-mono font-bold text-xs uppercase tracking-wider hover:bg-black active:scale-98 shadow-sm cursor-pointer transition-all"
-                                >
-                                    ACKNOWLEDGE & VIEW
-                                </button>
-                            </div>
+                                <div className="p-5 flex flex-col items-center text-center gap-3 font-sans">
+                                    <div>
+                                        <p className="text-[oklch(18%_0.012_28)] font-bold text-base">
+                                            {persistentAlert.profiles?.display_name || persistentAlert.pickup_contact_name || persistentAlert.customer_name || 'Online Customer'}
+                                        </p>
+                                        <p className="text-[oklch(55%_0.010_28)] font-mono text-xs mt-0.5">
+                                            {isOrderLineman(persistentAlert) 
+                                                ? `[LINE MAN PREPAID · ฿${(persistentAlert.total_amount || 0).toLocaleString()}]` 
+                                                : (isPickupAlert ? '[PICK-UP ORDER · รับกลับบ้าน]' : `[DINE-IN · ${persistentAlert.pax || 2} ท่าน${persistentAlert.tables_layout?.table_name ? ` · โต๊ะ ${persistentAlert.tables_layout.table_name}` : ''}]`)}
+                                            {persistentAlert.payment_slip_url ? ' · WITH SLIP' : ''}
+                                        </p>
+                                    </div>
+
+                                    {/* Complete Date & Time Block */}
+                                    <div className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3 font-mono text-xs flex flex-col gap-1.5 text-left">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold uppercase text-[oklch(55%_0.010_28)]">
+                                                {isPickupAlert ? 'วัน-เวลานัดรับ:' : 'วัน-เวลานัดหมาย:'}
+                                            </span>
+                                            <span className="font-black text-[oklch(18%_0.012_28)]">
+                                                {alertApptDt.shortText}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-t border-[oklch(85%_0.012_28)] pt-1 text-[11px] text-[oklch(55%_0.010_28)]">
+                                            <span>ทำรายการเมื่อ:</span>
+                                            <span className="font-bold">{alertCreatedDt.compactText}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={handleAcknowledge}
+                                        className="mt-1 w-full py-3 rounded-xl bg-[oklch(18%_0.012_28)] text-white font-mono font-bold text-xs uppercase tracking-wider hover:bg-black active:scale-98 shadow-sm cursor-pointer transition-all"
+                                    >
+                                        ACKNOWLEDGE & VIEW
+                                    </button>
+                                </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
+                    );
+                })()}
             </AnimatePresence>
 
             {/* WMA Setup Guide Modal */}

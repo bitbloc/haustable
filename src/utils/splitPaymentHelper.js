@@ -130,12 +130,22 @@ export function getSplitTotalPaid(booking) {
  */
 export function calculateSplitBalance(booking, orderItems = [], includeTax = true) {
     const rounds = getBookingSplitRounds(booking);
-    const alreadyPaid = rounds.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+    const splitPaid = rounds.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+    const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount) || 0) : 0;
+    const alreadyPaid = splitPaid + depositPaid;
 
     // Calculate full order total from items
-    const subtotal = (orderItems || []).reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)), 0);
-    const tax = includeTax ? Math.ceil((subtotal * 7) / 100) : 0;
-    const fullOrderTotal = Math.ceil(subtotal + tax);
+    const subtotal = (orderItems || []).reduce((sum, item) => {
+        if (!item || item.is_reward || item.status === 'void' || item.status === 'cancelled') return sum;
+        const unitPrice = parseFloat(item.price ?? item.price_at_time ?? 0) || 0;
+        const qty = parseInt(item.quantity, 10) || 0;
+        return sum + (unitPrice * qty);
+    }, 0);
+
+    const discountAmount = Math.max(0, (parseFloat(booking?.discount_amount) || 0) + (parseFloat(booking?.xhaus_discount) || 0));
+    const netBeforeTax = Math.ceil(Math.max(0, subtotal - discountAmount));
+    const tax = includeTax ? Math.ceil((netBeforeTax * 7) / 100) : 0;
+    const fullOrderTotal = Math.ceil(netBeforeTax + tax);
 
     // If orderItems is empty, fallback to booking.total_amount if available
     let computedTotal = fullOrderTotal;
@@ -156,7 +166,10 @@ export function calculateSplitBalance(booking, orderItems = [], includeTax = tru
     return {
         fullOrderTotal: computedTotal,
         subtotal,
+        discountAmount,
         tax,
+        depositPaid,
+        splitPaid,
         alreadyPaid,
         remainingBalance,
         currentRoundNumber,

@@ -265,6 +265,7 @@ export function stripInternalTransferTags(remark = '') {
         .replace(/\[CALL_STAFF\]/gi, '')
         .replace(/\[CALL_BILL\]/gi, '')
         .replace(/\[CASH:[^\]]+\]/gi, '')
+        .replace(/\[SPLIT_ROUNDS:\s*\[[\s\S]*?\]\s*\]/gi, '')
         .replace(/\[SPLIT:[^\]]+\]/gi, '')
         .replace(/\[ONLINE_PICKUP\]/gi, '')
         .replace(/\[ONLINE\]/gi, '')

@@ -27,7 +27,7 @@ import { posCache } from '../utils/offlineHelper';
 import { parseTableTransferInfo, isTableSessionActive } from '../utils/tableTransferHelper';
 export { isTableSessionActive };
 import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
-import { isHoldExpired, getBookingHoldMinutes, isCallConfirmOrder } from '../utils/availabilityUtils';
+import { isHoldExpired, getBookingHoldMinutes, isCallConfirmOrder, formatPosDateTime } from '../utils/availabilityUtils';
 
 export const getReservationDiffMins = (bookingTime, now = new Date()) => {
     if (!bookingTime) return 9999;
@@ -54,17 +54,12 @@ export const formatReservationCountdown = (bookingTime, now = new Date()) => {
 const formatUpcomingResTime = (timeStr) => {
     if (!timeStr) return '';
     try {
-        const d = new Date(timeStr);
-        const today = new Date();
-        const isToday = d.toDateString() === today.toDateString();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const isTomorrow = d.toDateString() === tomorrow.toDateString();
-
-        const timeOnly = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (isToday) return `${timeOnly}`;
-        if (isTomorrow) return `พรุ่งนี้ ${timeOnly}`;
-        return `${d.getDate()}/${d.getMonth() + 1} ${timeOnly}`;
+        const dt = formatPosDateTime(timeStr);
+        if (!dt.valid) return timeStr;
+        const timeOnly = dt.timeLabel.replace(/\s*น\.$/, '');
+        if (dt.isToday) return `วันนี้ ${timeOnly}`;
+        if (dt.isTomorrow) return `พรุ่งนี้ (${dt.dateLabel}) ${timeOnly}`;
+        return `${dt.dateLabel} ${timeOnly}`;
     } catch {
         return timeStr;
     }
@@ -600,6 +595,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             hasCallBill: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]')),
                             booking: booking || null,
                             upcomingReservation: upcomingRes || null,
+                            expiredHoldReservation: expiredHoldRes || null,
                             isAdvanceReserved: Boolean(isUpcomingFar),
                             reservationDiffMins: diffMins,
                             upcomingConflict: hasRealConflict ? upcomingRes : null
@@ -902,7 +898,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                 [GUEST] {reassignModalBooking.pickup_contact_name || reassignModalBooking.customer_name || 'ลูกค้าออนไลน์'}
                             </p>
                             <p className="text-[var(--color-neutral)]">
-                                [TIME] {new Date(reassignModalBooking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                [DATE & TIME] {formatPosDateTime(reassignModalBooking.booking_time).shortText}
                             </p>
                         </div>
 

@@ -399,7 +399,14 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     const voidedBookings = useMemo(() => bookings.filter(b => b.status === 'void' || b.status === 'cancelled'), [bookings]);
     const activeBookings = useMemo(() => bookings.filter(b => b.status === 'seated' || b.status === 'confirmed'), [bookings]);
 
-    const totalSales = completedBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    const getEffectiveBillTotal = (b) => {
+        const raw = Number(b?.total_amount || b?.total_price || 0);
+        if (raw > 0) return raw;
+        const br = getBookingPaymentBreakdown(b);
+        return (br.cash || 0) + (br.qr || 0) + (br.credit || 0);
+    };
+
+    const totalSales = completedBookings.reduce((sum, b) => sum + getEffectiveBillTotal(b), 0);
     const totalDiscounts = completedBookings.reduce((sum, b) => sum + (b.discount_amount || 0), 0);
     const activeUnpaid = activeBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
@@ -910,34 +917,43 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5 mb-5">
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
                                 <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
                                     <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold">OPENING FLOAT / เงินต้น</p>
                                     <p className="text-sm font-bold mt-1 text-[oklch(18%_0.012_28)]">฿{(activeShift.openingFloat || 0).toLocaleString()}</p>
                                 </div>
 
                                 <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-emerald-700">CASH IN / เงินเข้า (+)</p>
-                                    <p className="text-sm font-bold mt-1 text-emerald-700">
-                                        +฿{(activeShiftSummary ? activeShiftSummary.totalIn : 0).toLocaleString()}
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-emerald-700">CASH IN / OUT (เข้า-ออก)</p>
+                                    <p className="text-sm font-bold mt-1 flex items-center gap-1.5">
+                                        <span className="text-emerald-700">+฿{(activeShiftSummary ? activeShiftSummary.totalIn : 0).toLocaleString()}</span>
+                                        <span className="text-[oklch(55%_0.010_28)]">/</span>
+                                        <span className="text-red-600">-฿{(activeShiftSummary ? activeShiftSummary.totalOut : 0).toLocaleString()}</span>
                                     </p>
                                 </div>
 
                                 <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-red-600">CASH OUT / เงินออก (-)</p>
-                                    <p className="text-sm font-bold mt-1 text-red-600">
-                                        -฿{(activeShiftSummary ? activeShiftSummary.totalOut : 0).toLocaleString()}
-                                    </p>
-                                </div>
-
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-blue-700">CASH SALES / ขายเงินสด</p>
-                                    <p className="text-sm font-bold mt-1 text-blue-700">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-emerald-800">CASH SALES / ขายเงินสด</p>
+                                    <p className="text-sm font-bold mt-1 text-emerald-800">
                                         ฿{(activeShiftSummary ? activeShiftSummary.cashSales : 0).toLocaleString()}
                                     </p>
                                 </div>
 
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono col-span-2 md:col-span-1">
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-blue-700">QR SALES / ยอดโอนกะนี้</p>
+                                    <p className="text-sm font-bold mt-1 text-blue-700">
+                                        ฿{(activeShiftSummary ? activeShiftSummary.qrSales : 0).toLocaleString()}
+                                    </p>
+                                </div>
+
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-amber-800">CREDIT / บัตรเครดิตกะนี้</p>
+                                    <p className="text-sm font-bold mt-1 text-amber-800">
+                                        ฿{(activeShiftSummary ? activeShiftSummary.creditSales : 0).toLocaleString()}
+                                    </p>
+                                </div>
+
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
                                     <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-[oklch(52%_0.16_28)]">EXPECTED CASH / ในลิ้นชัก</p>
                                     <p className="text-sm font-bold mt-1 text-[oklch(52%_0.16_28)]">
                                         ฿{(activeShiftSummary ? activeShiftSummary.expectedCash : 0).toLocaleString()}
@@ -1237,9 +1253,18 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                                 VOIDED
                                                             </span>
                                                         ) : paymentBreakdown.isSplit ? (
-                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-purple-50 text-purple-800 border-purple-200">
-                                                                SPLIT PAY
-                                                            </span>
+                                                            <div className="flex flex-col items-start gap-0.5">
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-purple-50 text-purple-800 border-purple-200 whitespace-nowrap">
+                                                                    SPLIT PAY{paymentBreakdown.roundsCount > 1 ? ` (${paymentBreakdown.roundsCount} รอบ)` : ''}
+                                                                </span>
+                                                                <span className="text-[9px] font-mono text-[oklch(42%_0.010_28)] whitespace-nowrap">
+                                                                    {[
+                                                                        paymentBreakdown.cash > 0 ? `สด ฿${paymentBreakdown.cash.toLocaleString()}` : null,
+                                                                        paymentBreakdown.qr > 0 ? `QR ฿${paymentBreakdown.qr.toLocaleString()}` : null,
+                                                                        paymentBreakdown.credit > 0 ? `บัตร ฿${paymentBreakdown.credit.toLocaleString()}` : null
+                                                                    ].filter(Boolean).join(' · ')}
+                                                                </span>
+                                                            </div>
                                                         ) : paymentBreakdown.credit > 0 ? (
                                                             <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-amber-50 text-amber-800 border-amber-200">
                                                                 CREDIT
@@ -1267,7 +1292,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                         ) : isVoid ? (
                                                             <span className="line-through text-red-500">฿{b.total_amount?.toLocaleString()}</span>
                                                         ) : (
-                                                            <span>฿{b.total_amount?.toLocaleString()}</span>
+                                                            <span>฿{getEffectiveBillTotal(b).toLocaleString()}</span>
                                                         )}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>

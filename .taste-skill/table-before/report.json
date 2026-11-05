@@ -1,0 +1,1713 @@
+{
+ "url": "http://localhost:5173/table/H4",
+ "at": "2026-10-29T03:32:55.999Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.96,
+    0.97,
+    0.99,
+    0.97,
+    0.96,
+    0.98,
+    0.97,
+    0.96,
+    0.96,
+    0.98,
+    0.96,
+    0.96
+   ],
+   "motion": {
+    "elements": 5,
+    "css": 5,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 11758,
+     "screens": 13.1,
+     "words": 1780,
+     "img": 130,
+     "video": 0,
+     "canvas": 0,
+     "svg": 138,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 130,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "menu_1783397734043_opt_1784209092845.webp",
+      "menu_1783398077486_opt_1784209047640.webp",
+      "menu_1781949178248_opt_1784209062815.webp",
+      "menu_1781949139167_opt_1784209053646.webp",
+      "menu_1781950070189_opt_1784209070842.webp",
+      "menu_1783397300271_opt_1784209039524.webp",
+      "menu_1783397734043_opt_1784209092845.webp",
+      "menu_1783398077486_opt_1784209047640.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🍻",
+      "🫐",
+      "✨",
+      "🍃",
+      "🌶",
+      "🥭",
+      "🤩",
+      "🥛",
+      "🍨",
+      "🐄"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "IN THE HAUS",
+     "words": 3,
+     "chars": 11,
+     "lines": 1,
+     "size": 14,
+     "vw": 1,
+     "font": "ui-monospace",
+     "weight": 900,
+     "tracking": 0.05,
+     "leading": 1.43,
+     "top": 14,
+     "tag": "span",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": null,
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.86,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.14,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      18,
+      20
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 10,
+      "leading": 1.38,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 37,
+     "max": {
+      "size": 20,
+      "vw": 1.4,
+      "font": "IBM Plex Sans Thai",
+      "text": "-"
+     },
+     "monoShare": 0.14,
+     "monoProseShare": 0.14,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "IN THE HAUS",
+      "H4",
+      "WAITING STAFF",
+      "ดูสถานะ",
+      "PAX: 4 ท่าน",
+      "EDIT"
+     ],
+     "microLabels": 29,
+     "microLabelShare": 0.024,
+     "microSamples": [
+      "IN THE HAUS",
+      "H4",
+      "HAUS MEMBERSHIP",
+      "HAUS SIGNATURES",
+      "/ เมนูแนะนำ",
+      "SIGNATURE"
+     ],
+     "upperShare": 0.08,
+     "centerShare": 0.05,
+     "smallText": 266
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#776f6e",
+       "share": 0.7
+      },
+      {
+       "color": "#17100f",
+       "share": 0.28
+      },
+      {
+       "color": "#faf3f2",
+       "share": 0.02
+      },
+      {
+       "color": "#b33830",
+       "share": 0
+      }
+     ],
+     "button": {
+      "bg": "#faf3f2",
+      "hsl": {
+       "h": 7,
+       "s": 0.44,
+       "l": 0.96
+      },
+      "fg": "#776f6e"
+     },
+     "lowContrast": [
+      {
+       "text": "ระบบระบุพิกัดไม่พร้อมใช้งาน · ออเดอร์ของ",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 11,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 1",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 10,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "/ เมนูแนะนำ",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 9,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "รายการที่สั่ง",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 12,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "แตะเลือกเมนูเพื่อเริ่มสั่งอาหาร",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 9,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 24,
+     "inHero": 24,
+     "radius": 4,
+     "height": 31,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 24,
+     "upper": 21,
+     "heroLabels": [
+      "PAX: 4 ท่าน EDIT",
+      "SIGN IN / JOIN",
+      "ทั้งหมด (125)",
+      "เมนูแนะนำ (15)",
+      "VEGETARIAN (1)"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 7,
+     "shadowOverlay": 2,
+     "shadowSamples": [
+      "section.mb-4.bg-[var(--color-paper-2)] → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0"
+     ],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 8,
+     "hairlineSamples": [
+      "header.sticky.top-0 1440px",
+      "div.max-w-2xl.mx-auto 672px",
+      "div.p-4.bg-[var(--color-paper)] 672px",
+      "div.px-4.py-3 672px",
+      "div.p-3.sticky 672px"
+     ],
+     "outlinedBoxes": 264,
+     "dashed": 1,
+     "blurred": 4,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 367
+      },
+      {
+       "count": 122,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 923
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 49,
+     "floatingPill": false,
+     "blur": true
+    },
+    "fontsLoaded": [
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 11758,
+    "margins": {
+     "left": 407,
+     "right": 408
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 400,
+      "n": 1
+     },
+     {
+      "x": 423,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 2,
+    "bodySize": 10,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.22,
+    "voidBox": {
+     "x": 0,
+     "y": 120,
+     "w": 360,
+     "h": 780
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#faf3f2",
+    "sidebar": null,
+    "topbar": {
+     "h": 49
+    },
+    "canvas": {
+     "left": 407,
+     "right": -1455
+    },
+    "hero": {
+     "text": "IN THE HAUS",
+     "words": 3,
+     "chars": 11,
+     "lines": 1,
+     "size": 14,
+     "vw": 1,
+     "font": "ui-monospace",
+     "weight": 900,
+     "tracking": 0.05,
+     "leading": 1.43,
+     "top": 14,
+     "tag": "span",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 127,
+     "firstScreen": 2,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 155,
+     "radii": [
+      [
+       4,
+       155
+      ]
+     ],
+     "heavyBorders": 132,
+     "borderSamples": [
+      "#b3382e on #faf3f2 (5.44:1)",
+      "#b3382e on #faf3f2 (5.44:1)",
+      "#b3382e on #faf3f2 (5.44:1)"
+     ],
+     "heavyShadows": 1,
+     "softShadows": 7,
+     "shadowSamples": [
+      "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px"
+     ],
+     "glass": 0
+    },
+    "chips": {
+     "count": 131,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 1,
+     "tabularShare": 0,
+     "kpiMax": 12
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.99,
+     "tiny": 161,
+     "tinySamples": [
+      "WAITING STAFF 9px",
+      "ดูสถานะ 10px",
+      "EDIT 10px",
+      "ระบุเบอร์โทรเพื่อสะสมแต้ 10px"
+     ],
+     "sizes": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      16
+     ]
+    },
+    "title": null,
+    "colourShare": 0.003
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 1,
+   "filled": [
+    0
+   ],
+   "motion": {
+    "elements": 3,
+    "css": 3,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 11758,
+     "screens": 11.5,
+     "words": 1780,
+     "img": 130,
+     "video": 0,
+     "canvas": 0,
+     "svg": 138,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 24,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "menu_1783397734043_opt_1784209092845.webp",
+      "menu_1783398077486_opt_1784209047640.webp",
+      "menu_1781949178248_opt_1784209062815.webp",
+      "menu_1781949139167_opt_1784209053646.webp",
+      "menu_1781950070189_opt_1784209070842.webp",
+      "menu_1783397300271_opt_1784209039524.webp",
+      "menu_1783397734043_opt_1784209092845.webp",
+      "menu_1783398077486_opt_1784209047640.webp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🍻",
+      "🫐",
+      "✨",
+      "🍃",
+      "🌶",
+      "🥭",
+      "🤩",
+      "🥛",
+      "🍨",
+      "🐄"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "IN THE HAUS",
+     "words": 3,
+     "chars": 11,
+     "lines": 1,
+     "size": 14,
+     "vw": 1.8,
+     "font": "ui-monospace",
+     "weight": 900,
+     "tracking": 0.05,
+     "leading": 1.43,
+     "top": 14,
+     "tag": "span",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": null,
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.86,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.14,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      18,
+      20
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 10,
+      "leading": 1.38,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 37,
+     "max": {
+      "size": 20,
+      "vw": 2.6,
+      "font": "IBM Plex Sans Thai",
+      "text": "-"
+     },
+     "monoShare": 0.14,
+     "monoProseShare": 0.14,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "IN THE HAUS",
+      "H4",
+      "WAITING STAFF",
+      "ดูสถานะ",
+      "PAX: 4 ท่าน",
+      "EDIT"
+     ],
+     "microLabels": 29,
+     "microLabelShare": 0.024,
+     "microSamples": [
+      "IN THE HAUS",
+      "H4",
+      "HAUS MEMBERSHIP",
+      "HAUS SIGNATURES",
+      "/ เมนูแนะนำ",
+      "SIGNATURE"
+     ],
+     "upperShare": 0.08,
+     "centerShare": 0.05,
+     "smallText": 266
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#f2e9e7",
+       "top": 326,
+       "hsl": {
+        "h": 11,
+        "s": 0.3,
+        "l": 0.93
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#776f6e",
+       "share": 0.7
+      },
+      {
+       "color": "#17100f",
+       "share": 0.28
+      },
+      {
+       "color": "#faf3f2",
+       "share": 0.02
+      },
+      {
+       "color": "#b33830",
+       "share": 0
+      }
+     ],
+     "button": {
+      "bg": "#faf3f2",
+      "hsl": {
+       "h": 7,
+       "s": 0.44,
+       "l": 0.96
+      },
+      "fg": "#776f6e"
+     },
+     "lowContrast": [
+      {
+       "text": "ระบบระบุพิกัดไม่พร้อมใช้งาน · ออเดอร์ของ",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 11,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 1",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 10,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "/ เมนูแนะนำ",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 9,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 24,
+     "inHero": 24,
+     "radius": 4,
+     "height": 31,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 24,
+     "upper": 21,
+     "heroLabels": [
+      "PAX: 4 ท่าน EDIT",
+      "SIGN IN / JOIN",
+      "ทั้งหมด (125)",
+      "เมนูแนะนำ (15)",
+      "VEGETARIAN (1)"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 7,
+     "shadowOverlay": 2,
+     "shadowSamples": [
+      "section.mb-4.bg-[var(--color-paper-2)] → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0"
+     ],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 8,
+     "hairlineSamples": [
+      "header.sticky.top-0 768px",
+      "div.max-w-2xl.mx-auto 672px",
+      "div.p-4.bg-[var(--color-paper)] 672px",
+      "div.px-4.py-3 672px",
+      "div.p-3.sticky 672px"
+     ],
+     "outlinedBoxes": 264,
+     "dashed": 1,
+     "blurred": 4,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 367
+      },
+      {
+       "count": 122,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 923
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 49,
+     "floatingPill": false,
+     "blur": true
+    },
+    "fontsLoaded": [
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 11758,
+    "margins": {
+     "left": 71,
+     "right": 72
+    },
+    "sections": [
+     {
+      "sel": "section.mb-4.bg-[var(--color-paper-2)]",
+      "tag": "section",
+      "top": 326,
+      "height": 555,
+      "words": 149,
+      "media": 6,
+      "middle": 33,
+      "heading": {
+       "text": "HAUS SIGNATURES",
+       "size": 12,
+       "tag": "h3"
+      },
+      "left": 86,
+      "right": 87,
+      "textLeft": 86,
+      "textRight": 88,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.grid.grid-cols-2",
+      "tag": "div",
+      "top": 923,
+      "height": 10679,
+      "words": 1826,
+      "media": 124,
+      "middle": 32,
+      "heading": {
+       "text": "Set Size L สำหรับ 2-4 ท่าน ต้มจิ๋ว • คอหมูย่างในบ้",
+       "size": 12,
+       "tag": "h4"
+      },
+      "left": 71,
+      "right": 72,
+      "textLeft": 71,
+      "textRight": 72,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 64,
+      "n": 1
+     },
+     {
+      "x": 87,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 2,
+    "bodySize": 10,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#faf3f2",
+    "sidebar": null,
+    "topbar": {
+     "h": 49
+    },
+    "canvas": {
+     "left": 71,
+     "right": -1791
+    },
+    "hero": {
+     "text": "IN THE HAUS",
+     "words": 3,
+     "chars": 11,
+     "lines": 1,
+     "size": 14,
+     "vw": 1.8,
+     "font": "ui-monospace",
+     "weight": 900,
+     "tracking": 0.05,
+     "leading": 1.43,
+     "top": 14,
+     "tag": "span",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 127,
+     "firstScreen": 5,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 155,
+     "radii": [
+      [
+       4,
+       155
+      ]
+     ],
+     "heavyBorders": 132,
+     "borderSamples": [
+      "#b3382e on #faf3f2 (5.44:1)",
+      "#b3382e on #faf3f2 (5.44:1)",
+      "#b3382e on #faf3f2 (5.44:1)"
+     ],
+     "heavyShadows": 1,
+     "softShadows": 7,
+     "shadowSamples": [
+      "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px"
+     ],
+     "glass": 0
+    },
+    "chips": {
+     "count": 131,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 1,
+     "tabularShare": 0,
+     "kpiMax": 12
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.99,
+     "tiny": 161,
+     "tinySamples": [
+      "WAITING STAFF 9px",
+      "ดูสถานะ 10px",
+      "EDIT 10px",
+      "ระบุเบอร์โทรเพื่อสะสมแต้ 10px"
+     ],
+     "sizes": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      16
+     ]
+    },
+    "title": null,
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 12,
+   "filled": [
+    0.87,
+    0.86,
+    0.84,
+    0.87,
+    0.78,
+    0.82,
+    0.76,
+    0.83,
+    0.78,
+    0.81,
+    0.83,
+    0.75
+   ],
+   "motion": {
+    "elements": 5,
+    "css": 5,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 15762,
+     "screens": 18.7,
+     "words": 1780,
+     "img": 130,
+     "video": 0,
+     "canvas": 0,
+     "svg": 138,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [
+      "🍻",
+      "🫐",
+      "✨",
+      "🍃",
+      "🌶",
+      "🥭",
+      "🤩",
+      "🥛",
+      "🍨",
+      "🐄"
+     ],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "IN THE HAUS",
+     "words": 3,
+     "chars": 11,
+     "lines": 1,
+     "size": 14,
+     "vw": 3.6,
+     "font": "ui-monospace",
+     "weight": 900,
+     "tracking": 0.05,
+     "leading": 1.43,
+     "top": 14,
+     "tag": "span",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": null,
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans Thai",
+       "share": 0.86,
+       "mono": false
+      },
+      {
+       "family": "ui-monospace",
+       "share": 0.14,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      18,
+      20
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans Thai",
+      "size": 10,
+      "leading": 1.38,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 31,
+     "max": {
+      "size": 20,
+      "vw": 5.1,
+      "font": "IBM Plex Sans Thai",
+      "text": "-"
+     },
+     "monoShare": 0.14,
+     "monoProseShare": 0.14,
+     "monoFamilies": [
+      "ui-monospace"
+     ],
+     "monoSamples": [
+      "IN THE HAUS",
+      "H4",
+      "WAITING STAFF",
+      "ดูสถานะ",
+      "PAX: 4 ท่าน",
+      "EDIT"
+     ],
+     "microLabels": 29,
+     "microLabelShare": 0.024,
+     "microSamples": [
+      "IN THE HAUS",
+      "H4",
+      "HAUS MEMBERSHIP",
+      "HAUS SIGNATURES",
+      "/ เมนูแนะนำ",
+      "SIGNATURE"
+     ],
+     "upperShare": 0.08,
+     "centerShare": 0.05,
+     "smallText": 266
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#faf3f2",
+     "bodyBgHsl": {
+      "h": 7,
+      "s": 0.44,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#faf3f2",
+       "top": 0,
+       "hsl": {
+        "h": 7,
+        "s": 0.44,
+        "l": 0.96
+       }
+      },
+      {
+       "color": "#f2e9e7",
+       "top": 356,
+       "hsl": {
+        "h": 11,
+        "s": 0.3,
+        "l": 0.93
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#776f6e",
+       "share": 0.7
+      },
+      {
+       "color": "#17100f",
+       "share": 0.28
+      },
+      {
+       "color": "#faf3f2",
+       "share": 0.02
+      },
+      {
+       "color": "#b33830",
+       "share": 0
+      }
+     ],
+     "button": {
+      "bg": "#faf3f2",
+      "hsl": {
+       "h": 7,
+       "s": 0.44,
+       "l": 0.96
+      },
+      "fg": "#776f6e"
+     },
+     "lowContrast": [
+      {
+       "text": "ระบบระบุพิกัดไม่พร้อมใช้งาน · ออเดอร์ของ",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 11,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 1",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 10,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "/ เมนูแนะนำ",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 9,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "รายการที่สั่ง",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 12,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      },
+      {
+       "text": "แตะเลือกเมนูเพื่อเริ่มสั่งอาหาร",
+       "ratio": 4.1,
+       "need": 4.5,
+       "size": 9,
+       "fg": "#776f6e",
+       "bg": "#f2e9e7"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 24,
+     "inHero": 24,
+     "radius": 4,
+     "height": 31,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 24,
+     "upper": 21,
+     "heroLabels": [
+      "PAX: 4 ท่าน EDIT",
+      "SIGN IN / JOIN",
+      "ทั้งหมด (125)",
+      "เมนูแนะนำ (15)",
+      "VEGETARIAN (1)"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 7,
+     "shadowOverlay": 2,
+     "shadowSamples": [
+      "section.mb-4.bg-[var(--color-paper-2)] → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0",
+      "div.bg-[var(--color-paper)].rounded-sm → rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0"
+     ],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 8,
+     "hairlineSamples": [
+      "header.sticky.top-0 390px",
+      "div.max-w-2xl.mx-auto 390px",
+      "div.p-4.bg-[var(--color-paper)] 390px",
+      "div.px-4.py-3 390px",
+      "div.p-3.sticky 390px"
+     ],
+     "outlinedBoxes": 258,
+     "dashed": 1,
+     "blurred": 4,
+     "roundedBoxes": 0,
+     "boxRadius": 0,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 6,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 397
+      },
+      {
+       "count": 122,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 1125
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 49,
+     "floatingPill": false,
+     "blur": true
+    },
+    "fontsLoaded": [
+     "ibm plex sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 15762,
+    "margins": {
+     "left": 23,
+     "right": 24
+    },
+    "sections": [
+     {
+      "sel": "section.mb-4.bg-[var(--color-paper-2)]",
+      "tag": "section",
+      "top": 356,
+      "height": 728,
+      "words": 149,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "HAUS SIGNATURES",
+       "size": 12,
+       "tag": "h3"
+      },
+      "left": 38,
+      "right": 39,
+      "textLeft": 38,
+      "textRight": 42,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.grid.grid-cols-2",
+      "tag": "div",
+      "top": 1125,
+      "height": 14481,
+      "words": 1826,
+      "media": 0,
+      "middle": 32,
+      "heading": {
+       "text": "Set Size L สำหรับ 2-4 ท่าน ต้มจิ๋ว • คอหมูย่างในบ้",
+       "size": 12,
+       "tag": "h4"
+      },
+      "left": 23,
+      "right": 23,
+      "textLeft": 23,
+      "textRight": 23,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [],
+    "edgeText": [
+     {
+      "text": "IN THE HAUS",
+      "side": "left",
+      "px": 14
+     },
+     {
+      "text": "รายการทั้งหมด (125)",
+      "side": "left",
+      "px": 12
+     }
+    ],
+    "edges": [
+     {
+      "x": 16,
+      "n": 1
+     },
+     {
+      "x": 39,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 2,
+    "bodySize": 10,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#faf3f2",
+    "sidebar": null,
+    "topbar": {
+     "h": 49
+    },
+    "canvas": {
+     "left": 23,
+     "right": -2121
+    },
+    "hero": {
+     "text": "IN THE HAUS",
+     "words": 3,
+     "chars": 11,
+     "lines": 1,
+     "size": 14,
+     "vw": 3.6,
+     "font": "ui-monospace",
+     "weight": 900,
+     "tracking": 0.05,
+     "leading": 1.43,
+     "top": 14,
+     "tag": "span",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 127,
+     "firstScreen": 2,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 155,
+     "radii": [
+      [
+       4,
+       155
+      ]
+     ],
+     "heavyBorders": 132,
+     "borderSamples": [
+      "#b3382e on #faf3f2 (5.44:1)",
+      "#b3382e on #faf3f2 (5.44:1)",
+      "#b3382e on #faf3f2 (5.44:1)"
+     ],
+     "heavyShadows": 1,
+     "softShadows": 7,
+     "shadowSamples": [
+      "rgba(0, 0, 0, 0.25) 0px 25px 50px -12px"
+     ],
+     "glass": 0
+    },
+    "chips": {
+     "count": 131,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      },
+      {
+       "hue": 11,
+       "size": 24,
+       "radius": "4px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 1,
+     "tabularShare": 0,
+     "kpiMax": 12
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.99,
+     "tiny": 161,
+     "tinySamples": [
+      "WAITING STAFF 9px",
+      "ดูสถานะ 10px",
+      "EDIT 10px",
+      "ระบุเบอร์โทรเพื่อสะสมแต้ 10px"
+     ],
+     "sizes": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      14,
+      16
+     ]
+    },
+    "title": null,
+    "colourShare": 0.007
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "FAIL",
+   "id": "micro-label",
+   "width": 1440,
+   "message": "29 tiny uppercase letter-spaced labels (e.g. \"IN THE HAUS\", \"H4\", \"HAUS MEMBERSHIP\", \"HAUS SIGNATURES\").",
+   "fix": "Use sentence-case text at a readable size, or delete the label.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "emoji",
+   "width": 1440,
+   "message": "Emoji in the page: 🍻 🫐 ✨ 🍃 🌶 🥭 🤩 🥛 🍨 🐄",
+   "fix": "Remove. Use words or real imagery.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "contrast",
+   "width": 1440,
+   "message": "Low-contrast text: \"ระบบระบุพิกัดไม่พร้อมใช้งาน · ออเดอร์ของ\" 4.1:1 needs 4.5:1; \"ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 1\" 4.1:1 needs 4.5:1; \"/ เมนูแนะนำ\" 4.1:1 needs 4.5:1; \"รายการที่สั่ง\" 4.1:1 needs 4.5:1",
+   "fix": "Darken or lighten the text colour.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "dev-server",
+   "width": 1440,
+   "message": "This page is served by a development server (Vite, webpack or Next in dev mode).",
+   "fix": "Run the last gate on the production build too (vite build && vite preview, next build && next start, or the built index.html): minifiers and bundlers change the CSS a visitor receives.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "heavy-shadow",
+   "width": 1440,
+   "message": "1 panel shadow(s) heavy enough to read as floating: rgba(0, 0, 0, 0.25) 0px 25px 50px -12px",
+   "fix": "Panels sit on the ground: separate them with a fill one step from the ground or a quiet 1px border. A shadow, if any, is under 8% black with a small blur. Real overlays (menus, dialogs, popovers) may float.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "heavy-borders",
+   "width": 1440,
+   "message": "132 panel borders are dark against their ground: #b3382e on #faf3f2 (5.44:1) | #b3382e on #faf3f2 (5.44:1) | #b3382e on #faf3f2 (5.44:1)",
+   "fix": "A panel border is a whisper: about 1.1–1.3:1 against its ground on a light screen (#e5e7eb–#ededed on white), and about 1.2–1.5:1 on a dark one (#1a1a1a on #000, #2e2e2e on #111). Darker lines turn the screen into a grid of boxes; keep the stronger line for controls.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "icon-chips",
+   "width": 1440,
+   "message": "131 icons sit in tinted squares or circles.",
+   "fix": "This is the commonest tell of a generated dashboard. Drop the tinted square: a KPI is a label and a number; an icon, if it helps, is plain and in the text colour.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "tiny-text",
+   "width": 1440,
+   "message": "161 text blocks under 11px: WAITING STAFF 9px, ดูสถานะ 10px, EDIT 10px, ระบุเบอร์โทรเพื่อสะสมแต้ 10px.",
+   "fix": "Nothing below 11px; secondary text 12px, data 13–14px.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "below-fold",
+   "width": 1440,
+   "message": "Only 2 of 127 blocks start on the first 1440px screen.",
+   "fix": "Every block the brief names shows its header and first rows on the first desktop screen: size the headline block to its question, cap long lists with \"View all\", and put time-sensitive blocks before long tables."
+  },
+  {
+   "level": "FAIL",
+   "id": "no-title",
+   "width": 1440,
+   "message": "The screen has no h1.",
+   "fix": "Name the screen in an h1 at the top of the canvas (18–28px): \"Overview\", \"Payouts\", the project's name.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "edge-text",
+   "width": 390,
+   "message": "2 text block(s) sit 12–15px from the phone's edge: \"IN THE HAUS\" (14px); \"รายการทั้งหมด (125)\" (12px)",
+   "fix": "The page margin is 16–20px on a phone; the header and the corner labels sit on it too."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\desktop-page-01.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\desktop-page-02.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\desktop-page-03.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\mobile-page-01.jpg",
+    "C:\\Users\\Ritha\\inthehaus-booking\\.taste-skill\\table-before\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

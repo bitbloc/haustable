@@ -534,9 +534,18 @@ export default function PickupPage() {
                     {/* Step 1: Menu */}
                     {step === 1 && (
                         <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col h-full">
-                            <div className="mb-6">
+                            <div className="mb-4">
                                 <h1 className="text-3xl font-display font-bold tracking-tight">{t('orderFood')}</h1>
                                 <p className="text-subInk text-sm uppercase tracking-widest font-mono">{t('pickup')}</p>
+                                {payAtStoreEnabled && (
+                                    <div className="mt-3 px-3.5 py-2.5 bg-paper border border-[var(--color-rule)] rounded-rams text-xs leading-relaxed text-ink">
+                                        <span className="font-mono font-bold uppercase mr-1.5">[ จ่ายหน้าร้านตอนรับได้ ]</span>
+                                        <span>
+                                            สามารถเลือกโอนจ่ายทันที หรือชำระที่หน้าร้านตอนมารับได้ • <strong>กรณีรับหน้าร้านแบบจ่ายที่ร้าน ต้องได้รับการยืนยันจากทางร้านเสมอ</strong> มิฉะนั้นกรุณาโทร{' '}
+                                            <a href="tel:0985284217" className="font-mono font-bold underline">098-528-4217</a>
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex justify-between items-end mb-4 shrink-0">
@@ -865,7 +874,14 @@ export default function PickupPage() {
                                     {isPayAtStore ? (
                                         <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] space-y-2 text-sm leading-relaxed">
                                             <p className="text-ink">
-                                                พนักงานจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ที่เบอร์ <strong className="font-mono">{contactPhone?.trim() || '-'}</strong> ก่อนเริ่มทำอาหาร
+                                                {contactPhone?.trim() ? (
+                                                    <>พนักงานจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ที่เบอร์ <strong className="font-mono">{contactPhone.trim()}</strong> ก่อนเริ่มทำอาหาร</>
+                                                ) : (
+                                                    <>พนักงานจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ตามเบอร์โทรศัพท์ที่ระบุก่อนเริ่มทำอาหาร</>
+                                                )}
+                                            </p>
+                                            <p className="text-xs font-mono font-bold text-[var(--color-accent)]">
+                                                * ต้องได้รับการยืนยันจากทางร้านก่อนเริ่มทำอาหารเสมอ หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ <a href="tel:0985284217" className="underline">098-528-4217</a>
                                             </p>
                                             <p className="text-subInk text-xs">
                                                 ชำระ <strong className="font-mono text-ink">฿{finalTotal}.-</strong> ที่หน้าร้านตอนมารับ <span className="whitespace-nowrap">(เงินสด / สแกนจ่าย)</span> • หากติดต่อไม่ได้ ร้านขอสงวนสิทธิ์<span className="whitespace-nowrap">ยกเลิกออเดอร์</span>
@@ -1050,7 +1066,11 @@ export default function PickupPage() {
 
                                     <label className="flex items-center gap-2 mt-2 cursor-pointer pt-2 border-t border-[var(--color-rule)]">
                                         <input type="checkbox" checked={isAgreed} onChange={e => setIsAgreed(e.target.checked)} className="accent-ink w-4 h-4" />
-                                        <span className="font-mono font-bold text-xs">{t('agreeTerms')}</span>
+                                        <span className="font-mono font-bold text-xs">
+                                            {isPayAtStore
+                                                ? 'ฉันยืนยันการสั่งอาหารและรับทราบว่าพนักงานจะโทรยืนยันออเดอร์ก่อนเริ่มทำอาหาร'
+                                                : 'ฉันตรวจสอบรายการอาหารและเวลารับออเดอร์ถูกต้องแล้ว'}
+                                        </span>
                                     </label>
                                 </div>
 
