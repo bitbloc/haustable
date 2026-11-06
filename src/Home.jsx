@@ -16,6 +16,7 @@ import HomeNavigation from './components/home/HomeNavigation'
 import AuthModal from './components/AuthModal'
 import HistoryModal from './components/history/HistoryModal'
 import { trackDirectionsClick, trackPhoneClick, trackLineClick } from './utils/analyticsHelper'
+import { getStoreHours } from './utils/storeHours'
 
 export default function Home({ session }) {
     // 1. Logic & App State
@@ -93,7 +94,7 @@ export default function Home({ session }) {
         {
             q: "เปิดให้บริการช่วงเวลาไหน และครัวปิดกี่โมง?",
             qEn: "What are the opening and kitchen hours?",
-            a: `เปิดให้บริการทุกวัน ${settings?.link_hours || '11:30 - 23:30 น.'} โดยครัวหลักจะปิดรับออเดอร์เวลา 22:00 น. และโซนบาร์เครื่องดื่มเปิดบริการถึง 23:30 น.`
+            a: `เปิดให้บริการทุกวัน ${getStoreHours().open} - ${getStoreHours().close} น. โดยครัวหลักรับออเดอร์สุดท้ายเวลา ${getStoreHours().lastOrder} น. หลังจากนั้นสั่งได้เฉพาะเครื่องดื่มบางเมนูจนถึง ${getStoreHours().close} น.`
         },
         {
             q: "มีบริการสั่งอาหารกลับบ้าน (Pickup) แบบจ่ายที่หน้าร้านไหม?",
@@ -226,7 +227,7 @@ export default function Home({ session }) {
                                     [ TIME ]
                                 </span>
                                 <span className="font-bold text-right">
-                                    {settings?.link_hours || "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)"}
+                                    {settings?.link_hours || getStoreHours().label}
                                 </span>
                             </div>
                             <div className="flex items-start justify-between">

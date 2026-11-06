@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 export default function TimeSlotStudio({
     value = '',
     openingTime = '11:00',
-    closingTime = '22:00',
+    closingTime = '21:30',
     onChange
 }) {
     const [customTimeInput, setCustomTimeInput] = useState('');
@@ -47,7 +47,7 @@ export default function TimeSlotStudio({
     // Auto-generate slots given interval in minutes
     const generateSlotsByInterval = (intervalMins) => {
         const [openH, openM] = (openingTime || '11:00').split(':').map(Number);
-        const [closeH, closeM] = (closingTime || '22:00').split(':').map(Number);
+        const [closeH, closeM] = (closingTime || '21:30').split(':').map(Number);
 
         const startMinutes = openH * 60 + (openM || 0);
         const endMinutes = closeH * 60 + (closeM || 0);

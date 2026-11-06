@@ -84,8 +84,8 @@ export default function PickupPage() {
     const [policyNote, setPolicyNote] = useState('')
     const [minAdvanceHours, setMinAdvanceHours] = useState(1) 
     const [pickupDate, setPickupDate] = useState('today') // 'today' | 'tomorrow'
-    const [openingTime, setOpeningTime] = useState('10:00')
-    const [closingTime, setClosingTime] = useState('20:00')
+    const [openingTime, setOpeningTime] = useState('11:00')
+    const [closingTime, setClosingTime] = useState('21:30')
     const [crmBaseSpendAmount, setCrmBaseSpendAmount] = useState(100)
     const [easySlipEnabled, setEasySlipEnabled] = useState(true)
 

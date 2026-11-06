@@ -381,7 +381,7 @@ export default function MenuCategoryList() {
                                             KITCHEN CUTOFF
                                         </span>
                                         <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
-                                            ซ่อนหมวดหมู่นี้เมื่อครัวปิด (22:00 น.)
+                                            ซ่อนหมวดหมู่นี้เมื่อครัวปิด
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono leading-relaxed">
@@ -476,7 +476,7 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                         )}
                         {category.hide_on_kitchen_close && (
                             <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
-                                ปิดครัว 22:00
+                                ซ่อนเมื่อครัวปิด
                             </span>
                         )}
                     </div>

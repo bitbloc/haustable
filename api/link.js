@@ -12,11 +12,16 @@ let cachedPageData = null
 let cacheExpiry = 0
 const CACHE_TTL_MS = 30 * 1000 // 30 seconds in-memory for instant freshness
 
+// New hours start 9 Nov 2026 (Bangkok); see src/utils/storeHours.js
+const getStoreHoursLabel = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date()) >= '2026-11-09'
+    ? 'เปิดทุกวัน 11:00 - 21:30 น. (ครัวปิด 20:45 น.)'
+    : 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)'
+
 const DEFAULT_SETTINGS = {
     link_shop_name: "In the haus | ร้านในบ้าน นครพนม",
     link_shop_name_th: "ในบ้าน",
     link_subtitle: "We Make It Bold . จริตจัด รสชัดเต็ม · Real Southern Taste",
-    link_hours: "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)",
+    get link_hours() { return getStoreHoursLabel() },
     link_location_text: "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม",
     link_logo_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_logo_url_1778317272888.png",
     link_hero_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_hero_url_1778316469375.jpg",
@@ -208,7 +213,7 @@ function generateStandaloneLandingHtml(data) {
     const [mastTitle, ...mastRest] = String(settings.link_shop_name || "In the haus | ร้านในบ้าน นครพนม").split('|').map(t => t.trim())
     const mastSub = mastRest.join(' ') || settings.link_shop_name_th || "ในบ้าน"
     const subtitle = escapeHtml(settings.link_subtitle || "We Make It Bold . จริตจัด รสชัดเต็ม · Real Southern Taste")
-    const hours = escapeHtml(settings.link_hours || "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)")
+    const hours = escapeHtml(settings.link_hours || getStoreHoursLabel())
     const locationText = escapeHtml(settings.link_location_text || "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม")
     const logoUrl = settings.link_logo_url || DEFAULT_SETTINGS.link_logo_url
 

@@ -36,9 +36,9 @@ export default function IntegrationsTab({
         if (mode === 'force_open') return false;
         if (settings.qr_kitchen_cutoff_enabled === 'false') return false;
 
-        const openTimeStr = settings.qr_kitchen_open_time || settings.opening_time || '10:00';
+        const openTimeStr = settings.qr_kitchen_open_time || settings.opening_time || '11:00';
         const [openH, openM] = openTimeStr.split(':').map(Number);
-        const closeTimeStr = settings.qr_kitchen_close_time || '22:00';
+        const closeTimeStr = settings.qr_kitchen_close_time || '20:45';
         const [closeH, closeM] = closeTimeStr.split(':').map(Number);
 
         const now = new Date();
@@ -530,7 +530,7 @@ export default function IntegrationsTab({
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="time"
-                                        value={settings.qr_kitchen_open_time || '10:00'}
+                                        value={settings.qr_kitchen_open_time || '11:00'}
                                         onChange={(e) => handleSave('qr_kitchen_open_time', e.target.value)}
                                         className="w-24 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1.5 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
@@ -541,7 +541,7 @@ export default function IntegrationsTab({
                                                 type="button"
                                                 onClick={() => handleSave('qr_kitchen_open_time', t)}
                                                 className={`px-1.5 py-0.5 rounded border text-[9px] font-mono font-bold cursor-pointer transition-colors ${
-                                                    (settings.qr_kitchen_open_time || '10:00') === t
+                                                    (settings.qr_kitchen_open_time || '11:00') === t
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                         : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
                                                 }`}
@@ -563,18 +563,18 @@ export default function IntegrationsTab({
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="time"
-                                        value={settings.qr_kitchen_close_time || '22:00'}
+                                        value={settings.qr_kitchen_close_time || '20:45'}
                                         onChange={(e) => handleSave('qr_kitchen_close_time', e.target.value)}
                                         className="w-24 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1.5 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                     <div className="flex items-center gap-1 flex-wrap">
-                                        {['21:00', '21:30', '22:00', '22:30', '23:00'].map(t => (
+                                        {['20:45', '21:00', '21:30', '22:00'].map(t => (
                                             <button
                                                 key={t}
                                                 type="button"
                                                 onClick={() => handleSave('qr_kitchen_close_time', t)}
                                                 className={`px-1.5 py-0.5 rounded border text-[9px] font-mono font-bold cursor-pointer transition-colors ${
-                                                    (settings.qr_kitchen_close_time || '22:00') === t
+                                                    (settings.qr_kitchen_close_time || '20:45') === t
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                         : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
                                                 }`}

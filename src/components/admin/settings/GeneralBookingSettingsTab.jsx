@@ -265,7 +265,7 @@ export default function GeneralBookingSettingsTab({
                                     </label>
                                     <input
                                         type="time"
-                                        value={settings.closing_time || '22:00'}
+                                        value={settings.closing_time || '21:30'}
                                         onChange={(e) => handleSave('closing_time', e.target.value)}
                                         className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
@@ -505,7 +505,7 @@ export default function GeneralBookingSettingsTab({
                     <TimeSlotStudio
                         value={settings.booking_time_slots || ''}
                         openingTime={settings.opening_time || '11:00'}
-                        closingTime={settings.closing_time || '22:00'}
+                        closingTime={settings.closing_time || '21:30'}
                         onChange={(newSlots) => handleSave('booking_time_slots', newSlots)}
                     />
                 </div>

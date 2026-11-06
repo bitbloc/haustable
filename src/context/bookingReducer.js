@@ -34,13 +34,13 @@ export const initialState = {
     categories: [],
     settings: {
         shopMode: 'auto',
-        openingTime: '10:00',
-        closingTime: '20:00',
+        openingTime: '11:00',
+        closingTime: '21:30',
         minSpend: 0,
         bookingDepositRequired: false, // false = free booking, food optional, staff call to confirm
         bookingHoldMinutes: 30, // table released if guest is not seated by booking time + this
         minAdvanceHours: 2,
-        bookingTimeSlots: ['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'],
+        bookingTimeSlots: ['11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
         floorplanUrl: null,
         qrCodeUrl: null,
         policyNote: '',

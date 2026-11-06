@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RefreshCw, Compass, Instagram, Facebook, Star } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
+import { getStoreHours } from './utils/storeHours';
 import { Analytics } from '@vercel/analytics/react';
 import {
     trackDirectionsClick,
@@ -24,7 +25,7 @@ const DEFAULT_ADS_SETTINGS = {
     link_shop_name: "In the haus | ร้านในบ้าน นครพนม",
     link_shop_name_th: "ในบ้าน",
     link_subtitle: "We Make It Bold . จริตจัด รสชัดเต็ม · Real Southern Taste",
-    link_hours: "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)",
+    link_hours: getStoreHours().label,
     link_location_text: "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม",
     link_logo_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_logo_url_1778317272888.png",
     link_hero_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_hero_url_1778316469375.jpg",
@@ -329,7 +330,7 @@ export default function AdsLandingPage() {
     const shopName = settings.link_shop_name || 'IN THE HAUS';
     const shopNameTh = settings.link_shop_name_th || 'ในบ้าน';
     const subtitle = settings.link_subtitle || 'จริตจัด รสชัดเจน · Bold Attitude, Clear Taste';
-    const hours = settings.link_hours || 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)';
+    const hours = settings.link_hours || getStoreHours().label;
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
 

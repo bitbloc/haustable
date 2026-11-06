@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AnimatePresence, motion } from 'framer-motion';
 import generatePayload from 'promptpay-qr';
+import { getStoreHours } from '../utils/storeHours';
 import { QRCodeSVG } from 'qrcode.react';
 import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../utils/printerHelper';
 
@@ -688,7 +689,7 @@ export default function POSCustomerDisplay() {
                             <div className="flex items-center gap-3">
                                 <span>WI-FI : <strong className="text-[oklch(97%_0.008_28)]">IN THE HAUS 5G</strong></span>
                                 <span>·</span>
-                                <span>HOURS : <strong className="text-[oklch(97%_0.008_28)]">11.30 — 23.30</strong></span>
+                                <span>HOURS : <strong className="text-[oklch(97%_0.008_28)]">{getStoreHours().open.replace(':', '.')} — {getStoreHours().close.replace(':', '.')}</strong></span>
                             </div>
                             <span className="text-[oklch(52%_0.16_28)] font-bold">HAUS TABLE OS</span>
                         </div>

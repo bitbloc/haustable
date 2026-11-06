@@ -1,5 +1,12 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { getStoreHours } from './utils/storeHours';
+
+const storeHours = getStoreHours();
+const to12h = (time) => {
+  const [h, m] = time.split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
 
 const qaData = [
   {
@@ -47,9 +54,9 @@ const qaData = [
   {
     id: 7,
     thQ: "ร้านเปิด-ปิดกี่โมง?",
-    thA: "ตอบ: เปิดให้บริการทุกวัน ตั้งแต่เวลา 11:30 - 23:30 น. (ครัวปิด 22:00 น.) ครับ แวะมาฝากท้องได้ทั้งมื้อเที่ยงยาวไปจนถึงมื้อดึกเลยครับ",
+    thA: `ตอบ: เปิดให้บริการทุกวัน ตั้งแต่เวลา ${storeHours.open} - ${storeHours.close} น. (ครัวรับออเดอร์สุดท้าย ${storeHours.lastOrder} น. หลังจากนั้นสั่งได้เฉพาะเครื่องดื่มบางเมนู) แวะมาฝากท้องได้ทั้งมื้อเที่ยงยาวไปจนถึงมื้อค่ำเลยครับ`,
     enQ: "What are your opening hours?",
-    enA: "A: We are open every day from 11:30 AM to 11:30 PM (Kitchen closes at 10:00 PM). Feel free to drop by for lunch all the way through to late-night dining."
+    enA: `A: We are open every day from ${to12h(storeHours.open)} to ${to12h(storeHours.close)} (food last order ${to12h(storeHours.lastOrder)}, selected drinks after that). Feel free to drop by for lunch all the way through to dinner.`
   },
   {
     id: 8,

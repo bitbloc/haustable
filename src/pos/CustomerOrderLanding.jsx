@@ -156,8 +156,8 @@ export default function CustomerOrderLanding() {
         qr_latitude: '17.390086',
         qr_longitude: '104.792934',
         qr_radius: '250',
-        qr_kitchen_open_time: '10:00',
-        qr_kitchen_close_time: '22:00',
+        qr_kitchen_open_time: '11:00',
+        qr_kitchen_close_time: '20:45',
         qr_kitchen_cutoff_enabled: 'true',
         qr_kitchen_mode: 'auto',
         qr_kitchen_closed_categories: '[]',
@@ -1016,11 +1016,11 @@ export default function CustomerOrderLanding() {
         if (mode === 'force_open') return false;
         if (currentSettings.qr_kitchen_cutoff_enabled === 'false') return false;
 
-        const openTimeStr = currentSettings.qr_kitchen_open_time || currentSettings.opening_time || '10:00';
+        const openTimeStr = currentSettings.qr_kitchen_open_time || currentSettings.opening_time || '11:00';
         const [openHour, openMin] = openTimeStr.split(':').map(Number);
         const openTotalMins = (openHour ?? 10) * 60 + (openMin || 0);
 
-        const closeTimeStr = currentSettings.qr_kitchen_close_time || '22:00';
+        const closeTimeStr = currentSettings.qr_kitchen_close_time || '20:45';
         const [closeHour, closeMin] = closeTimeStr.split(':').map(Number);
         const closeTotalMins = (closeHour ?? 22) * 60 + (closeMin || 0);
 
@@ -1183,7 +1183,7 @@ export default function CustomerOrderLanding() {
     // Cart Operations
     const handleAddToCart = (item) => {
         if (isItemKitchenClosed(item)) {
-            toast.error(tt('toastKitchenClosed', { open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' }));
+            toast.error(tt('toastKitchenClosed', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' }));
             return;
         }
         setSelectedItem(item);
@@ -1246,7 +1246,7 @@ export default function CustomerOrderLanding() {
         if (isKitchenClosed) {
             const invalidItems = cart.filter(item => isItemKitchenClosed(item));
             if (invalidItems.length > 0) {
-                toast.error(tt('toastItemsRemovedKitchenClosed', { items: invalidItems.map(i => i.name).join(', '), open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' }));
+                toast.error(tt('toastItemsRemovedKitchenClosed', { items: invalidItems.map(i => i.name).join(', '), open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' }));
                 setCart(prev => prev.filter(item => !isItemKitchenClosed(item)));
                 submittingRef.current = false;
                 setSubmitting(false);
@@ -1812,7 +1812,7 @@ export default function CustomerOrderLanding() {
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-accent)]">
-                                            {tt('kitchenClosedTitle', { open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' })}
+                                            {tt('kitchenClosedTitle', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' })}
                                         </span>
                                         <span className="bg-[var(--color-paper)]/15 text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
                                             {tt('kitchenClosedTag')}
@@ -1997,7 +1997,7 @@ export default function CustomerOrderLanding() {
                             <p>{tt('emptyCategory')}</p>
                             {isKitchenClosed && (
                                 <p className="text-[10px] text-[var(--color-accent)]">
-                                    {tt('kitchenClosedEmpty', { open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' })}
+                                    {tt('kitchenClosedEmpty', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' })}
                                 </p>
                             )}
                         </div>

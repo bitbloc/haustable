@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import BookingHeader from './BookingHeader'
 import CustomCalendar from './CustomCalendar'
+import { getBookingSlotsForDate } from '../../utils/storeHours'
 
 export default function StepDateSelection() {
     const { t } = useLanguage()
@@ -18,6 +19,7 @@ export default function StepDateSelection() {
     } = useBooking()
 
     const [showLargeGroupModal, setShowLargeGroupModal] = useState(false)
+    const timeSlots = getBookingSlotsForDate(settings.bookingTimeSlots, date)
 
     // Format Date Display (DD/MM/YYYY)
     const formatDateDisplay = (isoDate) => {
@@ -65,6 +67,7 @@ export default function StepDateSelection() {
                         value={date}
                         onChange={(newDate) => {
                             setDate(newDate)
+                            if (time && !getBookingSlotsForDate(settings.bookingTimeSlots, newDate).includes(time)) setTime('')
                             // Auto scroll to time if needed, or visual cue
                         }}
                         blockedDates={blockedDates}
@@ -79,7 +82,7 @@ export default function StepDateSelection() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-3">
-                        {settings.bookingTimeSlots.map(tm => {
+                        {timeSlots.map(tm => {
                             let isDisabled = false
                             if (date) {
                                 const now = new Date()

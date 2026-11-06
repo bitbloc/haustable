@@ -335,7 +335,7 @@ export default function LandingPageSettingsTab({
                         type="text"
                         value={settings.link_hours || ''}
                         onChange={(e) => handleSave('link_hours', e.target.value)}
-                        placeholder="เปิดทุกวัน 11:30 - 23:30 น."
+                        placeholder="เปิดทุกวัน 11:00 - 21:30 น."
                         className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                     />
                 </div>

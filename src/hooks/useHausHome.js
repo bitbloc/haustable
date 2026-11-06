@@ -30,8 +30,8 @@ export const useHausHome = (session) => {
         
         const now = new Date()
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-        const openTime = s.opening_time || '11:30'
-        const closeTime = s.closing_time || '23:30'
+        const openTime = s.opening_time || '11:00'
+        const closeTime = s.closing_time || '21:30'
         const isOpen = currentTime >= openTime && currentTime < closeTime
         return { isOpen, text: isOpen ? 'OPEN' : 'CLOSED' }
     }
