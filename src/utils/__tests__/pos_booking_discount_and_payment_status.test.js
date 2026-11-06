@@ -141,4 +141,64 @@ describe('POS Advance Booking Discount & Paid-in-full Logic (Dieter Rams + Thai 
         expect(totalDiscount).toBe(150);
         expect(subtotal - totalDiscount).toBe(850);
     });
+
+    // -------------------------------------------------------------------------
+    // Scenario 5: Order #CB65 (50% Food Advance Deduction Persistence)
+    // -------------------------------------------------------------------------
+    it('1.5 should persist 50% food discount (฿456) across table switching, moving, and ordering additional items', () => {
+        // Items from order #CB65:
+        // Food: แกงมัสมั่น (฿299), สะตอผัดกุ้ง (฿299), ทาทากิ (฿199), ข้าวหมูย่าง (฿99), ข้าวสวย (฿15) = ฿911
+        // Drinks: PRO 2 แถม 1 (฿498), น้ำเปล่า (฿20) = ฿518
+        // Subtotal = ฿1,429
+        const foodSubtotal = 299 + 299 + 199 + 99 + 15; // 911
+        const drinksSubtotal = 498 + 20; // 518
+        const initialSubtotal = foodSubtotal + drinksSubtotal; // 1,429
+        expect(initialSubtotal).toBe(1429);
+
+        // 1. Staff deducts 50% of food: ฿455.5 -> ฿456
+        const discountAmt = Math.round(foodSubtotal * 0.5);
+        expect(discountAmt).toBe(456);
+
+        // Booking record in Supabase with persisted discount
+        let booking = {
+            id: 'cdb98953-ae70-4f1b-9653-c2b6a433a348',
+            table_id: 6, // Table H9
+            subtotal_amount: initialSubtotal,
+            discount_amount: discountAmt,
+            total_amount: initialSubtotal - discountAmt, // 973
+            staff_remark: '[QR:AUTO-SUBMIT] [ส่วนลด 50%: -฿456]'
+        };
+
+        // Verification 1: Net total reflects the ฿456 deduction
+        let netTotal = initialSubtotal - (booking.discount_amount || 0);
+        expect(netTotal).toBe(973);
+
+        // Verification 2: Simulating table switch (Table H9 -> Table H6 -> Table H9)
+        // When cashier reselects Table H9, POS restores discount from booking.discount_amount
+        const restoredDiscount = parseFloat(booking.discount_amount) || 0;
+        expect(restoredDiscount).toBe(456);
+        const remarkMatch = (booking.staff_remark || '').match(/\[ส่วนลด\s*([\d.]+)%/i);
+        expect(remarkMatch[1]).toBe('50');
+
+        // Verification 3: Simulating Move Table (H9 -> H6)
+        const targetTable = { id: 4, table_name: 'H6' };
+        const movedBooking = {
+            ...booking,
+            table_id: targetTable.id,
+            discount_amount: booking.discount_amount || 0 // Must be preserved!
+        };
+        expect(movedBooking.discount_amount).toBe(456);
+        expect(movedBooking.table_id).toBe(4);
+
+        // Verification 4: Simulating keying in additional items (e.g. adding 1 extra drink ฿100)
+        const addedDrinkPrice = 100;
+        const newSubtotal = initialSubtotal + addedDrinkPrice; // 1,529
+        const targetBookingAfterAdd = {
+            ...movedBooking,
+            discount_amount: movedBooking.discount_amount // Preserved across kitchen slip send
+        };
+        const newNetTotal = newSubtotal - targetBookingAfterAdd.discount_amount;
+        expect(targetBookingAfterAdd.discount_amount).toBe(456);
+        expect(newNetTotal).toBe(1073); // Never reverts back to full 1,529!
+    });
 });

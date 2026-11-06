@@ -2716,6 +2716,7 @@ export default function POSDashboard() {
                 ...(targetBooking || {}),
                 id: bookingId,
                 order_items: finalOrderItems,
+                discount_amount: checkoutMeta?.discount_amount ?? checkoutMeta?.discountAmount ?? targetBooking?.discount_amount ?? currentBooking?.discount_amount ?? 0,
                 ...(checkoutMeta ? {
                     discount_amount: checkoutMeta.discount_amount ?? checkoutMeta.discountAmount ?? targetBooking?.discount_amount ?? 0,
                     xhaus_discount: checkoutMeta.xhaus_discount ?? checkoutMeta.xhausDiscount ?? targetBooking?.xhaus_discount ?? 0,
@@ -3675,6 +3676,91 @@ export default function POSDashboard() {
             items: (prev?.items || []).filter(item => item?.claim_code !== claimCode)
         }));
     };
+
+    const handleUpdateDiscount = useCallback(async (discountData) => {
+        const { discountAmount, discountVal, discountType, promo } = discountData;
+        const roundedDiscount = Math.round(discountAmount || 0);
+
+        let targetBooking = activeBooking;
+        let targetBookingId = targetBooking?.id;
+
+        // If walk-in table with items but no booking row yet, create it first
+        if (!targetBookingId && selectedTable) {
+            const memberIdToPass = attachedMemberCrm?.id || null;
+            const newBooking = await createWalkIn(selectedTable, null, memberIdToPass);
+            if (newBooking) {
+                targetBooking = newBooking;
+                targetBookingId = newBooking.id;
+                setActiveBooking(newBooking);
+                if (activeBookingRef) activeBookingRef.current = newBooking;
+            }
+        }
+
+        if (targetBookingId) {
+            const toastId = toast.loading('กำลังบันทึกส่วนลด...');
+            
+            let currentRemark = targetBooking?.staff_remark || '';
+            let newRemark = currentRemark.replace(/\[ส่วนลด\s*[^\]]+\]/gi, '').trim();
+            if (discountType === 'percent' && discountVal > 0) {
+                newRemark = `${newRemark} [ส่วนลด ${discountVal}%: -฿${roundedDiscount}]`.trim();
+            } else if (roundedDiscount > 0) {
+                newRemark = `${newRemark} [ส่วนลดพิเศษ: -฿${roundedDiscount}]`.trim();
+            }
+            if (promo) {
+                newRemark = newRemark.replace(/\[PROMO:[^\]]+\]/gi, '').trim();
+                newRemark = `${newRemark} [PROMO:${promo.code}]`.trim();
+            } else {
+                newRemark = newRemark.replace(/\[PROMO:[^\]]+\]/gi, '').trim();
+            }
+
+            const isLocal = String(targetBookingId).startsWith('local_');
+
+            if (isOnline() && !isLocal) {
+                try {
+                    const { data, error } = await supabase
+                        .from('bookings')
+                        .update({
+                            discount_amount: roundedDiscount,
+                            staff_remark: newRemark
+                        })
+                        .eq('id', targetBookingId)
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                        .maybeSingle();
+
+                    if (error) throw error;
+                    if (data) {
+                        setActiveBooking(data);
+                        if (activeBookingRef) activeBookingRef.current = data;
+                        const cached = posCache.getBookings() || [];
+                        posCache.setBookings(cached.map(b => b.id === data.id ? data : b));
+                    }
+                    if (roundedDiscount > 0) {
+                        toast.success(`บันทึกส่วนลด -฿${roundedDiscount.toLocaleString()} เรียบร้อยแล้ว`, { id: toastId });
+                    } else {
+                        toast.success("ล้างส่วนลดเรียบร้อยแล้ว", { id: toastId });
+                    }
+                } catch (err) {
+                    console.error("Failed to update discount online, queueing offline:", err);
+                    addToOfflineQueue('update_discount', { bookingId: targetBookingId, discount_amount: roundedDiscount, staff_remark: newRemark });
+                    const updated = { ...targetBooking, discount_amount: roundedDiscount, staff_remark: newRemark };
+                    setActiveBooking(updated);
+                    if (activeBookingRef) activeBookingRef.current = updated;
+                    toast.success(`⚠️ บันทึกออฟไลน์: ส่วนลด -฿${roundedDiscount.toLocaleString()}`, { id: toastId });
+                }
+            } else {
+                addToOfflineQueue('update_discount', { bookingId: targetBookingId, discount_amount: roundedDiscount, staff_remark: newRemark });
+                const updated = { ...targetBooking, discount_amount: roundedDiscount, staff_remark: newRemark };
+                setActiveBooking(updated);
+                if (activeBookingRef) activeBookingRef.current = updated;
+                toast.success(`⚠️ บันทึกออฟไลน์: ส่วนลด -฿${roundedDiscount.toLocaleString()}`, { id: toastId });
+            }
+
+            sendPOSBroadcast('booking_updated', { bookingId: targetBookingId, discount_amount: roundedDiscount });
+            setRefreshKey(prev => prev + 1);
+        } else {
+            toast.error("กรุณาเลือกโต๊ะก่อนบันทึกส่วนลด");
+        }
+    }, [activeBooking, selectedTable, attachedMemberCrm, createWalkIn]);
 
     const handleCheckout = async (
         paymentMethod, 
@@ -5090,6 +5176,7 @@ export default function POSDashboard() {
                                 }
                             }}
                             onOpenSlip={handleSaveAndOpenSlip}
+                            onUpdateDiscount={handleUpdateDiscount}
                         />
                     </div>
                 </div>

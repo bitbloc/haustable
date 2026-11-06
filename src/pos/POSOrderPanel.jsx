@@ -37,7 +37,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     onInjectRewardItem,
     onRemoveRewardItem,
     onAddEmergencyItem,
-    onOpenMenu
+    onOpenMenu,
+    onUpdateDiscount
 }) {
     const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
     const [showEmergencyModal, setShowEmergencyModal] = React.useState(false);
@@ -513,7 +514,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         fetchActivePromotions();
     }, []);
 
-    // Reset points & discount settings when switching tables/bookings or when cart is cleared
+    // Sync and restore persistent discount settings when switching tables/bookings or reset when cart is cleared
+    const prevBookingIdRef = React.useRef(booking?.id);
+    const prevBookingDiscountRef = React.useRef(booking?.discount_amount);
+
     React.useEffect(() => {
         if (!booking || !booking.id || order.items.length === 0) {
             setXhausToRedeem(0);
@@ -527,8 +531,98 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             setRewardDiscount(0);
             setCashReceivedInput('');
             setUseFreeDrinkQuota(false);
+            prevBookingIdRef.current = null;
+            prevBookingDiscountRef.current = null;
+        } else {
+            const isBookingChanged = booking.id !== prevBookingIdRef.current;
+            const isDiscountChanged = (Number(booking.discount_amount) || 0) !== prevBookingDiscountRef.current;
+            
+            if (isBookingChanged || isDiscountChanged) {
+                prevBookingIdRef.current = booking.id;
+                prevBookingDiscountRef.current = Number(booking.discount_amount) || 0;
+                
+                const bDiscount = parseFloat(booking.discount_amount) || 0;
+                if (bDiscount > 0) {
+                    const remarkMatch = (booking.staff_remark || '').match(/\[ส่วนลด\s*([\d.]+)%/i);
+                    if (remarkMatch && remarkMatch[1]) {
+                        setManualDiscountType('percent');
+                        setManualDiscountVal(remarkMatch[1]);
+                    } else {
+                        setManualDiscountType('amount');
+                        setManualDiscountVal(String(Math.round(bDiscount)));
+                    }
+                } else {
+                    setManualDiscountVal('');
+                    setManualDiscountType('amount');
+                }
+            }
         }
-    }, [booking?.id, order.items.length]);
+    }, [booking?.id, booking?.discount_amount, booking?.staff_remark, order.items.length]);
+
+    const [isSavingDiscount, setIsSavingDiscount] = React.useState(false);
+
+    const handleApplyDiscount = async () => {
+        const val = parseFloat(manualDiscountVal) || 0;
+        let calculatedAmount = 0;
+        if (val > 0) {
+            if (manualDiscountType === 'percent') {
+                calculatedAmount = subtotal * (val / 100);
+            } else {
+                calculatedAmount = val;
+            }
+        }
+        if (selectedPromo) {
+            if (selectedPromo.discount_type === 'percent') {
+                calculatedAmount += subtotal * (parseFloat(selectedPromo.discount_value) / 100);
+            } else {
+                calculatedAmount += parseFloat(selectedPromo.discount_value);
+            }
+        }
+
+        const roundedDiscount = Math.round(calculatedAmount);
+
+        if (onUpdateDiscount) {
+            setIsSavingDiscount(true);
+            try {
+                await onUpdateDiscount({
+                    discountAmount: roundedDiscount,
+                    discountVal: val,
+                    discountType: manualDiscountType,
+                    promo: selectedPromo
+                });
+            } catch (e) {
+                console.error('Error applying discount:', e);
+            } finally {
+                setIsSavingDiscount(false);
+            }
+        }
+
+        setActiveModal(null);
+    };
+
+    const handleClearDiscount = async () => {
+        setManualDiscountVal('');
+        setManualDiscountType('amount');
+        setSelectedPromo(null);
+
+        if (onUpdateDiscount) {
+            setIsSavingDiscount(true);
+            try {
+                await onUpdateDiscount({
+                    discountAmount: 0,
+                    discountVal: 0,
+                    discountType: 'amount',
+                    promo: null
+                });
+            } catch (e) {
+                console.error('Error clearing discount:', e);
+            } finally {
+                setIsSavingDiscount(false);
+            }
+        }
+
+        setActiveModal(null);
+    };
 
     const handleApplyRewardCode = async () => {
         if (!rewardCodeInput) return;
@@ -2399,12 +2493,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
+                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-2">
+                                {(parseFloat(manualDiscountVal) > 0 || selectedPromo || parseFloat(booking?.discount_amount) > 0) && (
+                                    <button
+                                        type="button"
+                                        disabled={isSavingDiscount}
+                                        onClick={handleClearDiscount}
+                                        className="px-4 py-3.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm h-11"
+                                    >
+                                        ล้างส่วนลด (Clear)
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => setActiveModal(null)}
-                                    className="w-full bg-[#1A1A1A] hover:bg-[#333330] text-white py-3.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow h-11"
+                                    type="button"
+                                    disabled={isSavingDiscount}
+                                    onClick={handleApplyDiscount}
+                                    className="flex-1 bg-[#1A1A1A] hover:bg-[#333330] disabled:opacity-50 text-white py-3.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow h-11 flex items-center justify-center gap-2"
                                 >
-                                    Apply & Close
+                                    {isSavingDiscount ? 'Saving...' : 'Apply & Save / บันทึกส่วนลด'}
                                 </button>
                             </div>
                         </div>

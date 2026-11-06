@@ -686,6 +686,23 @@ export async function syncOfflineQueue(isManual = false) {
                 if (error) throw error;
             }
 
+            else if (action.type === 'update_discount') {
+                let { bookingId, discount_amount, staff_remark } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
+                }
+                const updatePayload = { discount_amount: Number(discount_amount) || 0 };
+                if (staff_remark !== undefined) updatePayload.staff_remark = staff_remark;
+                const { error } = await supabase
+                    .from('bookings')
+                    .update(updatePayload)
+                    .eq('id', bookingId);
+                if (error) throw error;
+            }
+
             else if (action.type === 'sync_shift') {
                 const shift = action.payload;
                 const corePayload = {
