@@ -12,7 +12,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' * data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' * blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com *; font-src 'self' https://fonts.gstatic.com * data:; img-src 'self' data: blob: *;">
     <title>Haus Table</title>
+    <meta name="description" content="ร้านในบ้าน (In the haus) นครพนม ร้านอาหารใต้รสชัดและคาเฟ่ริมโขง ใกล้ลานพญาศรีสัตตนาคราช จองโต๊ะ สั่งรับหน้าร้าน โทร 098-528-4217" />
     <link rel="canonical" href="https://haustable.vercel.app/" />
+    <!-- Per-route title / description / canonical for public pages (this file serves every SPA route).
+         Without it /booking, /pickup and /qa all claimed to be the homepage (canonical "/") with title "Haus Table". -->
+    <script>
+      (function() {
+        var SITE = 'https://haustable.vercel.app';
+        var path = window.location.pathname.replace(/\/+$/, '') || '/';
+        var pages = {
+          '/': {
+            t: 'ร้านในบ้าน นครพนม | อาหารใต้รสชัด คาเฟ่ริมโขง | In the haus',
+            d: 'ร้านในบ้าน (In the haus) นครพนม ร้านอาหารใต้รสชัดและคาเฟ่ริมโขง ใกล้ลานพญาศรีสัตตนาคราช จองโต๊ะออนไลน์ สั่งรับหน้าร้าน หรือแวะมานั่งได้เลย โทร 098-528-4217'
+          },
+          '/booking': {
+            t: 'จองโต๊ะ ร้านในบ้าน นครพนม | อาหารใต้ริมโขง In the haus',
+            d: 'จองโต๊ะออนไลน์ ร้านในบ้าน (In the haus) ร้านอาหารใต้และคาเฟ่ริมโขง นครพนม เลือกวัน เวลา และจำนวนคนได้เอง ยืนยันทันที ใกล้ลานพญาศรีสัตตนาคราช โทร 098-528-4217'
+          },
+          '/pickup': {
+            t: 'สั่งอาหารรับหน้าร้าน | ร้านในบ้าน นครพนม In the haus',
+            d: 'สั่งอาหารใต้และเครื่องดื่มจากร้านในบ้าน (In the haus) นครพนม ล่วงหน้าทางออนไลน์ แล้วแวะรับหน้าร้านริมโขงได้เลย ไม่ต้องรอคิว โทร 098-528-4217'
+          },
+          '/qa': {
+            t: 'คำถามที่พบบ่อย | ร้านในบ้าน นครพนม In the haus',
+            d: 'ตอบคำถามที่ลูกค้าถามบ่อยเกี่ยวกับร้านในบ้าน (In the haus) นครพนม เวลาเปิด-ปิด ที่จอดรถ การจองโต๊ะ และข้อมูลอื่นๆ ของร้านริมโขง'
+          }
+        };
+        var p = pages[path];
+        if (!p) return;
+        document.title = p.t;
+        document.querySelector('meta[name="description"]').setAttribute('content', p.d);
+        document.querySelector('link[rel="canonical"]').setAttribute('href', SITE + (path === '/' ? '/' : path));
+      })();
+    </script>
 
     <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
