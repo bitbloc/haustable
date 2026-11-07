@@ -569,6 +569,10 @@ export default function POSDashboard() {
 
     const shiftSummaryDebounceRef = useRef(null);
     const isFetchingShiftSummaryRef = useRef(false);
+    const showCloseShiftModalRef = useRef(showCloseShiftModal);
+    useEffect(() => {
+        showCloseShiftModalRef.current = showCloseShiftModal;
+    }, [showCloseShiftModal]);
 
     const fetchRealtimeSummary = useCallback(async () => {
         const currentShift = getCurrentShift() || activeShiftRef.current;
@@ -610,6 +614,7 @@ export default function POSDashboard() {
     }, []);
 
     const triggerDebouncedShiftSummary = useCallback(() => {
+        if (!showCloseShiftModalRef.current) return;
         if (shiftSummaryDebounceRef.current) clearTimeout(shiftSummaryDebounceRef.current);
         shiftSummaryDebounceRef.current = setTimeout(() => {
             fetchRealtimeSummary();
@@ -617,14 +622,12 @@ export default function POSDashboard() {
     }, [fetchRealtimeSummary]);
 
     useEffect(() => {
-        fetchRealtimeSummary();
-
-        // Realtime Subscription: Instant update when shift changes (bookings are handled by pos-master-db)
+        // Realtime Subscription: Instant update when shift changes
         const shiftSyncChannel = supabase.channel('pos-shift-realtime-dashboard')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, () => {
                 checkAndRestoreActiveShift().then(fresh => {
                     if (fresh) setActiveShift(fresh);
-                    triggerDebouncedShiftSummary();
+                    if (showCloseShiftModalRef.current) triggerDebouncedShiftSummary();
                 });
             })
             .subscribe();
@@ -632,7 +635,7 @@ export default function POSDashboard() {
         const handleLocalTx = () => {
             const fresh = getCurrentShift();
             if (fresh) setActiveShift(fresh);
-            triggerDebouncedShiftSummary();
+            if (showCloseShiftModalRef.current) triggerDebouncedShiftSummary();
         };
         window.addEventListener('pos-shift-changed', handleLocalTx);
         return () => {
@@ -645,6 +648,7 @@ export default function POSDashboard() {
     // Force re-sync and scan open tables when opening Close Shift modal
     useEffect(() => {
         if (showCloseShiftModal && activeShift) {
+            fetchRealtimeSummary();
             checkAndRestoreActiveShift().then(fresh => {
                 if (fresh) setActiveShift(fresh);
             });
@@ -2913,18 +2917,9 @@ export default function POSDashboard() {
 
         const currentReqId = ++tableSelectRequestIdRef.current;
 
-        // 2. SYNCHRONOUS TABLE ISOLATION:
-        // Immediately purge active booking and clear previous table's order items
-        // so that while awaiting network response, Table 7 items NEVER display under Table 6
+        // 2. SYNCHRONOUS ZERO-LATENCY UI RESPONSE:
+        // Use in-memory table.booking / posCache immediately so tapping any table responds in <16ms on Sunmi D2s Plus
         setSelectedTable(table);
-        setActiveBooking(null);
-        if (activeBookingRef) activeBookingRef.current = null;
-        setAttachedMemberCrm(null);
-        setCurrentOrder({
-            items: [],
-            customer: `Table ${table.table_name || ''}`,
-            table: table
-        });
 
         if (table?.id) {
             localStorage.setItem('pos_active_table_id', table.id);
@@ -2937,8 +2932,56 @@ export default function POSDashboard() {
                 if (tableAlertKey) toast.dismiss(tableAlertKey);
             } catch (e) {}
         }
+
+        const cachedBookings = posCache.getBookings() || [];
+        const richCachedBooking = table.booking?.id
+            ? (cachedBookings.find(b => b.id === table.booking.id) || table.booking)
+            : null;
+        const optimisticBooking = (table.status === 'occupied' || table.status === 'pending') ? (richCachedBooking || table.booking) : null;
+        const knownUpcomingRes = table.upcomingReservation || table.expiredHoldReservation || null;
+
+        if (optimisticBooking) {
+            setActiveBooking(optimisticBooking);
+            if (activeBookingRef) activeBookingRef.current = optimisticBooking;
+            setAttachedMemberCrm(optimisticBooking.profiles || null);
+            const optimisticItems = (optimisticBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+            setCurrentOrder({
+                items: optimisticItems,
+                customer: optimisticBooking.profiles?.display_name || optimisticBooking.pickup_contact_name || optimisticBooking.customer_name || `Table ${table.table_name}`,
+                table: table
+            });
+            setView('tables');
+        } else if (knownUpcomingRes) {
+            const diffMins = getReservationDiffMins(knownUpcomingRes.booking_time);
+            setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
+            setAttachedMemberCrm(null);
+            setCurrentOrder({
+                items: [],
+                customer: 'Walk-in Guest',
+                table: table
+            });
+            if (diffMins <= 45) {
+                setOnlineReservationModalData({ table, reservation: knownUpcomingRes, diffMins });
+            } else {
+                setOpenTablePaxInput(String(table.capacity || 2));
+                setOpenTableModalData({ table, upcomingReservation: knownUpcomingRes, reservationDiffMins: diffMins });
+            }
+        } else {
+            // Free table -> Open modal immediately (0ms network wait!)
+            setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
+            setAttachedMemberCrm(null);
+            setCurrentOrder({
+                items: [],
+                customer: 'Walk-in Guest',
+                table: table
+            });
+            setOpenTablePaxInput(String(table.capacity || 2));
+            setOpenTableModalData({ table });
+        }
         
-        // 3. Fetch active booking for this specific table
+        // 3. Background verification / hydration from Supabase
         const booking = await getActiveBooking(table.id);
 
         if (booking?.id) {
@@ -2950,6 +2993,9 @@ export default function POSDashboard() {
         if (currentReqId !== tableSelectRequestIdRef.current) return;
         
         if (booking) {
+            // If we optimistically opened a modal on a table that was just seated on another device, close the modal
+            setOpenTableModalData(null);
+            setOnlineReservationModalData(null);
             setActiveBooking(booking);
             if (activeBookingRef) activeBookingRef.current = booking;
             if (booking.profiles) {
@@ -2963,59 +3009,9 @@ export default function POSDashboard() {
                 customer: booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || `Table ${table.table_name}`,
                 table: table
             });
-            // Keep on 'tables' view so the floorplan remains visible
             setView('tables');
-        } else {
-            // Check if this table has an upcoming / today's online reservation
-            let upcomingRes = table.upcomingReservation || table.expiredHoldReservation || null;
-            if (!upcomingRes && isOnline() && table.id) {
-                try {
-                    const today = new Date();
-                    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
-                    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
-                    const { data: resData } = await supabase
-                        .from('bookings')
-                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, price, category_id))')
-                        .eq('table_id', table.id)
-                        .in('status', ['confirmed', 'pending', 'ready'])
-                        .gte('booking_time', startOfToday)
-                        .lte('booking_time', endOfToday)
-                        .order('booking_time', { ascending: true })
-                        .limit(1);
-                    if (resData && resData.length > 0) {
-                        upcomingRes = resData[0];
-                    }
-                } catch (e) {
-                    console.warn('Failed to fetch upcoming reservation for table:', e);
-                }
-            }
-
-            if (currentReqId !== tableSelectRequestIdRef.current) return;
-
-            if (upcomingRes) {
-                const diffMins = getReservationDiffMins(upcomingRes.booking_time);
-
-                // If reservation is imminent (<= 45 mins), open reservation check-in modal as primary
-                if (diffMins <= 45) {
-                    setOnlineReservationModalData({ table, reservation: upcomingRes, diffMins });
-                    return;
-                }
-
-                // Reservation is far in advance (> 45 mins) -> Customer hasn't arrived yet!
-                // Open table for on-site walk-in guests by default, completely isolated from future reservation.
-                setActiveBooking(null);
-                if (activeBookingRef) activeBookingRef.current = null;
-                setCurrentOrder({
-                    items: [],
-                    customer: 'Walk-in Guest',
-                    table: table
-                });
-                setOpenTablePaxInput(String(table.capacity || 2));
-                setOpenTableModalData({ table, upcomingReservation: upcomingRes, reservationDiffMins: diffMins });
-                return;
-            }
-
-            // Table is empty -> Show Open Table Modal to mandate entering guest count!
+        } else if (optimisticBooking) {
+            // Table was optimistically thought occupied, but DB confirmed it is now free
             setActiveBooking(null);
             if (activeBookingRef) activeBookingRef.current = null;
             setCurrentOrder({
@@ -3384,10 +3380,10 @@ export default function POSDashboard() {
 
     const qtyDebounceTimersRef = useRef({});
 
-    const handleUpdateQuantity = useCallback((itemId, delta) => {
+    const handleUpdateQuantity = useCallback(async (itemId, delta, options = {}) => {
         // Synchronously find targetItem from currentOrderRef to prevent React 18 async updater closure bugs
-        const targetItem = currentOrderRef.current?.items?.find(i => i.id === itemId);
-        if (!targetItem) return;
+        const targetItem = currentOrderRef.current?.items?.find(i => i.id === itemId) || options?.itemSnapshot;
+        if (!targetItem || delta === 0) return;
 
         const isReward = targetItem.is_reward || !!targetItem.claim_code || (targetItem.name || '').includes('แลกสิทธิ');
         if (isReward && delta > 0) {
@@ -3413,9 +3409,11 @@ export default function POSDashboard() {
             };
         });
 
+        let resolvedBooking = activeBookingRef.current || activeBooking;
+        let currentBookingId = resolvedBooking?.id || null;
+
         // 2. Perform DB sync and activeBooking sync if item exists in database
         if (targetItem.db_id) {
-            const currentBookingId = activeBookingRef.current?.id || activeBooking?.id;
             const cleanDbId = String(targetItem.db_id).replace(/^db_/, '');
 
             // Instant optimistic update to activeBooking in memory
@@ -3430,27 +3428,142 @@ export default function POSDashboard() {
                 const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
                 const updatedBooking = { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
                 if (activeBookingRef) activeBookingRef.current = updatedBooking;
+                resolvedBooking = updatedBooking;
                 return updatedBooking;
             });
 
             if (qtyDebounceTimersRef.current[cleanDbId]) {
                 clearTimeout(qtyDebounceTimersRef.current[cleanDbId]);
+                delete qtyDebounceTimersRef.current[cleanDbId];
             }
 
             if (nextQty === 0) {
-                deleteOrderItem(cleanDbId, currentBookingId);
-                delete qtyDebounceTimersRef.current[cleanDbId];
-                toast.success(`ลบรายการ "${targetItem.name || 'เมนู'}" เรียบร้อยแล้ว`);
+                await deleteOrderItem(cleanDbId, currentBookingId);
+            } else if (options?.autoPrint) {
+                await updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
             } else {
                 qtyDebounceTimersRef.current[cleanDbId] = setTimeout(() => {
                     updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
                     delete qtyDebounceTimersRef.current[cleanDbId];
                 }, 300);
             }
-        } else if (nextQty === 0) {
-            toast.info(`ลบรายการร่าง "${targetItem.name || 'เมนู'}" ออกแล้ว`);
+        } else if (options?.autoPrint && nextQty > 0) {
+            // Draft item confirmed via +/- modal: persist booking & item to DB so it gets a db_id and won't double-print later
+            try {
+                if (!currentBookingId) {
+                    const memberIdToPass = attachedMemberCrm?.id || resolvedBooking?.user_id || resolvedBooking?.profiles?.id || null;
+                    const pickupNote = currentOrderRef.current?.customer || 'ออเดอร์กลับบ้าน';
+                    const newBooking = selectedTable
+                        ? await createWalkIn(selectedTable, null, memberIdToPass)
+                        : await createWalkInPickup(pickupNote, memberIdToPass);
+                    if (newBooking) {
+                        currentBookingId = newBooking.id;
+                        resolvedBooking = newBooking;
+                        setActiveBooking(newBooking);
+                        if (activeBookingRef) activeBookingRef.current = newBooking;
+                        localStaffSubmittedBookingsRef.current.set(String(currentBookingId), Date.now());
+                    }
+                }
+                if (currentBookingId) {
+                    processingQrPrintRef.current.add(currentBookingId);
+                    localStaffSubmittedBookingsRef.current.set(String(currentBookingId), Date.now());
+                    const result = await submitOrderItems(currentBookingId, [{ ...targetItem, quantity: nextQty }]);
+                    const insertedRows = (typeof result === 'object' && result?.insertedItems) ? result.insertedItems : [];
+                    if (insertedRows.length > 0) {
+                        const newDbRow = insertedRows[0];
+                        const storageKey = `qr_printed_items_${currentBookingId}`;
+                        try {
+                            const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                            const combined = Array.from(new Set([...printed, ...insertedRows.map(r => r.id).filter(Boolean)]));
+                            localStorage.setItem(storageKey, JSON.stringify(combined));
+                        } catch (e) {}
+
+                        setCurrentOrder(prev => ({
+                            ...prev,
+                            items: (prev?.items || []).map(it => it.id === itemId ? { ...it, db_id: newDbRow.id } : it)
+                        }));
+                    }
+                    setTimeout(() => {
+                        processingQrPrintRef.current.delete(currentBookingId);
+                    }, 1500);
+                }
+            } catch (err) {
+                console.warn('[POS AutoPrint Qty] Failed to persist draft item before print:', err);
+            }
         }
-    }, [deleteOrderItem, updateOrderItemDbQty, activeBooking]);
+
+        // 3. Auto-print Kitchen / Bar notification slip for the confirmed +/- quantity change
+        if (options?.autoPrint) {
+            const absDelta = Math.abs(delta);
+            const actionTag = delta > 0 ? '[สั่งเพิ่ม]' : (nextQty === 0 ? '[ยกเลิกรายการ]' : '[ลดจำนวน]');
+            const actionNote = delta > 0
+                ? `สั่งเพิ่ม +${absDelta} ชิ้น (รวมเป็น ${nextQty} ชิ้น)`
+                : (nextQty === 0 ? `ยกเลิกรายการทั้งหมด (-${absDelta} ชิ้น)` : `ลดจำนวน -${absDelta} ชิ้น (คงเหลือ ${nextQty} ชิ้น)`);
+
+            const baseItemName = targetItem.custom_name || targetItem.name || 'Item';
+            const taggedItemName = `${actionTag} ${baseItemName}`;
+            const combinedItemNote = targetItem.item_note
+                ? `${targetItem.item_note} | ${actionNote}`
+                : actionNote;
+
+            const slipOrderItem = {
+                id: targetItem.db_id || targetItem.id || `qty_adj_${Date.now()}`,
+                booking_id: currentBookingId,
+                menu_item_id: resolveMenuItemId(targetItem),
+                quantity: absDelta,
+                price_at_time: Number(targetItem.price) || 0,
+                price: Number(targetItem.price) || 0,
+                selected_options: targetItem.selected_options || [],
+                item_note: combinedItemNote,
+                name: taggedItemName,
+                custom_name: taggedItemName,
+                destination: targetItem.destination || 'kitchen',
+                is_custom: Boolean(targetItem.is_custom),
+                is_emergency: Boolean(targetItem.is_emergency),
+                category_id: targetItem.category_id || '',
+                category_name: targetItem.category_name || (targetItem.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                menu_items: {
+                    name: taggedItemName,
+                    category_id: targetItem.category_id || '',
+                    menu_categories: {
+                        name: targetItem.category_name || (targetItem.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร')
+                    }
+                }
+            };
+
+            const deltaPrintBooking = {
+                ...(resolvedBooking || {}),
+                id: currentBookingId || `local_${Date.now()}`,
+                table_id: resolvedBooking?.table_id || selectedTable?.id || null,
+                tables_layout: resolvedBooking?.tables_layout || selectedTable || null,
+                booking_type: resolvedBooking?.booking_type || (selectedTable ? 'walk_in' : 'pickup'),
+                pax: resolvedBooking?.pax || selectedTable?.capacity || 1,
+                customer_name: resolvedBooking?.customer_name || currentOrderRef.current?.customer || 'Walk-in Guest',
+                created_at: new Date().toISOString(),
+                order_items: [slipOrderItem]
+            };
+
+            try {
+                const printed = await autoPrintQROrder(deltaPrintBooking);
+                if (printed) {
+                    toast.success(
+                        delta > 0
+                            ? `พิมพ์ใบสั่งเพิ่ม "${baseItemName}" (+${absDelta}) เรียบร้อยแล้ว`
+                            : (nextQty === 0
+                                ? `ลบและพิมพ์ใบยกเลิก "${baseItemName}" (-${absDelta}) เรียบร้อยแล้ว`
+                                : `ลดจำนวนและพิมพ์ใบแจ้ง "${baseItemName}" (-${absDelta}) เรียบร้อยแล้ว`)
+                    );
+                } else {
+                    openSlipOrSilentPrint(deltaPrintBooking, 'kitchen');
+                }
+            } catch (printErr) {
+                console.error('[POS AutoPrint Qty] Print failed:', printErr);
+                openSlipOrSilentPrint(deltaPrintBooking, 'kitchen');
+            }
+        } else if (nextQty === 0) {
+            toast.info(`ลบรายการ "${targetItem.name || 'เมนู'}" ออกแล้ว`);
+        }
+    }, [deleteOrderItem, updateOrderItemDbQty, activeBooking, attachedMemberCrm, selectedTable, createWalkIn, createWalkInPickup, submitOrderItems]);
 
     const handleUpdateItemNote = useCallback((itemId, note) => {
         setCurrentOrder(prev => ({
@@ -4815,49 +4928,311 @@ export default function POSDashboard() {
         return await printSplitQrSlip(activeBooking, splitDetails);
     };
 
+    // Stable callback dispatcher ref so React.memo on POSLayout, POSTableGrid, and POSOrderPanel is never broken by inline arrow functions
+    const dashboardActionsRef = useRef({});
+    dashboardActionsRef.current = {
+        onViewChange: (v) => {
+            if (v === 'tables') {
+                handleBackToTables();
+            } else if (v === 'menu' && view === 'tables') {
+                if (!selectedTable && !activeBooking) {
+                    setSelectedTable(null);
+                    setActiveBooking(null);
+                    if (activeBookingRef) activeBookingRef.current = null;
+                    setCurrentOrder({ items: [], customer: 'ออเดอร์กลับบ้าน', table: null });
+                    setAttachedMemberCrm(null);
+                    localStorage.removeItem('pos_active_table_id');
+                }
+                setView('menu');
+            } else {
+                if (activeBooking && (!activeBooking.table_id || activeBooking.booking_type === 'pickup')) {
+                    const isOnlineOrder = isCallConfirmOrder(activeBooking) || isPayAtStoreOrder(activeBooking) || (activeBooking.source || '').toLowerCase() === 'online';
+                    const hasNoItems = (!currentOrder?.items || currentOrder.items.length === 0) &&
+                                       (!activeBooking.order_items || activeBooking.order_items.length === 0);
+                    if (!isOnlineOrder && hasNoItems && activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
+                        supabase
+                            .from('bookings')
+                            .update({ status: 'void' })
+                            .eq('id', activeBooking.id)
+                            .then(() => {})
+                            .catch(err => console.error('Failed to void abandoned pickup:', err));
+                    }
+                    setActiveBooking(null);
+                    if (activeBookingRef) activeBookingRef.current = null;
+                    setCurrentOrder({ items: [], customer: null, table: null });
+                }
+                setView(v);
+            }
+        },
+        onBack: () => handleBackToTables(),
+        onNewWalkInPickup: () => handleNewWalkInPickup(),
+        onOpenNotifDrawer: () => {
+            setShowNotifDrawer(true);
+            setUnreadNotifCount(0);
+        },
+        onSelectOpenBill: (b) => handleSelectOpenBill(b),
+        onOpenSlip: (booking, slipType) => openSlipOrSilentPrint(booking, slipType),
+        onViewSlipImage: (url) => setViewSlipImageUrl(url),
+        onSelectCrmCustomer: (m) => handleSelectCrmCustomer(m),
+        onUpdateQuantity: (id, delta, opts) => handleUpdateQuantity(id, delta, opts),
+        onUpdateItemNote: (id, note) => handleUpdateItemNote(id, note),
+        onClear: () => handleClearOrderOrTable(),
+        onCheckout: (...args) => handleCheckout(...args),
+        onOpenMenu: () => setView('menu'),
+        onInjectRewardItem: (...args) => handleInjectRewardItem(...args),
+        onRemoveRewardItem: (...args) => handleRemoveRewardItem(...args),
+        onAddEmergencyItem: (...args) => handleAddToOrder(...args),
+        onMoveTable: () => handleOpenMoveModal(),
+        onMergeBill: () => handleOpenMergeModal(),
+        onSaveAndOpenSlip: (...args) => handleSaveAndOpenSlip(...args),
+        onUpdateDiscount: (...args) => handleUpdateDiscount(...args),
+        onAcceptOrder: async () => {
+            if (isSubmittingOrder) return;
+            setIsSubmittingOrder(true);
+            try {
+                if (activeBooking) {
+                    const success = await acceptOrder(activeBooking.id);
+                    if (success) {
+                        let updatedBooking = null;
+                        if (selectedTable) {
+                            updatedBooking = await getActiveBooking(selectedTable.id);
+                        } else {
+                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))').eq('id', activeBooking.id).single();
+                            updatedBooking = data;
+                        }
+                        
+                        if (updatedBooking) {
+                            setActiveBooking(updatedBooking);
+                        }
+                        
+                        const finalBooking = updatedBooking || activeBooking;
+                        
+                        const storageKey = `qr_printed_items_${activeBooking.id}`;
+                        let printed = [];
+                        try {
+                            printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                        } catch (e) {}
+                        
+                        const allItems = finalBooking.order_items || [];
+                        const unprinted = allItems.filter(i => i.id && !printed.includes(i.id));
+                        
+                        if (unprinted.length > 0) {
+                            const printSuccess = await autoPrintQROrder({ ...finalBooking, order_items: unprinted });
+                            if (printSuccess) {
+                                const newPrinted = Array.from(new Set([...printed, ...unprinted.map(i => i.id).filter(Boolean)]));
+                                localStorage.setItem(storageKey, JSON.stringify(newPrinted));
+                            } else {
+                                openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
+                            }
+                        }
+                        
+                        const cfdConfirmedDetail = {
+                            type: 'ORDER_CONFIRMED',
+                            payload: {
+                                tableName: selectedTable?.table_name || finalBooking.tables_layout?.table_name || 'Counter Order',
+                                customer: finalBooking.profiles?.display_name || finalBooking.pickup_contact_name || finalBooking.customer_name || 'Walk-in Guest',
+                                itemCount: unprinted.length > 0 ? unprinted.length : (finalBooking.order_items?.length || 0),
+                                totalAmount: (finalBooking.order_items || []).reduce((sum, i) => sum + (parseFloat(i.price_at_time ?? i.price) * (i.quantity || 1)), 0),
+                                bookingId: activeBooking.id
+                            },
+                            timestamp: Date.now()
+                        };
+                        window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdConfirmedDetail }));
+                        try {
+                            if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                                window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdConfirmedDetail));
+                            }
+                        } catch (e) {}
+
+                        const bId = finalBooking?.id;
+                        const tId = selectedTable?.id || finalBooking?.table_id;
+                        if (bId) {
+                            const orderAlertKey = getCanonicalOrderAlertKey(bId);
+                            if (orderAlertKey) toast.dismiss(orderAlertKey);
+                        }
+                        if (tId) {
+                            const tableAlertKey = getCanonicalTableAlertKey('table_order', tId);
+                            if (tableAlertKey) toast.dismiss(tableAlertKey);
+                        }
+
+                        checkPendingOrders();
+                    }
+                }
+            } finally {
+                setIsSubmittingOrder(false);
+            }
+        },
+        onOpenSplitPayment: (tax) => {
+            const defaultVat = (() => {
+                try {
+                    const cached = localStorage.getItem('pos_default_vat_enabled');
+                    if (cached !== null) return cached === 'true';
+                } catch (e) {}
+                return true;
+            })();
+            setSplitIncludeTax(typeof tax === 'boolean' ? tax : defaultVat);
+            setShowSplitModal(true);
+        },
+        onAttachCustomer: async (member) => {
+            if (!member?.id) return;
+            let fullMember = member;
+            try {
+                const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: member.id });
+                if (!error && data && data.length > 0) {
+                    fullMember = { ...member, ...data[0] };
+                }
+            } catch (e) {}
+            setAttachedMemberCrm(fullMember);
+            let bookingId = activeBooking?.id;
+
+            if (!bookingId) {
+                if (selectedTable) {
+                    const newBooking = await createWalkIn(selectedTable, null, member.id);
+                    if (newBooking) {
+                        bookingId = newBooking.id;
+                        setActiveBooking({ ...newBooking, user_id: member.id, profiles: fullMember });
+                        setAttachedMemberCrm(fullMember);
+                        await attachCustomerToBooking(bookingId, member.id);
+                    }
+                } else {
+                    setActiveBooking({ id: null, user_id: member.id, profiles: member, booking_type: 'pickup', pax: 1 });
+                    toast.success(`ผูกสมาชิก: ${member.display_name || member.phone || 'Customer'}`);
+                    return;
+                }
+            } else {
+                const success = await attachCustomerToBooking(bookingId, member.id);
+                if (success) {
+                    setAttachedMemberCrm(member);
+                    let updatedBooking = null;
+                    if (selectedTable?.id) {
+                        updatedBooking = await getActiveBooking(selectedTable.id);
+                    } else if (!String(bookingId).startsWith('local_')) {
+                        const { data } = await supabase
+                            .from('bookings')
+                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                            .eq('id', bookingId)
+                            .maybeSingle();
+                        updatedBooking = data;
+                    }
+                    if (updatedBooking) {
+                        setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
+                    } else {
+                        setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
+                    }
+                }
+            }
+        },
+        onDetachCustomer: async () => {
+            setAttachedMemberCrm(null);
+            if (activeBooking) {
+                const success = await attachCustomerToBooking(activeBooking.id, null);
+                if (success) {
+                    if (selectedTable?.id) {
+                        const updatedBooking = await getActiveBooking(selectedTable.id);
+                        setActiveBooking(updatedBooking ? { ...updatedBooking, user_id: null, profiles: null } : null);
+                    } else if (!String(activeBooking.id).startsWith('local_')) {
+                        const { data } = await supabase
+                            .from('bookings')
+                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                            .eq('id', activeBooking.id)
+                            .maybeSingle();
+                        if (data) setActiveBooking({ ...data, user_id: null, profiles: null });
+                        else setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : null);
+                    } else {
+                        setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : null);
+                    }
+                }
+            }
+        },
+        onUpdateCustomerProfile: async (updatedProfile) => {
+            if (updatedProfile) {
+                setAttachedMemberCrm(prev => {
+                    if (prev && (prev.id === updatedProfile.id || prev.user_id === updatedProfile.id)) {
+                        return { ...prev, ...updatedProfile };
+                    }
+                    return prev;
+                });
+            }
+            if (activeBooking) {
+                if (activeBooking.id && updatedProfile && (activeBooking.user_id === updatedProfile.id || !activeBooking.user_id)) {
+                    try {
+                        await supabase.from('bookings').update({
+                            pickup_contact_name: updatedProfile.display_name,
+                            customer_name: updatedProfile.display_name,
+                            pickup_contact_phone: updatedProfile.phone_number
+                        }).eq('id', activeBooking.id);
+                    } catch (err) {
+                        console.warn("Could not sync booking contact name:", err);
+                    }
+                }
+
+                if (selectedTable?.id) {
+                    const updatedBooking = await getActiveBooking(selectedTable.id);
+                    if (updatedBooking) {
+                        setActiveBooking(updatedBooking);
+                        if (updatedBooking.profiles) {
+                            setAttachedMemberCrm(prev => prev ? { ...prev, ...updatedBooking.profiles } : updatedBooking.profiles);
+                        }
+                    }
+                } else if (activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
+                    const { data } = await supabase
+                        .from('bookings')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                        .eq('id', activeBooking.id)
+                        .maybeSingle();
+                    if (data) {
+                        setActiveBooking(data);
+                        if (data.profiles) {
+                            setAttachedMemberCrm(prev => prev ? { ...prev, ...data.profiles } : data.profiles);
+                        }
+                    }
+                } else if (updatedProfile) {
+                    setActiveBooking(prev => prev ? {
+                        ...prev,
+                        customer_name: updatedProfile.display_name,
+                        pickup_contact_name: updatedProfile.display_name,
+                        profiles: { ...(prev.profiles || {}), ...updatedProfile }
+                    } : prev);
+                }
+            }
+        }
+    };
+
+    const stableOnViewChange = useCallback((v) => dashboardActionsRef.current.onViewChange(v), []);
+    const stableOnBack = useCallback(() => dashboardActionsRef.current.onBack(), []);
+    const stableOnNewWalkInPickup = useCallback(() => dashboardActionsRef.current.onNewWalkInPickup(), []);
+    const stableOnOpenNotifDrawer = useCallback(() => dashboardActionsRef.current.onOpenNotifDrawer(), []);
+    const stableOnSelectOpenBill = useCallback((b) => dashboardActionsRef.current.onSelectOpenBill(b), []);
+    const stableOnOpenSlip = useCallback((b, t) => dashboardActionsRef.current.onOpenSlip(b, t), []);
+    const stableOnViewSlipImage = useCallback((url) => dashboardActionsRef.current.onViewSlipImage(url), []);
+    const stableOnSelectCrmCustomer = useCallback((m) => dashboardActionsRef.current.onSelectCrmCustomer(m), []);
+    const stableOnUpdateQuantity = useCallback((id, d, opts) => dashboardActionsRef.current.onUpdateQuantity(id, d, opts), []);
+    const stableOnUpdateItemNote = useCallback((id, n) => dashboardActionsRef.current.onUpdateItemNote(id, n), []);
+    const stableOnClear = useCallback(() => dashboardActionsRef.current.onClear(), []);
+    const stableOnCheckout = useCallback((...args) => dashboardActionsRef.current.onCheckout(...args), []);
+    const stableOnOpenMenu = useCallback(() => dashboardActionsRef.current.onOpenMenu(), []);
+    const stableOnInjectRewardItem = useCallback((...args) => dashboardActionsRef.current.onInjectRewardItem(...args), []);
+    const stableOnRemoveRewardItem = useCallback((...args) => dashboardActionsRef.current.onRemoveRewardItem(...args), []);
+    const stableOnAddEmergencyItem = useCallback((...args) => dashboardActionsRef.current.onAddEmergencyItem(...args), []);
+    const stableOnAcceptOrder = useCallback(() => dashboardActionsRef.current.onAcceptOrder(), []);
+    const stableOnOpenSplitPayment = useCallback((tax) => dashboardActionsRef.current.onOpenSplitPayment(tax), []);
+    const stableOnMoveTable = useCallback(() => dashboardActionsRef.current.onMoveTable(), []);
+    const stableOnMergeBill = useCallback(() => dashboardActionsRef.current.onMergeBill(), []);
+    const stableOnAttachCustomer = useCallback((m) => dashboardActionsRef.current.onAttachCustomer(m), []);
+    const stableOnDetachCustomer = useCallback(() => dashboardActionsRef.current.onDetachCustomer(), []);
+    const stableOnUpdateCustomerProfile = useCallback((p) => dashboardActionsRef.current.onUpdateCustomerProfile(p), []);
+    const stableOnSaveAndOpenSlip = useCallback((...args) => dashboardActionsRef.current.onSaveAndOpenSlip(...args), []);
+    const stableOnUpdateDiscount = useCallback((...args) => dashboardActionsRef.current.onUpdateDiscount(...args), []);
+
     return (
-        <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none">
+        <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none pos-container">
             
             <POSLayout 
                 activeView={view} 
                 onlinePendingCount={onlinePendingCount}
-                onViewChange={(v) => {
-                    if (v === 'tables') {
-                        handleBackToTables();
-                    } else if (v === 'menu' && view === 'tables') {
-                        // Only start a clean Direct/Pickup order if no table/booking is currently active
-                        if (!selectedTable && !activeBooking) {
-                            setSelectedTable(null);
-                            setActiveBooking(null);
-                            if (activeBookingRef) activeBookingRef.current = null;
-                            setCurrentOrder({ items: [], customer: 'ออเดอร์กลับบ้าน', table: null });
-                            setAttachedMemberCrm(null);
-                            localStorage.removeItem('pos_active_table_id');
-                        }
-                        setView('menu');
-                    } else {
-                        // Safety cleanup when navigating away: void empty POS walk-in pickup if abandoned
-                        if (activeBooking && (!activeBooking.table_id || activeBooking.booking_type === 'pickup')) {
-                            const isOnlineOrder = isCallConfirmOrder(activeBooking) || isPayAtStoreOrder(activeBooking) || (activeBooking.source || '').toLowerCase() === 'online';
-                            const hasNoItems = (!currentOrder?.items || currentOrder.items.length === 0) &&
-                                               (!activeBooking.order_items || activeBooking.order_items.length === 0);
-                            if (!isOnlineOrder && hasNoItems && activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
-                                supabase
-                                    .from('bookings')
-                                    .update({ status: 'void' })
-                                    .eq('id', activeBooking.id)
-                                    .then(() => {})
-                                    .catch(err => console.error('Failed to void abandoned pickup:', err));
-                            }
-                            setActiveBooking(null);
-                            if (activeBookingRef) activeBookingRef.current = null;
-                            setCurrentOrder({ items: [], customer: null, table: null });
-                        }
-                        setView(v);
-                    }
-                }}
+                onViewChange={stableOnViewChange}
                 selectedTable={selectedTable}
-                onBack={handleBackToTables}
+                onBack={stableOnBack}
             >
                 <div className="flex h-full w-full overflow-hidden pos-view-container">
                     {/* Main Content Area */}
@@ -4866,15 +5241,12 @@ export default function POSDashboard() {
                         <div className={view === 'tables' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSTableGrid 
                                 onSelectTable={handleSelectTable} 
-                                onNewWalkInPickup={handleNewWalkInPickup}
+                                onNewWalkInPickup={stableOnNewWalkInPickup}
                                 hasPendingOrders={hasPendingOrders} 
                                 refreshKey={refreshKey}
                                 activeTableId={selectedTable?.id}
                                 activeBooking={activeBooking}
-                                onOpenNotifDrawer={() => {
-                                    setShowNotifDrawer(true);
-                                    setUnreadNotifCount(0);
-                                }}
+                                onOpenNotifDrawer={stableOnOpenNotifDrawer}
                                 unreadNotifCount={unreadNotifCount}
                             />
                         </div>
@@ -4890,11 +5262,9 @@ export default function POSDashboard() {
                         <div className={view === 'open_bills' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSOpenBillsGrid 
                                 isActive={view === 'open_bills'}
-                                onSelectOrder={handleSelectOpenBill} 
-                                onOpenSlip={(booking, slipType) => {
-                                    openSlipOrSilentPrint(booking, slipType);
-                                }} 
-                                refreshKey={refreshKey} 
+                                onSelectOrder={stableOnSelectOpenBill} 
+                                onOpenSlip={stableOnOpenSlip} 
+                                refreshKey={view === 'open_bills' ? refreshKey : 0} 
                             />
                         </div>
                         <div className={view === 'crm' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
@@ -4934,249 +5304,40 @@ export default function POSDashboard() {
                                 <POSOnlineHub 
                                     isActive={view === 'online_hub'}
                                     activeShift={activeShift} 
-                                    onOpenSlipModal={(booking, slipType) => {
-                                        openSlipOrSilentPrint(booking, slipType);
-                                    }}
-                                    onViewSlipImage={(url) => setViewSlipImageUrl(url)}
-                                    onSelectOrder={handleSelectOpenBill}
-                                    refreshKey={refreshKey}
+                                    onOpenSlipModal={stableOnOpenSlip}
+                                    onViewSlipImage={stableOnViewSlipImage}
+                                    onSelectOrder={stableOnSelectOpenBill}
+                                    refreshKey={view === 'online_hub' ? refreshKey : 0}
                                 />
                             </React.Suspense>
                         </div>
                     </div>
 
-                    {/* Order Panel Sidebar - Persistently mounted with GPU layer to prevent layout reflow jumping */}
+                    {/* Order Panel Sidebar */}
                     <div className={view !== 'reports' && view !== 'crm' && view !== 'open_bills' && view !== 'online_hub' ? 'h-full shrink-0 flex pos-panel-layer' : 'hidden'}>
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
                             isSubmitting={isSubmittingOrder}
                             attachedMemberCrm={attachedMemberCrm}
-                            onSelectCrmCustomer={handleSelectCrmCustomer}
-                            onUpdateQuantity={handleUpdateQuantity}
-                            onUpdateItemNote={handleUpdateItemNote}
-                            onClear={handleClearOrderOrTable}
-                            onCheckout={handleCheckout}
-                            onOpenMenu={() => setView('menu')}
-                            onInjectRewardItem={handleInjectRewardItem}
-                            onRemoveRewardItem={handleRemoveRewardItem}
-                            onAddEmergencyItem={handleAddToOrder}
-                            onAcceptOrder={async () => {
-                                if (isSubmittingOrder) return;
-                                setIsSubmittingOrder(true);
-                                try {
-                                    if (activeBooking) {
-                                        const success = await acceptOrder(activeBooking.id);
-                                    if (success) {
-                                        let updatedBooking = null;
-                                        if (selectedTable) {
-                                            updatedBooking = await getActiveBooking(selectedTable.id);
-                                        } else {
-                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))').eq('id', activeBooking.id).single();
-                                            updatedBooking = data;
-                                        }
-                                        
-                                        if (updatedBooking) {
-                                            setActiveBooking(updatedBooking);
-                                        }
-                                        
-                                        const finalBooking = updatedBooking || activeBooking;
-                                        
-                                        // Auto-print both Kitchen and Bar slips for unprinted items
-                                        const storageKey = `qr_printed_items_${activeBooking.id}`;
-                                        let printed = [];
-                                        try {
-                                            printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                                        } catch (e) {}
-                                        
-                                        const allItems = finalBooking.order_items || [];
-                                        const unprinted = allItems.filter(i => i.id && !printed.includes(i.id));
-                                        
-                                        if (unprinted.length > 0) {
-                                            const printSuccess = await autoPrintQROrder({ ...finalBooking, order_items: unprinted });
-                                            if (printSuccess) {
-                                                const newPrinted = Array.from(new Set([...printed, ...unprinted.map(i => i.id).filter(Boolean)]));
-                                                localStorage.setItem(storageKey, JSON.stringify(newPrinted));
-                                            } else {
-                                                openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
-                                            }
-                                        }
-                                        
-                                        // Broadcast ORDER_CONFIRMED to CFD so customer sees confirmation and screen auto-resets to IDLE
-                                        const cfdConfirmedDetail = {
-                                            type: 'ORDER_CONFIRMED',
-                                            payload: {
-                                                tableName: selectedTable?.table_name || finalBooking.tables_layout?.table_name || 'Counter Order',
-                                                customer: finalBooking.profiles?.display_name || finalBooking.pickup_contact_name || finalBooking.customer_name || 'Walk-in Guest',
-                                                itemCount: unprinted.length > 0 ? unprinted.length : (finalBooking.order_items?.length || 0),
-                                                totalAmount: (finalBooking.order_items || []).reduce((sum, i) => sum + (parseFloat(i.price_at_time ?? i.price) * (i.quantity || 1)), 0),
-                                                bookingId: activeBooking.id
-                                            },
-                                            timestamp: Date.now()
-                                        };
-                                        window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdConfirmedDetail }));
-                                        try {
-                                            if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
-                                                window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdConfirmedDetail));
-                                            }
-                                        } catch (e) {}
-
-                                        const bId = finalBooking?.id;
-                                        const tId = selectedTable?.id || finalBooking?.table_id;
-                                        if (bId) {
-                                            const orderAlertKey = getCanonicalOrderAlertKey(bId);
-                                            if (orderAlertKey) toast.dismiss(orderAlertKey);
-                                        }
-                                        if (tId) {
-                                            const tableAlertKey = getCanonicalTableAlertKey('table_order', tId);
-                                            if (tableAlertKey) toast.dismiss(tableAlertKey);
-                                        }
-
-                                        checkPendingOrders();
-                                        }
-                                    }
-                                } finally {
-                                    setIsSubmittingOrder(false);
-                                }
-                            }}
-                            onOpenSplitPayment={(tax) => {
-                                const defaultVat = (() => {
-                                    try {
-                                        const cached = localStorage.getItem('pos_default_vat_enabled');
-                                        if (cached !== null) return cached === 'true';
-                                    } catch (e) {}
-                                    return true;
-                                })();
-                                setSplitIncludeTax(typeof tax === 'boolean' ? tax : defaultVat);
-                                setShowSplitModal(true);
-                            }}
-                            onMoveTable={handleOpenMoveModal}
-                            onMergeBill={handleOpenMergeModal}
-                            onAttachCustomer={async (member) => {
-                                if (!member?.id) return;
-                                let fullMember = member;
-                                try {
-                                    const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: member.id });
-                                    if (!error && data && data.length > 0) {
-                                        fullMember = { ...member, ...data[0] };
-                                    }
-                                } catch (e) {}
-                                setAttachedMemberCrm(fullMember);
-                                let bookingId = activeBooking?.id;
-
-                                if (!bookingId) {
-                                    if (selectedTable) {
-                                        const newBooking = await createWalkIn(selectedTable, null, member.id);
-                                        if (newBooking) {
-                                            bookingId = newBooking.id;
-                                            setActiveBooking({ ...newBooking, user_id: member.id, profiles: fullMember });
-                                            setAttachedMemberCrm(fullMember);
-                                            await attachCustomerToBooking(bookingId, member.id);
-                                        }
-                                    } else {
-                                        setActiveBooking({ id: null, user_id: member.id, profiles: member, booking_type: 'pickup', pax: 1 });
-                                        toast.success(`ผูกสมาชิก: ${member.display_name || member.phone || 'Customer'}`);
-                                        return;
-                                    }
-                                } else {
-                                    const success = await attachCustomerToBooking(bookingId, member.id);
-                                    if (success) {
-                                        setAttachedMemberCrm(member);
-                                        let updatedBooking = null;
-                                        if (selectedTable?.id) {
-                                            updatedBooking = await getActiveBooking(selectedTable.id);
-                                        } else if (!String(bookingId).startsWith('local_')) {
-                                            const { data } = await supabase
-                                                .from('bookings')
-                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
-                                                .eq('id', bookingId)
-                                                .maybeSingle();
-                                            updatedBooking = data;
-                                        }
-                                        if (updatedBooking) {
-                                            setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
-                                        } else {
-                                            setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
-                                        }
-                                    }
-                                }
-                            }}
-                            onDetachCustomer={async () => {
-                                setAttachedMemberCrm(null);
-                                if (activeBooking) {
-                                    const success = await attachCustomerToBooking(activeBooking.id, null);
-                                    if (success) {
-                                        if (selectedTable?.id) {
-                                            const updatedBooking = await getActiveBooking(selectedTable.id);
-                                            setActiveBooking(updatedBooking ? { ...updatedBooking, user_id: null, profiles: null } : null);
-                                        } else if (!String(activeBooking.id).startsWith('local_')) {
-                                            const { data } = await supabase
-                                                .from('bookings')
-                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
-                                                .eq('id', activeBooking.id)
-                                                .maybeSingle();
-                                            if (data) setActiveBooking({ ...data, user_id: null, profiles: null });
-                                            else setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : null);
-                                        } else {
-                                            setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : null);
-                                        }
-                                    }
-                                }
-                            }}
-                            onUpdateCustomerProfile={async (updatedProfile) => {
-                                if (updatedProfile) {
-                                    setAttachedMemberCrm(prev => {
-                                        if (prev && (prev.id === updatedProfile.id || prev.user_id === updatedProfile.id)) {
-                                            return { ...prev, ...updatedProfile };
-                                        }
-                                        return prev;
-                                    });
-                                }
-                                if (activeBooking) {
-                                    if (activeBooking.id && updatedProfile && (activeBooking.user_id === updatedProfile.id || !activeBooking.user_id)) {
-                                        try {
-                                            await supabase.from('bookings').update({
-                                                pickup_contact_name: updatedProfile.display_name,
-                                                customer_name: updatedProfile.display_name,
-                                                pickup_contact_phone: updatedProfile.phone_number
-                                            }).eq('id', activeBooking.id);
-                                        } catch (err) {
-                                            console.warn("Could not sync booking contact name:", err);
-                                        }
-                                    }
-
-                                    if (selectedTable?.id) {
-                                        const updatedBooking = await getActiveBooking(selectedTable.id);
-                                        if (updatedBooking) {
-                                            setActiveBooking(updatedBooking);
-                                            if (updatedBooking.profiles) {
-                                                setAttachedMemberCrm(prev => prev ? { ...prev, ...updatedBooking.profiles } : updatedBooking.profiles);
-                                            }
-                                        }
-                                    } else if (activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
-                                        const { data } = await supabase
-                                            .from('bookings')
-                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
-                                            .eq('id', activeBooking.id)
-                                            .maybeSingle();
-                                        if (data) {
-                                            setActiveBooking(data);
-                                            if (data.profiles) {
-                                                setAttachedMemberCrm(prev => prev ? { ...prev, ...data.profiles } : data.profiles);
-                                            }
-                                        }
-                                    } else if (updatedProfile) {
-                                        setActiveBooking(prev => prev ? {
-                                            ...prev,
-                                            customer_name: updatedProfile.display_name,
-                                            pickup_contact_name: updatedProfile.display_name,
-                                            profiles: { ...(prev.profiles || {}), ...updatedProfile }
-                                        } : prev);
-                                    }
-                                }
-                            }}
-                            onOpenSlip={handleSaveAndOpenSlip}
-                            onUpdateDiscount={handleUpdateDiscount}
+                            onSelectCrmCustomer={stableOnSelectCrmCustomer}
+                            onUpdateQuantity={stableOnUpdateQuantity}
+                            onUpdateItemNote={stableOnUpdateItemNote}
+                            onClear={stableOnClear}
+                            onCheckout={stableOnCheckout}
+                            onOpenMenu={stableOnOpenMenu}
+                            onInjectRewardItem={stableOnInjectRewardItem}
+                            onRemoveRewardItem={stableOnRemoveRewardItem}
+                            onAddEmergencyItem={stableOnAddEmergencyItem}
+                            onAcceptOrder={stableOnAcceptOrder}
+                            onOpenSplitPayment={stableOnOpenSplitPayment}
+                            onMoveTable={stableOnMoveTable}
+                            onMergeBill={stableOnMergeBill}
+                            onAttachCustomer={stableOnAttachCustomer}
+                            onDetachCustomer={stableOnDetachCustomer}
+                            onUpdateCustomerProfile={stableOnUpdateCustomerProfile}
+                            onOpenSlip={stableOnSaveAndOpenSlip}
+                            onUpdateDiscount={stableOnUpdateDiscount}
                         />
                     </div>
                 </div>

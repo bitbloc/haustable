@@ -43,6 +43,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
     const [showEmergencyModal, setShowEmergencyModal] = React.useState(false);
     const [editPaxInput, setEditPaxInput] = React.useState('1');
+    const [qtyAdjustModalData, setQtyAdjustModalData] = React.useState(null);
+    const [isConfirmingQtyPrint, setIsConfirmingQtyPrint] = React.useState(false);
+
+    const handleRequestQtyChange = React.useCallback((item, initialDelta) => {
+        if (!item) return;
+        const isReward = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
+        if (isReward && initialDelta > 0) {
+            toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
+            return;
+        }
+        const initialQty = Number(item.quantity) || 1;
+        const targetQty = Math.max(0, initialQty + initialDelta);
+        setQtyAdjustModalData({
+            item,
+            initialQty,
+            targetQty
+        });
+    }, []);
     const [defaultVatEnabled, setDefaultVatEnabled] = React.useState(() => {
         try {
             const cached = localStorage.getItem('pos_default_vat_enabled');
@@ -1011,41 +1029,45 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const broadcastCFD = React.useCallback((msg) => {
         if (!msg) return;
+        const rawDedupeStr = JSON.stringify(msg);
+        if (rawDedupeStr === lastBroadcastMsgRef.current && msg.type !== 'PAYMENT_SUCCESS') return;
+        lastBroadcastMsgRef.current = rawDedupeStr;
+
         const enrichedMsg = { ...msg, timestamp: msg.timestamp || Date.now() };
-        const msgStr = JSON.stringify(enrichedMsg);
-        if (msgStr === lastBroadcastMsgRef.current) return;
-        lastBroadcastMsgRef.current = msgStr;
 
         if (msg.type === 'PAYMENT_SUCCESS') {
             lastPaymentSuccessTimeRef.current = Date.now();
         }
 
-        // 1. Instant local BroadcastChannel (same origin / same window)
-        if (cfdChannel.current) {
-            try { cfdChannel.current.postMessage(enrichedMsg); } catch (e) {}
-        }
-
-        // 2. Android Direct Native Bridge for POS APK (Capacitor -> MainActivity -> Secondary Presentation WebView)
-        try {
-            if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
-                window.AndroidCfdBridge.sendCfdEvent(msgStr);
-            }
-        } catch (e) {}
-
-        // 3. Local CustomEvent for in-app listeners
-        try {
-            window.dispatchEvent(new CustomEvent('pos_cfd_native_event', { detail: enrichedMsg }));
-        } catch (e) {}
-        
-        // 4. Debounce cloud realtime broadcast and storage write
+        // Debounce IPC & storage writes so rapid + / - taps never block the UI thread on Sunmi D2s Plus
         if (cfdDebounceTimerRef.current) {
             clearTimeout(cfdDebounceTimerRef.current);
         }
 
         const isUrgent = msg.type === 'PAYMENT_SUCCESS' || msg.type === 'IDLE';
-        const delay = isUrgent ? 0 : 120;
+        const delay = isUrgent ? 0 : 80;
 
         cfdDebounceTimerRef.current = setTimeout(() => {
+            const msgStr = JSON.stringify(enrichedMsg);
+
+            // 1. Local BroadcastChannel (same origin / same window)
+            if (cfdChannel.current) {
+                try { cfdChannel.current.postMessage(enrichedMsg); } catch (e) {}
+            }
+
+            // 2. Android Direct Native Bridge for POS APK (Capacitor -> MainActivity -> Secondary Presentation WebView)
+            try {
+                if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                    window.AndroidCfdBridge.sendCfdEvent(msgStr);
+                }
+            } catch (e) {}
+
+            // 3. Local CustomEvent for in-app listeners
+            try {
+                window.dispatchEvent(new CustomEvent('pos_cfd_native_event', { detail: enrichedMsg }));
+            } catch (e) {}
+
+            // 4. Cloud realtime broadcast & storage fallback
             if (supabaseCfdRef.current) {
                 supabaseCfdRef.current.send({
                     type: 'broadcast',
@@ -1506,6 +1528,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             key={item.id}
                             item={item}
                             onUpdateQuantity={onUpdateQuantity}
+                            onRequestQtyChange={handleRequestQtyChange}
                             onUpdateItemNote={onUpdateItemNote}
                         />
                     ))
@@ -3016,6 +3039,198 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 document.body
             )}
 
+            {/* Quantity Adjust & Auto-Print Confirmation Modal (Dieter Rams + Thai Modern OKLCH) */}
+            {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */}
+            {qtyAdjustModalData && createPortal(
+                <div className="fixed inset-0 bg-black/65 z-[9999] flex items-center justify-center p-4 select-none font-sans">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
+                        {(() => {
+                            const { item: modalItem, initialQty, targetQty } = qtyAdjustModalData;
+                            const delta = targetQty - initialQty;
+                            const isAdding = delta > 0;
+                            const isVoidingAll = targetQty === 0;
+                            const isReducing = delta < 0 && targetQty > 0;
+                            const isReward = modalItem.is_reward || !!modalItem.claim_code || (modalItem.name || '').includes('แลกสิทธิ');
+                            const opts = formatOrderItemOptions(modalItem.selected_options);
+
+                            return (
+                                <>
+                                    {/* Structural Tabular Header */}
+                                    <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center justify-between">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider ${
+                                                    isAdding
+                                                        ? 'bg-[oklch(45%_0.08_140)] text-white'
+                                                        : 'bg-[oklch(52%_0.16_28)] text-white'
+                                                }`}>
+                                                    {isAdding ? 'ADD ORDER · สั่งเพิ่ม' : (isVoidingAll ? 'VOID ITEM · ยกเลิกรายการ' : 'REDUCE QTY · ลดจำนวน')}
+                                                </span>
+                                                <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                                    AUTO PRINT SLIP
+                                                </span>
+                                            </div>
+                                            <h3 className="text-sm font-bold text-[oklch(18%_0.012_28)] mt-1">
+                                                ยืนยันการปรับจำนวนและพิมพ์ใบแจ้งครัว/บาร์
+                                            </h3>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={isConfirmingQtyPrint}
+                                            onClick={() => setQtyAdjustModalData(null)}
+                                            className="w-8 h-8 rounded-xs bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-mono font-bold cursor-pointer"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+
+                                    {/* Body */}
+                                    <div className="p-5 flex flex-col gap-4">
+                                        {/* Item Card */}
+                                        <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3.5 rounded-xs flex items-start justify-between gap-3">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-bold text-base text-[oklch(18%_0.012_28)] uppercase leading-snug">
+                                                    {modalItem.name}
+                                                </div>
+                                                {opts.length > 0 && (
+                                                    <div className="text-xs font-mono text-[oklch(55%_0.010_28)] mt-1">
+                                                        {opts.join(', ')}
+                                                    </div>
+                                                )}
+                                                {modalItem.item_note && (
+                                                    <div className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] mt-1">
+                                                        Note: {modalItem.item_note}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="text-right shrink-0 font-mono">
+                                                <div className="text-xs font-bold text-[oklch(52%_0.16_28)]">
+                                                    ฿{Number(modalItem.price || 0).toLocaleString()} / ชิ้น
+                                                </div>
+                                                <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                                    จำนวนเดิม: {initialQty}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Quantity Stepper Control */}
+                                        <div className="flex flex-col items-center gap-2 py-1">
+                                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                                ปรับจำนวนใหม่ที่ต้องการ (NEW QUANTITY)
+                                            </span>
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    type="button"
+                                                    disabled={isConfirmingQtyPrint || targetQty <= 0}
+                                                    onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, targetQty: Math.max(0, prev.targetQty - 1) } : null)}
+                                                    className="w-12 h-12 rounded-xs bg-[oklch(94%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] disabled:opacity-40 border border-[oklch(85%_0.012_28)] text-xl font-mono font-bold flex items-center justify-center cursor-pointer touch-manipulation"
+                                                >
+                                                    -
+                                                </button>
+                                                <div className="min-w-[110px] h-12 bg-white border-2 border-[oklch(18%_0.012_28)] rounded-xs flex flex-col items-center justify-center px-3 font-mono">
+                                                    <span className="text-2xl font-black leading-none text-[oklch(18%_0.012_28)]">
+                                                        {targetQty}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-[oklch(55%_0.010_28)] uppercase mt-0.5">
+                                                        (เดิม {initialQty})
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={isConfirmingQtyPrint || isReward}
+                                                    onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, targetQty: prev.targetQty + 1 } : null)}
+                                                    className="w-12 h-12 rounded-xs bg-[oklch(94%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] disabled:opacity-40 border border-[oklch(85%_0.012_28)] text-xl font-mono font-bold flex items-center justify-center cursor-pointer touch-manipulation"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+
+                                            {targetQty > 0 && (
+                                                <button
+                                                    type="button"
+                                                    disabled={isConfirmingQtyPrint}
+                                                    onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, targetQty: 0 } : null)}
+                                                    className="mt-1 text-[11px] font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline cursor-pointer py-1 px-2"
+                                                >
+                                                    [ ลบรายการนี้ออกทั้งหมด (เหลือ 0) ]
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Print Action Preview Banner */}
+                                        <div className={`p-3 rounded-xs border font-mono text-xs flex items-center justify-between ${
+                                            delta === 0
+                                                ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]'
+                                                : isAdding
+                                                ? 'bg-[oklch(45%_0.08_140)]/10 border-[oklch(45%_0.08_140)] text-[oklch(30%_0.08_140)]'
+                                                : 'bg-[oklch(52%_0.16_28)]/10 border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]'
+                                        }`}>
+                                            <span className="font-bold uppercase">
+                                                {delta === 0
+                                                    ? 'ไม่มีการเปลี่ยนแปลงจำนวน'
+                                                    : isAdding
+                                                    ? `ใบสั่งเพิ่ม (ADD): +${delta} ชิ้น`
+                                                    : isVoidingAll
+                                                    ? `ใบยกเลิกรายการ (VOID): -${initialQty} ชิ้น`
+                                                    : `ใบลดจำนวน (REDUCE): ${delta} ชิ้น`}
+                                            </span>
+                                            <span className="font-bold">
+                                                {delta === 0 ? '-' : `รวมสุทธิ ${targetQty} ชิ้น`}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer Actions */}
+                                    <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex gap-3">
+                                        <button
+                                            type="button"
+                                            disabled={isConfirmingQtyPrint}
+                                            onClick={() => setQtyAdjustModalData(null)}
+                                            className="flex-1 min-h-[44px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] py-2.5 rounded-xs font-mono text-xs font-bold uppercase cursor-pointer touch-manipulation"
+                                        >
+                                            ยกเลิก (Cancel)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={isConfirmingQtyPrint || delta === 0}
+                                            onClick={async () => {
+                                                if (delta === 0 || isConfirmingQtyPrint) return;
+                                                setIsConfirmingQtyPrint(true);
+                                                try {
+                                                    await onUpdateQuantity(modalItem.id, delta, {
+                                                        autoPrint: true,
+                                                        itemSnapshot: modalItem,
+                                                        prevQty: initialQty,
+                                                        nextQty: targetQty
+                                                    });
+                                                    setQtyAdjustModalData(null);
+                                                } finally {
+                                                    setIsConfirmingQtyPrint(false);
+                                                }
+                                            }}
+                                            className={`flex-1 min-h-[44px] py-2.5 px-3 rounded-xs font-mono text-xs font-bold uppercase tracking-wider text-white cursor-pointer touch-manipulation disabled:opacity-40 disabled:cursor-not-allowed ${
+                                                isAdding
+                                                    ? 'bg-[oklch(18%_0.012_28)] hover:bg-black'
+                                                    : 'bg-[oklch(52%_0.16_28)] hover:opacity-95'
+                                            }`}
+                                        >
+                                            {isConfirmingQtyPrint
+                                                ? 'กำลังพิมพ์สลิป...'
+                                                : isAdding
+                                                ? `ยืนยันสั่งเพิ่ม (+${delta}) & พิมพ์สลิป`
+                                                : isVoidingAll
+                                                ? `ยืนยันลบรายการ & พิมพ์ใบยกเลิก`
+                                                : `ยืนยันลดจำนวน (${delta}) & พิมพ์สลิป`}
+                                        </button>
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* View Slip Modal */}
             <ViewSlipModal 
                 url={viewSlipModalUrl} 
@@ -3039,14 +3254,21 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
 export default POSOrderPanel;
 
-const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, onUpdateItemNote }) {
+const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, onRequestQtyChange, onUpdateItemNote }) {
     const isRewardItem = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
     const isCustomEmergency = Boolean(item.is_custom || item.is_emergency || String(item.id).startsWith('custom_'));
+
+    const triggerQtyChange = (delta) => {
+        if (onRequestQtyChange) {
+            onRequestQtyChange(item, delta);
+        } else if (onUpdateQuantity) {
+            onUpdateQuantity(item.id, delta);
+        }
+    };
 
     return (
         <div 
             className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
-            style={{ contain: 'content', transform: 'translateZ(0)' }}
         >
             <div className="flex-1 min-w-0 mr-3">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -3098,8 +3320,8 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                         {/* Quick remove button */}
                         <button
                             type="button"
-                            onClick={() => onUpdateQuantity(item.id, -item.quantity)}
-                            className="text-[11px] text-[#767673] hover:text-red-600 hover:bg-red-50/80 border border-transparent hover:border-red-200 px-1.5 py-0.5 rounded transition-all font-mono font-medium cursor-pointer touch-manipulation flex items-center gap-1 active:scale-95"
+                            onClick={() => triggerQtyChange(-item.quantity)}
+                            className="text-[11px] text-[#767673] hover:text-red-600 hover:bg-red-50/80 border border-transparent hover:border-red-200 px-1.5 py-0.5 rounded transition-colors font-mono font-medium cursor-pointer touch-manipulation flex items-center gap-1"
                             title="ลบรายการนี้ออกทั้งหมด"
                         >
                             <Trash2 size={11} className="text-red-500" />
@@ -3111,8 +3333,8 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                 <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1 shrink-0">
                     <button 
                         type="button"
-                        onClick={() => onUpdateQuantity(item.id, -1)}
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] active:scale-95 transition-all shadow-xs cursor-pointer touch-manipulation ${
+                        onClick={() => triggerQtyChange(-1)}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] transition-colors shadow-xs cursor-pointer touch-manipulation ${
                             item.quantity === 1 ? 'text-red-600 hover:bg-red-50 hover:border-red-200 border border-transparent' : 'text-[#1A1A1A]'
                         }`}
                         title={item.quantity === 1 ? "ลบรายการนี้ออก" : "ลดจำนวนลง 1"}
@@ -3128,10 +3350,10 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                                 toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
                                 return;
                             }
-                            onUpdateQuantity(item.id, 1);
+                            triggerQtyChange(1);
                         }}
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white text-[#1A1A1A] transition-transform shadow-xs cursor-pointer touch-manipulation ${
-                            isRewardItem ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#F5F5F2] active:scale-95'
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white text-[#1A1A1A] transition-colors shadow-xs cursor-pointer touch-manipulation ${
+                            isRewardItem ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#F5F5F2]'
                         }`}
                         title={isRewardItem ? "รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้" : "เพิ่มจำนวน"}
                     >

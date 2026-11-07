@@ -431,7 +431,7 @@ const MenuItemCard = memo(function MenuItemCard({ item, cachedImg, onClick }) {
         <button
             type="button"
             onClick={() => onClick(item)}
-            className="bg-[var(--color-paper)] rounded-md border border-[var(--color-rule)] p-3 flex flex-col gap-2.5 text-left group hover:border-[var(--color-accent)] active:scale-[0.98] transition-transform duration-75 cursor-pointer shadow-xs relative select-none touch-manipulation min-h-[140px]"
+            className="bg-[var(--color-paper)] active:bg-[var(--color-paper-2)] rounded-md border border-[var(--color-rule)] p-3 flex flex-col gap-2.5 text-left group hover:border-[var(--color-accent)] transition-colors duration-75 cursor-pointer shadow-xs relative select-none touch-manipulation min-h-[140px]"
         >
             <div className="aspect-square rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] shrink-0">
                 {targetImg && !imgError ? (

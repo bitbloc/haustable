@@ -332,12 +332,12 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
 });
 
 const POSHeaderClock = memo(function POSHeaderClock() {
-    const [timeStr, setTimeStr] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    const [timeStr, setTimeStr] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-        }, 1000);
+            setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }, 15000);
         return () => clearInterval(interval);
     }, []);
 
@@ -356,8 +356,7 @@ const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label, badg
         <button 
             type="button"
             onClick={onClick}
-            style={{ transform: 'translateZ(0)' }}
-            className={`group relative flex flex-col items-center justify-center w-full min-h-[52px] py-2.5 rounded-md border transition-colors duration-100 cursor-pointer select-none touch-manipulation active:scale-95 ${
+            className={`group relative flex flex-col items-center justify-center w-full min-h-[52px] py-2.5 rounded-md border transition-colors duration-100 cursor-pointer select-none touch-manipulation ${
                 active 
                 ? 'bg-[var(--color-paper)] border-[var(--color-accent)] font-bold text-[var(--color-ink)] shadow-xs' 
                 : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] shadow-xs'
@@ -371,7 +370,7 @@ const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label, badg
             
             {/* Number Badge Notification */}
             {badge > 0 ? (
-                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[var(--color-accent)] text-white font-mono text-[9px] font-bold px-1 shadow-xs animate-pulse border border-[var(--color-paper)]">
+                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[var(--color-accent)] text-white font-mono text-[9px] font-bold px-1 shadow-xs border border-[var(--color-paper)]">
                     {badge > 99 ? '99+' : badge}
                 </span>
             ) : active ? (

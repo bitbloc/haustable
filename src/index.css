@@ -77,34 +77,25 @@ button, a, select, input, textarea, [role="button"] {
 
 .overflow-y-auto, .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
 }
 
-/* GPU Hardware Layer Promotion for APK Performance */
+/* Lightweight Layer Hint (Use sparingly on drawers only) */
 .gpu-accelerated, .drawer-slide {
-  transform: translateZ(0);
-  will-change: transform, opacity;
+  will-change: opacity;
 }
 
-/* Anti-glitch & Zero-tear GPU Compositing for Fast Tab/View Switching */
+/* Anti-glitch Layout Containment for Sunmi D2s Plus (Zero VRAM Thrashing) */
 .pos-view-container {
-  contain: strict;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  perspective: 1000px;
+  contain: layout style;
 }
 
 .pos-panel-layer {
-  contain: content;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  contain: layout style;
 }
 
-/* POS Ultra-Performance Optimizations for Low-Power ARM POS (Sunmi D2s Plus) */
-.pos-menu-grid-scroll, .pos-table-grid-scroll {
-  contain: content;
-  transform: translateZ(0);
-  will-change: scroll-position;
+/* POS Scroll Containers for Low-Power ARM POS (Sunmi D2s Plus) */
+.pos-menu-grid-scroll, .pos-table-grid-scroll, .pos-cart-list-scroll {
+  contain: layout style;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
@@ -350,27 +341,37 @@ input[type="range"]::-moz-range-thumb {
 .pos-view-container, .pos-container, .cfd-container {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeSpeed;
-  contain: strict;
-  transform: translateZ(0);
+  contain: layout style;
 }
 
 /* Eliminate expensive backdrop-filter blur on low-end mobile POS GPUs */
 .pos-view-container .glass,
 .pos-container .glass,
 .cfd-container .glass,
-.pos-panel-layer .glass {
-  background: var(--color-paper-2);
+.pos-panel-layer .glass,
+.pos-container [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* Sub-tree containment for Table Grid, Menu Grid and Cart List */
+/* Prevent capacitive touch hit-test cancellation caused by button scale shrinking on touchstart */
+.pos-container button:active,
+.pos-container button:hover,
+.pos-container [role="button"]:active,
+.pos-container [role="button"]:hover {
+  scale: 1 !important;
+}
+
+.pos-container button:active,
+.pos-container [role="button"]:active {
+  opacity: 0.86;
+}
+
+/* Sub-tree layout containment for Table Grid, Menu Grid and Cart List (No forced GPU textures) */
 .pos-table-grid-scroll,
 .pos-menu-grid-scroll,
 .pos-cart-list-scroll {
-  contain: content;
-  transform: translateZ(0);
-  will-change: transform;
+  contain: layout style;
   overscroll-behavior: contain;
 }
 
@@ -448,15 +449,13 @@ input[type="range"]::-moz-range-thumb {
    Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
    ========================================================================== */
 
-/* Quiet Beacon Breath: Slow 2.8s sinusoidal rhythm, calm and peaceful */
+/* Quiet Beacon Breath: Slow 2.8s sinusoidal rhythm, purely compositor opacity */
 @keyframes rams-beacon-breath {
   0%, 100% {
     opacity: 1;
-    filter: drop-shadow(0 0 0px transparent);
   }
   50% {
     opacity: 0.38;
-    filter: drop-shadow(0 0 3px oklch(52% 0.16 28 / 0.35));
   }
 }
 
@@ -464,41 +463,37 @@ input[type="range"]::-moz-range-thumb {
   animation: rams-beacon-breath 2.8s ease-in-out infinite;
 }
 
-/* Dedicated Strip Beacon: Pulses strictly the left border color & glow, never fading text or cards */
+/* Dedicated Strip Beacon: Static solid left border without main-thread box-shadow repaints */
 @keyframes rams-strip-beacon {
   0%, 100% {
     border-left-color: oklch(52% 0.16 28);
-    box-shadow: inset 3px 0 0 oklch(52% 0.16 28);
   }
   50% {
     border-left-color: oklch(62% 0.22 28);
-    box-shadow: inset 5px 0 14px oklch(52% 0.16 28 / 0.45);
   }
 }
 
 .animate-rams-strip-pulse {
-  animation: rams-strip-beacon 1.8s ease-in-out infinite;
+  border-left-color: oklch(52% 0.16 28);
 }
 
-/* Dieter Rams Organic Heartbeat Pulse (สีแดงชีพจรนุ่มนวล มีชีวิตชีวา แต่ไม่ลายตา) */
+/* Dieter Rams Organic Heartbeat Pulse (Pure transform + opacity on GPU compositor) */
 @keyframes rams-heartbeat {
   0%, 100% {
     transform: scale(1);
     opacity: 1;
   }
   14% {
-    transform: scale(1.35);
+    transform: scale(1.25);
     opacity: 1;
-    filter: drop-shadow(0 0 4px oklch(52% 0.16 28 / 0.5));
   }
   28% {
     transform: scale(1);
-    opacity: 0.9;
+    opacity: 0.85;
   }
   42% {
-    transform: scale(1.2);
+    transform: scale(1.15);
     opacity: 1;
-    filter: drop-shadow(0 0 2px oklch(52% 0.16 28 / 0.35));
   }
   70% {
     transform: scale(1);

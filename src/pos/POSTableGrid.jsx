@@ -646,26 +646,14 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     return (
         <div className="h-full flex flex-col bg-[var(--color-paper)] overflow-hidden select-none font-sans text-[var(--color-ink)]">
             <style>{`
-                @keyframes pos-blink-red {
-                    0%, 100% { border-color: var(--color-accent); background-color: var(--color-accent); color: #ffffff; }
-                    50% { border-color: #ef4444; background-color: #dc2626; color: #ffffff; }
+                @keyframes pos-blink-opacity {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.78; }
                 }
-                @keyframes pos-blink-orange {
-                    0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
-                    50% { border-color: #FFAA00; background-color: #FFF8E7; color: #7A4100; }
-                }
-                @keyframes pos-blink-yellow {
-                    0%, 100% { border-color: #EAB308; background-color: #FEFCE8; color: #713F12; }
-                    50% { border-color: #CA8A04; background-color: #FACC15; color: #000000; }
-                }
-                @keyframes pos-blink-blue {
-                    0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
-                    50% { border-color: #0099FF; background-color: #EDF7FF; color: #004C80; }
-                }
-                .animate-pos-blink-red { animation: pos-blink-red 1.2s infinite ease-in-out !important; }
-                .animate-pos-blink-orange { animation: pos-blink-orange 1.2s infinite ease-in-out !important; }
-                .animate-pos-blink-yellow { animation: pos-blink-yellow 1.0s infinite ease-in-out !important; }
-                .animate-pos-blink-blue { animation: pos-blink-blue 1.2s infinite ease-in-out !important; }
+                .animate-pos-blink-red { background-color: #dc2626 !important; border-color: #ef4444 !important; color: #ffffff !important; animation: pos-blink-opacity 1.4s infinite ease-in-out !important; }
+                .animate-pos-blink-orange { background-color: #FFF8E7 !important; border-color: #FFAA00 !important; color: #7A4100 !important; animation: pos-blink-opacity 1.4s infinite ease-in-out !important; }
+                .animate-pos-blink-yellow { background-color: #FACC15 !important; border-color: #CA8A04 !important; color: #000000 !important; animation: pos-blink-opacity 1.2s infinite ease-in-out !important; }
+                .animate-pos-blink-blue { background-color: #EDF7FF !important; border-color: #0099FF !important; color: #004C80 !important; animation: pos-blink-opacity 1.4s infinite ease-in-out !important; }
             `}</style>
             {/* Top Toolbar */}
             <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-col md:flex-row gap-3 items-center justify-between z-10 shrink-0 shadow-xs">
@@ -812,6 +800,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             maxScale={4}
                             centerOnInit={true}
                             limitToBounds={false}
+                            panning={{ excluded: ['pos-floorplan-table-btn'], velocityDisabled: true }}
+                            doubleClick={{ disabled: true }}
                         >
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
@@ -880,7 +870,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             </div>
             {/* Smart Re-assignment Modal (Dieter Rams + Thai Modern OKLCH) */}
             {reassignModalBooking && (
-                <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
                     <div className="bg-[var(--color-paper)] rounded-sm max-w-md w-full p-5 shadow-2xl border border-[var(--color-rule)] font-sans text-[var(--color-ink)] animate-in fade-in duration-150">
                         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--color-rule)]">
                             <div>
@@ -1006,7 +996,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
             key={table.id}
             type="button"
             onClick={() => onSelectTable(table)}
-            className={`absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:scale-[1.03] hover:z-[30] active:scale-[0.98] transition-transform duration-100 touch-manipulation`}
+            className={`pos-floorplan-table-btn absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:z-[30] transition-colors duration-100 touch-manipulation`}
             style={{
                 left: `${table.pos_x}%`,
                 top: `${table.pos_y}%`,
@@ -1206,7 +1196,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             key={table.id}
             type="button"
             onClick={() => onSelectTable(table)}
-            className={`min-h-[135px] rounded-md p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.01] active:scale-[0.98] touch-manipulation ${cellBgClass}`}
+            className={`min-h-[135px] rounded-md p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-colors duration-100 touch-manipulation ${cellBgClass}`}
         >
             {/* Top row: Status LEDs */}
             <div className="flex justify-between items-center w-full">
