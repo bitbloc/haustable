@@ -35,6 +35,87 @@
                     "value": "/"
                 }
             ]
+        },
+        {
+            "source": "/admin",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/admin/(.*)",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/staff",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/staff/(.*)",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/pos",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/pos/(.*)",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/table/(.*)",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/member-card",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
+        },
+        {
+            "source": "/tracking/(.*)",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
         }
     ],
     "rewrites": [

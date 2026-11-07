@@ -639,8 +639,18 @@ function generateStandaloneLandingHtml(data) {
         // Non-blocking deferred loading of GTM container script
         (function() {
             let loaded = false;
+            // Staff devices (marked by the React app on /admin, /staff, /pos) never load GTM,
+            // so their visits to /link are not counted in GA4 / Google Ads. ?internal=off clears it.
+            let isInternal = false;
+            try {
+                if (new URLSearchParams(window.location.search).get('internal') === 'off') {
+                    localStorage.removeItem('haus_internal');
+                } else {
+                    isInternal = localStorage.getItem('haus_internal') === '1';
+                }
+            } catch (e) {}
             window.loadGtm = function() {
-                if (loaded) return;
+                if (loaded || isInternal) return;
                 loaded = true;
                 const s = document.createElement('script');
                 s.async = true;

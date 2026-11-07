@@ -52,9 +52,43 @@
       function gtag(){window.dataLayer.push(arguments);}
       window.gtag = gtag;
 
+      // Staff devices: any device that opens /admin, /staff or /pos is marked internal and is
+      // never sent to GA4 / Google Ads again (also when it later opens public pages).
+      // Opening any page with ?internal=off clears the mark on that device.
+      (function() {
+        const STAFF_RE = /^\/(admin|staff|pos)(\/|$)/;
+        const disableTags = function() {
+          window['ga-disable-G-D1M18Z54LM'] = true;
+          window['ga-disable-AW-11227095880'] = true;
+        };
+        const markInternal = function() {
+          try { localStorage.setItem('haus_internal', '1'); } catch (e) {}
+          window.__hausInternal = true;
+          disableTags();
+        };
+        try {
+          if (new URLSearchParams(window.location.search).get('internal') === 'off') {
+            localStorage.removeItem('haus_internal');
+          } else if (localStorage.getItem('haus_internal') === '1') {
+            window.__hausInternal = true;
+          }
+        } catch (e) {}
+        if (STAFF_RE.test(window.location.pathname)) markInternal();
+        if (window.__hausInternal) disableTags();
+        // SPA navigation from a public page into the back office
+        ['pushState', 'replaceState'].forEach(function(fn) {
+          const orig = history[fn];
+          history[fn] = function() {
+            const r = orig.apply(this, arguments);
+            if (STAFF_RE.test(window.location.pathname)) markInternal();
+            return r;
+          };
+        });
+      })();
+
       (function() {
         const isNative = window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:';
-        if (!isNative) {
+        if (!isNative && !window.__hausInternal) {
           // Initialize immediate queue configurations so events are never lost
           window.dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
 
