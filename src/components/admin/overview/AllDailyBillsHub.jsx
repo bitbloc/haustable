@@ -461,6 +461,27 @@ export default function AllDailyBillsHub({
         )
     }
 
+    const getAdSourceBadge = (booking) => {
+        if (!booking) return null
+        const remark = booking.staff_remark || ''
+        const source = (booking.source || '').toLowerCase()
+        const match = remark.match(/\[AD:\s*([^\]]+)\]/i)
+        let adTag = match ? match[1].trim() : null
+        if (!adTag && (source.startsWith('online:') || source.startsWith('ad:'))) {
+            adTag = source.split(':')[1].trim()
+        }
+        if (!adTag) return null
+
+        return (
+            <span 
+                className="inline-flex items-center px-1.5 py-0.2 rounded-xs text-[9px] font-mono font-bold bg-[oklch(93%_0.02_250)] text-[oklch(35%_0.10_250)] border border-[oklch(80%_0.04_250)] uppercase tracking-wider"
+                title={`ที่มาจากแคมเปญโฆษณา: ${adTag}`}
+            >
+                <span>AD: {adTag}</span>
+            </span>
+        )
+    }
+
     // Visual Database Card Component (Dieter Rams + Thai Modern OKLCH)
     const renderVisualCard = (b) => {
         const isExpanded = expandedBillIds.has(b.id)
@@ -574,6 +595,7 @@ export default function AllDailyBillsHub({
                     <div className="flex items-center gap-1.5 flex-wrap my-2">
                         {getStatusBadge(b)}
                         {getPaymentBadge(b)}
+                        {getAdSourceBadge(b)}
                         <LiveServiceDurationBadge booking={b} />
                     </div>
 
@@ -740,7 +762,7 @@ export default function AllDailyBillsHub({
                             </h2>
                         </div>
                         <p className="font-mono text-xs text-[oklch(42%_0.010_28)] mt-0.5">
-                            ศูนย์รวมและตรวจสอบบิลทั้งหมดของวัน รายการอาหาร การชำระเงิน และการพิมพ์สลิป
+                            ศูนย์รวมและตรวจสอบบิลทั้งหมดของวัน รายการอาหาร การชำระเงิน ตรวจสอบสลิป และการออกใบกำกับภาษี
                         </p>
                     </div>
 
@@ -1115,6 +1137,9 @@ export default function AllDailyBillsHub({
 
                                         {/* Payment Badge */}
                                         {getPaymentBadge(b)}
+
+                                        {/* Ad Attribution Badge */}
+                                        {getAdSourceBadge(b)}
 
                                         {/* Call Bill Badge if active and unpaid */}
                                         {Boolean(

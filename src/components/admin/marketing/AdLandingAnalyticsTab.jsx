@@ -5,7 +5,6 @@ import {
     ExternalLink, 
     Copy, 
     Check, 
-    Filter, 
     Navigation, 
     Phone, 
     MessageCircle, 
@@ -14,21 +13,89 @@ import {
     Eye, 
     Layers, 
     Sparkles, 
-    RefreshCw 
+    RefreshCw,
+    TrendingUp,
+    DollarSign,
+    Calculator,
+    AlertCircle,
+    ToggleLeft,
+    ToggleRight
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getThaiDate } from '../../../utils/timeUtils'
 
 export default function AdLandingAnalyticsTab() {
     const [events, setEvents] = useState([])
+    const [attributedBookings, setAttributedBookings] = useState([])
     const [loading, setLoading] = useState(true)
-    const [timeRange, setTimeRange] = useState('7d') // '24h', '7d', '30d', 'all'
+    const [timeRange, setTimeRange] = useState('7d') // 'today', 'yesterday', '7d', '30d', 'all'
     const [copiedUrl, setCopiedUrl] = useState(null)
+    const [demoMode, setDemoMode] = useState(false)
+
+    // Ad Spend Budget & Unit Economics State (Persisted in localStorage per timeRange)
+    const [adSpendInput, setAdSpendInput] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_ad_spend_7d') || '500'
+        } catch {
+            return '500'
+        }
+    })
 
     // Campaign Link Builder State
     const [customSource, setCustomSource] = useState('facebook')
     const [customMedium, setCustomMedium] = useState('cpc')
     const [customCampaign, setCustomCampaign] = useState('dinner_promo')
     const [customContent, setCustomContent] = useState('')
+
+    // Date range calculator aligned with Asia/Bangkok time
+    const dateBounds = useMemo(() => {
+        const todayStr = getThaiDate()
+        const now = new Date()
+
+        if (timeRange === 'today') {
+            return {
+                start: `${todayStr}T00:00:00+07:00`,
+                end: `${todayStr}T23:59:59+07:00`,
+                label: `วันนี้ (${todayStr})`
+            }
+        }
+        if (timeRange === 'yesterday') {
+            const d = new Date()
+            d.setDate(d.getDate() - 1)
+            const yStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            return {
+                start: `${yStr}T00:00:00+07:00`,
+                end: `${yStr}T23:59:59+07:00`,
+                label: `เมื่อวาน (${yStr})`
+            }
+        }
+        if (timeRange === '7d') {
+            const since = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString()
+            return { start: since, end: null, label: '7 วันย้อนหลัง' }
+        }
+        if (timeRange === '30d') {
+            const since = new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString()
+            return { start: since, end: null, label: '30 วันย้อนหลัง' }
+        }
+        return { start: null, end: null, label: 'ข้อมูลทั้งหมดสะสม' }
+    }, [timeRange])
+
+    // Load saved spend when timeRange switches
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(`onhaus_ad_spend_${timeRange}`)
+            if (saved !== null) {
+                setAdSpendInput(saved)
+            }
+        } catch {}
+    }, [timeRange])
+
+    const handleAdSpendChange = (val) => {
+        setAdSpendInput(val)
+        try {
+            localStorage.setItem(`onhaus_ad_spend_${timeRange}`, val)
+        } catch {}
+    }
 
     useEffect(() => {
         fetchAdAnalytics()
@@ -52,40 +119,57 @@ export default function AdLandingAnalyticsTab() {
             if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
-    }, [timeRange])
+    }, [timeRange, dateBounds])
 
     const fetchAdAnalytics = async () => {
         setLoading(true)
         try {
+            // 1. Fetch Ad Events within date bounds
             let query = supabase.from('ad_events').select('*').order('created_at', { ascending: false })
 
-            const now = new Date()
-            if (timeRange === '24h') {
-                const since = new Date(now.getTime() - 24 * 3600 * 1000).toISOString()
-                query = query.gte('created_at', since)
-            } else if (timeRange === '7d') {
-                const since = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString()
-                query = query.gte('created_at', since)
-            } else if (timeRange === '30d') {
-                const since = new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString()
-                query = query.gte('created_at', since)
+            if (dateBounds.start) {
+                query = query.gte('created_at', dateBounds.start)
+            }
+            if (dateBounds.end) {
+                query = query.lte('created_at', dateBounds.end)
             }
 
-            const { data, error } = await query.limit(2000)
-            if (error) throw error
-            setEvents(data || [])
+            const eventsReq = query.limit(5000)
+
+            // 2. Fetch Attributed Bookings within date bounds (Closed-Loop Attribution)
+            let bQuery = supabase
+                .from('bookings')
+                .select('id, total_amount, status, created_at, booking_time, source, staff_remark')
+                .or('source.ilike.%online:%,source.ilike.%ad:%,staff_remark.ilike.%[AD:%')
+
+            if (dateBounds.start) {
+                bQuery = bQuery.gte('created_at', dateBounds.start)
+            }
+            if (dateBounds.end) {
+                bQuery = bQuery.lte('created_at', dateBounds.end)
+            }
+
+            const [eventsRes, bookingsRes] = await Promise.all([
+                eventsReq,
+                bQuery.limit(1000)
+            ])
+
+            if (eventsRes.error) throw eventsRes.error
+            setEvents(eventsRes.data || [])
+            setAttributedBookings(bookingsRes?.data || [])
         } catch (err) {
-            console.warn('[AdAnalytics] Fetch error or table not yet initialized:', err?.message)
+            console.warn('[AdAnalytics] Fetch error:', err?.message)
             setEvents([])
+            setAttributedBookings([])
         } finally {
             setLoading(false)
         }
     }
 
-    // Process Comprehensive 6-Dimension Metrics
+    // Process Comprehensive 6-Dimension Metrics (Real Ground Truth + Demo Mode switch)
     const metrics = useMemo(() => {
         const totalEvents = events.length
-        const isLive = totalEvents > 0
+        const isLive = !demoMode
 
         // 1. Core Page Views
         const pageviews = isLive 
@@ -113,7 +197,7 @@ export default function AdLandingAnalyticsTab() {
             ? events.filter(e => ['click_pickup_link', 'click_pickup', 'pickup'].includes(e.event_name)).length 
             : 42
 
-        // Completed transactions (fired on the booking / pickup success step, not on /link)
+        // Completed transactions (fired on the booking / pickup success step)
         const bookingCompletes = isLive
             ? events.filter(e => e.event_name === 'booking_complete').length
             : 31
@@ -121,10 +205,13 @@ export default function AdLandingAnalyticsTab() {
             ? events.filter(e => e.event_name === 'pickup_complete').length
             : 12
 
-        // 5. Deep Exploration (Full Menu, Classic Booklet, Atmosphere / Vibe)
+        // 5. Deep Exploration (Full Menu, Starter Sets, Classic Booklet, Atmosphere / Vibe)
         const fullMenuViews = isLive
             ? events.filter(e => ['view_full_menu', 'full_menu', 'explore_menu'].includes(e.event_name)).length
             : 312
+        const starterSetViews = isLive
+            ? events.filter(e => ['click_starter_set', 'select_starter_set'].includes(e.event_name)).length
+            : 145
         const bookletViews = isLive 
             ? events.filter(e => ['view_booklet_menu', 'lightbox_open', 'click_booklet', 'booklet'].includes(e.event_name)).length 
             : 218
@@ -133,7 +220,7 @@ export default function AdLandingAnalyticsTab() {
             : 175
 
         // Aggregates
-        const totalExplorations = fullMenuViews + bookletViews + atmosphereViews
+        const totalExplorations = fullMenuViews + starterSetViews + bookletViews + atmosphereViews
         const directOrders = bookingClicks + pickupClicks
         const directContacts = lineClicks + phoneClicks
         const totalDirectActions = mapClicks + directContacts + directOrders
@@ -153,7 +240,7 @@ export default function AdLandingAnalyticsTab() {
             },
             { 
                 stage: '02. สำรวจเมนูและบรรยากาศ (Consideration)', 
-                sub: 'เปิดดูเมนูเต็ม ขยายรายการอาหาร พลิกดูเล่ม PDF หรือเปิดดูวิวร้านริมโขง',
+                sub: 'เปิดดูเมนูเต็ม เซ็ตเมนูแนะนำ พลิกดูเล่ม PDF หรือเปิดดูวิวร้านริมโขง',
                 count: totalExplorations, 
                 pct: Math.min(100, Math.round((totalExplorations / (pageviews || 1)) * 100)), 
                 color: 'bg-[oklch(35%_0.06_250)]' 
@@ -167,7 +254,7 @@ export default function AdLandingAnalyticsTab() {
             },
             { 
                 stage: '04. สั่งซื้อและจองโต๊ะ (Direct Transactions)', 
-                sub: 'คลิกจองโต๊ะล่วงหน้า หรือคลิกต้องการสั่งอาหารรับหน้าร้าน (แม้ระบบปิด)',
+                sub: 'คลิกจองโต๊ะล่วงหน้า หรือคลิกสั่งอาหารรับหน้าร้าน',
                 count: directOrders, 
                 pct: Math.min(100, Math.round((directOrders / (pageviews || 1)) * 100)), 
                 color: 'bg-[oklch(45%_0.08_140)]' 
@@ -200,10 +287,10 @@ export default function AdLandingAnalyticsTab() {
                 } else if (['generate_lead', 'click_line', 'line', 'contact', 'click_phone', 'click_call', 'call'].includes(ev)) {
                     sourceMap[s].contacts++
                     sourceMap[s].conversions++
-                } else if (['click_booking_link', 'click_pickup_link', 'click_booking', 'click_pickup', 'booking', 'pickup'].includes(ev)) {
+                } else if (['click_booking_link', 'click_pickup_link', 'click_booking', 'click_pickup', 'booking', 'pickup', 'booking_complete', 'pickup_complete'].includes(ev)) {
                     sourceMap[s].orders++
                     sourceMap[s].conversions++
-                } else if (['view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open', 'view_vibe', 'explore_menu'].includes(ev)) {
+                } else if (['view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open', 'view_vibe', 'explore_menu', 'click_starter_set', 'select_starter_set'].includes(ev)) {
                     sourceMap[s].explores++
                     sourceMap[s].conversions++
                 }
@@ -221,6 +308,17 @@ export default function AdLandingAnalyticsTab() {
             cvr: s.visits > 0 ? ((s.conversions / s.visits) * 100).toFixed(1) : '0.0'
         })).sort((a, b) => b.visits - a.visits)
 
+        // Financial & Unit Economics Calculations
+        const adSpend = parseFloat(adSpendInput) || 0
+        const costPerVisit = adSpend > 0 && pageviews > 0 ? (adSpend / pageviews).toFixed(1) : null
+        const costPerIntent = adSpend > 0 && totalHighIntentActions > 0 ? (adSpend / totalHighIntentActions).toFixed(1) : null
+        const costPerBooking = adSpend > 0 && (bookingCompletes + pickupCompletes) > 0 ? (adSpend / (bookingCompletes + pickupCompletes)).toFixed(1) : null
+
+        // Attributed Revenue from bookings
+        const settledAttributedBookings = attributedBookings.filter(b => ['completed', 'paid', 'success'].includes(b.status))
+        const attributedRevenue = settledAttributedBookings.reduce((sum, b) => sum + Number(b.total_amount || 0), 0)
+        const roas = adSpend > 0 && attributedRevenue > 0 ? (attributedRevenue / adSpend).toFixed(2) : null
+
         return {
             pageviews,
             mapClicks,
@@ -231,6 +329,7 @@ export default function AdLandingAnalyticsTab() {
             bookingCompletes,
             pickupCompletes,
             fullMenuViews,
+            starterSetViews,
             bookletViews,
             atmosphereViews,
             totalExplorations,
@@ -242,9 +341,18 @@ export default function AdLandingAnalyticsTab() {
             cvrDirect,
             funnel,
             sources,
-            isLive
+            adSpend,
+            costPerVisit,
+            costPerIntent,
+            costPerBooking,
+            attributedRevenue,
+            settledAttributedCount: settledAttributedBookings.length,
+            totalAttributedCount: attributedBookings.length,
+            roas,
+            isLive,
+            hasData: totalEvents > 0
         }
-    }, [events])
+    }, [events, demoMode, adSpendInput, attributedBookings])
 
     const generatedLink = useMemo(() => {
         const base = `${typeof window !== 'undefined' ? window.location.origin : ''}/link`
@@ -277,7 +385,7 @@ export default function AdLandingAnalyticsTab() {
     return (
         <div className="space-y-6 text-[oklch(18%_0.012_28)] font-sans">
             {/* Header Toolbar */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] shadow-2xs">
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
                     <div>
                         <div className="flex items-center gap-2">
@@ -289,15 +397,34 @@ export default function AdLandingAnalyticsTab() {
                             </h2>
                         </div>
                         <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-0.5">
-                            วิเคราะห์พฤติกรรมลูกค้าเชิงลึก 6 มิติ (แผนที่, โทร, LINE, จองโต๊ะ, สั่ง Pick-up, และการเปิดชมเมนู/บรรยากาศร้าน)
+                            วิเคราะห์พฤติกรรมลูกค้า 6 มิติ (แผนที่, โทร, LINE, จองโต๊ะ, สั่ง Pick-up, เมนูและบรรยากาศ)
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                        {/* Time Range Filter Buttons */}
+                        {/* Demo Mode Toggle */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDemoMode(!demoMode)
+                                toast.info(!demoMode ? 'เปิดโหมดข้อมูลตัวอย่างจำลอง (DEMO)' : 'กลับสู่โหมดข้อมูลจริง (LIVE DATA)')
+                            }}
+                            className={`px-2.5 py-1 text-xs font-mono font-bold rounded-xs border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                demoMode 
+                                    ? 'bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border-[oklch(80%_0.06_65)]' 
+                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                            }`}
+                            title="สลับโหมดเพื่อดูตัวอย่างหน้าจอรายงานที่มีทราฟฟิกสูง"
+                        >
+                            {demoMode ? <ToggleRight size={14} className="text-amber-700" /> : <ToggleLeft size={14} />}
+                            <span>{demoMode ? 'DEMO ACTIVE' : 'DEMO PREVIEW'}</span>
+                        </button>
+
+                        {/* Thai Calendar Time Range Filter Buttons */}
                         <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-1 font-mono text-xs">
                             {[
-                                { id: '24h', label: '24 ชม.' },
+                                { id: 'today', label: 'วันนี้' },
+                                { id: 'yesterday', label: 'เมื่อวาน' },
                                 { id: '7d', label: '7 วัน' },
                                 { id: '30d', label: '30 วัน' },
                                 { id: 'all', label: 'ทั้งหมด' },
@@ -331,9 +458,13 @@ export default function AdLandingAnalyticsTab() {
                 {/* Quick Live Status Alert */}
                 <div className="px-4 py-2 bg-[oklch(94%_0.010_28)] flex items-center justify-between text-xs font-mono">
                     <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${metrics.isLive ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(52%_0.16_28)]'}`} />
+                        <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-amber-500' : metrics.hasData ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
                         <span className="font-bold">
-                            {metrics.isLive ? `DATABASE LIVE SYNC (${events.length} บันทึก Event ในระบบ)` : 'BASELINE TEMPLATE (แสดงตัวอย่างสถิติเพื่อเตรียมรับข้อมูลจริงจาก /link)'}
+                            {demoMode 
+                                ? 'DEMO SIMULATION // กำลังแสดงข้อมูลตัวอย่างแคมเปญ' 
+                                : metrics.hasData 
+                                    ? `LIVE SYNC // พบ ${events.length} Events ในช่วงเวลา: ${dateBounds.label}` 
+                                    : `LIVE SYNC // ยังไม่มี Event ในช่วงเวลา: ${dateBounds.label}`}
                         </span>
                     </div>
                     <a
@@ -348,8 +479,32 @@ export default function AdLandingAnalyticsTab() {
                 </div>
             </div>
 
+            {/* Empty State Banner (If live data has 0 events and not in demo mode) */}
+            {!demoMode && !metrics.hasData && (
+                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(95%_0.010_28)] p-4 rounded-xs font-mono text-xs text-[oklch(42%_0.010_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                        <AlertCircle size={16} className="text-[oklch(52%_0.16_28)] shrink-0 mt-0.5" />
+                        <div>
+                            <span className="font-bold text-[oklch(18%_0.012_28)] block">
+                                ไม่มีบันทึก Event ในช่วงเวลาที่เลือก ({dateBounds.label})
+                            </span>
+                            <span className="text-[11px] block mt-0.5 text-[oklch(50%_0.010_28)]">
+                                ระบบจะบันทึกอัตโนมัติเมื่อมีผู้เข้าชมคลิกเปิดหน้า /link ผ่าน Facebook, TikTok, Instagram หรือ QR บนโต๊ะ
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setDemoMode(true)}
+                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white text-[11px] font-bold rounded-xs whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                    >
+                        เปิดดูตัวอย่างข้อมูลจำลอง (Demo)
+                    </button>
+                </div>
+            )}
+
             {/* 1. Top 6 KPI Cards (Dieter Rams Tabular Grid) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border border-[oklch(85%_0.012_28)] divide-x divide-y md:divide-y-0 divide-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border border-[oklch(85%_0.012_28)] divide-x divide-y md:divide-y-0 divide-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] shadow-2xs">
                 {/* 1. Pageviews */}
                 <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] font-mono">
                     <span className="text-[10px] text-[oklch(55%_0.010_28)] block font-bold">TOTAL VISITS</span>
@@ -392,7 +547,7 @@ export default function AdLandingAnalyticsTab() {
                     <div className="text-xl md:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                         {metrics.directOrders.toLocaleString()}
                     </div>
-                    <span className="text-[10px] text-[oklch(42%_0.010_28)] block">จอง {metrics.bookingClicks} · รับกลับ {metrics.pickupClicks}</span>
+                    <span className="text-[10px] text-[oklch(42%_0.010_28)] block">คลิกจอง {metrics.bookingClicks} · รับกลับ {metrics.pickupClicks}</span>
                     <span className="text-[10px] text-[oklch(45%_0.08_140)] block font-bold">สำเร็จจริง: จอง {metrics.bookingCompletes} · รับกลับ {metrics.pickupCompletes}</span>
                 </div>
 
@@ -402,14 +557,80 @@ export default function AdLandingAnalyticsTab() {
                     <div className="text-xl md:text-2xl font-bold text-[oklch(35%_0.06_250)] tabular-nums">
                         {metrics.totalExplorations.toLocaleString()}
                     </div>
-                    <span className="text-[10px] text-[oklch(42%_0.010_28)] block">เมนู {metrics.fullMenuViews + metrics.bookletViews} · วิว {metrics.atmosphereViews}</span>
+                    <span className="text-[10px] text-[oklch(42%_0.010_28)] block">เมนู {metrics.fullMenuViews} · เซ็ต {metrics.starterSetViews} · วิว {metrics.atmosphereViews}</span>
+                </div>
+            </div>
+
+            {/* 1.5 Unit Economics & Ad Spend ROI Calculator Strip */}
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] shadow-2xs">
+                <div className="p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <Calculator size={14} className="text-[oklch(52%_0.16_28)]" />
+                        <span>AD SPEND & UNIT ECONOMICS // เครื่องคำนวณต้นทุนต่อผลลัพธ์ ({dateBounds.label})</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                        <span className="text-[oklch(55%_0.010_28)] font-normal">งบโฆษณาที่ใช้:</span>
+                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-white px-2 py-0.5 rounded-xs">
+                            <span className="text-[oklch(55%_0.010_28)] text-[10px] mr-1">฿</span>
+                            <input
+                                type="number"
+                                value={adSpendInput}
+                                onChange={(e) => handleAdSpendChange(e.target.value)}
+                                placeholder="0"
+                                className="w-20 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] focus:outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] font-mono text-xs">
+                    {/* Cost Per Visit */}
+                    <div className="p-3 space-y-0.5">
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block font-bold">COST PER VISIT (CPV)</span>
+                        <div className="text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                            {metrics.costPerVisit ? `฿${metrics.costPerVisit}` : '-'}
+                        </div>
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] block">ต้นทุน/เปิดชมหน้าเว็บ</span>
+                    </div>
+
+                    {/* Cost Per Lead */}
+                    <div className="p-3 space-y-0.5">
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block font-bold">COST PER LEAD (CPL)</span>
+                        <div className="text-base sm:text-lg font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                            {metrics.costPerIntent ? `฿${metrics.costPerIntent}` : '-'}
+                        </div>
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] block">ต้นทุน/ลูกค้าที่มีเจตนาจริง</span>
+                    </div>
+
+                    {/* Cost Per Acquisition */}
+                    <div className="p-3 space-y-0.5">
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block font-bold">COST PER BOOKING (CPA)</span>
+                        <div className="text-base sm:text-lg font-bold text-[oklch(45%_0.08_140)] tabular-nums">
+                            {metrics.costPerBooking ? `฿${metrics.costPerBooking}` : '-'}
+                        </div>
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] block">ต้นทุน/การจองหรือสั่งซื้อสำเร็จ</span>
+                    </div>
+
+                    {/* Attributed Revenue & ROAS */}
+                    <div className="p-3 space-y-0.5">
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block font-bold">ATTRIBUTED REVENUE & ROAS</span>
+                        <div className="text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                            ฿{metrics.attributedRevenue.toLocaleString()}
+                            {metrics.roas && (
+                                <span className="ml-1.5 text-xs text-[oklch(52%_0.16_28)] font-bold">({metrics.roas}x)</span>
+                            )}
+                        </div>
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] block">
+                            {metrics.settledAttributedCount} บิลปิดยอดจากโฆษณา
+                        </span>
+                    </div>
                 </div>
             </div>
 
             {/* 2. Full-Funnel Visualizer & Direct Action Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Stepped Conversion Funnel (7 cols) */}
-                <div className="lg:col-span-7 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
+                <div className="lg:col-span-7 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] shadow-2xs">
                     <div className="p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
                         <span>CONVERSION FUNNEL // ลำดับ 4 ขั้นตอนการแปลงเป็นลูกค้า</span>
                         <span className="text-[oklch(52%_0.16_28)]">FULL FUNNEL FLOW</span>
@@ -441,7 +662,7 @@ export default function AdLandingAnalyticsTab() {
                 </div>
 
                 {/* Detailed Action Breakdown Matrix (5 cols) */}
-                <div className="lg:col-span-5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
+                <div className="lg:col-span-5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] shadow-2xs">
                     <div className="p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
                         <span>BEHAVIOR MATRIX // แจกแจงการคลิกทั้ง 8 พฤติกรรม</span>
                         <span className="text-[oklch(42%_0.010_28)]">{metrics.totalHighIntentActions} TOTAL</span>
@@ -525,18 +746,18 @@ export default function AdLandingAnalyticsTab() {
                             </div>
                         </div>
 
-                        {/* 6. Full Menu Accordion */}
+                        {/* 6. Full Menu & Starter Sets */}
                         <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <Layers size={13} className="text-[oklch(35%_0.06_250)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">เปิดดูเมนูเต็ม (Full Menu)</span>
+                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">เปิดดูเมนูเต็ม & เซ็ตแนะนำ</span>
                                 </div>
-                                <span className="text-[10px] text-[oklch(42%_0.010_28)] block">กดขยายดูรายการอาหารทั้งหมด</span>
+                                <span className="text-[10px] text-[oklch(42%_0.010_28)] block">กดขยายรายการอาหารทั้งหมด ({metrics.fullMenuViews} เมนู · {metrics.starterSetViews} เซ็ต)</span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-sm text-[oklch(35%_0.06_250)] tabular-nums">{metrics.fullMenuViews}</span>
-                                <span className="text-[9px] text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.fullMenuViews / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="font-bold text-sm text-[oklch(35%_0.06_250)] tabular-nums">{metrics.fullMenuViews + metrics.starterSetViews}</span>
+                                <span className="text-[9px] text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? (((metrics.fullMenuViews + metrics.starterSetViews) / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
@@ -574,9 +795,9 @@ export default function AdLandingAnalyticsTab() {
             </div>
 
             {/* 3. Campaign & UTM Source Attribution Matrix */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] shadow-2xs">
                 <div className="p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
-                    <span>ATTRIBUTION MATRIX // แหล่งที่มาแคมเปญโฆษณาและการแปลงพฤติกรรม</span>
+                    <span>ATTRIBUTION MATRIX // แหล่งที่มาแคมเปญโฆษณาและการแปลงพฤติกรรม ({dateBounds.label})</span>
                     <span className="text-[oklch(42%_0.010_28)]">{metrics.sources.length} แหล่งที่มา</span>
                 </div>
 
@@ -596,38 +817,46 @@ export default function AdLandingAnalyticsTab() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
-                            {metrics.sources.map((s, idx) => (
-                                <tr key={idx} className="hover:bg-[oklch(94%_0.010_28)] transition-colors">
-                                    <td className="p-3 sticky left-0 bg-[oklch(97%_0.008_28)] z-10 border-r border-[oklch(88%_0.012_28)] sm:border-r-0">
-                                        <div className="font-bold text-[oklch(18%_0.012_28)] font-sans">{s.source}</div>
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)]">
-                                            {s.campaign || 'default_traffic'} {s.medium ? `· ${s.medium}` : ''}
-                                        </div>
-                                    </td>
-                                    <td className="p-3 text-right font-bold tabular-nums">{s.visits.toLocaleString()}</td>
-                                    <td className="p-3 text-right font-bold text-[oklch(45%_0.08_140)] tabular-nums">{s.directions || 0}</td>
-                                    <td className="p-3 text-right tabular-nums">{s.contacts || 0}</td>
-                                    <td className="p-3 text-right tabular-nums">{s.orders || 0}</td>
-                                    <td className="p-3 text-right tabular-nums text-[oklch(35%_0.06_250)]">{s.explores || 0}</td>
-                                    <td className="p-3 text-right font-bold text-[oklch(18%_0.012_28)] tabular-nums">{s.conversions.toLocaleString()}</td>
-                                    <td className="p-3 text-right font-bold text-[oklch(52%_0.16_28)] tabular-nums">{s.cvr}%</td>
-                                    <td className="p-3 text-right">
-                                        <button
-                                            onClick={() => copyToClipboard(`${typeof window !== 'undefined' ? window.location.origin : ''}/link?utm_source=${s.source}${s.medium ? `&utm_medium=${s.medium}` : ''}`)}
-                                            className="px-2 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[10px] font-bold rounded-xs cursor-pointer"
-                                        >
-                                            COPY
-                                        </button>
+                            {metrics.sources.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="p-6 text-center text-[oklch(55%_0.010_28)]">
+                                        ไม่มีแหล่งที่มาในระบบสำหรับช่วงเวลาที่เลือก
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                metrics.sources.map((s, idx) => (
+                                    <tr key={idx} className="hover:bg-[oklch(94%_0.010_28)] transition-colors">
+                                        <td className="p-3 sticky left-0 bg-[oklch(97%_0.008_28)] z-10 border-r border-[oklch(88%_0.012_28)] sm:border-r-0">
+                                            <div className="font-bold text-[oklch(18%_0.012_28)] font-sans">{s.source}</div>
+                                            <div className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                {s.campaign || 'default_traffic'} {s.medium ? `· ${s.medium}` : ''}
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-right font-bold tabular-nums">{s.visits.toLocaleString()}</td>
+                                        <td className="p-3 text-right font-bold text-[oklch(45%_0.08_140)] tabular-nums">{s.directions || 0}</td>
+                                        <td className="p-3 text-right tabular-nums">{s.contacts || 0}</td>
+                                        <td className="p-3 text-right tabular-nums">{s.orders || 0}</td>
+                                        <td className="p-3 text-right tabular-nums text-[oklch(35%_0.06_250)]">{s.explores || 0}</td>
+                                        <td className="p-3 text-right font-bold text-[oklch(18%_0.012_28)] tabular-nums">{s.conversions.toLocaleString()}</td>
+                                        <td className="p-3 text-right font-bold text-[oklch(52%_0.16_28)] tabular-nums">{s.cvr}%</td>
+                                        <td className="p-3 text-right">
+                                            <button
+                                                onClick={() => copyToClipboard(`${typeof window !== 'undefined' ? window.location.origin : ''}/link?utm_source=${s.source}${s.medium ? `&utm_medium=${s.medium}` : ''}`)}
+                                                className="px-2 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[10px] font-bold rounded-xs cursor-pointer"
+                                            >
+                                                COPY
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
             {/* 4. Campaign Link & UTM Generator Widget */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] shadow-2xs">
                 <div className="p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
                     <span>TRACKING BUILDER // เครื่องมือสร้างลิงก์โฆษณาพร้อม UTM สากล</span>
                     <span className="text-[oklch(42%_0.010_28)]">AUTO PRESERVE ATTRIBUTION</span>

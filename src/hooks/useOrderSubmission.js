@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { getAppOrigin } from '../utils/urlHelper'
 import { sendPOSBroadcast } from '../utils/realtimeNotifier'
 import { sendOrderNotificationEmail } from '../utils/orderNotificationHelper'
+import { getStoredUtmParams } from '../utils/analyticsHelper'
 
 export function useOrderSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -186,9 +187,25 @@ export function useOrderSubmission() {
                 }
             }
 
-            // 2. Prepare Final Payload
+            // 2. Prepare Final Payload with Attribution
+            const utm = getStoredUtmParams()
+            let enrichedRemark = bookingPayload.staff_remark || ''
+            let enrichedSource = bookingPayload.source || 'online'
+
+            if (utm && utm.utm_source) {
+                const adTag = `[AD: ${utm.utm_source}${utm.utm_campaign ? ` · ${utm.utm_campaign}` : ''}]`
+                if (!enrichedRemark.includes('[AD:')) {
+                    enrichedRemark = enrichedRemark ? `${enrichedRemark} ${adTag}` : adTag
+                }
+                if (enrichedSource === 'online' || !enrichedSource) {
+                    enrichedSource = `online:${utm.utm_source}`
+                }
+            }
+
             const finalBookingPayload = {
                 ...bookingPayload,
+                source: enrichedSource,
+                staff_remark: enrichedRemark,
                 payment_slip_url: finalSlipUrl
             }
 

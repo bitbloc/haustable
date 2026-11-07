@@ -87,6 +87,7 @@ export default function AdminDashboard() {
     }, [])
     const [showDailySummaryModal, setShowDailySummaryModal] = useState(false)
     const [yesterdayRevenue, setYesterdayRevenue] = useState(0)
+    const [adTelemetry, setAdTelemetry] = useState({ visits: 0, maps: 0, contacts: 0, orders: 0, totalEvents: 0 })
     const selectedDateRef = useRef(selectedDate)
     const activeRequestIdRef = useRef(0)
 
@@ -216,8 +217,15 @@ export default function AdminDashboard() {
                 .or(`and(booking_time.gte.${yesterdayDate}T00:00:00+07:00,booking_time.lte.${yesterdayDate}T23:59:59+07:00),and(created_at.gte.${yesterdayDate}T00:00:00+07:00,created_at.lte.${yesterdayDate}T23:59:59+07:00)`)
                 .in('status', ['completed', 'paid', 'success'])
 
-            const [pendingRes, dateRes, seatedRes, shiftsRes, tablesRes, yesterdayRes] = await Promise.all([
-                pendingReq, dateReq, seatedReq, shiftsReq, tablesReq, yesterdayReq
+            // 7. Fetch Ad & Traffic Events for the queryDate
+            const adReq = supabase
+                .from('ad_events')
+                .select('event_name, utm_source')
+                .gte('created_at', `${queryDate}T00:00:00+07:00`)
+                .lte('created_at', `${queryDate}T23:59:59+07:00`)
+
+            const [pendingRes, dateRes, seatedRes, shiftsRes, tablesRes, yesterdayRes, adRes] = await Promise.all([
+                pendingReq, dateReq, seatedReq, shiftsReq, tablesReq, yesterdayReq, adReq
             ])
 
             if (pendingRes.error) throw pendingRes.error
@@ -238,6 +246,17 @@ export default function AdminDashboard() {
             if (yesterdayRes?.data) {
                 const totalY = yesterdayRes.data.reduce((sum, b) => sum + Number(b.total_amount || 0), 0)
                 setYesterdayRevenue(totalY)
+            }
+
+            if (adRes?.data) {
+                const adData = adRes.data
+                setAdTelemetry({
+                    visits: adData.filter(e => e.event_name === 'page_view').length,
+                    maps: adData.filter(e => ['find_location', 'click_directions', 'directions'].includes(e.event_name)).length,
+                    contacts: adData.filter(e => ['generate_lead', 'click_line', 'line', 'contact', 'click_phone', 'click_call', 'call'].includes(e.event_name)).length,
+                    orders: adData.filter(e => ['click_booking_link', 'click_pickup_link', 'click_booking', 'click_pickup', 'booking_complete', 'pickup_complete'].includes(e.event_name)).length,
+                    totalEvents: adData.length
+                })
             }
 
             if (tablesRes?.data) {
@@ -874,6 +893,28 @@ export default function AdminDashboard() {
                             onUpdateStatus={updateStatus}
                         />
 
+                        {/* 1.4 AD & TRAFFIC RADAR STRIP (Omni-Mode Awareness) */}
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-3 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs shadow-2xs">
+                            <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                <span className="font-bold text-[oklch(18%_0.012_28)] tracking-wider uppercase text-[11px]">
+                                    AD RADAR // ทราฟฟิกโฆษณา ({selectedDate}):
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3.5 flex-wrap text-[11px]">
+                                <span>เปิดชมเว็บ (/link): <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.visits}</strong></span>
+                                <span>ขอทาง GPS: <strong className="text-[oklch(45%_0.08_140)] font-bold tabular-nums">{adTelemetry.maps}</strong></span>
+                                <span>โทร / LINE: <strong className="text-[oklch(52%_0.16_28)] font-bold tabular-nums">{adTelemetry.contacts}</strong></span>
+                                <span>จอง / สั่งรับ: <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.orders}</strong></span>
+                                <a 
+                                    href="/admin/marketing?tab=ads_landing" 
+                                    className="text-[oklch(52%_0.16_28)] font-bold hover:underline flex items-center gap-1 border-b border-[oklch(52%_0.16_28)] pb-0.5 ml-1"
+                                >
+                                    <span>วิเคราะห์ Ads เชิงลึก ➔</span>
+                                </a>
+                            </div>
+                        </div>
+
                         {/* 1.5 Backoffice Simplified Daily Bills Summary List */}
                         <SimplifiedBillsSummaryList 
                             bookings={dailyBookings}
@@ -938,6 +979,8 @@ export default function AdminDashboard() {
                             dineInCount={dineInCount}
                             pickupCount={pickupCount}
                             paymentBreakdown={paymentBreakdown}
+                            adTelemetry={adTelemetry}
+                            selectedDate={selectedDate}
                             loading={loading}
                         />
 

@@ -13,6 +13,8 @@ export default function LivePulseMetrics({
     dineInCount = 0,
     pickupCount = 0,
     paymentBreakdown = null,
+    adTelemetry = null,
+    selectedDate = '',
     loading = false
 }) {
     const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
@@ -189,6 +191,37 @@ export default function LivePulseMetrics({
                             <span className="text-[oklch(28%_0.08_250)] font-bold bg-[oklch(93%_0.04_250)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_250)] tabular-nums">
                                 บัตรเครดิต: ฿{(paymentBreakdown.credit || 0).toLocaleString()}
                             </span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Ad & Campaign Traffic Radar Strip */}
+            {adTelemetry && (
+                <div className="col-span-2 lg:col-span-4 bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2.5 rounded-sm flex flex-wrap items-center justify-between gap-2 font-mono text-xs shadow-2xs">
+                    <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                        <span className="text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider text-[10px]">
+                            AD RADAR // ทราฟฟิกโฆษณา & แคมเปญ {selectedDate ? `(${selectedDate})` : ''}:
+                        </span>
+                    </div>
+                    {loading ? (
+                        <div className="flex items-center gap-2 text-[11px] text-[oklch(55%_0.010_28)]">
+                            <span className="inline-block w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
+                            <span>กำลังซิงค์สัญญาณโฆษณา...</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3.5 flex-wrap text-[11px]">
+                            <span>เปิดชมเว็บ (/link): <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.visits}</strong></span>
+                            <span>ขอทาง GPS: <strong className="text-[oklch(45%_0.08_140)] font-bold tabular-nums">{adTelemetry.maps}</strong></span>
+                            <span>โทร / LINE: <strong className="text-[oklch(52%_0.16_28)] font-bold tabular-nums">{adTelemetry.contacts}</strong></span>
+                            <span>จอง / สั่งรับ: <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.orders}</strong></span>
+                            <a 
+                                href="/admin/marketing?tab=ads_landing" 
+                                className="text-[oklch(52%_0.16_28)] font-bold hover:underline flex items-center gap-1 border-b border-[oklch(52%_0.16_28)] pb-0.5 ml-1"
+                            >
+                                <span>วิเคราะห์แอดเชิงลึก ➔</span>
+                            </a>
                         </div>
                     )}
                 </div>

@@ -174,6 +174,8 @@ export default function SimplifiedBillsSummaryList({
                             const isSeated = ['seated', 'ready'].includes(b.status)
                             const isCancelled = ['cancelled', 'void'].includes(b.status)
                             const transfer = parseTableTransferInfo(b, bookings)
+                            const adMatch = (b.staff_remark || '').match(/\[AD:\s*([^\]]+)\]/i)
+                            const adTag = adMatch ? adMatch[1].trim() : ((b.source || '').startsWith('online:') ? b.source.split(':')[1] : null)
 
                             const itemNames = (b.order_items || [])
                                 .map(it => it.menu_items?.name)
@@ -204,6 +206,11 @@ export default function SimplifiedBillsSummaryList({
                                             {isPickup && (
                                                 <span className="text-[9px] px-1 py-0.5 bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs font-mono">
                                                     PICKUP
+                                                </span>
+                                            )}
+                                            {adTag && (
+                                                <span className="text-[9px] px-1 py-0.5 bg-[oklch(93%_0.02_250)] text-[oklch(35%_0.10_250)] border border-[oklch(80%_0.04_250)] rounded-xs font-mono font-bold uppercase">
+                                                    AD: {adTag}
                                                 </span>
                                             )}
                                             <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] tabular-nums">{timeStr}</span>
@@ -299,6 +306,8 @@ export default function SimplifiedBillsSummaryList({
                                         const isSeated = ['seated', 'ready'].includes(b.status)
                                         const isCancelled = ['cancelled', 'void'].includes(b.status)
                                         const transfer = parseTableTransferInfo(b, bookings)
+                            const adMatch = (b.staff_remark || '').match(/\[AD:\s*([^\]]+)\]/i)
+                            const adTag = adMatch ? adMatch[1].trim() : ((b.source || '').startsWith('online:') ? b.source.split(':')[1] : null)
 
                                         const itemNames = (b.order_items || [])
                                             .map(it => it.menu_items?.name)
@@ -347,6 +356,11 @@ export default function SimplifiedBillsSummaryList({
                                                         ) : (
                                                             <span className="text-[9px] px-1 py-0.5 bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs font-mono">
                                                                 DINE-IN
+                                                            </span>
+                                                        )}
+                                                        {adTag && (
+                                                            <span className="text-[9px] px-1.5 py-0.2 bg-[oklch(93%_0.02_250)] text-[oklch(35%_0.10_250)] border border-[oklch(80%_0.04_250)] rounded-xs font-mono font-bold uppercase">
+                                                                AD: {adTag}
                                                             </span>
                                                         )}
                                                     </div>
