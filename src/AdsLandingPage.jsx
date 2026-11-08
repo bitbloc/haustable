@@ -481,7 +481,7 @@ export default function AdsLandingPage() {
                         </div>
                         <div className="p-3 flex flex-col gap-1">
                             <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">HOURS</span>
-                            <span className="text-xs font-bold">{hours.replace('เปิดทุกวัน ', '')}</span>
+                            <span className="text-xs font-bold">{hours.replace('เปิดทุกวัน ', '').split(/\s(?=\()/).flatMap((part, i) => [i ? ' ' : null, <span key={i} className="whitespace-nowrap">{part}</span>])}</span>
                         </div>
                         <div className="p-3 flex flex-col gap-1 col-span-2 border-t border-[var(--color-hallmark-rule)]">
                             <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">LOC</span>

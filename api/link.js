@@ -14,7 +14,7 @@ const CACHE_TTL_MS = 30 * 1000 // 30 seconds in-memory for instant freshness
 
 // New hours start 8 Nov 2026 (Bangkok); see src/utils/storeHours.js
 const getStoreHoursLabel = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date()) >= '2026-11-08'
-    ? 'เปิดทุกวัน 11:00 - 21:30 น. (ครัวปิด 20:45 น.)'
+    ? 'เปิดทุกวัน 11:00 - 21:30 น. (ปิดรับออเดอร์ 20:45 น.)'
     : 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)'
 
 const DEFAULT_SETTINGS = {
@@ -776,7 +776,7 @@ function generateStandaloneLandingHtml(data) {
             <div class="fact wide">
                 <span class="fact-label">เวลาเปิด</span>
                 <span class="fact-val nb">${hoursMain}</span>
-                ${hoursNote ? `<span class="fact-note">${hoursNote}</span>` : ''}
+                ${hoursNote ? `<span class="fact-note nb">${hoursNote}</span>` : ''}
             </div>
             <div class="fact full">
                 <span class="fact-label">ที่ตั้ง</span>
@@ -1087,8 +1087,8 @@ function generateStandaloneLandingHtml(data) {
                 const hoursLine = document.getElementById('status-hours');
                 if (!isOpen && hoursLine) hoursLine.textContent = 'เปิด ' + m[1] + ':' + m[2] + ' น.';
 
-                // Kitchen closing countdown: last 2 hours before "ครัวปิด HH:MM", then "kitchen closed"
-                const k = (el.dataset.hours || '').match(/ครัวปิด\\s*(\\d{1,2})[:.](\\d{2})/);
+                // Last-order countdown: last 2 hours before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
+                const k = (el.dataset.hours || '').match(/(?:ปิดรับออเดอร์|ครัวปิด)\\s*(\\d{1,2})[:.](\\d{2})/);
                 const note = document.getElementById('kitchen-note');
                 if (isOpen && k && note) {
                     let kitchen = Number(k[1]) * 60 + Number(k[2]);
@@ -1098,10 +1098,10 @@ function generateStandaloneLandingHtml(data) {
                     if (left > 0 && left <= 120) {
                         const h = Math.floor(left / 60), mm = left % 60;
                         // Each phrase stays on one line ("เหลืออีก 21 นาที" never splits)
-                        note.innerHTML = '<span class="nb">ครัวปิด ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>';
+                        note.innerHTML = '<span class="nb">ปิดรับออเดอร์ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>';
                         note.hidden = false;
                     } else if (left <= 0) {
-                        note.innerHTML = '<span class="nb">ครัวปิดแล้ว</span> · <span class="nb">ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.</span>';
+                        note.innerHTML = '<span class="nb">ปิดรับออเดอร์แล้ว</span> · <span class="nb">ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.</span>';
                         note.hidden = false;
                     }
                     if (!note.hidden && hoursLine) hoursLine.hidden = true;

@@ -15,7 +15,7 @@ const bangkokDate = (now) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/
 
 export const getStoreHours = (now = new Date()) => {
     const hours = bangkokDate(now) >= HOURS_EFFECTIVE_DATE ? CURRENT_HOURS : PREVIOUS_HOURS
-    return { ...hours, label: `เปิดทุกวัน ${hours.open} - ${hours.close} น. (ครัวปิด ${hours.lastOrder} น.)` }
+    return { ...hours, label: `เปิดทุกวัน ${hours.open} - ${hours.close} น. (ปิดรับออเดอร์ ${hours.lastOrder} น.)` }
 }
 
 // Bookings made before the change for a date on/after it must already see the new slots.

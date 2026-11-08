@@ -54,7 +54,7 @@ const qaData = [
   {
     id: 7,
     thQ: "ร้านเปิด-ปิดกี่โมง?",
-    thA: `ตอบ: เปิดให้บริการทุกวัน ตั้งแต่เวลา ${storeHours.open} - ${storeHours.close} น. (ครัวรับออเดอร์สุดท้าย ${storeHours.lastOrder} น. หลังจากนั้นสั่งได้เฉพาะเครื่องดื่มบางเมนู) แวะมาฝากท้องได้ทั้งมื้อเที่ยงยาวไปจนถึงมื้อค่ำเลยครับ`,
+    thA: `ตอบ: เปิดให้บริการทุกวัน ตั้งแต่เวลา ${storeHours.open} - ${storeHours.close} น. (ปิดรับออเดอร์ ${storeHours.lastOrder} น. หลังจากนั้นสั่งได้เฉพาะเครื่องดื่มบางเมนู) แวะมาฝากท้องได้ทั้งมื้อเที่ยงยาวไปจนถึงมื้อค่ำเลยครับ`,
     enQ: "What are your opening hours?",
     enA: `A: We are open every day from ${to12h(storeHours.open)} to ${to12h(storeHours.close)} (food last order ${to12h(storeHours.lastOrder)}, selected drinks after that). Feel free to drop by for lunch all the way through to dinner.`
   },
