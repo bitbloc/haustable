@@ -3,9 +3,10 @@
     "deno.enablePaths": [
         "supabase/functions"
     ],
-    "deno.unstable": true,
     "deno.importMap": "./supabase/functions/deno.json",
-    "editor.defaultFormatter": "denoland.vscode-deno",
+    "[typescript]": {
+        "editor.defaultFormatter": "denoland.vscode-deno"
+    },
     "java.configuration.updateBuildConfiguration": "manual",
     "java.import.gradle.enabled": false,
     "java.autobuild.enabled": false,

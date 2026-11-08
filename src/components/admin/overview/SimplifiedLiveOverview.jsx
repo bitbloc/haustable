@@ -9,50 +9,59 @@ import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 import { playAdminOrderAlert } from '../../../utils/audioHelper'
 import OnlineAdvanceOrdersHub from './OnlineAdvanceOrdersHub'
 
+// Shared live clock listener to eliminate dozens of concurrent setInterval instances across table cards
+const globalClockListeners = new Set()
+let globalClockInterval = null
+let currentGlobalNow = Date.now()
+
+function subscribeGlobalClock(callback) {
+    globalClockListeners.add(callback)
+    if (!globalClockInterval) {
+        globalClockInterval = setInterval(() => {
+            currentGlobalNow = Date.now()
+            globalClockListeners.forEach(fn => fn(currentGlobalNow))
+        }, 15000)
+    }
+    return () => {
+        globalClockListeners.delete(callback)
+        if (globalClockListeners.size === 0 && globalClockInterval) {
+            clearInterval(globalClockInterval)
+            globalClockInterval = null
+        }
+    }
+}
+
+function useSharedLiveClock() {
+    const [now, setNow] = useState(() => currentGlobalNow)
+    useEffect(() => {
+        return subscribeGlobalClock((t) => setNow(t))
+    }, [])
+    return now
+}
+
 /**
- * Isolated live relative time display that updates itself without re-rendering the whole floor grid
+ * Isolated live relative time display using shared live clock
  */
 function LiveRelativeTime({ timeIso, className = '' }) {
-    const [now, setNow] = useState(() => Date.now())
-
-    useEffect(() => {
-        if (!timeIso) return
-        const timer = setInterval(() => setNow(Date.now()), 15000)
-        return () => clearInterval(timer)
-    }, [timeIso])
-
+    const now = useSharedLiveClock()
     const text = formatThaiRelativeTime(timeIso, now)
     return <span className={className}>{text}</span>
 }
 
 /**
- * Isolated live duration display that updates itself without re-rendering the whole floor grid
+ * Isolated live duration display using shared live clock
  */
 function LiveDuration({ startTime, className = '' }) {
-    const [now, setNow] = useState(() => Date.now())
-
-    useEffect(() => {
-        if (!startTime) return
-        const timer = setInterval(() => setNow(Date.now()), 15000)
-        return () => clearInterval(timer)
-    }, [startTime])
-
+    const now = useSharedLiveClock()
     const elapsedMins = calculateDurationMinutes(startTime, now)
     return <span className={className}>{formatThaiDuration(elapsedMins)}</span>
 }
 
 /**
- * Isolated duration badge with progressive stay colors
+ * Isolated duration badge with progressive stay colors using shared live clock
  */
 function LiveDurationBadge({ startTime }) {
-    const [now, setNow] = useState(() => Date.now())
-
-    useEffect(() => {
-        if (!startTime) return
-        const timer = setInterval(() => setNow(Date.now()), 15000)
-        return () => clearInterval(timer)
-    }, [startTime])
-
+    const now = useSharedLiveClock()
     const elapsedMins = calculateDurationMinutes(startTime, now)
     
     let pillStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
@@ -79,7 +88,7 @@ function LiveDurationBadge({ startTime }) {
  * - lg: ใหญ่ (Large/spacious 2-3 cols, high legibility typography)
  * - xl: Extra (Extra Large 1-2 cols, TV/Dashboard high-visibility typography)
  */
-export const SIZE_CONFIGS = {
+const SIZE_CONFIGS = {
     sm: {
         id: 'sm',
         label: 'เล็ก',
@@ -223,13 +232,7 @@ function OverviewTableCard({
     const guestCount = item.booking?.guest_count || item.table.capacity || 2
     const roundsInfo = item.orderRoundsInfo
     const hasMoreThan15Items = orderItems.length > 15
-    const [now, setNow] = useState(() => Date.now())
-
-    useEffect(() => {
-        if (!isOccupied || !item.latestOrderTimeMs) return
-        const timer = setInterval(() => setNow(Date.now()), 15000)
-        return () => clearInterval(timer)
-    }, [isOccupied, item.latestOrderTimeMs])
+    const now = useSharedLiveClock()
 
     // Urgency calculation based on elapsed minutes from latest order:
     // <= 10m: Fresh incoming order / new round (Quiet Pulse with animate-rams-breath)
@@ -243,7 +246,8 @@ function OverviewTableCard({
     const isFreshOrder = Boolean(
         isOccupied && (
             (orderDiffMins !== null && orderDiffMins >= 0 && orderDiffMins <= 10) ||
-            hasRecentAlert
+            hasRecentAlert ||
+            isLatestOrderOnFloor
         )
     )
 
@@ -288,7 +292,7 @@ function OverviewTableCard({
     return (
         <div
             onClick={hasMoreThan15Items ? () => onInspect(item) : undefined}
-            className={`${cfg.cardPadding} rounded-xs border transition-colors duration-150 ${
+            className={`${cfg.cardPadding} rounded-xs border transition-colors duration-150 min-w-0 w-full overflow-hidden ${
                 hasMoreThan15Items ? 'cursor-pointer hover:border-[oklch(18%_0.012_28)]' : 'cursor-default'
             } flex flex-col justify-between shadow-2xs ${bgClass} ${borderClass} ${leftAccentClass}`}
         >
@@ -685,7 +689,6 @@ export default function SimplifiedLiveOverview({
     const [zoomMode, setZoomMode] = useState('card') // 'card' | 'list'
     const [inspectingTable, setInspectingTable] = useState(null)
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const [actionLoading, setActionLoading] = useState(false)
     const containerRef = useRef(null)
 
     // User preference for font & grid scaling (sm | md | lg | xl)
@@ -939,6 +942,7 @@ export default function SimplifiedLiveOverview({
             if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isParentDriven])
 
     // Fullscreen change & keyboard ESC listener with WebKit/iOS fallback
@@ -971,6 +975,7 @@ export default function SimplifiedLiveOverview({
             window.removeEventListener('keydown', handleKeyDown)
             document.body.style.overflow = ''
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isFullscreen])
 
     // Helper: Determine table state using centralized business logic
@@ -1064,6 +1069,7 @@ export default function SimplifiedLiveOverview({
                 hasCallBill
             }
         })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tables, liveBookings, shifts, isShiftOpen, latestClosedShift])
 
     // Maximum order timestamp across the floor among occupied tables
@@ -1181,7 +1187,6 @@ export default function SimplifiedLiveOverview({
     // Dismiss Call Staff / Bill Alert
     const handleDismissAlert = async (bookingId, e) => {
         if (e) e.stopPropagation()
-        setActionLoading(true)
         try {
             const currentBooking = liveBookings.find(b => b.id === bookingId)
             const cleanRemark = (currentBooking?.staff_remark || '')
@@ -1199,8 +1204,6 @@ export default function SimplifiedLiveOverview({
             if (onRefresh) onRefresh()
         } catch (err) {
             toast.error('ไม่สามารถอัปเดตสถานะ: ' + err.message)
-        } finally {
-            setActionLoading(false)
         }
     }
 

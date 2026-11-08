@@ -14,8 +14,6 @@ export default function SimplifiedBillsSummaryList({
     bookings = [],
     selectedDate = getThaiDate(),
     loading = false,
-    onViewSlip,
-    onPrintSlip,
     onOpenProMode
 }) {
     const isToday = !selectedDate || selectedDate === getThaiDate()

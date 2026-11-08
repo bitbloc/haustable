@@ -1,24 +1,23 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react'
 import { ChevronDown, ChevronUp, ArrowDownLeft, ArrowUpRight, Lock, CheckCircle2, AlertTriangle, Clock, FileText, ShoppingBag } from 'lucide-react'
 import { supabase } from '../../../lib/supabaseClient'
 import { classifyAdjustmentNote } from './DailyShiftsCashFlowWidget'
 import { fetchShiftBookings } from '../../../utils/shiftHelper'
-import DailySummarySlipModal from './DailySummarySlipModal'
 import { toast } from 'sonner'
+
+const DailySummarySlipModal = lazy(() => import('./DailySummarySlipModal'))
 
 export default function AdminShiftsLedgerTab({
     shifts = [],
-    loading = false,
-    selectedDate = '',
-    onRefreshShifts = null
+    selectedDate = ''
 }) {
     const [expandedShiftId, setExpandedShiftId] = useState(null)
     const [selectedShiftSlip, setSelectedShiftSlip] = useState(null)
     const [loadingShiftId, setLoadingShiftId] = useState(null)
     const [shiftTopSellers, setShiftTopSellers] = useState({})
     const [sellersLoading, setSellersLoading] = useState({})
-    const [companySettings, setCompanySettings] = useState(() => {
+    const [companySettings] = useState(() => {
         try {
             const stored = localStorage.getItem('onhaus_tax_settings')
             return stored ? JSON.parse(stored) : {}
@@ -452,16 +451,18 @@ export default function AdminShiftsLedgerTab({
             )}
 
             {/* Shift Slip Modal (Digital PNG Export & LINE Copy) */}
-            {selectedShiftSlip && (
-                <DailySummarySlipModal
-                    targetShift={selectedShiftSlip.shift}
-                    bookings={selectedShiftSlip.bookings}
-                    shifts={sortedShifts}
-                    selectedDate={selectedDate}
-                    companySettings={companySettings}
-                    onClose={() => setSelectedShiftSlip(null)}
-                />
-            )}
+            <Suspense fallback={null}>
+                {selectedShiftSlip && (
+                    <DailySummarySlipModal
+                        targetShift={selectedShiftSlip.shift}
+                        bookings={selectedShiftSlip.bookings}
+                        shifts={sortedShifts}
+                        selectedDate={selectedDate}
+                        companySettings={companySettings}
+                        onClose={() => setSelectedShiftSlip(null)}
+                    />
+                )}
+            </Suspense>
         </div>
     )
 }

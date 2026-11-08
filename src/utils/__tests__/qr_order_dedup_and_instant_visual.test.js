@@ -149,9 +149,6 @@ describe('QR Order Deduplication & Instant Visual Table Notification Tests', () 
             } else if (hasCallBill) {
                 tableBgClass = 'animate-pos-blink-orange border-2';
                 ledColor = 'bg-[#FFAA00] animate-pulse';
-            } else if (hasOrder) {
-                tableBgClass = 'bg-[var(--color-accent)] animate-pos-blink-red border-2 border-red-500 text-white shadow-sm';
-                ledColor = 'bg-red-500 animate-pulse';
             }
 
             return { tableBgClass, ledColor };

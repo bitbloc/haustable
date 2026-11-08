@@ -5,9 +5,9 @@ import { formatThaiDateLong, formatThaiTimeOnly } from '../../utils/timeUtils'
 import { getShortBookingId } from '../../utils/printerHelper'
 
 export default function PaymentVerificationModal({ order, onClose, onVerify }) {
-    if (!order) return null
-
     const [scale, setScale] = useState(1)
+
+    if (!order) return null
 
     // Calculate totals
     const total = order.total_amount || 0

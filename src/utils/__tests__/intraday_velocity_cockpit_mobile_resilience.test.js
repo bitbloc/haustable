@@ -199,10 +199,8 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         expect(renderedHours.length).toBe(5)
 
         // Desktop or non-minimal mode keeps all 13 operational hours
-        const desktopHours = allHours.filter(
-            h => false || false || [11, 14, 17, 20, 23].includes(h)
-        )
-        expect(allHours.filter(h => !minimalMode || !false || [11, 14, 17, 20, 23].includes(h)).length).toBe(13)
+        const isDesktopMobile = false
+        expect(allHours.filter(h => !minimalMode || !isDesktopMobile || [11, 14, 17, 20, 23].includes(h)).length).toBe(13)
     })
 
     it('correctly separates directions and inquiries without double-counting and tracks pre-opening signals', () => {

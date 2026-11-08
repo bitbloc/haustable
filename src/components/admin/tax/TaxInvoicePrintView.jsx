@@ -42,7 +42,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
     // PDF State
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [pdfDownloaded, setPdfDownloaded] = useState(false);
-    const [lastPdfResult, setLastPdfResult] = useState(null);
+    const [, setLastPdfResult] = useState(null);
 
     // Email Modal State
     const [showEmailModal, setShowEmailModal] = useState(Boolean(initialShowEmail));
@@ -93,24 +93,9 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    if (!invoice) return null;
-
-    const isVat = Boolean(invoice.doc_type === 'tax_invoice' || (invoice.vat_amount && Number(invoice.vat_amount) > 0));
+    const isVat = Boolean(invoice?.doc_type === 'tax_invoice' || (invoice?.vat_amount && Number(invoice?.vat_amount) > 0));
     const docTitle = isVat ? 'ใบเสร็จรับเงิน / ใบกำกับภาษี' : 'ใบเสร็จรับเงิน';
-    const docTitleEn = isVat ? 'RECEIPT / TAX INVOICE' : 'OFFICIAL RECEIPT';
-    const copyLabel = activeCopyType === 'original' ? 'ต้นฉบับ (ORIGINAL)' : 'สำเนา (COPY)';
-    const copySubtitle = activeCopyType === 'original' 
-        ? '(เอกสารออกเป็นชุด: ต้นฉบับสำหรับผู้ซื้อ / ผู้รับบริการ)' 
-        : '(เอกสารออกเป็นชุด: สำเนาสำหรับผู้ขาย / แผนกบัญชี)';
-
-    const rawItems = Array.isArray(invoice.items) ? invoice.items : [];
-    const effectiveIssuedAt = linkedBookingTime || invoice.booking_time || invoice.issued_at || invoice.created_at;
-    const formattedDate = effectiveIssuedAt 
-        ? new Date(effectiveIssuedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-        : new Date().toLocaleDateString('th-TH');
-
-    const bahtWords = thaiBahtText(invoice.total_amount || invoice.net_payable || 0);
-    const pdfFileName = `${invoice.invoice_number || 'tax-invoice'}_${activeCopyType === 'original' ? 'ORIGINAL' : 'COPY'}.pdf`;
+    const rawItems = React.useMemo(() => Array.isArray(invoice?.items) ? invoice.items : [], [invoice?.items]);
 
     // Dynamic Pagination Logic for Invoices:
     // - If items <= 12: 1 Single A4 Page (fits header, customer, items, summary, signatures seamlessly).
@@ -149,12 +134,29 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
 
     // Prepare default Email Subject on load
     useEffect(() => {
+        if (!invoice) return;
         const issuer = companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม';
         setEmailSubject(`[${docTitle}] เลขที่ ${invoice.invoice_number} - ${issuer}`);
         if (invoice?.customer_email && !recipientEmail) {
             setRecipientEmail(invoice.customer_email);
         }
-    }, [invoice, companySettings, docTitle]);
+    }, [invoice, companySettings, docTitle, recipientEmail]);
+
+    if (!invoice) return null;
+
+    const docTitleEn = isVat ? 'RECEIPT / TAX INVOICE' : 'OFFICIAL RECEIPT';
+    const copyLabel = activeCopyType === 'original' ? 'ต้นฉบับ (ORIGINAL)' : 'สำเนา (COPY)';
+    const copySubtitle = activeCopyType === 'original' 
+        ? '(เอกสารออกเป็นชุด: ต้นฉบับสำหรับผู้ซื้อ / ผู้รับบริการ)' 
+        : '(เอกสารออกเป็นชุด: สำเนาสำหรับผู้ขาย / แผนกบัญชี)';
+
+    const effectiveIssuedAt = linkedBookingTime || invoice.booking_time || invoice.issued_at || invoice.created_at;
+    const formattedDate = effectiveIssuedAt 
+        ? new Date(effectiveIssuedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date().toLocaleDateString('th-TH');
+
+    const bahtWords = thaiBahtText(invoice.total_amount || invoice.net_payable || 0);
+    const pdfFileName = `${invoice.invoice_number || 'tax-invoice'}_${activeCopyType === 'original' ? 'ORIGINAL' : 'COPY'}.pdf`;
 
     const handlePrint = () => {
         window.print();

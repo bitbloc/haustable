@@ -261,7 +261,7 @@ export default function POSCustomerDisplay() {
                     resetToIdle();
                     break;
 
-                case 'ORDER_CONFIRMED':
+                case 'ORDER_CONFIRMED': {
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
@@ -274,14 +274,15 @@ export default function POSCustomerDisplay() {
                     expireAtRef.current = Date.now() + orderConfirmDuration;
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
-                    } catch (e) {}
+                    } catch {}
 
                     autoResetTimerRef.current = setTimeout(() => {
                         resetToIdle();
                     }, orderConfirmDuration);
                     break;
+                }
 
-                case 'UPDATE_CART':
+                case 'UPDATE_CART': {
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
@@ -290,7 +291,7 @@ export default function POSCustomerDisplay() {
                     setOrderData(prev => ({ ...prev, ...payload }));
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
-                    } catch (e) {}
+                    } catch {}
 
                     // 60-second inactivity watchdog: If cashier stops adding items, gracefully return to IDLE
                     const cartInactivityDuration = 60000;
@@ -299,9 +300,10 @@ export default function POSCustomerDisplay() {
                         resetToIdle();
                     }, cartInactivityDuration);
                     break;
+                }
 
                 case 'SHOW_QR':
-                case 'SHOW_CHECKOUT':
+                case 'SHOW_CHECKOUT': {
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
@@ -329,7 +331,7 @@ export default function POSCustomerDisplay() {
                     }
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
-                    } catch (e) {}
+                    } catch {}
 
                     // 120-second checkout watchdog
                     const checkoutDuration = 120000;
@@ -338,8 +340,9 @@ export default function POSCustomerDisplay() {
                         resetToIdle();
                     }, checkoutDuration);
                     break;
+                }
 
-                case 'SPLIT_CHECKOUT':
+                case 'SPLIT_CHECKOUT': {
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
@@ -365,7 +368,7 @@ export default function POSCustomerDisplay() {
                     }
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
-                    } catch (e) {}
+                    } catch {}
 
                     const splitDurationMax = 120000;
                     expireAtRef.current = Date.now() + splitDurationMax;
@@ -373,8 +376,9 @@ export default function POSCustomerDisplay() {
                         resetToIdle();
                     }, splitDurationMax);
                     break;
+                }
 
-                case 'SPLIT_SUCCESS':
+                case 'SPLIT_SUCCESS': {
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                     }
@@ -386,7 +390,7 @@ export default function POSCustomerDisplay() {
                     expireAtRef.current = Date.now() + splitDuration;
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
-                    } catch (e) {}
+                    } catch {}
 
                     autoResetTimerRef.current = setTimeout(() => {
                         if (payload?.remainingBalance > 0) {
@@ -397,8 +401,9 @@ export default function POSCustomerDisplay() {
                         }
                     }, splitDuration);
                     break;
+                }
 
-                case 'PAYMENT_SUCCESS':
+                case 'PAYMENT_SUCCESS': {
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                     }
@@ -410,12 +415,13 @@ export default function POSCustomerDisplay() {
                     expireAtRef.current = Date.now() + successDuration;
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
-                    } catch (e) {}
+                    } catch {}
 
                     autoResetTimerRef.current = setTimeout(() => {
                         resetToIdle();
                     }, successDuration);
                     break;
+                }
 
                 default:
                     break;

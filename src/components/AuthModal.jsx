@@ -170,23 +170,6 @@ export default function AuthModal({ isOpen, onClose }) {
             } else {
                 throw new Error("Login failed (No Link). Please try again.")
             }
-
-            // Fallback: If no link, we might be in a weird state. 
-            // Better to reload to let App.jsx check session or just close if we trust the logic.
-            // But if we just close, user isn't logged in.
-            // Let's force a reload to home if no link (assuming cookie might be set? No, magic link sets cookie).
-            // Actually, if no link, something is wrong. But let's show "Done" and close.
-           
-            // Update: User requested "No Go To Login Page". Just "Completed".
-            // So if we are here (no link), we just set view to success but change success view to be "Done" and Auto Close.
-            setView('success')
-            
-            // Auto close after 2 seconds
-            setTimeout(() => {
-                 // Try to reload to see if session works? 
-                 // Or just Close.
-                 window.location.reload()
-            }, 2000)
         } catch (e) {
             setError(e.message)
         } finally {

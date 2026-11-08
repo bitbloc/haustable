@@ -3,9 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil, Trash2, Star, Lock, ChefHat } from 'lucide-react';
 
 export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, isOverlay }) {
-  if (!item) return null; // Safety check
-
-  const isRecommended = item.is_recommended;
+  const isRecommended = item?.is_recommended;
 
   const {
     attributes,
@@ -16,13 +14,15 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, i
     transition,
     isDragging
   } = useSortable({ 
-    id: String(item.id), // Enforce String ID
-    disabled: isRecommended, 
+    id: String(item?.id || 'empty'), // Enforce String ID
+    disabled: !item || isRecommended, 
     data: { 
-        category_id: item.category,
+        category_id: item?.category,
         is_recommended: isRecommended
     }
   });
+
+  if (!item) return null; // Safety check
 
   const style = {
     transform: CSS.Transform.toString(transform),

@@ -299,12 +299,8 @@ export default function SongRequestPage() {
       // 0. Verify GPS Location
       let currentDistance = null;
       if (gpsConfig.enabled) {
-        try {
-          const dist = await verifyLocation();
-          currentDistance = dist;
-        } catch (gpsError) {
-          throw gpsError;
-        }
+        const dist = await verifyLocation();
+        currentDistance = dist;
       }
 
       // 1. Upload Slip Image to Slips bucket

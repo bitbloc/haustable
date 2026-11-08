@@ -3,7 +3,6 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { 
     Search, 
     Filter, 
-    Printer, 
     ChefHat, 
     Wine, 
     FileText, 
@@ -29,7 +28,7 @@ import {
     Columns,
     List
 } from 'lucide-react'
-import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
+import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDuration } from '../../../utils/timeUtils'
 import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
@@ -39,7 +38,7 @@ import { toast } from 'sonner'
 
 // Real-time Service Duration Badge Component
 function LiveServiceDurationBadge({ booking }) {
-    const [now, setNow] = useState(Date.now())
+    const [now, setNow] = useState(() => Date.now())
     const status = (booking?.status || '').toLowerCase()
     const isSeated = status === 'seated' || status === 'ready'
     const isCompleted = status === 'completed' || status === 'paid' || status === 'success'
@@ -125,7 +124,6 @@ export default function AllDailyBillsHub({
     onPrintSlip, 
     onViewSlip, 
     onOpenTaxInvoice, 
-    onUpdateStatus,
     selectedDate = getThaiDate()
 }) {
     const [searchQuery, setSearchQuery] = useState('')
@@ -159,7 +157,7 @@ export default function AllDailyBillsHub({
     const [viewMode, setViewMode] = useState(() => {
         try {
             return localStorage.getItem('onhaus_bills_view_mode') || 'grid'
-        } catch (e) {
+        } catch {
             return 'grid'
         }
     })
@@ -168,7 +166,9 @@ export default function AllDailyBillsHub({
         setViewMode(mode)
         try {
             localStorage.setItem('onhaus_bills_view_mode', mode)
-        } catch (e) {}
+        } catch {
+            // ignore localStorage quota errors
+        }
     }
 
     // Toggle expand/collapse for a specific bill
@@ -727,10 +727,10 @@ export default function AllDailyBillsHub({
                             type="button"
                             onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
                             className="flex-1 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
-                            title="ดูภาพสลิป/PNG"
+                            title="เปิดดูภาพสลิปดิจิทัล (PNG / ส่ง LINE / PDF)"
                         >
                             <Receipt size={11} />
-                            <span>สลิป</span>
+                            <span>สลิป PNG</span>
                         </button>
                         <button
                             type="button"
@@ -1271,10 +1271,10 @@ export default function AllDailyBillsHub({
                                             type="button"
                                             onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
                                             className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                            title="เปิดดูภาพสลิปใบแจ้งยอด/ใบเสร็จ (คัดลอกรูปส่งลูกค้า LINE หรือ Save PNG)"
+                                            title="เปิดดูภาพสลิปดิจิทัลใบแจ้งยอด/ใบเสร็จ (คัดลอกรูปส่งลูกค้า LINE หรือ Save PNG)"
                                         >
                                             <Receipt size={13} />
-                                            <span>ภาพสลิป/PNG</span>
+                                            <span>ภาพสลิป PNG</span>
                                         </button>
 
                                         {/* Tax Invoice Modal Trigger */}

@@ -196,34 +196,55 @@ export default function LivePulseMetrics({
                 </div>
             )}
 
-            {/* Ad & Campaign Traffic Radar Strip */}
+            {/* Ad & Campaign Traffic Radar (4-Cell Neo-Brutalist Cluster) */}
             {adTelemetry && (
-                <div className="col-span-2 lg:col-span-4 bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2.5 rounded-sm flex flex-wrap items-center justify-between gap-2 font-mono text-xs shadow-2xs">
-                    <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                        <span className="text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider text-[10px]">
-                            AD RADAR // ทราฟฟิกโฆษณา & แคมเปญ {selectedDate ? `(${selectedDate})` : ''}:
-                        </span>
+                <div className="col-span-2 lg:col-span-4 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-xs overflow-hidden shadow-2xs">
+                    <div className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                AD RADAR // ทราฟฟิกโฆษณา & แคมเปญ {selectedDate ? `(${selectedDate})` : ''}
+                            </span>
+                        </div>
+                        <a 
+                            href="/admin/marketing?tab=ads_landing" 
+                            className="font-mono text-[11px] font-bold text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1"
+                        >
+                            <span>วิเคราะห์แอดเชิงลึก</span>
+                            <span>➔</span>
+                        </a>
                     </div>
-                    {loading ? (
-                        <div className="flex items-center gap-2 text-[11px] text-[oklch(55%_0.010_28)]">
-                            <span className="inline-block w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
-                            <span>กำลังซิงค์สัญญาณโฆษณา...</span>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] font-mono">
+                        <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                            <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block font-semibold">เปิดชมเว็บ (/link)</span>
+                            <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                {loading ? '...' : (adTelemetry.visits || 0)}
+                            </div>
+                            <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Ad Impressions / Clicks</span>
                         </div>
-                    ) : (
-                        <div className="flex items-center gap-3.5 flex-wrap text-[11px]">
-                            <span>เปิดชมเว็บ (/link): <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.visits}</strong></span>
-                            <span>ขอทาง GPS: <strong className="text-[oklch(45%_0.08_140)] font-bold tabular-nums">{adTelemetry.maps}</strong></span>
-                            <span>โทร / LINE: <strong className="text-[oklch(52%_0.16_28)] font-bold tabular-nums">{adTelemetry.contacts}</strong></span>
-                            <span>จอง / สั่งรับ: <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.orders}</strong></span>
-                            <a 
-                                href="/admin/marketing?tab=ads_landing" 
-                                className="text-[oklch(52%_0.16_28)] font-bold hover:underline flex items-center gap-1 border-b border-[oklch(52%_0.16_28)] pb-0.5 ml-1"
-                            >
-                                <span>วิเคราะห์แอดเชิงลึก ➔</span>
-                            </a>
+                        <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                            <span className="text-[10px] text-[oklch(45%_0.08_140)] uppercase block font-semibold">ขอทาง GPS (Maps)</span>
+                            <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(45%_0.08_140)] tabular-nums">
+                                {loading ? '...' : (adTelemetry.maps || 0)}
+                            </div>
+                            <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">High Intent Store Visit</span>
                         </div>
-                    )}
+                        <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                            <span className="text-[10px] text-[oklch(52%_0.16_28)] uppercase block font-semibold">โทรสอบถาม / LINE</span>
+                            <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                                {loading ? '...' : (adTelemetry.contacts || 0)}
+                            </div>
+                            <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Direct Inquiries</span>
+                        </div>
+                        <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                            <span className="text-[10px] text-[oklch(18%_0.012_28)] uppercase block font-semibold">จองโต๊ะ / สั่งรับ</span>
+                            <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                {loading ? '...' : (adTelemetry.orders || 0)}
+                            </div>
+                            <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Attributed Orders</span>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

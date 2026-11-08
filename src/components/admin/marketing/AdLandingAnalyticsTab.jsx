@@ -87,14 +87,18 @@ export default function AdLandingAnalyticsTab() {
             if (saved !== null) {
                 setAdSpendInput(saved)
             }
-        } catch {}
+        } catch {
+            // ignore storage error
+        }
     }, [timeRange])
 
     const handleAdSpendChange = (val) => {
         setAdSpendInput(val)
         try {
             localStorage.setItem(`onhaus_ad_spend_${timeRange}`, val)
-        } catch {}
+        } catch {
+            // ignore storage error
+        }
     }
 
     useEffect(() => {
@@ -119,6 +123,7 @@ export default function AdLandingAnalyticsTab() {
             if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeRange, dateBounds])
 
     const fetchAdAnalytics = async () => {

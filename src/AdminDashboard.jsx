@@ -1,15 +1,16 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabaseClient'
 import PageTransition from './components/PageTransition'
-import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime } from './utils/timeUtils'
+import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly } from './utils/timeUtils'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
 import { playOrderAlert } from './utils/audioHelper'
 import { subscribePOSBroadcast, sendTrackingBroadcast, sendPOSBroadcast } from './utils/realtimeNotifier'
+import { RefreshCw } from 'lucide-react'
 
-// Components
+// Core Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
 import IntradayVelocityDaypartCockpit from './components/admin/financial/IntradayVelocityDaypartCockpit'
 import FloorTurnoverGauge from './components/admin/overview/FloorTurnoverGauge'
@@ -18,17 +19,19 @@ import DailyShiftsCashFlowWidget from './components/admin/overview/DailyShiftsCa
 import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerTab'
 import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
 import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
-import DailySummarySlipModal from './components/admin/overview/DailySummarySlipModal'
 import SimplifiedLiveOverview from './components/admin/overview/SimplifiedLiveOverview'
 import SimplifiedBillsSummaryList from './components/admin/overview/SimplifiedBillsSummaryList'
 import OnlineAdvanceOrdersHub from './components/admin/overview/OnlineAdvanceOrdersHub'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
-import SlipModal from './components/shared/SlipModal'
-import ViewSlipModal from './components/shared/ViewSlipModal'
-import TaxInvoiceModal from './components/admin/tax/TaxInvoiceModal'
-import TaxInvoicePrintView from './components/admin/tax/TaxInvoicePrintView'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from './utils/tableTransferHelper'
+
+// Lazy-Loaded Dialog Modals (Improves First Contentful Paint & Mobile Performance)
+const DailySummarySlipModal = lazy(() => import('./components/admin/overview/DailySummarySlipModal'))
+const SlipModal = lazy(() => import('./components/shared/SlipModal'))
+const ViewSlipModal = lazy(() => import('./components/shared/ViewSlipModal'))
+const TaxInvoiceModal = lazy(() => import('./components/admin/tax/TaxInvoiceModal'))
+const TaxInvoicePrintView = lazy(() => import('./components/admin/tax/TaxInvoicePrintView'))
 
 export default function AdminDashboard() {
     const [tables, setTables] = useState([])
@@ -49,7 +52,9 @@ export default function AdminDashboard() {
                 if (urlMode === 'pro' || urlMode === 'simplified') return urlMode
                 const sessionMode = sessionStorage.getItem('onhaus_admin_overview_mode')
                 if (sessionMode === 'pro' || sessionMode === 'simplified') return sessionMode
-            } catch {}
+            } catch {
+                // ignore sessionStorage error
+            }
         }
         return 'simplified' // Default: LIVE NOW
     })
@@ -58,7 +63,9 @@ export default function AdminDashboard() {
         setOverviewMode(mode)
         try {
             sessionStorage.setItem('onhaus_admin_overview_mode', mode)
-        } catch {}
+        } catch {
+            // ignore sessionStorage error
+        }
     }
 
     const [slipData, setSlipData] = useState(null) // { booking, type }
@@ -113,9 +120,13 @@ export default function AdminDashboard() {
                         if (settingsMap.default_vat_enabled !== undefined) {
                             localStorage.setItem('pos_default_vat_enabled', String(settingsMap.default_vat_enabled));
                         }
-                    } catch (e) {}
+                    } catch {
+                        // ignore storage error
+                    }
                 }
-            } catch (err) {}
+            } catch {
+                // ignore network error
+            }
         };
         loadTaxSettings();
     }, [])
@@ -381,6 +392,7 @@ export default function AdminDashboard() {
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
             window.removeEventListener('focus', handleVisibilityOrFocus)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const updateStatus = async (id, status) => {
@@ -683,9 +695,9 @@ export default function AdminDashboard() {
                 isDangerous={confirmModal.isDangerous}
             />
             
-            <div className="pb-24">
-                {/* Executive Header Bar (Dieter Rams Minimalist) */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5 pb-4 border-b border-[oklch(85%_0.012_28)]">
+            <div className="pb-24 w-full min-w-0 overflow-x-clip">
+                {/* Executive Header Bar (Dieter Rams Minimalist Instrument Cluster) */}
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 mb-5 pb-4 border-b border-[oklch(85%_0.012_28)]">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] bg-[oklch(92%_0.010_28)] px-2 py-0.5 rounded-xs">
@@ -701,27 +713,27 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Date Picker & Controls Ribbon */}
-                    <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+                    <div className="flex items-stretch sm:items-center gap-2 flex-wrap sm:flex-nowrap">
                         {/* Quick Date Switcher */}
-                        <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-1 font-mono text-xs">
+                        <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-1 font-mono text-xs flex-1 sm:flex-none">
                             <span className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] ml-1 shrink-0">[DATE]</span>
                             <input
                                 type="date"
                                 value={selectedDate}
                                 onChange={(e) => handleDateChange(e.target.value)}
-                                className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-bold focus:outline-none cursor-pointer"
+                                className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-bold focus:outline-none cursor-pointer min-w-0"
                             />
                             <button
                                 type="button"
                                 onClick={() => handleDateChange(getThaiDate())}
-                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer transition-colors ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
+                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
                             >
                                 วันนี้
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handleDateChange(getYesterdayDate())}
-                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer transition-colors ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
+                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
                             >
                                 เมื่อวาน
                             </button>
@@ -732,7 +744,7 @@ export default function AdminDashboard() {
                             <button
                                 type="button"
                                 onClick={() => setSoundMuted(!soundMuted)}
-                                className={`px-2 py-1 rounded-xs border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                className={`px-2 py-1 rounded-xs border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
                                     soundMuted 
                                         ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]' 
                                         : 'bg-[oklch(92%_0.02_28)] border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]'
@@ -748,7 +760,7 @@ export default function AdminDashboard() {
                         <button 
                             type="button"
                             onClick={() => setShowDailySummaryModal(true)}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-medium rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-medium rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                             title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
                         >
                             <span className="font-bold text-[10px] text-[oklch(52%_0.16_28)]">[Z-REPORT]</span>
@@ -761,9 +773,11 @@ export default function AdminDashboard() {
                             type="button"
                             onClick={() => fetchData(false, selectedDate)} 
                             disabled={loading}
-                            className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                            className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                            title="รีเฟรชข้อมูลล่าสุด"
                         >
-                            <span>{loading ? '[SYNCING...]' : '[REFRESH]'}</span>
+                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            <span className="hidden sm:inline">{loading ? '[SYNCING...]' : '[REFRESH]'}</span>
                         </button>
                     </div>
                 </div>
@@ -893,25 +907,53 @@ export default function AdminDashboard() {
                             onUpdateStatus={updateStatus}
                         />
 
-                        {/* 1.4 AD & TRAFFIC RADAR STRIP (Omni-Mode Awareness) */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-3 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs shadow-2xs">
-                            <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                                <span className="font-bold text-[oklch(18%_0.012_28)] tracking-wider uppercase text-[11px]">
-                                    AD RADAR // ทราฟฟิกโฆษณา ({selectedDate}):
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3.5 flex-wrap text-[11px]">
-                                <span>เปิดชมเว็บ (/link): <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.visits}</strong></span>
-                                <span>ขอทาง GPS: <strong className="text-[oklch(45%_0.08_140)] font-bold tabular-nums">{adTelemetry.maps}</strong></span>
-                                <span>โทร / LINE: <strong className="text-[oklch(52%_0.16_28)] font-bold tabular-nums">{adTelemetry.contacts}</strong></span>
-                                <span>จอง / สั่งรับ: <strong className="text-[oklch(18%_0.012_28)] font-bold tabular-nums">{adTelemetry.orders}</strong></span>
+                        {/* 1.4 AD & TRAFFIC RADAR (4-Cell Neo-Brutalist Cluster) */}
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-xs overflow-hidden shadow-2xs">
+                            <div className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${adTelemetry && adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                        AD RADAR // ทราฟฟิกโฆษณา & แคมเปญ ({selectedDate})
+                                    </span>
+                                </div>
                                 <a 
                                     href="/admin/marketing?tab=ads_landing" 
-                                    className="text-[oklch(52%_0.16_28)] font-bold hover:underline flex items-center gap-1 border-b border-[oklch(52%_0.16_28)] pb-0.5 ml-1"
+                                    className="font-mono text-[11px] font-bold text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1"
                                 >
-                                    <span>วิเคราะห์ Ads เชิงลึก ➔</span>
+                                    <span>วิเคราะห์ Ads เชิงลึก</span>
+                                    <span>➔</span>
                                 </a>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] font-mono">
+                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block font-semibold">เปิดชมเว็บ (/link)</span>
+                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                        {loading ? '...' : (adTelemetry.visits || 0)}
+                                    </div>
+                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Ad Impressions / Clicks</span>
+                                </div>
+                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                                    <span className="text-[10px] text-[oklch(45%_0.08_140)] uppercase block font-semibold">ขอทาง GPS (Maps)</span>
+                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(45%_0.08_140)] tabular-nums">
+                                        {loading ? '...' : (adTelemetry.maps || 0)}
+                                    </div>
+                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">High Intent Store Visit</span>
+                                </div>
+                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                                    <span className="text-[10px] text-[oklch(52%_0.16_28)] uppercase block font-semibold">โทรสอบถาม / LINE</span>
+                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                                        {loading ? '...' : (adTelemetry.contacts || 0)}
+                                    </div>
+                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Direct Inquiries</span>
+                                </div>
+                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
+                                    <span className="text-[10px] text-[oklch(18%_0.012_28)] uppercase block font-semibold">จองโต๊ะ / สั่งรับ</span>
+                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                        {loading ? '...' : (adTelemetry.orders || 0)}
+                                    </div>
+                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Attributed Orders</span>
+                                </div>
                             </div>
                         </div>
 
@@ -1062,59 +1104,62 @@ export default function AdminDashboard() {
                 )}
             </div>
 
-            {/* Daily Summary PNG Slip Modal */}
-            {showDailySummaryModal && (
-                <DailySummarySlipModal
-                    bookings={dailyBookings}
-                    shifts={shifts}
-                    selectedDate={selectedDate}
-                    companySettings={companySettings}
-                    onClose={() => setShowDailySummaryModal(false)}
-                />
-            )}
+            {/* Lazy-Loaded Modals Wrapped in Suspense */}
+            <Suspense fallback={null}>
+                {/* Daily Summary PNG Slip Modal */}
+                {showDailySummaryModal && (
+                    <DailySummarySlipModal
+                        bookings={dailyBookings}
+                        shifts={shifts}
+                        selectedDate={selectedDate}
+                        companySettings={companySettings}
+                        onClose={() => setShowDailySummaryModal(false)}
+                    />
+                )}
 
-            {/* Slip Modal (Admin Digital Bill & Receipt) */}
-            {slipData && (
-                <SlipModal
-                    booking={slipData.booking}
-                    type={slipData.type}
-                    isAdmin={true}
-                    onClose={() => setSlipData(null)}
-                />
-            )}
+                {/* Slip Modal (Admin Digital Bill & Receipt) */}
+                {slipData && (
+                    <SlipModal
+                        booking={slipData.booking}
+                        type={slipData.type}
+                        isAdmin={true}
+                        onClose={() => setSlipData(null)}
+                    />
+                )}
 
-            {/* View Slip Modal */}
-            {viewSlipUrl && (
-                <ViewSlipModal 
-                    slipUrl={viewSlipUrl}
-                    onClose={() => setViewSlipUrl(null)} 
-                />
-            )}
+                {/* View Slip Modal */}
+                {viewSlipUrl && (
+                    <ViewSlipModal 
+                        slipUrl={viewSlipUrl}
+                        onClose={() => setViewSlipUrl(null)} 
+                    />
+                )}
 
-            {/* Tax Invoice Full Modal */}
-            {taxInvoiceBooking && (
-                <TaxInvoiceModal
-                    booking={taxInvoiceBooking}
-                    companySettings={companySettings}
-                    onClose={() => setTaxInvoiceBooking(null)}
-                    onSaveSuccess={(savedInvoice, printImmediately) => {
-                        setTaxInvoiceBooking(null);
-                        fetchData();
-                        if (printImmediately) {
-                            setActivePrintInvoice(savedInvoice);
-                        }
-                    }}
-                />
-            )}
+                {/* Tax Invoice Full Modal */}
+                {taxInvoiceBooking && (
+                    <TaxInvoiceModal
+                        booking={taxInvoiceBooking}
+                        companySettings={companySettings}
+                        onClose={() => setTaxInvoiceBooking(null)}
+                        onSaveSuccess={(savedInvoice, printImmediately) => {
+                            setTaxInvoiceBooking(null);
+                            fetchData();
+                            if (printImmediately) {
+                                setActivePrintInvoice(savedInvoice);
+                            }
+                        }}
+                    />
+                )}
 
-            {/* A4 Official Printable Tax Invoice / Receipt View */}
-            {activePrintInvoice && (
-                <TaxInvoicePrintView
-                    invoice={activePrintInvoice}
-                    companySettings={companySettings}
-                    onClose={() => setActivePrintInvoice(null)}
-                />
-            )}
+                {/* A4 Official Printable Tax Invoice / Receipt View */}
+                {activePrintInvoice && (
+                    <TaxInvoicePrintView
+                        invoice={activePrintInvoice}
+                        companySettings={companySettings}
+                        onClose={() => setActivePrintInvoice(null)}
+                    />
+                )}
+            </Suspense>
         </PageTransition>
     )
 }

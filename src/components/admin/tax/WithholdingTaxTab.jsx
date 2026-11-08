@@ -19,6 +19,7 @@ import {
     exportWithholdingTaxCsv, 
     downloadCsvFile 
 } from '../../../utils/thaiTaxHelper';
+import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
 import { toast } from 'sonner';
 
 export default function WithholdingTaxTab({ 

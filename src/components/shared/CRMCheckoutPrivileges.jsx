@@ -20,15 +20,13 @@ export default function CRMCheckoutPrivileges({
     cartSubtotal = 0,
     promoDiscount = 0
 }) {
-    if (!memberProfile) return null
-
     // 1. CRM Settings Parsing
     const redeemRate = parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0
     const minRedeem = parseFloat(crmSettings.crm_min_redeem_xhaus) || 10.0
     const maxRedeemPercent = parseFloat(crmSettings.crm_max_redeem_percent) || 100.0
-    const memberBalance = Math.max(0, parseFloat(memberProfile.xhaus_balance || 0))
-    const currentStamps = parseInt(memberProfile.drink_stamp_count || 0, 10)
-    const currentQuota = parseInt(memberProfile.free_drink_quota || 0, 10)
+    const memberBalance = Math.max(0, parseFloat(memberProfile?.xhaus_balance || 0))
+    const currentStamps = parseInt(memberProfile?.drink_stamp_count || 0, 10)
+    const currentQuota = parseInt(memberProfile?.free_drink_quota || 0, 10)
 
     // Total free drinks earned / available
     const availableFreeDrinks = Math.max(0, currentQuota + Math.floor(currentStamps / 10))
@@ -67,6 +65,8 @@ export default function CRMCheckoutPrivileges({
             setRedeemInput(String(xhausToRedeem))
         }
     }, [xhausToRedeem])
+
+    if (!memberProfile) return null
 
     const handleApplyCoins = () => {
         setInputError(null)
