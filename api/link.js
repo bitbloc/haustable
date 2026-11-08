@@ -12,8 +12,8 @@ let cachedPageData = null
 let cacheExpiry = 0
 const CACHE_TTL_MS = 30 * 1000 // 30 seconds in-memory for instant freshness
 
-// New hours start 9 Nov 2026 (Bangkok); see src/utils/storeHours.js
-const getStoreHoursLabel = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date()) >= '2026-11-09'
+// New hours start 8 Nov 2026 (Bangkok); see src/utils/storeHours.js
+const getStoreHoursLabel = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date()) >= '2026-11-08'
     ? 'เปิดทุกวัน 11:00 - 21:30 น. (ครัวปิด 20:45 น.)'
     : 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)'
 

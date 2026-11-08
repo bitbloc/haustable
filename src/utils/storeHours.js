@@ -2,7 +2,7 @@
 // The app_settings values flip at the same moment via the pg_cron job in
 // supabase/migrations/20261106120000_store_hours_nov9.sql.
 // api/link.js keeps its own copy of this date because it is deployed as a standalone function.
-export const HOURS_EFFECTIVE_DATE = '2026-11-09'
+export const HOURS_EFFECTIVE_DATE = '2026-11-08'
 
 const PREVIOUS_HOURS = { open: '11:30', close: '23:30', lastOrder: '22:00' }
 const CURRENT_HOURS = { open: '11:00', close: '21:30', lastOrder: '20:45' }
