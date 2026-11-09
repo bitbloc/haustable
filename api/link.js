@@ -50,6 +50,8 @@ const DEFAULT_SETTINGS = {
     link_url_4: "https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7",
     link_tags: "อาหารใต้รสจัด, คาเฟ่ริมโขง, นครพนม, พริกแกงใต้แท้, ที่จอดรถสะดวก, อาหารจานเดียว, จริตจัด รสชัดเต็ม",
     // Same wording as the Google Ads headline (message match)
+    // One-line identity band at the very top: what only this shop offers (kept short so it never truncates)
+    link_usp: "อาหารใต้รสจัด พริกแกงนครศรีฯ แท้ · ริมโขง นครพนม",
     link_location_short: "ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ",
     link_directions_sub: "ห่าง 2 นาที จากลานพญานาค",
     // "First time here?" chooser lists every available item in these categories (name contains)
@@ -212,7 +214,6 @@ function generateStandaloneLandingHtml(data) {
     // Masthead: "In the haus | ร้านในบ้าน นครพนม" → "In the haus" over "ร้านในบ้าน นครพนม", leaving room for the status cell
     const [mastTitle, ...mastRest] = String(settings.link_shop_name || "In the haus | ร้านในบ้าน นครพนม").split('|').map(t => t.trim())
     const mastSub = mastRest.join(' ') || settings.link_shop_name_th || "ในบ้าน"
-    const subtitle = escapeHtml(settings.link_subtitle || "We Make It Bold . จริตจัด รสชัดเต็ม · Real Southern Taste")
     const hours = escapeHtml(settings.link_hours || getStoreHoursLabel())
     const locationText = escapeHtml(settings.link_location_text || "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม")
     const logoUrl = settings.link_logo_url || DEFAULT_SETTINGS.link_logo_url
@@ -431,11 +432,17 @@ function generateStandaloneLandingHtml(data) {
         /* Page frame */
         /* Blocks are paper slips on a darker ground: an 8px gap of ground between blocks, never a hairline */
         .container { width: 100%; max-width: 560px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom)); }
+        /* One continuous sheet: blocks are divided by hairlines only, no ground gaps between them */
+        html { scroll-behavior: smooth; }
+        .container { background: var(--color-paper); }
         .masthead, .facts, .tags-wrap, footer, :where(#sec-menu, #sec-vibe, #sec-connect) > * { background-color: var(--color-paper); }
-        .row-link.slip, .facts, .tab-bar, .quick-grid, .tags-wrap, footer { margin-top: var(--space-2); }
-        :where(#sec-menu, #sec-vibe, #sec-connect) > .section-header:not(:first-child) { margin-top: var(--space-2); }
-        .row-link.slip { border-bottom: none; }
-        .marquee { background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-1) var(--space-3); font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .facts, .quick-grid, .tags-wrap, footer { border-top: 1px solid var(--color-rule); }
+        .row-link.slip { border-top: 1px solid var(--color-rule); }
+        :where(#sec-menu, #sec-vibe, #sec-connect) { scroll-margin-top: 48px; }
+        :where(#sec-vibe, #sec-connect) > .section-header:first-child { border-top: 1px solid var(--color-ink); }
+        /* Identity band: the full line stays readable (wraps between phrases instead of being cut off with an ellipsis) */
+        .marquee .nb { display: inline-block; white-space: normal; }
+        .marquee { background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; text-wrap: balance; }
         /* Masthead: brand cell | live status cell */
         .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
         .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
@@ -472,7 +479,7 @@ function generateStandaloneLandingHtml(data) {
 
         /* First-time set chooser: the page's one dark field, so the first decision is read first.
          * Inside it the starter set is a light card with a large photo; the other sets are dark tiles. */
-        .sets { margin-top: var(--space-2); background: var(--color-field); color: var(--color-paper); padding-bottom: var(--space-2); }
+        .sets { background: var(--color-field); color: var(--color-paper); padding-bottom: var(--space-2); }
         .sets-head { padding: var(--space-6) var(--space-4) var(--space-5); }
         .sets-title { font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
         .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-md); font-weight: 500; color: var(--color-on-ink-2); }
@@ -552,11 +559,12 @@ function generateStandaloneLandingHtml(data) {
         .quick-btn:hover { background: var(--color-paper-2); }
 
         /* Tab strip */
-        .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-ink); background: var(--color-paper); position: sticky; top: 0; z-index: var(--z-sticky); }
-        .tab-btn { min-height: 48px; padding: var(--space-3) var(--space-2); font-size: var(--text-md); font-weight: 600; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out); }
+        /* Section index: sticky, follows the scroll (one page, no hidden panels) */
+        .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); position: sticky; top: 0; z-index: var(--z-sticky); }
+        .tab-btn { min-height: 48px; padding: var(--space-3) var(--space-2); font-size: var(--text-md); font-weight: 600; text-align: center; color: var(--color-muted); box-shadow: inset 0 0 0 var(--color-ink); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out); }
         .tab-btn + .tab-btn { border-left: 1px solid var(--color-rule); }
         .tab-btn:hover { background: var(--color-paper-2); }
-        .tab-btn.active { background: var(--color-ink); color: var(--color-paper); }
+        .tab-btn.active { color: var(--color-ink); box-shadow: inset 0 -3px 0 var(--color-ink); }
 
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
@@ -690,7 +698,7 @@ function generateStandaloneLandingHtml(data) {
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
-        <div class="marquee">${subtitle}</div>
+        <p class="marquee">${phrasesHtml(settings.link_usp || DEFAULT_SETTINGS.link_usp, '·', ' · ')}</p>
 
         <header class="masthead">
             <div class="brand">
@@ -875,7 +883,7 @@ function generateStandaloneLandingHtml(data) {
         </div>
 
         <!-- ─── SECTION 2: ATMOSPHERE ─── -->
-        <div id="sec-vibe" style="display:none;">
+        <div id="sec-vibe">
             ${atmImages.length > 0 ? `
             <div class="section-header">
                 <h2 class="section-title">บรรยากาศร้านริมโขง</h2>
@@ -903,7 +911,7 @@ function generateStandaloneLandingHtml(data) {
         </div>
 
         <!-- ─── SECTION 3: CONTACT ─── -->
-        <div id="sec-connect" style="display:none;">
+        <div id="sec-connect">
             <div class="section-header">
                 <h2 class="section-title">ติดต่อร้าน</h2>
                 <span class="section-meta num">098-528-4217</span>
@@ -1048,23 +1056,29 @@ function generateStandaloneLandingHtml(data) {
         })();
 
         // ─── TAB SWITCHING ───
-        function switchSection(name) {
-            document.getElementById('sec-menu').style.display = name === 'menu' ? 'block' : 'none';
-            document.getElementById('sec-vibe').style.display = name === 'vibe' ? 'block' : 'none';
-            document.getElementById('sec-connect').style.display = name === 'connect' ? 'block' : 'none';
-
-            document.getElementById('tab-btn-menu').className = 'tab-btn' + (name === 'menu' ? ' active' : '');
-            document.getElementById('tab-btn-vibe').className = 'tab-btn' + (name === 'vibe' ? ' active' : '');
-            document.getElementById('tab-btn-connect').className = 'tab-btn' + (name === 'connect' ? ' active' : '');
-
-            // If the user switched tabs while scrolled down, bring the new section's top into view
-            const bar = document.querySelector('.tab-bar');
-            const sec = document.getElementById('sec-' + name);
-            const secTop = sec.getBoundingClientRect().top;
-            if (secTop < bar.offsetHeight) {
-                window.scrollTo({ top: window.scrollY + secTop - bar.offsetHeight });
-            }
+        // All three sections stay on the page; the strip is a sticky index that scrolls to them
+        // and highlights whichever one is under the reader (no hide/show jumps).
+        const SECTIONS = ['menu', 'vibe', 'connect'];
+        function markSection(name) {
+            SECTIONS.forEach(function(s) {
+                const b = document.getElementById('tab-btn-' + s);
+                if (b) b.className = 'tab-btn' + (s === name ? ' active' : '');
+            });
         }
+        function switchSection(name) {
+            markSection(name);
+            const sec = document.getElementById('sec-' + name);
+            if (sec) sec.scrollIntoView({ block: 'start' });
+        }
+        (function() {
+            if (!('IntersectionObserver' in window)) return;
+            const io = new IntersectionObserver(function(entries) {
+                entries.forEach(function(en) {
+                    if (en.isIntersecting) markSection(en.target.id.replace('sec-', ''));
+                });
+            }, { rootMargin: '-45% 0px -50% 0px' });
+            SECTIONS.forEach(function(s) { const el = document.getElementById('sec-' + s); if (el) io.observe(el); });
+        })();
 
         // ─── OPEN / CLOSED STATUS (Asia/Bangkok, from the hours text) ───
         (function() {
