@@ -593,8 +593,25 @@ function generateStandaloneLandingHtml(data) {
         .item-price { font-size: var(--text-md); font-weight: 600; margin-top: var(--space-1); }
         .item-row .heat { margin-top: var(--space-1); }
         .item-thumb { width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-2); }
-        .full-menu-btn { width: 100%; min-height: 52px; padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; font-size: var(--text-md); font-weight: 600; border-bottom: 1px solid var(--color-rule); background: var(--color-paper-2); transition: background-color var(--dur) var(--ease-out); }
-        .full-menu-btn:hover { background: var(--color-paper-3); }
+        /* Full menu: the main way into all dishes, so a full-width ink block rather than a quiet row */
+        .full-menu-btn { width: 100%; min-height: 64px; padding: var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); text-align: left; font-size: var(--text-lg); font-weight: 700; line-height: 1.35; background: var(--color-ink); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+        .full-menu-btn:hover { background: var(--color-ink-2); }
+        .full-menu-btn:active { transform: scale(0.99); }
+        .full-menu-sub { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-on-ink-2); margin-top: 2px; }
+        .full-menu-btn .arrow { font-size: var(--text-xl); color: var(--color-paper); }
+        .full-menu-btn.open { background: var(--color-paper-2); color: var(--color-ink); border-bottom: 1px solid var(--color-rule); }
+        .full-menu-btn.open .arrow { color: var(--color-ink); }
+        .full-menu-btn.open .full-menu-sub { display: none; }
+
+        /* Opening hours: large figures + live state, readable at a glance */
+        .hours-fact { gap: var(--space-1); padding-top: var(--space-4); padding-bottom: var(--space-4); }
+        .hours-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+        .hours-main { font-size: var(--text-2xl); font-weight: 600; line-height: 1.3; }
+        .hours-note { font-size: var(--text-md); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
+        .hours-state { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
+        .hours-state::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); }
+        .hours-state.closed { color: var(--color-muted); }
+        .hours-state.closed::before { background: var(--color-neutral); }
 
         /* Galleries */
         .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
@@ -781,10 +798,13 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Facts: status · hours · location -->
         <div class="facts">
-            <div class="fact wide">
-                <span class="fact-label">เวลาเปิด</span>
-                <span class="fact-val nb">${hoursMain}</span>
-                ${hoursNote ? `<span class="fact-note nb">${hoursNote}</span>` : ''}
+            <div class="fact wide hours-fact">
+                <div class="hours-head">
+                    <span class="fact-label">เวลาเปิด-ปิด · ทุกวัน</span>
+                    <span class="hours-state" id="hours-state" hidden></span>
+                </div>
+                <span class="hours-main num nb">${hoursMain}</span>
+                ${hoursNote ? `<span class="hours-note nb">${hoursNote}</span>` : ''}
             </div>
             <div class="fact full">
                 <span class="fact-label">ที่ตั้ง</span>
@@ -877,7 +897,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span id="full-menu-label">ดูเมนูทั้งหมด ${menuItems.length} รายการ</span><span class="arrow" id="full-menu-arrow">↓</span></button>
+            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span><span id="full-menu-label">ดูเมนูทั้งหมด ${menuItems.length} รายการ</span><span class="full-menu-sub">ทุกหมวด พร้อมราคาและระดับความเผ็ด</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
             <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
@@ -1098,6 +1118,12 @@ function generateStandaloneLandingHtml(data) {
                 el.innerHTML = isOpen
                     ? '<span class="dot"></span> เปิดอยู่'
                     : '<span class="dot closed"></span> ปิดอยู่';
+                const hoursState = document.getElementById('hours-state');
+                if (hoursState) {
+                    hoursState.textContent = isOpen ? 'เปิดอยู่ตอนนี้' : 'ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
+                    hoursState.className = 'hours-state' + (isOpen ? '' : ' closed');
+                    hoursState.hidden = false;
+                }
                 const hoursLine = document.getElementById('status-hours');
                 if (!isOpen && hoursLine) hoursLine.textContent = 'เปิด ' + m[1] + ':' + m[2] + ' น.';
 
@@ -1230,12 +1256,14 @@ function generateStandaloneLandingHtml(data) {
                 content.style.display = 'block';
                 document.getElementById('full-menu-label').textContent = 'ปิดเมนูทั้งหมด';
                 document.getElementById('full-menu-arrow').textContent = '↑';
+                document.getElementById('btn-full-menu').classList.add('open');
                 if (window.gtag) gtag('event', 'view_full_menu', { event_category: 'engagement', page_path: '/link' });
                 logAdEvent('view_full_menu');
             } else {
                 content.style.display = 'none';
                 document.getElementById('full-menu-label').textContent = 'ดูเมนูทั้งหมด ${menuItems.length} รายการ';
                 document.getElementById('full-menu-arrow').textContent = '↓';
+                document.getElementById('btn-full-menu').classList.remove('open');
             }
         }
 
