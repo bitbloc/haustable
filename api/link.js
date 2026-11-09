@@ -51,7 +51,14 @@ const DEFAULT_SETTINGS = {
     link_tags: "อาหารใต้รสจัด, คาเฟ่ริมโขง, นครพนม, พริกแกงใต้แท้, ที่จอดรถสะดวก, อาหารจานเดียว, จริตจัด รสชัดเต็ม",
     // Same wording as the Google Ads headline (message match)
     // One-line identity band at the very top: what only this shop offers (kept short so it never truncates)
-    link_usp: "อาหารใต้รสจัด พริกแกงนครศรีฯ แท้ · ริมโขง นครพนม",
+    link_usp: "คาเฟ่ริมโขงที่มีกับข้าวใต้รสนครศรีฯ · จิบชิลตั้งแต่หัววัน ไม่กินเผ็ดก็มาได้",
+    link_sig_name_en_1: "Southern Fish Entrails Curry (Gaeng Tai Pla)",
+    link_sig_name_en_2: "Stir-fried Liang Leaves (House Style)",
+    link_sig_name_en_3: "Stir-fried Stink Beans with Shrimp",
+    link_usp_en: "A Mekong café with real Southern Thai food · Sip from midday, mild dishes for every palate",
+    link_location_short_en: "By the Mekong · 2 min from Naga Square · Parking",
+    link_directions_sub_en: "2 min from Naga Square",
+    link_location_text_en: "On Sunthorn Wichit Road, 2 minutes from Phaya Si Satta Nakharat (Naga) Square, by the Mekong, Nakhon Phanom",
     link_location_short: "ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ",
     link_directions_sub: "ห่าง 2 นาที จากลานพญานาค",
     // "First time here?" chooser lists every available item in these categories (name contains)
@@ -95,13 +102,20 @@ function spiceRange(name, spiceMap, id) {
     return { min: Math.min(...levels), max: Math.max(...levels) }
 }
 
+// TH/EN: both languages are rendered, CSS shows the one set on <html lang> (no re-render, no flash)
+function tt(th, en) {
+    return `<span class="l-th">${th}</span><span class="l-en">${en}</span>`
+}
+const HEAT_LABELS_EN = ['Not spicy', 'Mild', 'Medium', 'Very spicy']
+
 // Three-cell heat meter + Thai label. A set mixing mild and hot dishes reads "มีจานเผ็ด".
 function heatHtml(range) {
     if (!range) return ''
     const level = range.max
     const label = level > 0 && range.min === 0 ? 'มีจานเผ็ด' : HEAT_LABELS[level]
+    const labelEn = level > 0 && range.min === 0 ? 'Some spicy dishes' : HEAT_LABELS_EN[level]
     const cells = [1, 2, 3].map(n => `<i${n <= level ? ' class="on"' : ''}></i>`).join('')
-    return `<span class="heat h${level}" role="img" aria-label="ความเผ็ด: ${label}"><span class="heat-cells" aria-hidden="true">${cells}</span><span class="heat-label">${label}</span></span>`
+    return `<span class="heat h${level}" role="img" aria-label="ความเผ็ด: ${label}"><span class="heat-cells" aria-hidden="true">${cells}</span><span class="heat-label">${tt(label, labelEn)}</span></span>`
 }
 
 const DEFAULT_MENU_ITEMS = [
@@ -144,6 +158,20 @@ function formatDescriptionHtml(desc) {
     }).filter(Boolean).join('<br>')
 }
 
+// Menu item name: EN view shows name_en with the Thai name underneath (guests can point it out to staff), like the QR order page
+function itemNameHtml(item) {
+    const th = escapeHtml(item.name)
+    const en = String(item.name_en || '').trim()
+    return tt(th, en && en !== item.name ? `${escapeHtml(en)}<span class="item-name-th">${th}</span>` : th)
+}
+// Description: EN view shows only the English description (no Thai fallback), like the QR order page
+function itemDescHtml(item) {
+    const th = item.description ? formatDescriptionHtml(item.description) : ''
+    const en = item.description_en ? formatDescriptionHtml(item.description_en) : ''
+    if (!th && !en) return ''
+    return `<div class="item-desc${th ? '' : ' l-en'}${en ? '' : ' l-th'}">${tt(th, en)}</div>`
+}
+
 // Join phrases with a separator, each phrase kept on one line (Thai has no spaces to break on)
 function phrasesHtml(text, splitter, joiner) {
     return String(text || '').split(splitter).map(t => t.trim()).filter(Boolean)
@@ -174,19 +202,31 @@ function buildSetRow(item, spiceMap) {
         .replace(/^[^:•]*:\s*/, '')
         .replace(/\s*>\s*/g, ' ')
     let perPerson = ''
+    let perPersonEn = ''
     if (pax && price) {
         const low = Math.round(price / Number(pax[2]))
         const high = Math.round(price / Number(pax[1]))
-        perPerson = low === high ? `คนละ ฿${low}` : `คนละ ฿${low}–${high}`
+        const range = low === high ? `฿${low}` : `฿${low}–${high}`
+        perPerson = `คนละ ${range}`
+        perPersonEn = `${range} per person`
     }
+    // "Set L for 2-4: House Set" → "Set L · House Set"
+    const nameEn = String(item.name_en || '').trim()
+    const titleEn = nameEn
+        ? nameEn.replace(/^(set\s+\w+)\s+for\s+[\d\s-]+:\s*/i, '$1 · ').replace(/^set\s*:\s*/i, '').trim()
+        : title
+    const dishesEn = String(item.description_en || '').trim().split('\n')[0].trim() || dishes
     return {
         id: item.id,
         group: pax ? `${pax[1]}–${pax[2]}` : '1',
         groupMin: pax ? Number(pax[1]) : 1,
         title,
+        titleEn,
         dishes,
+        dishesEn,
         price,
         perPerson,
+        perPersonEn,
         heat: heatHtml(spiceRange(name, spiceMap, item.id)),
         thumb: item.image_url ? optImg(item.image_url, 160, 70) : '',
         feature: item.image_url ? optImg(item.image_url, 720, 70) : '',
@@ -228,6 +268,17 @@ function generateStandaloneLandingHtml(data) {
     const sig1Name = escapeHtml(settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
     const sig2Name = escapeHtml(settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
     const sig3Name = escapeHtml(settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
+    // Signature English name: link_sig_name_en_N, else the single dish (never a set) whose Thai name starts the same
+    const sigEn = (i, name) => {
+        if (settings[`link_sig_name_en_${i}`]) return escapeHtml(settings[`link_sig_name_en_${i}`])
+        const n = String(name || '').replace(/\s*\(.*\)\s*/, '').trim()
+        const dishes = menuItems.filter(m => m.name_en && !/^set\b|เซต/i.test(String(m.name || '')))
+        const hit = n && (dishes.find(m => String(m.name).trim() === String(name).trim()) || dishes.find(m => String(m.name).startsWith(n)))
+        return escapeHtml(hit ? hit.name_en : (DEFAULT_SETTINGS[`link_sig_name_en_${i}`] || name))
+    }
+    const sig1NameEn = sigEn(1, settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
+    const sig2NameEn = sigEn(2, settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
+    const sig3NameEn = sigEn(3, settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
     const sig1Price = escapeHtml(settings.link_sig_price_1 || "159")
     const sig2Price = escapeHtml(settings.link_sig_price_2 || "139")
     const sig3Price = escapeHtml(settings.link_sig_price_3 || "299")
@@ -319,6 +370,12 @@ function generateStandaloneLandingHtml(data) {
     const hoursMain = escapeHtml(hoursPlain.replace(/\s*\(.*\)\s*/, '').trim())
     const hoursNote = escapeHtml((hoursPlain.match(/\(([^)]*)\)/) || [])[1] || '')
     const directionsSub = escapeHtml(settings.link_directions_sub || DEFAULT_SETTINGS.link_directions_sub)
+    const directionsSubEn = escapeHtml(settings.link_directions_sub_en || DEFAULT_SETTINGS.link_directions_sub_en)
+    const locationShortEnHtml = phrasesHtml(settings.link_location_short_en || DEFAULT_SETTINGS.link_location_short_en, '·', ' · ')
+    const locationTextEn = escapeHtml(settings.link_location_text_en || DEFAULT_SETTINGS.link_location_text_en)
+    const hoursMainEn = hoursMain.replace(/\s*น\.?\s*$/, '').replace(' - ', ' – ')
+    const hoursNoteEn = hoursNote.replace(/ปิดรับออเดอร์|ครัวปิด/, 'Last order').replace(/\s*น\.?\s*$/, '')
+    const peopleEn = key => key === '1' ? '1 person' : `${key} people`
 
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
@@ -365,6 +422,17 @@ function generateStandaloneLandingHtml(data) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 
+    <script>
+        // Language: ?lang=en|th, else the visitor's saved choice, else Thai. Set before paint so nothing flashes.
+        (function() {
+            try {
+                var q = new URLSearchParams(location.search).get('lang');
+                var l = (q === 'en' || q === 'th') ? q : localStorage.getItem('haus_lang');
+                if (q === 'en' || q === 'th') localStorage.setItem('haus_lang', q);
+                if (l === 'en') document.documentElement.lang = 'en';
+            } catch (e) {}
+        })();
+    </script>
     <style>
         /* Hallmark · macrostructure: Catalogue · tone: utilitarian (Dieter Rams × Thai modern) · anchor hue: 28 terracotta
          * theme: custom (.agents/AGENTS.md) · paper oklch(97% 0.008 28) · accent oklch(52% 0.16 28) · IBM Plex Sans Thai + IBM Plex Mono
@@ -441,8 +509,14 @@ function generateStandaloneLandingHtml(data) {
         :where(#sec-menu, #sec-vibe, #sec-connect) { scroll-margin-top: 48px; }
         :where(#sec-vibe, #sec-connect) > .section-header:first-child { border-top: 1px solid var(--color-ink); }
         /* Identity band: the full line stays readable (wraps between phrases instead of being cut off with an ellipsis) */
-        .marquee .nb { display: inline-block; white-space: normal; }
-        .marquee { background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; text-wrap: balance; }
+        html[lang="en"] .l-th, html:not([lang="en"]) .l-en { display: none !important; }
+        /* Each USP phrase is its own line, so no separator is ever left dangling on a line of its own */
+        .marquee .nb { display: block; white-space: normal; }
+        .marquee { display: flex; align-items: center; gap: var(--space-3); background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; }
+        .marquee-text { flex: 1; min-width: 0; text-align: center; text-wrap: balance; }
+        /* Language switch: names the other language in its own script, so a visitor who can't read Thai still finds it */
+        .lang-btn { flex-shrink: 0; min-height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-ink); border-radius: var(--radius); font-size: var(--text-sm); font-weight: 700; line-height: 30px; white-space: nowrap; transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .lang-btn:hover { background: var(--color-ink); color: var(--color-signal); }
         /* Masthead: brand cell | live status cell */
         .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
         .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
@@ -588,6 +662,7 @@ function generateStandaloneLandingHtml(data) {
         .item-row.zoomable { cursor: zoom-in; }
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: var(--text-md); font-weight: 600; line-height: 1.45; }
+        .item-name-th { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-neutral); }
         .item-desc { font-size: var(--text-sm); color: var(--color-muted); margin-top: 2px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
         .modifier-tag { display: inline-block; font-size: var(--text-xs); font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--color-rule); border-radius: var(--radius); background: var(--color-paper-2); margin-bottom: 2px; }
         .item-price { font-size: var(--text-md); font-weight: 600; margin-top: var(--space-1); }
@@ -715,7 +790,7 @@ function generateStandaloneLandingHtml(data) {
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
-        <p class="marquee">${phrasesHtml(settings.link_usp || DEFAULT_SETTINGS.link_usp, '·', ' · ')}</p>
+        <div class="marquee"><p class="marquee-text">${tt(phrasesHtml(settings.link_usp || DEFAULT_SETTINGS.link_usp, '·', ' '), phrasesHtml(settings.link_usp_en || DEFAULT_SETTINGS.link_usp_en, '·', ' '))}</p><button type="button" class="lang-btn" onclick="toggleLang()" aria-label="Switch language / เปลี่ยนภาษา">${tt('English', 'ภาษาไทย')}</button></div>
 
         <header class="masthead">
             <div class="brand">
@@ -724,8 +799,8 @@ function generateStandaloneLandingHtml(data) {
             </div>
             <!-- Live status: can I go now? -->
             <div class="status-cell" aria-live="polite">
-                <span class="fact-val" id="open-status" data-hours="${hours}"><span class="dot"></span> เปิดทุกวัน</span>
-                <span class="fact-note nb" id="status-hours">${hoursMain}</span>
+                <span class="fact-val" id="open-status" data-hours="${hours}"><span class="dot"></span> ${tt('เปิดทุกวัน', 'Open daily')}</span>
+                <span class="fact-note nb" id="status-hours">${tt(hoursMain, hoursMainEn)}</span>
                 <span class="kitchen-note" id="kitchen-note" hidden></span>
             </div>
         </header>
@@ -734,22 +809,22 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Location-first banner: shown when utm_content says the ad sold the location -->
         <section class="loc-hero" id="loc-hero" hidden>
-            <div class="loc-hero-title">${directionsSub}</div>
-            <div class="loc-hero-sub">ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ</div>
-            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">นำทางมาร้าน <span class="arrow">→</span></a>
+            <div class="loc-hero-title">${tt(directionsSub, directionsSubEn)}</div>
+            <div class="loc-hero-sub">${tt('ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ', 'By the Mekong · Walk-ins welcome · Parking')}</div>
+            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">${tt('นำทางมาร้าน', 'Get directions')} <span class="arrow">→</span></a>
         </section>
 
         ${setGroups.length > 0 ? `
         <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
         <section class="sets" id="starter-card" data-lunch="${lunchWindow}" aria-labelledby="sets-title">
             <div class="sets-head">
-                <h2 class="sets-title" id="sets-title"><span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span></h2>
-                <p class="sets-walkin">ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</p>
-                <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">หรือดูเมนูทั้งหมด ${menuItems.length} รายการ <span class="arrow">↓</span></a>
+                <h2 class="sets-title" id="sets-title">${tt('<span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span>', '<span class="nb">First time here?</span> <span class="nb">Pick a set for your group</span>')}</h2>
+                <p class="sets-walkin">${tt('ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ', 'No booking needed · walk in anytime · parking')}</p>
+                <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">${tt(`หรือดูเมนูทั้งหมด ${menuItems.length} รายการ`, `Or see the full menu · ${menuItems.length} items`)} <span class="arrow">↓</span></a>
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
-                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${g.key} คน</span><span class="set-tab-count">${g.rows.length} ชุด</span></button>`).join('')}
+                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key))}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`)}</span></button>`).join('')}
             </div>` : ''}
             ${setGroups.map(g => `
             <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
@@ -758,84 +833,84 @@ function generateStandaloneLandingHtml(data) {
                     ${r.feature ? `<img class="set-feature-img" src="${r.feature}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === defaultGroup ? 'eager' : 'lazy'}"${g.key === defaultGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
                     <div class="set-feature-body">
                         <div class="set-feature-top">
-                            <h3 class="set-name">${setTitleHtml(r.title)}${r.starter ? '<span class="set-tag">เริ่มที่ชุดนี้</span>' : ''}</h3>
+                            <h3 class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</h3>
                             <div class="set-price">
                                 <span class="num">฿${r.price}</span>
-                                ${r.perPerson ? `<span class="set-pp">${escapeHtml(r.perPerson)}</span>` : ''}
+                                ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn))}</span>` : ''}
                             </div>
                         </div>
-                        <div class="set-dishes">${phrasesHtml(r.dishes, '•', ' • ')}</div>
+                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '))}</div>
                         ${r.heat}
                     </div>
                 </article>` : `
                 <div class="set-row">
                     ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
-                    <div class="set-name">${setTitleHtml(r.title)}${r.starter ? '<span class="set-tag">เริ่มที่ชุดนี้</span>' : ''}</div>
+                    <div class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</div>
                     <div class="set-price">
                         <span class="num">฿${r.price}</span>
-                        ${r.perPerson ? `<span class="set-pp">${escapeHtml(r.perPerson)}</span>` : ''}
+                        ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn))}</span>` : ''}
                     </div>
                     <div class="set-row-body">
-                        <div class="set-dishes">${phrasesHtml(r.dishes, '•', ' • ')}</div>
+                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '))}</div>
                         ${r.heat}
                     </div>
                 </div>`).join('')}
             </div>`).join('')}
             <div class="set-ctas">
-                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">นำทางมาร้าน</a>
-                <a href="tel:0985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">โทรสอบถาม</a>
+                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">${tt('นำทางมาร้าน', 'Get directions')}</a>
+                <a href="tel:0985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">${tt('โทรสอบถาม', 'Call us')}</a>
             </div>
             <div class="set-more">
-                <span>อยากได้โต๊ะแน่นอน?</span>
-                <a href="/booking" onclick="handleStarterClick(event, 'booking')">จองล่วงหน้า</a>
-                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">สั่งรับหน้าร้าน</a>
+                <span>${tt('อยากได้โต๊ะแน่นอน?', 'Want a table for sure?')}</span>
+                <a href="/booking" onclick="handleStarterClick(event, 'booking')">${tt('จองล่วงหน้า', 'Book ahead')}</a>
+                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">${tt('สั่งรับหน้าร้าน', 'Order for pickup')}</a>
             </div>
         </section>` : `
         <div class="quick-grid">
-            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">จองโต๊ะ <span class="arrow">→</span></a>
-            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">สั่งรับหน้าร้าน <span class="arrow">→</span></a>
+            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">${tt('จองโต๊ะ', 'Book a table')} <span class="arrow">→</span></a>
+            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">${tt('สั่งรับหน้าร้าน', 'Order for pickup')} <span class="arrow">→</span></a>
         </div>`}
 
         <!-- Facts: status · hours · location -->
         <div class="facts">
             <div class="fact wide hours-fact">
                 <div class="hours-head">
-                    <span class="fact-label">เวลาเปิด-ปิด · ทุกวัน</span>
+                    <span class="fact-label">${tt('เวลาเปิด-ปิด · ทุกวัน', 'Opening hours · daily')}</span>
                     <span class="hours-state" id="hours-state" hidden></span>
                 </div>
-                <span class="hours-main num nb">${hoursMain}</span>
-                ${hoursNote ? `<span class="hours-note nb">${hoursNote}</span>` : ''}
+                <span class="hours-main num nb">${tt(hoursMain, hoursMainEn)}</span>
+                ${hoursNote ? `<span class="hours-note nb">${tt(hoursNote, hoursNoteEn)}</span>` : ''}
             </div>
             <div class="fact full">
-                <span class="fact-label">ที่ตั้ง</span>
+                <span class="fact-label">${tt('ที่ตั้ง', 'Location')}</span>
                 <div class="loc-row">
-                    <span class="fact-val flow">${locationShortHtml}</span>
-                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-map-btn" onclick="handleDirectionsClick(event)">แผนที่ <span class="arrow">→</span></a>
+                    <span class="fact-val flow">${tt(locationShortHtml, locationShortEnHtml)}</span>
+                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-map-btn" onclick="handleDirectionsClick(event)">${tt('แผนที่', 'Map')} <span class="arrow">→</span></a>
                 </div>
                 <details class="loc-more">
-                    <summary>วิธีมาที่ร้าน</summary>
-                    <p>${locationText}</p>
+                    <summary>${tt('วิธีมาที่ร้าน', 'How to get here')}</summary>
+                    <p>${tt(locationText, locationTextEn)}</p>
                 </details>
             </div>
         </div>
 
         <a href="/link/hauscheckin" class="row-link slip">
-            <span class="row-main"><span class="dot"></span><span>รูปจากลูกค้าจริง<span class="row-sub">บอร์ดเช็กอินของลูกค้าที่มาร้าน</span></span></span>
+            <span class="row-main"><span class="dot"></span><span>${tt('รูปจากลูกค้าจริง', 'Real guest photos')}<span class="row-sub">${tt('บอร์ดเช็กอินของลูกค้าที่มาร้าน', 'Check-in wall from our guests')}</span></span></span>
             <span class="arrow">→</span>
         </a>
 
         <!-- Tab strip -->
         <div class="tab-bar" role="tablist">
-            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')">เมนู</button>
-            <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">บรรยากาศ</button>
-            <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">ติดต่อ</button>
+            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')">${tt('เมนู', 'Menu')}</button>
+            <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">${tt('บรรยากาศ', 'Atmosphere')}</button>
+            <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">${tt('ติดต่อ', 'Contact')}</button>
         </div>
 
         <!-- ─── SECTION 1: MENU ─── -->
         <div id="sec-menu">
             <div class="section-header">
-                <h2 class="section-title">จานเด่นของร้าน</h2>
-                <span class="section-meta">แตะรูปเพื่อขยาย</span>
+                <h2 class="section-title">${tt('จานเด่นของร้าน', 'Signature dishes')}</h2>
+                <span class="section-meta">${tt('แตะรูปเพื่อขยาย', 'Tap to enlarge')}</span>
             </div>
             <div class="sig-grid">
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 800)}')">
@@ -843,7 +918,7 @@ function generateStandaloneLandingHtml(data) {
                         <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
-                        <div class="sig-name">${sig1Name}</div>
+                        <div class="sig-name">${tt(sig1Name, sig1NameEn)}</div>
                         <div class="sig-price num">฿${sig1Price}</div>
                         ${heatHtml(spiceRange(settings.link_sig_name_1 || DEFAULT_SETTINGS.link_sig_name_1, spiceMap))}
                     </div>
@@ -853,7 +928,7 @@ function generateStandaloneLandingHtml(data) {
                         <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
-                        <div class="sig-name">${sig2Name}</div>
+                        <div class="sig-name">${tt(sig2Name, sig2NameEn)}</div>
                         <div class="sig-price num">฿${sig2Price}</div>
                         ${heatHtml(spiceRange(settings.link_sig_name_2 || DEFAULT_SETTINGS.link_sig_name_2, spiceMap))}
                     </div>
@@ -863,7 +938,7 @@ function generateStandaloneLandingHtml(data) {
                         <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
-                        <div class="sig-name">${sig3Name}</div>
+                        <div class="sig-name">${tt(sig3Name, sig3NameEn)}</div>
                         <div class="sig-price num">฿${sig3Price}</div>
                         ${heatHtml(spiceRange(settings.link_sig_name_3 || DEFAULT_SETTINGS.link_sig_name_3, spiceMap))}
                     </div>
@@ -874,22 +949,22 @@ function generateStandaloneLandingHtml(data) {
             <button type="button" class="row-link as-button" onclick="openBooklet()">
                 <span class="row-main">
                     <img src="${optImg(bookletImages[0], 120)}" alt="" class="row-thumb" width="44" height="44" loading="lazy">
-                    <span>เปิดดูเมนูแบบเล่ม<span class="row-sub">เมนูเล่มจริงของร้าน ${bookletImages.length} หน้า</span></span>
+                    <span>${tt('เปิดดูเมนูแบบเล่ม', 'Browse the printed menu')}<span class="row-sub">${tt(`เมนูเล่มจริงของร้าน ${bookletImages.length} หน้า`, `Our menu book · ${bookletImages.length} pages`)}</span></span>
                 </span>
                 <span class="arrow">→</span>
             </button>` : ''}
 
             ${recommendedItems.length > 0 ? `
             <div class="section-header">
-                <h2 class="section-title">เมนูแนะนำ</h2>
-                <span class="section-meta">${recommendedItems.length} รายการ</span>
+                <h2 class="section-title">${tt('เมนูแนะนำ', 'Recommended')}</h2>
+                <span class="section-meta">${tt(`${recommendedItems.length} รายการ`, `${recommendedItems.length} items`)}</span>
             </div>
             <div>
                 ${recommendedItems.map(item => `
                 <div class="item-row${item.image_url ? ' zoomable' : ''}"${item.image_url ? ` onclick="openLightbox('${optImg(item.image_url, 800)}')"` : ''}>
                     <div class="item-info">
-                        <div class="item-name">${escapeHtml(item.name)}</div>
-                        ${item.description ? `<div class="item-desc">${formatDescriptionHtml(item.description)}</div>` : ''}
+                        <div class="item-name">${itemNameHtml(item)}</div>
+                        ${itemDescHtml(item)}
                         <div class="item-price num">฿${escapeHtml(item.price)}</div>
                         ${heatHtml(item.spice)}
                     </div>
@@ -897,7 +972,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span><span id="full-menu-label">ดูเมนูทั้งหมด ${menuItems.length} รายการ</span><span class="full-menu-sub">ทุกหมวด พร้อมราคาและระดับความเผ็ด</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
+            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
             <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
@@ -906,8 +981,8 @@ function generateStandaloneLandingHtml(data) {
         <div id="sec-vibe">
             ${atmImages.length > 0 ? `
             <div class="section-header">
-                <h2 class="section-title">บรรยากาศร้านริมโขง</h2>
-                <span class="section-meta">${atmImages.length} รูป</span>
+                <h2 class="section-title">${tt('บรรยากาศร้านริมโขง', 'By the Mekong')}</h2>
+                <span class="section-meta">${tt(`${atmImages.length} รูป`, `${atmImages.length} photos`)}</span>
             </div>
             <div class="gallery-grid">
                 ${atmImages.map((img, i) => `
@@ -918,8 +993,8 @@ function generateStandaloneLandingHtml(data) {
 
             ${diningCheckins.length > 0 ? `
             <div class="section-header">
-                <h2 class="section-title">มื้อจริงจากลูกค้า</h2>
-                <span class="section-meta">${diningCheckins.length} รูป</span>
+                <h2 class="section-title">${tt('มื้อจริงจากลูกค้า', 'Real meals from guests')}</h2>
+                <span class="section-meta">${tt(`${diningCheckins.length} รูป`, `${diningCheckins.length} photos`)}</span>
             </div>
             <div class="gallery-grid">
                 ${diningCheckins.map((chk, i) => `
@@ -933,41 +1008,41 @@ function generateStandaloneLandingHtml(data) {
         <!-- ─── SECTION 3: CONTACT ─── -->
         <div id="sec-connect">
             <div class="section-header">
-                <h2 class="section-title">ติดต่อร้าน</h2>
+                <h2 class="section-title">${tt('ติดต่อร้าน', 'Contact us')}</h2>
                 <span class="section-meta num">098-528-4217</span>
             </div>
             <a href="${mapUrl}" id="cta-connect-map" target="_blank" rel="noopener noreferrer" class="row-link ink" onclick="handleDirectionsClick(event)">
-                <span>นำทางมาร้าน<span class="row-sub">${directionsSub}</span></span>
+                <span>${tt('นำทางมาร้าน', 'Get directions')}<span class="row-sub">${tt(directionsSub, directionsSubEn)}</span></span>
                 <span class="arrow">→</span>
             </a>
             <a href="${lineUrl}" id="cta-connect-line" target="_blank" rel="noopener noreferrer" class="row-link line" onclick="handleLineClick(event)">
-                <span>แชท LINE<span class="row-sub">สอบถามหรือสั่งอาหาร</span></span>
+                <span>${tt('แชท LINE', 'Chat on LINE')}<span class="row-sub">${tt('สอบถามหรือสั่งอาหาร', 'Ask us or order')}</span></span>
                 <span class="arrow">→</span>
             </a>
             <a href="tel:0985284217" id="cta-connect-call" class="row-link" onclick="handleCallClick(event)">
-                <span>โทรหาร้าน<span class="row-sub num">098-528-4217</span></span>
+                <span>${tt('โทรหาร้าน', 'Call the shop')}<span class="row-sub num">098-528-4217</span></span>
                 <span class="arrow">→</span>
             </a>
 
             <div class="section-header">
-                <h2 class="section-title">จองโต๊ะและสั่งอาหาร</h2>
-                <span class="section-meta">ไม่จองก็มาได้</span>
+                <h2 class="section-title">${tt('จองโต๊ะและสั่งอาหาร', 'Book &amp; order')}</h2>
+                <span class="section-meta">${tt('ไม่จองก็มาได้', 'Walk-ins welcome')}</span>
             </div>
             <a href="/booking" class="row-link" onclick="handleBookingClick(event)">
-                <span>จองโต๊ะล่วงหน้า<span class="row-sub">สำหรับวันที่อยากได้โต๊ะแน่นอน</span></span>
+                <span>${tt('จองโต๊ะล่วงหน้า', 'Book a table')}<span class="row-sub">${tt('สำหรับวันที่อยากได้โต๊ะแน่นอน', 'When you want a table for sure')}</span></span>
                 <span class="arrow">→</span>
             </a>
             <a href="/pickup" class="row-link" onclick="handlePickupClick(event)">
-                <span>สั่งรับหน้าร้าน<span class="row-sub">สั่งออนไลน์ แล้วแวะรับ</span></span>
+                <span>${tt('สั่งรับหน้าร้าน', 'Order for pickup')}<span class="row-sub">${tt('สั่งออนไลน์ แล้วแวะรับ', 'Order online, pick up at the shop')}</span></span>
                 <span class="arrow">→</span>
             </a>
             <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="row-link" onclick="logAdEvent('click_lineman')">
-                <span>เดลิเวอรีผ่าน LINE MAN<span class="row-sub">สั่งผ่านแอป LINE MAN</span></span>
+                <span>${tt('เดลิเวอรีผ่าน LINE MAN', 'Delivery via LINE MAN')}<span class="row-sub">${tt('สั่งผ่านแอป LINE MAN', 'Order in the LINE MAN app')}</span></span>
                 <span class="arrow">→</span>
             </a>
 
             <div class="section-header">
-                <h2 class="section-title">ติดตามและข้อมูลร้าน</h2>
+                <h2 class="section-title">${tt('ติดตามและข้อมูลร้าน', 'Follow &amp; info')}</h2>
             </div>
             <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
                 <span>Instagram<span class="row-sub">@inthehausth</span></span>
@@ -978,11 +1053,11 @@ function generateStandaloneLandingHtml(data) {
                 <span class="arrow">→</span>
             </a>
             <a href="/qa" class="row-link">
-                <span>คำถามที่พบบ่อย<span class="row-sub">รวมคำถามที่ลูกค้าถามบ่อย</span></span>
+                <span>${tt('คำถามที่พบบ่อย', 'FAQ')}<span class="row-sub">${tt('รวมคำถามที่ลูกค้าถามบ่อย', 'Questions guests often ask')}</span></span>
                 <span class="arrow">→</span>
             </a>
             <a href="/link/hauscheckin" class="row-link">
-                <span>บอร์ดเช็กอินลูกค้า<span class="row-sub">รูปจากลูกค้าที่มาร้าน</span></span>
+                <span>${tt('บอร์ดเช็กอินลูกค้า', 'Guest check-in wall')}<span class="row-sub">${tt('รูปจากลูกค้าที่มาร้าน', 'Photos from our guests')}</span></span>
                 <span class="arrow">→</span>
             </a>
         </div>
@@ -1004,31 +1079,31 @@ function generateStandaloneLandingHtml(data) {
         <nav class="sticky-bar" aria-label="ติดต่อด่วน">
             <div class="sticky-inner">
                 <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
-                    <span>นำทาง</span>
-                    <span class="sticky-sub">${directionsSub}</span>
+                    <span>${tt('นำทาง', 'Directions')}</span>
+                    <span class="sticky-sub">${tt(directionsSub, directionsSubEn)}</span>
                 </a>
-                <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">แชท LINE</a>
-                <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn" onclick="handleCallClick(event)">โทร</a>
-                <a href="/booking" id="cta-sticky-booking" class="sticky-btn" onclick="handleBookingClick(event)">จองโต๊ะ</a>
+                <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">${tt('แชท LINE', 'LINE chat')}</a>
+                <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn" onclick="handleCallClick(event)">${tt('โทร', 'Call')}</a>
+                <a href="/booking" id="cta-sticky-booking" class="sticky-btn" onclick="handleBookingClick(event)">${tt('จองโต๊ะ', 'Book')}</a>
             </div>
         </nav>
     </div>
 
     <!-- Image Lightbox Modal -->
     <div id="lightbox-modal" class="modal" onclick="closeLightbox()">
-        <button class="modal-close" onclick="closeLightbox()">ปิด</button>
+        <button class="modal-close" onclick="closeLightbox()">${tt('ปิด', 'Close')}</button>
         <img id="lightbox-img" class="modal-content" src="" alt="รูปขยาย">
     </div>
 
     <!-- Booklet Viewer Modal -->
     <div id="booklet-modal" class="modal" onclick="closeBooklet(event)">
-        <button class="modal-close" onclick="closeBooklet()">ปิด</button>
+        <button class="modal-close" onclick="closeBooklet()">${tt('ปิด', 'Close')}</button>
         <div class="modal-stack" onclick="event.stopPropagation()">
             <img id="booklet-img" class="modal-content" src="${bookletImages[0] ? optImg(bookletImages[0], 900) : ''}" alt="หน้าเมนูแบบเล่ม">
             <div class="booklet-nav">
-                <button onclick="prevBookletPage()">← ก่อนหน้า</button>
+                <button onclick="prevBookletPage()">← ${tt('ก่อนหน้า', 'Prev')}</button>
                 <span id="booklet-counter" class="num">1 / ${bookletImages.length}</span>
-                <button onclick="nextBookletPage()">ถัดไป →</button>
+                <button onclick="nextBookletPage()">${tt('ถัดไป', 'Next')} →</button>
             </div>
         </div>
     </div>
@@ -1100,6 +1175,15 @@ function generateStandaloneLandingHtml(data) {
             SECTIONS.forEach(function(s) { const el = document.getElementById('sec-' + s); if (el) io.observe(el); });
         })();
 
+        // ─── LANGUAGE ───
+        function TT(th, en) { return '<span class="l-th">' + th + '</span><span class="l-en">' + en + '</span>'; }
+        function toggleLang() {
+            const en = document.documentElement.lang !== 'en';
+            document.documentElement.lang = en ? 'en' : 'th';
+            try { localStorage.setItem('haus_lang', en ? 'en' : 'th'); } catch (e) {}
+            logAdEvent(en ? 'switch_lang_en' : 'switch_lang_th');
+        }
+
         // ─── OPEN / CLOSED STATUS (Asia/Bangkok, from the hours text) ───
         (function() {
             const el = document.getElementById('open-status');
@@ -1116,16 +1200,16 @@ function generateStandaloneLandingHtml(data) {
                 if (close <= open) close += 24 * 60;
                 const isOpen = (now >= open && now < close) || (now + 24 * 60 >= open && now + 24 * 60 < close);
                 el.innerHTML = isOpen
-                    ? '<span class="dot"></span> เปิดอยู่'
-                    : '<span class="dot closed"></span> ปิดอยู่';
+                    ? '<span class="dot"></span> ' + TT('เปิดอยู่', 'Open now')
+                    : '<span class="dot closed"></span> ' + TT('ปิดอยู่', 'Closed');
                 const hoursState = document.getElementById('hours-state');
                 if (hoursState) {
-                    hoursState.textContent = isOpen ? 'เปิดอยู่ตอนนี้' : 'ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
+                    hoursState.innerHTML = isOpen ? TT('เปิดอยู่ตอนนี้', 'Open now') : TT('ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.', 'Closed · opens ' + m[1] + ':' + m[2]);
                     hoursState.className = 'hours-state' + (isOpen ? '' : ' closed');
                     hoursState.hidden = false;
                 }
                 const hoursLine = document.getElementById('status-hours');
-                if (!isOpen && hoursLine) hoursLine.textContent = 'เปิด ' + m[1] + ':' + m[2] + ' น.';
+                if (!isOpen && hoursLine) hoursLine.innerHTML = TT('เปิด ' + m[1] + ':' + m[2] + ' น.', 'Opens ' + m[1] + ':' + m[2]);
 
                 // Last-order countdown: last 2 hours before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
                 const k = (el.dataset.hours || '').match(/(?:ปิดรับออเดอร์|ครัวปิด)\\s*(\\d{1,2})[:.](\\d{2})/);
@@ -1138,10 +1222,12 @@ function generateStandaloneLandingHtml(data) {
                     if (left > 0 && left <= 120) {
                         const h = Math.floor(left / 60), mm = left % 60;
                         // Each phrase stays on one line ("เหลืออีก 21 นาที" never splits)
-                        note.innerHTML = '<span class="nb">ปิดรับออเดอร์ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>';
+                        note.innerHTML = TT('<span class="nb">ปิดรับออเดอร์ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>',
+                            '<span class="nb">Last order ' + k[1] + ':' + k[2] + '</span> · <span class="nb">' + (h ? h + ' h ' : '') + (mm ? mm + ' min' : '') + ' left</span>');
                         note.hidden = false;
                     } else if (left <= 0) {
-                        note.innerHTML = '<span class="nb">ปิดรับออเดอร์แล้ว</span> · <span class="nb">ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.</span>';
+                        note.innerHTML = TT('<span class="nb">ปิดรับออเดอร์แล้ว</span> · <span class="nb">ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.</span>',
+                            '<span class="nb">Kitchen closed</span> · <span class="nb">open until ' + m[3] + ':' + m[4] + '</span>');
                         note.hidden = false;
                     }
                     if (!note.hidden && hoursLine) hoursLine.hidden = true;
@@ -1208,20 +1294,33 @@ function generateStandaloneLandingHtml(data) {
             return html.replace(/(<br>)+$/, '');
         }
 
+        function clientItemName(item) {
+            const th = escapeClientHtml(item.name);
+            const en = String(item.name_en || '').trim();
+            return TT(th, en && en !== item.name ? escapeClientHtml(en) + '<span class="item-name-th">' + th + '</span>' : th);
+        }
+        function clientItemDesc(item) {
+            const th = item.description ? formatClientDescription(item.description) : '';
+            const en = item.description_en ? formatClientDescription(item.description_en) : '';
+            if (!th && !en) return '';
+            return '<div class="item-desc' + (th ? '' : ' l-en') + (en ? '' : ' l-th') + '">' + TT(th, en) + '</div>';
+        }
         const HEAT_LABELS = ${JSON.stringify(HEAT_LABELS)};
+        const HEAT_LABELS_EN = ${JSON.stringify(HEAT_LABELS_EN)};
         function clientHeat(range) {
             if (!range) return '';
             const level = range.max;
             const label = level > 0 && range.min === 0 ? 'มีจานเผ็ด' : HEAT_LABELS[level];
+            const labelEn = level > 0 && range.min === 0 ? 'Some spicy dishes' : HEAT_LABELS_EN[level];
             let cells = '';
             for (let n = 1; n <= 3; n++) cells += '<i' + (n <= level ? ' class="on"' : '') + '></i>';
-            return '<span class="heat h' + level + '" role="img" aria-label="ความเผ็ด: ' + label + '"><span class="heat-cells" aria-hidden="true">' + cells + '</span><span class="heat-label">' + label + '</span></span>';
+            return '<span class="heat h' + level + '" role="img" aria-label="ความเผ็ด: ' + label + '"><span class="heat-cells" aria-hidden="true">' + cells + '</span><span class="heat-label">' + TT(label, labelEn) + '</span></span>';
         }
 
         // From the first-time block: open the full menu and bring it under the tab strip
         function jumpToFullMenu(e) {
             if (e) e.preventDefault();
-            switchSection('menu');
+            markSection('menu');
             if (document.getElementById('full-menu-content').style.display === 'none') toggleFullMenu();
             const bar = document.querySelector('.tab-bar');
             const top = document.getElementById('btn-full-menu').getBoundingClientRect().top + window.scrollY - bar.offsetHeight;
@@ -1240,13 +1339,13 @@ function generateStandaloneLandingHtml(data) {
                         raw.categories.forEach(cat => {
                             const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
                             if (cItems.length === 0) return;
-                            html += '<div class="section-header sub"><h3 class="section-title">' + escapeClientHtml(cat.name) + '</h3><span class="section-meta">' + cItems.length + ' รายการ</span></div><div>';
+                            html += '<div class="section-header sub"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items') + '</span></div><div>';
                             cItems.forEach(item => {
                                 const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
                                 const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)"' : '';
-                                const descHtml = item.description ? '<div class="item-desc">' + formatClientDescription(item.description) + '</div>' : '';
-                                html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + escapeClientHtml(item.name) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
+                                const descHtml = clientItemDesc(item);
+                                html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + clientItemName(item) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
                             });
                             html += '</div>';
                         });
@@ -1254,14 +1353,14 @@ function generateStandaloneLandingHtml(data) {
                     } catch(e) {}
                 }
                 content.style.display = 'block';
-                document.getElementById('full-menu-label').textContent = 'ปิดเมนูทั้งหมด';
+                document.getElementById('full-menu-label').innerHTML = TT('ปิดเมนูทั้งหมด', 'Close the full menu');
                 document.getElementById('full-menu-arrow').textContent = '↑';
                 document.getElementById('btn-full-menu').classList.add('open');
                 if (window.gtag) gtag('event', 'view_full_menu', { event_category: 'engagement', page_path: '/link' });
                 logAdEvent('view_full_menu');
             } else {
                 content.style.display = 'none';
-                document.getElementById('full-menu-label').textContent = 'ดูเมนูทั้งหมด ${menuItems.length} รายการ';
+                document.getElementById('full-menu-label').innerHTML = TT('ดูเมนูทั้งหมด ${menuItems.length} รายการ', 'See the full menu · ${menuItems.length} items');
                 document.getElementById('full-menu-arrow').textContent = '↓';
                 document.getElementById('btn-full-menu').classList.remove('open');
             }
@@ -1575,8 +1674,8 @@ export default async function handler(req, res) {
             try {
                 const fetchPromise = Promise.all([
                     supabase.from('app_settings').select('key, value').or('key.like.link_%,key.eq.contact_map_url'),
-                    supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, is_hausmade, category_id, sort_order').eq('is_available', true).order('sort_order'),
-                    supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
+                    supabase.from('menu_items').select('id, name, name_en, price, description, description_en, image_url, is_available, is_recommended, is_hausmade, category_id, sort_order').eq('is_available', true).order('sort_order'),
+                    supabase.from('menu_categories').select('id, name, name_en, display_order').order('display_order'),
                     supabase.from('haus_checkins').select('id, image_url, text, is_visible').eq('is_visible', true).order('created_at', { ascending: false }).limit(24)
                 ])
 
