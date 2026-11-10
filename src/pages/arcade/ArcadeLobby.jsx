@@ -10,6 +10,8 @@ import { getAppOrigin } from '../../utils/urlHelper';
 import { resolveTableIdentifier } from '../../utils/tableResolver';
 import FlappyCatGame from './FlappyCatGame';
 import TaiPlaMiniGame from './game/TaiPlaMiniGame';
+import ArcadePreview from './ArcadePreview';
+import { useLofi, LofiMiniPlayer, LofiStudio } from './lofi/LofiLounge';
 import { pixelSound, getArcadeRank, normalizeLeaderboard } from './game/utils/pixelSoundEngine';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
@@ -66,59 +68,7 @@ export default function ArcadeLobby() {
   const [guestName, setGuestName] = useState('');
   const [isSubmittingGuest, setIsSubmittingGuest] = useState(false);
 
-  // --- Lo-Fi Lounge Audio & Sleep Timer States ---
-  const [chillPlaying, setChillPlaying] = useState(false);
-  const [chillVolume, setChillVolume] = useState(0.85);
-  const [noiseVolume, setNoiseVolume] = useState(0.45);
-  const [chordVolume, setChordVolume] = useState(0.85);
-  const [beatVolume, setBeatVolume] = useState(0.75);
-  const [chillPreset, setChillPreset] = useState('jazz');
-  const [hasHeadphonesConfirmed, setHasHeadphonesConfirmed] = useState(false);
-  const [showHeadphonePrompt, setShowHeadphonePrompt] = useState(false);
-  const [sleepMinutes, setSleepMinutes] = useState(0); // 0 = off, 15, 30, 45
-  const [sleepSecondsLeft, setSleepSecondsLeft] = useState(0);
-  const [chordVariation, setChordVariation] = useState('auto'); // 'auto' | 'part_a' | 'part_b'
-  const [currentPlayingChordName, setCurrentPlayingChordName] = useState('');
-  const [chordIndexState, setChordIndexState] = useState(0);
-  const chordCycleRef = useRef(0);
-  const chordVariationRef = useRef('auto');
-  const chillVolumeRef = useRef(0.85);
-  const noiseVolumeRef = useRef(0.45);
-  const chordVolumeRef = useRef(0.85);
-  const beatVolumeRef = useRef(0.75);
-  const chillPresetRef = useRef('jazz');
-
-  useEffect(() => {
-    chordVariationRef.current = chordVariation;
-  }, [chordVariation]);
-  useEffect(() => {
-    chillVolumeRef.current = chillVolume;
-  }, [chillVolume]);
-  useEffect(() => {
-    noiseVolumeRef.current = noiseVolume;
-  }, [noiseVolume]);
-  useEffect(() => {
-    chordVolumeRef.current = chordVolume;
-  }, [chordVolume]);
-  useEffect(() => {
-    beatVolumeRef.current = beatVolume;
-  }, [beatVolume]);
-  useEffect(() => {
-    chillPresetRef.current = chillPreset;
-  }, [chillPreset]);
-
-  const audioCtxRef = useRef(null);
-  const masterGainRef = useRef(null);
-  const compressorRef = useRef(null);
-  const synthBusRef = useRef(null);
-  const noiseNodeRef = useRef(null);
-  const binauralNodesRef = useRef([]);
-  const chordGainRef = useRef(null);
-  const synthIntervalRef = useRef(null);
-  const beatIntervalRef = useRef(null);
-  const beatStepRef = useRef(0);
-  const lofiCanvasRef = useRef(null);
-  const lofiAnimRef = useRef(null);
+  const lofi = useLofi();
 
   const SHOP_LAT = 17.39008981227407;
   const SHOP_LNG = 104.79292770946343;
@@ -668,1435 +618,6 @@ export default function ArcadeLobby() {
     }
   };
 
-  // --- Lo-Fi & Jazz Lounge Web Audio Synthesizer Presets (13 Chill Soundscapes with Multi-Section Progressions) ---
-  const CHILL_PRESETS = {
-    jazz: {
-      id: 'jazz',
-      tag: '[ TRK-01 ]',
-      name: 'แจ๊สริมโขง (Mekong Jazz)',
-      desc: 'ดนตรีแจ๊สเปียโน & คอร์ด 9th/13th นุ่มลึก ริมฝั่งโขงยามค่ำคืน',
-      filterFreq: 850,
-      noiseGain: 0.32,
-      type: 'jazz',
-      chords: [
-        // Section A (Theme)
-        { name: 'Dm9', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 493.88, 659.25] },
-        { name: 'G13', section: 'A', notes: [98.00, 246.94, 329.63, 349.23, 440.00, 587.33] },
-        { name: 'Cmaj9', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88, 587.33] },
-        { name: 'A7alt', section: 'A', notes: [110.00, 220.00, 277.18, 349.23, 415.30, 523.25] },
-        // Section B (Bridge & Color)
-        { name: 'Fmaj9', section: 'B', notes: [174.61, 261.63, 329.63, 392.00, 440.00, 523.25] },
-        { name: 'Fm9', section: 'B', notes: [174.61, 261.63, 311.13, 392.00, 440.00, 523.25] },
-        { name: 'Em9', section: 'B', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 587.33] },
-        { name: 'Dbmaj7#11', section: 'B', notes: [138.59, 277.18, 329.63, 369.99, 415.30, 523.25] }
-      ]
-    },
-    cafe_jazz: {
-      id: 'cafe_jazz',
-      tag: '[ TRK-02 ]',
-      name: 'คาเฟ่แจ๊สในบ้าน (Haus Bossa)',
-      desc: 'บรรยากาศกาแฟสด & คอร์ดแจ๊ส Neo-Soul อบอุ่นสไตล์ Bossa Nova',
-      filterFreq: 680,
-      noiseGain: 0.28,
-      type: 'bossa',
-      chords: [
-        // Section A
-        { name: 'Fmaj9', section: 'A', notes: [174.61, 261.63, 329.63, 392.00, 440.00, 523.25] },
-        { name: 'Em7b5', section: 'A', notes: [164.81, 246.94, 293.66, 349.23, 392.00] },
-        { name: 'A7b9', section: 'A', notes: [110.00, 220.00, 277.18, 349.23, 466.16, 554.37] },
-        { name: 'Dm9', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 523.25, 659.25] },
-        // Section B
-        { name: 'Gm9', section: 'B', notes: [196.00, 293.66, 349.23, 440.00, 523.25, 587.33] },
-        { name: 'C13', section: 'B', notes: [130.81, 261.63, 329.63, 440.00, 493.88, 587.33] },
-        { name: 'Gb7#11', section: 'B', notes: [185.00, 277.18, 329.63, 369.99, 440.00, 523.25] },
-        { name: 'Fmaj7', section: 'B', notes: [174.61, 261.63, 329.63, 349.23, 440.00, 523.25] }
-      ]
-    },
-    sunset: {
-      id: 'sunset',
-      tag: '[ TRK-03 ]',
-      name: 'ริมโขงนครพนม (Sunset Lo-Fi)',
-      desc: 'เสียงคลื่นน้ำริมฝั่งโขง & คอร์ด Lo-Fi อบอุ่นยามเย็น',
-      filterFreq: 450,
-      noiseGain: 0.35,
-      type: 'lofi',
-      chords: [
-        // Section A
-        { name: 'Cmaj7', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88] },
-        { name: 'Am7', section: 'A', notes: [110.00, 220.00, 261.63, 329.63, 392.00] },
-        { name: 'Fmaj7', section: 'A', notes: [87.31, 174.61, 220.00, 261.63, 329.63] },
-        { name: 'G7', section: 'A', notes: [98.00, 196.00, 246.94, 293.66, 349.23] },
-        // Section B
-        { name: 'Em7', section: 'B', notes: [164.81, 246.94, 329.63, 392.00, 493.88] },
-        { name: 'A7b9', section: 'B', notes: [110.00, 220.00, 277.18, 349.23, 466.16] },
-        { name: 'Dm9', section: 'B', notes: [146.83, 261.63, 293.66, 349.23, 440.00] },
-        { name: 'Fm6', section: 'B', notes: [174.61, 261.63, 293.66, 349.23, 440.00] }
-      ]
-    },
-    rain: {
-      id: 'rain',
-      tag: '[ TRK-04 ]',
-      name: 'สายฝนริมหน้าต่าง (Rainy Piano)',
-      desc: 'เสียงหยาดฝนกระทบกระจก & เมโลดี้เปียโนแสนสงบ',
-      filterFreq: 1100,
-      noiseGain: 0.42,
-      type: 'piano',
-      chords: [
-        // Section A
-        { name: 'Dm7', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 523.25] },
-        { name: 'Em7', section: 'A', notes: [164.81, 329.63, 392.00, 493.88, 587.33] },
-        { name: 'Fmaj7', section: 'A', notes: [174.61, 349.23, 440.00, 523.25, 659.25] },
-        { name: 'Am7', section: 'A', notes: [220.00, 440.00, 523.25, 659.25, 783.99] },
-        // Section B
-        { name: 'Bbmaj7', section: 'B', notes: [116.54, 233.08, 293.66, 349.23, 440.00] },
-        { name: 'Am7', section: 'B', notes: [110.00, 220.00, 261.63, 329.63, 392.00] },
-        { name: 'Gm7', section: 'B', notes: [98.00, 196.00, 233.08, 293.66, 349.23] },
-        { name: 'A7b9', section: 'B', notes: [110.00, 220.00, 277.18, 349.23, 466.16] }
-      ]
-    },
-    campfire: {
-      id: 'campfire',
-      tag: '[ TRK-05 ]',
-      name: 'แคมป์ไฟริมหาด (Campfire Shores)',
-      desc: 'เสียงลมโขงและสะเก็ดไฟ ผ่อนคลายคลายกังวล',
-      filterFreq: 360,
-      noiseGain: 0.32,
-      type: 'ambient',
-      chords: [
-        // Section A
-        { name: 'Dsus2', section: 'A', notes: [146.83, 293.66, 369.99, 440.00, 587.33] },
-        { name: 'Asus4', section: 'A', notes: [110.00, 220.00, 293.66, 329.63, 440.00] },
-        { name: 'Gsus2', section: 'A', notes: [98.00, 196.00, 246.94, 293.66, 392.00] },
-        { name: 'Bm7', section: 'A', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
-        // Section B
-        { name: 'Gmaj7', section: 'B', notes: [98.00, 196.00, 246.94, 293.66, 369.99] },
-        { name: 'F#m7', section: 'B', notes: [92.50, 185.00, 220.00, 277.18, 369.99] },
-        { name: 'Em9', section: 'B', notes: [82.41, 164.81, 246.94, 329.63, 392.00] },
-        { name: 'A7sus4', section: 'B', notes: [110.00, 220.00, 293.66, 329.63, 440.00] }
-      ]
-    },
-    rhodes: {
-      id: 'rhodes',
-      tag: '[ TRK-06 ]',
-      name: 'ยามเช้ากาแฟดริป (Morning Rhodes)',
-      desc: 'เสียงเปียโนไฟฟ้า Rhodes & เมโลดี้ Neo-Soul นุ่มละมุน',
-      filterFreq: 750,
-      noiseGain: 0.25,
-      type: 'jazz',
-      chords: [
-        // Section A
-        { name: 'Emaj9', section: 'A', notes: [164.81, 329.63, 392.00, 493.88, 622.25, 739.99] },
-        { name: 'C#m9', section: 'A', notes: [138.59, 277.18, 329.63, 415.30, 493.88, 622.25] },
-        { name: 'F#m9', section: 'A', notes: [185.00, 369.99, 440.00, 554.37, 659.25, 830.61] },
-        { name: 'B13', section: 'A', notes: [123.47, 246.94, 392.00, 440.00, 493.88, 659.25] },
-        // Section B
-        { name: 'G#m7', section: 'B', notes: [103.83, 207.65, 311.13, 369.99, 415.30] },
-        { name: 'C#7alt', section: 'B', notes: [138.59, 277.18, 329.63, 392.00, 523.25] },
-        { name: 'F#m9', section: 'B', notes: [185.00, 369.99, 440.00, 554.37, 659.25] },
-        { name: 'B7b9', section: 'B', notes: [123.47, 246.94, 311.13, 369.99, 466.16] }
-      ]
-    },
-    breeze: {
-      id: 'breeze',
-      tag: '[ TRK-07 ]',
-      name: 'ลมโขงพัดเอื่อย (River Breeze)',
-      desc: 'เสียงคลื่นลมพัดผ่านระเบียงไม้ คอร์ดเมโลดี้โปร่งสบาย',
-      filterFreq: 600,
-      noiseGain: 0.36,
-      type: 'lofi',
-      chords: [
-        // Section A
-        { name: 'Gmaj9', section: 'A', notes: [196.00, 293.66, 392.00, 440.00, 493.88, 587.33] },
-        { name: 'Em9', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 587.33] },
-        { name: 'Cmaj7', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88] },
-        { name: 'D7sus4', section: 'A', notes: [146.83, 293.66, 392.00, 440.00, 587.33] },
-        // Section B
-        { name: 'Bm7', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
-        { name: 'E7b9', section: 'B', notes: [164.81, 246.94, 311.13, 392.00, 466.16] },
-        { name: 'Am9', section: 'B', notes: [110.00, 220.00, 261.63, 329.63, 493.88] },
-        { name: 'Cm6', section: 'B', notes: [130.81, 261.63, 311.13, 392.00, 440.00] }
-      ]
-    },
-    midnight: {
-      id: 'midnight',
-      tag: '[ TRK-08 ]',
-      name: 'เที่ยงคืนในบ้าน (Midnight Beats)',
-      desc: 'คอร์ดแจ๊สยามวิกาล บรรยากาศเงียบสงบพักผ่อนสมอง',
-      filterFreq: 520,
-      noiseGain: 0.30,
-      type: 'bossa',
-      chords: [
-        // Section A
-        { name: 'Bm9', section: 'A', notes: [123.47, 246.94, 293.66, 369.99, 440.00, 554.37] },
-        { name: 'Gmaj7', section: 'A', notes: [98.00, 196.00, 293.66, 369.99, 440.00] },
-        { name: 'Em9', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 587.33] },
-        { name: 'F#7alt', section: 'A', notes: [92.50, 185.00, 277.18, 349.23, 440.00, 523.25] },
-        // Section B
-        { name: 'Dmaj9', section: 'B', notes: [146.83, 293.66, 369.99, 440.00, 554.37, 659.25] },
-        { name: 'C#m7b5', section: 'B', notes: [138.59, 277.18, 329.63, 392.00, 493.88] },
-        { name: 'F#7b9', section: 'B', notes: [92.50, 185.00, 277.18, 369.99, 440.00] },
-        { name: 'Bm9', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00, 554.37] }
-      ]
-    },
-    sleeper: {
-      id: 'sleeper',
-      tag: '[ TRK-09 ]',
-      name: 'รถไฟสายราตรี (Sleeper Express)',
-      desc: 'เสียงจังหวะรถไฟสม่ำเสมอ & คอร์ดบรรเลงกล่อมให้หลับสบาย',
-      filterFreq: 400,
-      noiseGain: 0.38,
-      type: 'ambient',
-      chords: [
-        // Section A
-        { name: 'Asus2', section: 'A', notes: [110.00, 220.00, 293.66, 329.63, 440.00] },
-        { name: 'F#m7', section: 'A', notes: [92.50, 185.00, 277.18, 329.63, 440.00] },
-        { name: 'Dmaj9', section: 'A', notes: [146.83, 293.66, 369.99, 440.00, 554.37, 659.25] },
-        { name: 'E6', section: 'A', notes: [164.81, 246.94, 329.63, 415.30, 493.88, 659.25] },
-        // Section B
-        { name: 'C#m7', section: 'B', notes: [138.59, 277.18, 329.63, 415.30, 493.88] },
-        { name: 'F#m7', section: 'B', notes: [92.50, 185.00, 277.18, 329.63, 440.00] },
-        { name: 'Bm9', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
-        { name: 'E7sus4', section: 'B', notes: [164.81, 246.94, 329.63, 369.99, 440.00] }
-      ]
-    },
-    acoustic: {
-      id: 'acoustic',
-      tag: '[ TRK-10 ]',
-      name: 'อะคูสติกนอกชาน (Porch Acoustic)',
-      desc: 'สายลมยามบ่าย & เมโลดี้กีตาร์โปร่งโฟล์คแสนอบอุ่น',
-      filterFreq: 900,
-      noiseGain: 0.22,
-      type: 'piano',
-      chords: [
-        // Section A
-        { name: 'D', section: 'A', notes: [146.83, 220.00, 293.66, 369.99, 440.00, 587.33] },
-        { name: 'G/D', section: 'A', notes: [146.83, 196.00, 246.94, 293.66, 392.00, 587.33] },
-        { name: 'A/D', section: 'A', notes: [146.83, 220.00, 277.18, 329.63, 440.00, 554.37] },
-        { name: 'D', section: 'A', notes: [146.83, 220.00, 293.66, 369.99, 440.00, 587.33] },
-        // Section B
-        { name: 'Bm7', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
-        { name: 'Gmaj7', section: 'B', notes: [98.00, 196.00, 246.94, 293.66, 369.99] },
-        { name: 'Em7', section: 'B', notes: [82.41, 164.81, 246.94, 293.66, 392.00] },
-        { name: 'A7', section: 'B', notes: [110.00, 220.00, 277.18, 329.63, 440.00] }
-      ]
-    },
-    swing_jazz: {
-      id: 'swing_jazz',
-      tag: '[ TRK-11 ]',
-      name: 'สวิงแจ๊สริมโขง (Mekong Swing)',
-      desc: 'Walking Bass กระฉับกระเฉง & สวิงริธึมสไตล์บิ๊กแบนด์ริมแม่น้ำโขง',
-      filterFreq: 950,
-      noiseGain: 0.25,
-      type: 'jazz',
-      chords: [
-        // Section A
-        { name: 'Cmaj9', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88, 587.33] },
-        { name: 'Am9', section: 'A', notes: [110.00, 220.00, 261.63, 329.63, 440.00, 523.25] },
-        { name: 'Dm9', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 523.25, 659.25] },
-        { name: 'G13', section: 'A', notes: [98.00, 246.94, 293.66, 349.23, 440.00, 587.33] },
-        // Section B
-        { name: 'F#m7b5', section: 'B', notes: [92.50, 185.00, 220.00, 261.63, 329.63] },
-        { name: 'B7b9', section: 'B', notes: [123.47, 246.94, 311.13, 369.99, 440.00] },
-        { name: 'Em9', section: 'B', notes: [164.81, 246.94, 329.63, 392.00, 493.88] },
-        { name: 'Db9', section: 'B', notes: [138.59, 277.18, 349.23, 415.30, 493.88] }
-      ]
-    },
-    indie_rock: {
-      id: 'indie_rock',
-      tag: '[ TRK-12 ]',
-      name: 'อินดี้ร็อกถนนคนเดิน (Indie Rock)',
-      desc: 'กีตาร์คอร์ดดิบสไตล์อินดี้ & บีททรงพลังริมถนนคนเดินนครพนม',
-      filterFreq: 1200,
-      noiseGain: 0.30,
-      type: 'lofi',
-      chords: [
-        // Section A (Verse)
-        { name: 'A5', section: 'A', notes: [110.00, 164.81, 220.00, 329.63, 440.00] },
-        { name: 'Dsus2', section: 'A', notes: [146.83, 220.00, 293.66, 369.99, 440.00] },
-        { name: 'Em', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88] },
-        { name: 'Cadd9', section: 'A', notes: [130.81, 196.00, 261.63, 329.63, 392.00] },
-        // Section B (Chorus)
-        { name: 'F#m', section: 'B', notes: [92.50, 185.00, 277.18, 369.99, 440.00] },
-        { name: 'Dsus2', section: 'B', notes: [146.83, 220.00, 293.66, 440.00, 587.33] },
-        { name: 'A', section: 'B', notes: [110.00, 220.00, 277.18, 329.63, 440.00] },
-        { name: 'E', section: 'B', notes: [82.41, 164.81, 246.94, 329.63, 415.30] }
-      ]
-    },
-    mekong_funk: {
-      id: 'mekong_funk',
-      tag: '[ TRK-13 ]',
-      name: 'โขงเซิร์ฟฟังก์ (Mekong Surf Funk)',
-      desc: 'กรูฟฟังก์สนุกสนาน & คอร์ด 9th สดใสรับลมโขงสไตล์อีสานฟังก์',
-      filterFreq: 1100,
-      noiseGain: 0.26,
-      type: 'jazz',
-      chords: [
-        // Section A (Groove)
-        { name: 'Em9', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 659.25] },
-        { name: 'A13', section: 'A', notes: [110.00, 220.00, 277.18, 329.63, 554.37] },
-        { name: 'Cmaj9', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 523.25, 659.25] },
-        { name: 'B7#9', section: 'A', notes: [123.47, 246.94, 311.13, 369.99, 554.37] },
-        // Section B (Bridge)
-        { name: 'Am9', section: 'B', notes: [110.00, 220.00, 261.63, 329.63, 440.00, 493.88] },
-        { name: 'D9', section: 'B', notes: [146.83, 220.00, 293.66, 369.99, 440.00, 523.25] },
-        { name: 'Gmaj9', section: 'B', notes: [98.00, 196.00, 293.66, 369.99, 440.00, 493.88] },
-        { name: 'B7alt', section: 'B', notes: [123.47, 246.94, 311.13, 369.99, 466.16, 554.37] }
-      ]
-    }
-  };
-
-  const handlePlayClick = () => {
-    pixelSound.play('ui_click');
-    if (chillPlaying) {
-      stopChillAudio();
-    } else {
-      if (!hasHeadphonesConfirmed) {
-        setShowHeadphonePrompt(true);
-      } else {
-        startChillAudio(chillPresetRef.current);
-      }
-    }
-  };
-
-  const confirmHeadphonesAndPlay = () => {
-    pixelSound.play('ui_click');
-    setHasHeadphonesConfirmed(true);
-    setShowHeadphonePrompt(false);
-    startChillAudio(chillPresetRef.current);
-  };
-
-  // Helper to synthesize warm Rhodes / Electric Piano / Guitar notes through the stereo FX bus
-  const triggerRichChordVoice = (ctx, targetNode, preset, freq, delay = 0, isBass = false, isMelody = false) => {
-    if (!ctx || !targetNode) return;
-    const startTime = ctx.currentTime + delay;
-    const cVol = chordVolumeRef.current;
-
-    if (isBass) {
-      // Warm analog sub-bass + upper harmonic body
-      const subOsc = ctx.createOscillator();
-      const bodyOsc = ctx.createOscillator();
-      const bassFilter = ctx.createBiquadFilter();
-      const bassGain = ctx.createGain();
-
-      subOsc.type = 'sine';
-      bodyOsc.type = 'triangle';
-      subOsc.frequency.setValueAtTime(freq, startTime);
-      bodyOsc.frequency.setValueAtTime(freq, startTime);
-
-      bassFilter.type = 'lowpass';
-      bassFilter.frequency.setValueAtTime(360, startTime);
-
-      const peak = cVol * 0.34;
-      bassGain.gain.setValueAtTime(0.0001, startTime);
-      bassGain.gain.linearRampToValueAtTime(peak, startTime + 0.045);
-      bassGain.gain.exponentialRampToValueAtTime(peak * 0.45, startTime + 0.65);
-      bassGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 2.5);
-
-      subOsc.connect(bassFilter);
-      bodyOsc.connect(bassFilter);
-      bassFilter.connect(bassGain);
-      bassGain.connect(targetNode);
-
-      subOsc.start(startTime);
-      bodyOsc.start(startTime);
-      subOsc.stop(startTime + 2.55);
-      bodyOsc.stop(startTime + 2.55);
-      return;
-    }
-
-    // Rhodes Electric Piano / Warm Acoustic Piano / Lo-Fi Pluck voicing
-    const mainOsc = ctx.createOscillator();
-    const chorusOsc = ctx.createOscillator();
-    const tineOsc = ctx.createOscillator();
-    const voiceFilter = ctx.createBiquadFilter();
-    const voiceGain = ctx.createGain();
-    const tineGain = ctx.createGain();
-
-    const isJazzOrBossa = preset.type === 'jazz' || preset.type === 'bossa';
-    mainOsc.type = isJazzOrBossa ? 'sine' : 'triangle';
-    chorusOsc.type = 'triangle';
-    tineOsc.type = 'sine';
-
-    mainOsc.frequency.setValueAtTime(freq, startTime);
-    chorusOsc.frequency.setValueAtTime(freq, startTime);
-    // Warm analog tape chorus detuning (+4.5 cents on chord, +3.5 cents on melody)
-    chorusOsc.detune.setValueAtTime(isMelody ? 3.5 : 4.5, startTime);
-    // Electric piano bell tine harmonic (2x or 3x overtone with fast decay)
-    tineOsc.frequency.setValueAtTime(freq * (isMelody ? 2 : 3), startTime);
-
-    voiceFilter.type = 'lowpass';
-    const baseCut = isMelody ? 1850 : 1250;
-    voiceFilter.frequency.setValueAtTime(baseCut, startTime);
-    voiceFilter.frequency.exponentialRampToValueAtTime(baseCut * 0.52, startTime + (isMelody ? 0.9 : 2.4));
-
-    const peakVol = isMelody
-      ? cVol * 0.18
-      : (isJazzOrBossa ? cVol * 0.19 : cVol * 0.17);
-    const dur = isMelody ? 1.15 : 3.2;
-
-    voiceGain.gain.setValueAtTime(0.0001, startTime);
-    voiceGain.gain.linearRampToValueAtTime(peakVol, startTime + (isMelody ? 0.022 : 0.065));
-    voiceGain.gain.exponentialRampToValueAtTime(peakVol * 0.38, startTime + (isMelody ? 0.35 : 0.95));
-    voiceGain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
-
-    // Subtle Rhodes bell attack
-    tineGain.gain.setValueAtTime(0.0001, startTime);
-    tineGain.gain.linearRampToValueAtTime(peakVol * 0.24, startTime + 0.012);
-    tineGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.28);
-
-    // Stereo spread panner if supported
-    let outNode = voiceGain;
-    if (typeof ctx.createStereoPanner === 'function') {
-      const panner = ctx.createStereoPanner();
-      const panVal = isMelody
-        ? (Math.sin(freq) * 0.35)
-        : (((Math.round(freq) % 7) - 3) * 0.12);
-      panner.pan.setValueAtTime(Math.max(-0.6, Math.min(0.6, panVal)), startTime);
-      voiceGain.connect(panner);
-      outNode = panner;
-    }
-
-    mainOsc.connect(voiceFilter);
-    chorusOsc.connect(voiceFilter);
-    tineOsc.connect(tineGain);
-    tineGain.connect(voiceFilter);
-    voiceFilter.connect(voiceGain);
-    outNode.connect(targetNode);
-
-    mainOsc.start(startTime);
-    chorusOsc.start(startTime);
-    tineOsc.start(startTime);
-    mainOsc.stop(startTime + dur + 0.05);
-    chorusOsc.stop(startTime + dur + 0.05);
-    tineOsc.stop(startTime + 0.32);
-  };
-
-  // Synthesize warm Lo-Fi / Jazz / Bossa drum percussion & groove bass
-  const triggerLoFiDrumHit = (ctx, targetNode, drumBuffer, kind, velocity = 1.0) => {
-    if (!ctx || !targetNode) return;
-    const bVol = beatVolumeRef.current * velocity;
-    if (bVol <= 0.01) return;
-    const now = ctx.currentTime;
-
-    if (kind === 'kick') {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(118, now);
-      osc.frequency.exponentialRampToValueAtTime(42, now + 0.11);
-      g.gain.setValueAtTime(bVol * 0.42, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-      osc.connect(g);
-      g.connect(targetNode);
-      osc.start(now);
-      osc.stop(now + 0.24);
-    } else if (kind === 'snare' || kind === 'rim') {
-      // Warm rim/body tone
-      const bodyOsc = ctx.createOscillator();
-      const bodyGain = ctx.createGain();
-      bodyOsc.type = 'triangle';
-      bodyOsc.frequency.setValueAtTime(kind === 'rim' ? 340 : 185, now);
-      bodyOsc.frequency.exponentialRampToValueAtTime(kind === 'rim' ? 190 : 95, now + 0.065);
-      bodyGain.gain.setValueAtTime(bVol * (kind === 'rim' ? 0.18 : 0.22), now);
-      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'rim' ? 0.075 : 0.11));
-      bodyOsc.connect(bodyGain);
-      bodyGain.connect(targetNode);
-      bodyOsc.start(now);
-      bodyOsc.stop(now + 0.12);
-
-      // Filtered dusty snare wire / brush noise
-      if (drumBuffer) {
-        const src = ctx.createBufferSource();
-        src.buffer = drumBuffer;
-        const flt = ctx.createBiquadFilter();
-        flt.type = 'bandpass';
-        flt.frequency.setValueAtTime(kind === 'rim' ? 2200 : 1450, now);
-        flt.Q.setValueAtTime(kind === 'rim' ? 2.5 : 1.1, now);
-        const nGain = ctx.createGain();
-        const dur = kind === 'rim' ? 0.055 : 0.14;
-        nGain.gain.setValueAtTime(bVol * (kind === 'rim' ? 0.12 : 0.20), now);
-        nGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-        src.connect(flt);
-        flt.connect(nGain);
-        nGain.connect(targetNode);
-        src.start(now);
-        src.stop(now + dur + 0.01);
-      }
-    } else if ((kind === 'hat' || kind === 'ride') && drumBuffer) {
-      const src = ctx.createBufferSource();
-      src.buffer = drumBuffer;
-      const flt = ctx.createBiquadFilter();
-      flt.type = 'highpass';
-      flt.frequency.setValueAtTime(kind === 'ride' ? 5200 : 6800, now);
-      const hGain = ctx.createGain();
-      const dur = kind === 'ride' ? 0.11 : 0.042;
-      hGain.gain.setValueAtTime(bVol * (kind === 'ride' ? 0.095 : 0.075), now);
-      hGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-      src.connect(flt);
-      flt.connect(hGain);
-      hGain.connect(targetNode);
-      src.start(now);
-      src.stop(now + dur + 0.01);
-    }
-  };
-
-  const startChillAudio = (presetOverrideId = null) => {
-    try {
-      // Always clean up any previous nodes/intervals before starting or switching presets
-      stopChillAudio(true);
-
-      const activePresetId = typeof presetOverrideId === 'string' ? presetOverrideId : chillPresetRef.current;
-      const preset = CHILL_PRESETS[activePresetId] || CHILL_PRESETS.jazz;
-
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioCtx();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      // Master Compressor & Warm Limiter
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-14, ctx.currentTime);
-      compressor.knee.setValueAtTime(24, ctx.currentTime);
-      compressor.ratio.setValueAtTime(6, ctx.currentTime);
-      compressor.attack.setValueAtTime(0.005, ctx.currentTime);
-      compressor.release.setValueAtTime(0.24, ctx.currentTime);
-
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(chillVolumeRef.current * 1.45, ctx.currentTime);
-
-      // Warm Stereo Synth Bus with Tape Delay / Room Ambiance
-      const synthBus = ctx.createGain();
-      synthBus.gain.setValueAtTime(1.0, ctx.currentTime);
-
-      const delayNode = ctx.createDelay(1.0);
-      delayNode.delayTime.setValueAtTime(0.34, ctx.currentTime);
-      const delayFeedback = ctx.createGain();
-      delayFeedback.gain.setValueAtTime(0.24, ctx.currentTime);
-      const delayFilter = ctx.createBiquadFilter();
-      delayFilter.type = 'lowpass';
-      delayFilter.frequency.setValueAtTime(1100, ctx.currentTime);
-      const delayWet = ctx.createGain();
-      delayWet.gain.setValueAtTime(0.22, ctx.currentTime);
-
-      synthBus.connect(masterGain);
-      synthBus.connect(delayNode);
-      delayNode.connect(delayFilter);
-      delayFilter.connect(delayFeedback);
-      delayFeedback.connect(delayNode);
-      delayFilter.connect(delayWet);
-      delayWet.connect(masterGain);
-
-      masterGain.connect(compressor);
-      compressor.connect(ctx.destination);
-
-      masterGainRef.current = masterGain;
-      compressorRef.current = compressor;
-      synthBusRef.current = synthBus;
-
-      // 1. Subtle 3D Binaural Relaxation Carrier (Left 216Hz, Right 224Hz = 8Hz Alpha/Theta wave)
-      if (typeof ctx.createStereoPanner === 'function') {
-        const binGain = ctx.createGain();
-        binGain.gain.setValueAtTime(0.022 * chordVolumeRef.current, ctx.currentTime);
-        const oscL = ctx.createOscillator();
-        const oscR = ctx.createOscillator();
-        const panL = ctx.createStereoPanner();
-        const panR = ctx.createStereoPanner();
-        oscL.type = 'sine';
-        oscR.type = 'sine';
-        oscL.frequency.setValueAtTime(216, ctx.currentTime);
-        oscR.frequency.setValueAtTime(224, ctx.currentTime); // 8Hz Alpha-Theta border
-        panL.pan.setValueAtTime(-0.85, ctx.currentTime);
-        panR.pan.setValueAtTime(0.85, ctx.currentTime);
-        oscL.connect(panL);
-        oscR.connect(panR);
-        panL.connect(binGain);
-        panR.connect(binGain);
-        binGain.connect(masterGain);
-        oscL.start();
-        oscR.start();
-        binauralNodesRef.current = [oscL, oscR, binGain];
-      }
-
-      // 2. Ambient Mekong River / Rain / Vinyl Crackle Buffer
-      const bufferSize = ctx.sampleRate * 2;
-      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-      for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        b0 = 0.99886 * b0 + white * 0.0555179;
-        b1 = 0.99332 * b1 + white * 0.0750759;
-        b2 = 0.96900 * b2 + white * 0.1538520;
-        b3 = 0.86650 * b3 + white * 0.3104856;
-        b4 = 0.55000 * b4 + white * 0.5329522;
-        b5 = -0.7616 * b5 - white * 0.0168980;
-        // Occasional soft warm vinyl dust pop
-        const vinylPop = Math.random() < 0.00035 ? (Math.random() * 0.45 - 0.22) : 0;
-        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.052 + vinylPop;
-        b6 = white * 0.115926;
-      }
-
-      const noise = ctx.createBufferSource();
-      noise.buffer = noiseBuffer;
-      noise.loop = true;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = preset.filterFreq;
-
-      const gain = ctx.createGain();
-      gain.gain.value = noiseVolumeRef.current * preset.noiseGain;
-
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(masterGain);
-      noise.start();
-
-      noiseNodeRef.current = { noise, gain, filter };
-
-      // Short percussion noise buffer for snare & hi-hat
-      const drumBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
-      const drumData = drumBuffer.getChannelData(0);
-      for (let i = 0; i < drumData.length; i++) {
-        drumData[i] = Math.random() * 2 - 1;
-      }
-
-      // 3. Chord Progression & Soulful Melody Sequencer
-      let chordIndex = chordCycleRef.current || 0;
-
-      const getActiveChordPool = () => {
-        if (chordVariationRef.current === 'part_a') {
-          const aChords = preset.chords.filter(c => c.section === 'A');
-          if (aChords.length) return aChords;
-        } else if (chordVariationRef.current === 'part_b') {
-          const bChords = preset.chords.filter(c => c.section === 'B');
-          if (bChords.length) return bChords;
-        }
-        return preset.chords;
-      };
-
-      const triggerChordAtIndex = (idx) => {
-        const pool = getActiveChordPool();
-        const currentChord = pool[idx % pool.length];
-        const chordNotes = Array.isArray(currentChord) ? currentChord : (currentChord?.notes || []);
-        const chordName = (currentChord && currentChord.name) ? currentChord.name : `CHORD ${idx % pool.length + 1}`;
-        setCurrentPlayingChordName(chordName);
-        setChordIndexState(idx % pool.length);
-
-        chordNotes.forEach((freq, nIdx) => {
-          // Gentle rolled Rhodes arpeggio strum
-          const delay = nIdx === 0 ? 0 : (nIdx * 0.085);
-          triggerRichChordVoice(ctx, synthBus, preset, freq, delay, nIdx === 0, false);
-        });
-      };
-
-      // Sound the initial chord immediately
-      triggerChordAtIndex(chordIndex);
-
-      // Step Duration (16 steps = 1 bar = 1 chord change)
-      const stepMs = preset.id === 'swing_jazz' ? 155
-        : preset.id === 'mekong_funk' ? 160
-        : preset.id === 'indie_rock' ? 165
-        : preset.type === 'bossa' ? 185
-        : preset.type === 'ambient' ? 230
-        : 195;
-
-      beatStepRef.current = 0;
-      beatIntervalRef.current = setInterval(() => {
-        if (!audioCtxRef.current || !synthBusRef.current) return;
-        const step = beatStepRef.current % 16;
-
-        // Advance to next chord at the start of every 16-step bar
-        if (beatStepRef.current > 0 && step === 0) {
-          chordIndex++;
-          chordCycleRef.current = chordIndex;
-          triggerChordAtIndex(chordIndex);
-        }
-
-        const pool = getActiveChordPool();
-        const activeChord = pool[chordIndex % pool.length];
-        const notes = Array.isArray(activeChord) ? activeChord : (activeChord?.notes || []);
-
-        // A. Drum Beat Pattern per Genre
-        if (preset.type === 'bossa') {
-          // Authentic Bossa Nova groove: syncopated rimshot (0, 3, 6, 10, 13) + soft kick (0, 6, 8, 14)
-          if (step === 0 || step === 6 || step === 8 || step === 14) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.9);
-          if (step === 3 || step === 6 || step === 10 || step === 13) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'rim', 0.85);
-          if (step % 2 === 0) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', step % 4 === 0 ? 0.8 : 0.5);
-        } else if (preset.id === 'swing_jazz') {
-          // Jazz Swing Ride pattern + walking bass on 0, 4, 8, 12
-          if (step === 0 || step === 8) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.8);
-          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'rim', 0.85);
-          if (step === 0 || step === 4 || step === 7 || step === 8 || step === 12 || step === 15) {
-            triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'ride', step % 4 === 0 ? 0.95 : 0.7);
-          }
-          // Walking Bass on quarter notes (4, 8, 12)
-          if ((step === 4 || step === 8 || step === 12) && notes.length >= 3) {
-            const walkFreq = step === 8 ? notes[0] * 1.5 : (step === 12 ? notes[0] * 1.25 : notes[0] * 1.125);
-            triggerRichChordVoice(ctx, synthBus, preset, walkFreq, 0, true, false);
-          }
-        } else if (preset.id === 'mekong_funk' || preset.id === 'indie_rock') {
-          // Upbeat Funk / Indie groove
-          if (step === 0 || step === 7 || step === 10) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 1.0);
-          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'snare', 0.95);
-          if (step === 9 || step === 15) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'rim', 0.55);
-          if (step % 2 === 0) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', 0.8);
-          if (step === 6 && notes[0]) {
-            triggerRichChordVoice(ctx, synthBus, preset, notes[0] * 1.5, 0, true, false);
-          }
-        } else if (preset.type === 'ambient') {
-          // Gentle heartbeat pulse for Campfire / Sleeper
-          if (step === 0 || step === 10) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.55);
-          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', 0.45);
-        } else {
-          // Classic Cozy Lo-Fi Chillhop / Mekong Jazz Boom-Bap (Kick on 0, 7, 10; Snare on 4, 12; Swung hats)
-          if (step === 0 || step === 7 || step === 10) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.92);
-          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'snare', 0.82);
-          if (step % 2 === 0) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', step % 4 === 0 ? 0.78 : 0.48);
-          // Warm bass 5th pickup on step 10
-          if (step === 10 && notes[0]) {
-            triggerRichChordVoice(ctx, synthBus, preset, notes[0] * 1.5, 0, true, false);
-          }
-        }
-
-        // B. Soulful Generative Rhodes / Piano / Guitar Melody Improviser
-        if (notes.length >= 3 && (step === 3 || step === 6 || step === 9 || step === 11 || step === 14)) {
-          // Deterministic yet varied melodic phrasing based on bar & step
-          const phraseSeed = (chordIndex * 7 + step) % 5;
-          if (phraseSeed !== 4) {
-            const upperNotes = notes.slice(1);
-            const baseMel = upperNotes[(chordIndex + step) % upperNotes.length];
-            const octaveShift = (step === 6 || step === 14) ? 2.0 : 1.0;
-            const melFreq = Math.min(1320, baseMel * octaveShift);
-            // Slight human swing delay (15–30ms)
-            triggerRichChordVoice(ctx, synthBus, preset, melFreq, 0.02, false, true);
-          }
-        }
-
-        beatStepRef.current++;
-      }, stepMs);
-
-      setChillPlaying(true);
-    } catch (e) {
-      console.warn('Audio synthesis warning:', e);
-    }
-  };
-
-  const handleManualChordChange = () => {
-    pixelSound.play('ui_click');
-    chordCycleRef.current = (chordCycleRef.current || 0) + 1;
-    const idx = chordCycleRef.current;
-    setChordIndexState(idx);
-    if (!chillPlaying) {
-      startChillAudio(chillPresetRef.current);
-      return;
-    }
-    if (audioCtxRef.current && synthBusRef.current) {
-      const ctx = audioCtxRef.current;
-      const preset = CHILL_PRESETS[chillPresetRef.current] || CHILL_PRESETS.jazz;
-      let pool = preset.chords;
-      if (chordVariation === 'part_a') {
-        const a = preset.chords.filter(c => c.section === 'A');
-        if (a.length) pool = a;
-      } else if (chordVariation === 'part_b') {
-        const b = preset.chords.filter(c => c.section === 'B');
-        if (b.length) pool = b;
-      }
-      const item = pool[idx % pool.length];
-      const notes = Array.isArray(item) ? item : (item?.notes || []);
-      setCurrentPlayingChordName(item.name || `CHORD ${idx % pool.length + 1}`);
-
-      notes.forEach((freq, noteIdx) => {
-        const delay = noteIdx === 0 ? 0 : noteIdx * 0.075;
-        triggerRichChordVoice(ctx, synthBusRef.current, preset, freq, delay, noteIdx === 0, false);
-      });
-    }
-  };
-
-  const handleSelectSpecificChord = (targetIndex) => {
-    pixelSound.play('ui_click');
-    chordCycleRef.current = targetIndex;
-    setChordIndexState(targetIndex);
-    if (!chillPlaying) {
-      startChillAudio(chillPresetRef.current);
-      return;
-    }
-    if (audioCtxRef.current && synthBusRef.current) {
-      const ctx = audioCtxRef.current;
-      const preset = CHILL_PRESETS[chillPresetRef.current] || CHILL_PRESETS.jazz;
-      const item = preset.chords[targetIndex % preset.chords.length];
-      const notes = Array.isArray(item) ? item : (item?.notes || []);
-      setCurrentPlayingChordName(item.name || `CHORD ${targetIndex + 1}`);
-
-      notes.forEach((freq, noteIdx) => {
-        const delay = noteIdx === 0 ? 0 : noteIdx * 0.075;
-        triggerRichChordVoice(ctx, synthBusRef.current, preset, freq, delay, noteIdx === 0, false);
-      });
-    }
-  };
-
-  const stopChillAudio = (silent = false) => {
-    if (noiseNodeRef.current) {
-      try {
-        noiseNodeRef.current.noise.stop();
-        noiseNodeRef.current.noise.disconnect();
-      } catch (e) {}
-      noiseNodeRef.current = null;
-    }
-    if (binauralNodesRef.current && binauralNodesRef.current.length) {
-      binauralNodesRef.current.forEach((n) => {
-        try {
-          if (n.stop) n.stop();
-          if (n.disconnect) n.disconnect();
-        } catch (e) {}
-      });
-      binauralNodesRef.current = [];
-    }
-    if (synthIntervalRef.current) {
-      clearInterval(synthIntervalRef.current);
-      synthIntervalRef.current = null;
-    }
-    if (beatIntervalRef.current) {
-      clearInterval(beatIntervalRef.current);
-      beatIntervalRef.current = null;
-    }
-    if (!silent) {
-      setChillPlaying(false);
-    }
-  };
-
-  // Sleep Timer countdown
-  useEffect(() => {
-    if (sleepMinutes <= 0) {
-      setSleepSecondsLeft(0);
-      return;
-    }
-    setSleepSecondsLeft(sleepMinutes * 60);
-  }, [sleepMinutes]);
-
-  useEffect(() => {
-    if (!chillPlaying || sleepSecondsLeft <= 0) return;
-    const interval = setInterval(() => {
-      setSleepSecondsLeft((prev) => {
-        if (prev <= 1) {
-          stopChillAudio();
-          setSleepMinutes(0);
-          toast.info('ตัวตั้งเวลา Lo-Fi สิ้นสุดแล้ว ขอให้ผ่อนคลายอย่างมีความสุขครับ');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [chillPlaying, sleepSecondsLeft]);
-
-  // Pixel Visualizer Canvas for Lo-Fi & Jazz Lounge
-  useEffect(() => {
-    if (!showStudioModal && activeTab !== 'lofi') return;
-    const canvas = lofiCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let frame = 0;
-
-    const renderLofi = () => {
-      frame++;
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      // Sky Background gradient
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-      const isNightMode = ['jazz', 'campfire', 'midnight', 'sleeper'].includes(chillPreset);
-      const isWarmDawn = ['cafe_jazz', 'rhodes', 'breeze', 'acoustic'].includes(chillPreset);
-
-      if (chillPreset === 'jazz' || chillPreset === 'midnight') {
-        skyGrad.addColorStop(0, '#0b132b');
-        skyGrad.addColorStop(0.7, '#1c2541');
-        skyGrad.addColorStop(1, '#3a506b');
-      } else if (chillPreset === 'sleeper' || chillPreset === 'campfire') {
-        skyGrad.addColorStop(0, '#1e1b4b');
-        skyGrad.addColorStop(0.6, '#311042');
-        skyGrad.addColorStop(1, '#431407');
-      } else if (chillPreset === 'rain') {
-        skyGrad.addColorStop(0, '#1e293b');
-        skyGrad.addColorStop(1, '#475569');
-      } else if (isWarmDawn) {
-        skyGrad.addColorStop(0, '#451a03');
-        skyGrad.addColorStop(0.6, '#78350f');
-        skyGrad.addColorStop(1, '#fde68a');
-      } else {
-        // Sunset
-        skyGrad.addColorStop(0, '#ea580c');
-        skyGrad.addColorStop(0.6, '#f97316');
-        skyGrad.addColorStop(1, '#fde047');
-      }
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Twinkling stars in night modes
-      if (isNightMode) {
-        ctx.fillStyle = '#ffffff';
-        for (let s = 0; s < 26; s++) {
-          const sx = (s * 37 + 15) % w;
-          const sy = (s * 19 + 10) % (h - 70);
-          const starAlpha = Math.sin(frame * 0.05 + s) * 0.4 + 0.6;
-          ctx.globalAlpha = starAlpha;
-          ctx.fillRect(sx, sy, 2, 2);
-        }
-        ctx.globalAlpha = 1.0;
-      }
-
-      // Pop-Pixel Audio Spectrum Bars over the Mekong Horizon when playing
-      if (chillPlaying) {
-        const barCount = 24;
-        const barWidth = 14;
-        const gap = 8;
-        const totalW = barCount * (barWidth + gap);
-        const startX = (w - totalW) / 2;
-        for (let b = 0; b < barCount; b++) {
-          const wave1 = Math.abs(Math.sin(frame * 0.09 + b * 0.45));
-          const wave2 = Math.abs(Math.cos(frame * 0.06 - b * 0.3));
-          const barH = Math.max(6, Math.round((wave1 * 38 + wave2 * 24) * (0.45 + chordVolumeRef.current * 0.55)));
-          const bx = startX + b * (barWidth + gap);
-          const by = h - 52 - barH;
-          ctx.fillStyle = b % 3 === 0 ? 'rgba(233, 243, 68, 0.42)' : 'rgba(251, 191, 36, 0.28)';
-          ctx.fillRect(bx, by, barWidth, barH);
-          // Crisp pixel peak cap
-          ctx.fillStyle = '#E9F344';
-          ctx.fillRect(bx, by - 3, barWidth, 2);
-        }
-      }
-
-      // Distant Lao Mountains
-      ctx.fillStyle = isNightMode ? '#0f172a' : (chillPreset === 'rain' ? '#1e293b' : '#7c2d12');
-      ctx.beginPath();
-      ctx.moveTo(0, h - 50);
-      for (let x = 0; x <= w; x += 15) {
-        const peak = Math.sin(x * 0.02) * 16 + Math.cos(x * 0.01) * 8;
-        ctx.lineTo(x, h - 55 - peak);
-      }
-      ctx.lineTo(w, h - 30);
-      ctx.lineTo(0, h - 30);
-      ctx.closePath();
-      ctx.fill();
-
-      // Mekong River Water
-      const riverGrad = ctx.createLinearGradient(0, h - 45, 0, h);
-      if (chillPreset === 'jazz') {
-        riverGrad.addColorStop(0, '#1e3a8a');
-        riverGrad.addColorStop(1, '#0f172a');
-      } else {
-        riverGrad.addColorStop(0, '#0284c7');
-        riverGrad.addColorStop(1, '#0369a1');
-      }
-      ctx.fillStyle = riverGrad;
-      ctx.fillRect(0, h - 45, w, 45);
-
-      // Water Shimmer ripples
-      ctx.fillStyle = chillPreset === 'jazz' ? '#93c5fd' : '#bae6fd';
-      for (let i = 0; i < 6; i++) {
-        const rx = ((frame * (1 + i * 0.3) * 1.5) + i * 80) % (w + 40) - 20;
-        const ry = h - 38 + (i * 6);
-        ctx.fillRect(rx, ry, 28, 2);
-      }
-
-      // Wooden Balcony Deck
-      ctx.fillStyle = '#451a03';
-      ctx.fillRect(0, h - 22, w, 22);
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(0, h - 20, w, 3);
-
-      // Balcony Railing
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(20, h - 38, w - 40, 3);
-      for (let bx = 30; bx < w - 30; bx += 35) {
-        ctx.fillRect(bx, h - 38, 3, 16);
-      }
-
-      // Relaxing Calico Cat Sitting at Wooden Table with Vinyl Turntable
-      const catX = w / 2 - 36;
-      const catY = h - 22;
-      const headBob = chillPlaying ? Math.round(Math.sin(frame * 0.18) * 1.5) : 0;
-
-      // Wooden Table
-      ctx.fillStyle = '#9a3412';
-      ctx.fillRect(catX + 26, catY - 14, 52, 14);
-      ctx.fillStyle = '#b45309';
-      ctx.fillRect(catX + 24, catY - 16, 56, 3);
-
-      // Mini Pixel Vinyl Turntable on the Table
-      ctx.fillStyle = '#181615';
-      ctx.fillRect(catX + 52, catY - 21, 22, 5);
-      // Spinning vinyl platter
-      ctx.fillStyle = '#27272a';
-      ctx.fillRect(catX + 54, catY - 23, 18, 2);
-      ctx.fillStyle = (chillPlaying && Math.floor(frame / 8) % 2 === 0) ? '#E9F344' : '#BD4924';
-      ctx.fillRect(catX + 60, catY - 23, 6, 2);
-
-      // Coffee Mug & Steam
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(catX + 34, catY - 22, 7, 7);
-      ctx.fillStyle = '#ea580c';
-      ctx.fillRect(catX + 35, catY - 21, 5, 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      const steamY = ((frame * 0.9) % 22);
-      ctx.fillRect(catX + 36 + Math.sin(frame * 0.1) * 2, catY - 24 - steamY, 2, 3);
-
-      // Relaxing Cat Body
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(catX, catY - 18, 22, 18);
-      ctx.fillStyle = '#fef3c7';
-      ctx.fillRect(catX + 2, catY - 16, 18, 16);
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(catX + 4, catY - 16, 7, 7);
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(catX + 13, catY - 12, 5, 5);
-
-      // Cat Head & Ears (with rhythmic head-bob!)
-      const hy = catY + headBob;
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(catX + 6, hy - 26, 14, 12);
-      ctx.fillRect(catX + 6, hy - 30, 4, 5);
-      ctx.fillRect(catX + 16, hy - 30, 4, 5);
-      ctx.fillStyle = '#fef3c7';
-      ctx.fillRect(catX + 8, hy - 24, 10, 9);
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(catX + 7, hy - 29, 2, 3);
-
-      // Pop-Pixel Headphones on the Cat (#E9F344 band + #BD4924 earcups)
-      ctx.fillStyle = '#E9F344';
-      ctx.fillRect(catX + 5, hy - 27, 16, 2);
-      ctx.fillStyle = '#BD4924';
-      ctx.fillRect(catX + 4, hy - 25, 3, 5);
-      ctx.fillRect(catX + 19, hy - 25, 3, 5);
-
-      // Eyes & Rosy Cheeks
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(catX + 10, hy - 21, 3, 1);
-      ctx.fillRect(catX + 15, hy - 21, 3, 1);
-      ctx.fillStyle = '#f43f5e';
-      ctx.fillRect(catX + 8, hy - 19, 2, 2);
-      ctx.fillRect(catX + 17, hy - 19, 2, 2);
-
-      // Floating Musical Notes when playing
-      if (chillPlaying) {
-        ctx.fillStyle = '#E9F344';
-        const note1Y = (frame * 1.3) % 80;
-        const note1X = catX + 15 + Math.sin(frame * 0.08) * 10;
-        ctx.fillRect(note1X, catY - 25 - note1Y, 3, 3);
-        ctx.fillRect(note1X + 2, catY - 30 - note1Y, 2, 6);
-        ctx.fillRect(note1X + 4, catY - 30 - note1Y, 3, 2);
-
-        ctx.fillStyle = '#38bdf8';
-        const note2Y = ((frame * 1.3) + 40) % 80;
-        const note2X = catX + 48 + Math.cos(frame * 0.08) * 10;
-        ctx.fillRect(note2X, catY - 25 - note2Y, 3, 3);
-        ctx.fillRect(note2X + 2, catY - 30 - note2Y, 2, 6);
-        ctx.fillRect(note2X + 4, catY - 30 - note2Y, 3, 2);
-      }
-
-      if (chillPreset === 'rain') {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        for (let r = 0; r < 22; r++) {
-          const rx = (r * 25 + frame * 4) % w;
-          const ry = (r * 15 + frame * 8) % (h - 22);
-          ctx.fillRect(rx, ry, 1, 6);
-        }
-      }
-
-      lofiAnimRef.current = requestAnimationFrame(renderLofi);
-    };
-
-    lofiAnimRef.current = requestAnimationFrame(renderLofi);
-    return () => {
-      if (lofiAnimRef.current) cancelAnimationFrame(lofiAnimRef.current);
-    };
-  }, [activeTab, chillPlaying, chillPreset, showStudioModal]);
-
-  useEffect(() => {
-    return () => {
-      stopChillAudio();
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
-  const renderStickyMiniPlayer = () => {
-    if (!chillPlaying) return null;
-    const currentPreset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
-    return (
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[94%] max-w-xl bg-[#181615] text-[#FAF7F5] rounded-2xl p-3 sm:p-3.5 border-2 border-[#3D3835] shadow-2xl flex items-center justify-between z-40 animate-[slideUp_0.2s_ease-out] font-sans">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-end gap-0.5 h-4 w-4 shrink-0 text-[#E9F344]">
-            <span className="w-1 bg-[#E9F344] h-2.5 rounded-xs animate-bounce" />
-            <span className="w-1 bg-[#E9F344] h-4 rounded-xs animate-bounce [animation-delay:0.15s]" />
-            <span className="w-1 bg-[#E9F344] h-1.5 rounded-xs animate-bounce [animation-delay:0.3s]" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 font-mono text-[10px] text-[#A8A29E]">
-              <span className="text-[#E9F344] font-bold">[ ON AIR ]</span>
-              <span className="truncate">{currentPreset.tag}</span>
-              {currentPlayingChordName && (
-                <span className="text-[#E9F344] font-bold px-1.5 py-0.2 bg-[#3D3835] rounded text-[9px]">
-                  {currentPlayingChordName}
-                </span>
-              )}
-            </div>
-            <p className="font-bold text-xs truncate text-[#FAF7F5]">
-              {currentPreset.name.split(' (')[0]}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 font-mono text-xs shrink-0">
-          <button
-            onClick={handleManualChordChange}
-            className="px-2.5 py-1.5 bg-[#2A2624] hover:bg-[#3D3835] text-[#E9F344] rounded-xl border border-[#4A433F] text-[10px] font-bold cursor-pointer transition-colors active:scale-95"
-            title="เปลี่ยนทางคอร์ดถัดไป"
-          >
-            [ ⏭ คอร์ด ]
-          </button>
-          <button
-            onClick={() => stopChillAudio()}
-            className="px-3 py-1.5 bg-[#2A2624] hover:bg-[#3D3835] text-[#FAF7F5] rounded-xl border border-[#4A433F] text-[10px] font-bold cursor-pointer transition-colors"
-          >
-            [ ⏸ พักเสียง ]
-          </button>
-          <button
-            onClick={() => setShowStudioModal(true)}
-            className="px-3 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] text-[10px] font-bold cursor-pointer transition-colors"
-          >
-            [ สตูดิโอ ]
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderStudioModal = () => {
-    if (!showStudioModal) return null;
-    const activePresetObj = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
-    return (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 z-50 animate-[fadeIn_0.15s_ease-out] font-sans overflow-y-auto">
-        <div className="w-full max-w-4xl bg-[var(--color-paper)] border-2 border-[#181615] rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b-2 border-[#181615] pb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615] animate-pulse" />
-              <h2 className="font-pixel text-lg sm:text-xl font-bold uppercase tracking-wider text-[#181615]">
-                HAUS BINAURAL LO-FI STUDIO // 13 SOUNDSCAPES
-              </h2>
-            </div>
-            <button
-              onClick={() => { pixelSound.play('ui_click'); setShowStudioModal(false); }}
-              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#181615] hover:text-[#FAF7F5] rounded-xl border-2 border-[#181615] text-xs font-mono font-bold cursor-pointer transition-colors"
-            >
-              [ ✕ ปิดห้องสตูดิโอ ]
-            </button>
-          </div>
-
-          <div className="w-full aspect-[16/6] max-h-[210px] bg-[#181615] rounded-2xl overflow-hidden border-2 border-[#181615] shadow-inner flex items-center justify-center relative">
-            <canvas 
-              ref={lofiCanvasRef} 
-              width={680} 
-              height={255} 
-              className="w-full h-full block" 
-              style={{ imageRendering: 'pixelated' }} 
-            />
-            <div className="absolute top-2.5 left-3 bg-[#181615]/85 text-[#FAF7F5] border border-[#3D3835] px-2.5 py-1 rounded-lg font-mono text-[10px] flex items-center gap-2">
-              <span className="text-[#E9F344] font-bold">{activePresetObj.tag}</span>
-              <span>{activePresetObj.name}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#57534e]">
-                [ SELECT MEKONG SOUNDTRACK // เลือกบทเพลง ({ activePresetObj.desc }) ]:
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
-              {Object.values(CHILL_PRESETS).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    chillPresetRef.current = p.id;
-                    setChillPreset(p.id);
-                    startChillAudio(p.id);
-                  }}
-                  className={`p-2.5 rounded-xl border-2 text-left transition-colors duration-150 cursor-pointer flex flex-col gap-1 ${
-                    chillPreset === p.id 
-                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-[2px_2px_0px_#BD4924]' 
-                      : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:border-[#181615] hover:bg-[#F2ECE4]'
-                  }`}
-                >
-                  <span className={`text-[9px] font-bold ${chillPreset === p.id ? 'text-[#E9F344]' : 'text-[#78716c]'}`}>
-                    {p.tag}
-                  </span>
-                  <strong className="text-xs truncate">{p.name.split(' (')[0]}</strong>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
-            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
-              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ MASTER ]</span>
-                <span>{Math.round(chillVolume * 100)}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05"
-                value={chillVolume}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setChillVolume(val);
-                  chillVolumeRef.current = val;
-                  if (masterGainRef.current && audioCtxRef.current) {
-                    masterGainRef.current.gain.setValueAtTime(val * 1.45, audioCtxRef.current.currentTime);
-                  }
-                }}
-                className="w-full accent-[#181615] cursor-pointer"
-              />
-            </div>
-
-            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
-              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ RHODES / MELODY ]</span>
-                <span>{Math.round(chordVolume * 100)}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05"
-                value={chordVolume}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setChordVolume(val);
-                  chordVolumeRef.current = val;
-                }}
-                className="w-full accent-[#181615] cursor-pointer"
-              />
-            </div>
-
-            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
-              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ BEAT GROOVE ]</span>
-                <span>{Math.round(beatVolume * 100)}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05"
-                value={beatVolume}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setBeatVolume(val);
-                  beatVolumeRef.current = val;
-                }}
-                className="w-full accent-[#181615] cursor-pointer"
-              />
-            </div>
-
-            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
-              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ AMBIENT RIVER ]</span>
-                <span>{Math.round(noiseVolume * 100)}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05"
-                value={noiseVolume}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setNoiseVolume(val);
-                  noiseVolumeRef.current = val;
-                  if (noiseNodeRef.current && audioCtxRef.current) {
-                    const preset = CHILL_PRESETS[chillPresetRef.current] || CHILL_PRESETS.jazz;
-                    noiseNodeRef.current.gain.gain.setValueAtTime(val * preset.noiseGain, audioCtxRef.current.currentTime);
-                  }
-                }}
-                className="w-full accent-[#181615] cursor-pointer"
-              />
-            </div>
-
-            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5 font-mono col-span-2 sm:col-span-1">
-              <div className="flex justify-between text-[10px] font-bold text-[#181615]">
-                <span>[ SLEEP TIMER ]</span>
-                <span>
-                  {sleepSecondsLeft > 0 
-                    ? `${Math.floor(sleepSecondsLeft / 60)}:${(sleepSecondsLeft % 60).toString().padStart(2, '0')}` 
-                    : 'OFF'}
-                </span>
-              </div>
-              <div className="flex gap-1 text-[9px]">
-                {[0, 15, 30, 45].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => { pixelSound.play('ui_click'); setSleepMinutes(m); }}
-                    className={`flex-1 py-1 rounded-lg text-center font-bold cursor-pointer transition-colors ${
-                      sleepMinutes === m 
-                        ? 'bg-[#181615] text-[#FAF7F5]' 
-                        : 'bg-[#FAF7F2] text-[#181615] border border-[#181615]/30 hover:bg-[#F2ECE4]'
-                    }`}
-                  >
-                    {m === 0 ? 'OFF' : `${m}m`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Chord Progression & Harmonic Variations Control Deck */}
-          <div className="bg-[#FAF7F2] p-3.5 sm:p-4 rounded-2xl border-2 border-[#181615] flex flex-col gap-2.5 font-mono shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#181615]/20 pb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#181615]">
-                  [ ♫ ทางคอร์ด & CHORD PROGRESSION ]:
-                </span>
-                {currentPlayingChordName ? (
-                  <span className="px-2.5 py-0.5 bg-[#181615] text-[#E9F344] text-[10px] font-bold rounded-md border border-[#181615] animate-pulse">
-                    กำลังเล่น: {currentPlayingChordName}
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 bg-[#181615]/10 text-[#57534e] text-[9px] rounded-md font-bold">
-                    [ STANDBY ]
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={handleManualChordChange}
-                className="px-3.5 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] text-[10px] font-bold cursor-pointer transition-transform active:scale-95 shadow-2xs self-start sm:self-auto flex items-center gap-1.5"
-                title="กดเพื่อเปลี่ยนไปยังคอร์ดถัดไปทันที"
-              >
-                <span>[ ⏭ สลับคอร์ดถัดไป // NEXT CHORD ]</span>
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-              <span className="text-[#57534e] mr-1">[ โหมดทางคอร์ด ]:</span>
-              <button
-                onClick={() => { pixelSound.play('ui_click'); setChordVariation('auto'); }}
-                className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
-                  chordVariation === 'auto'
-                    ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
-                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
-                }`}
-              >
-                [ สลับท่อนต่อเนื่อง (A ➔ B อัตโนมัติ) ]
-              </button>
-              <button
-                onClick={() => { pixelSound.play('ui_click'); setChordVariation('part_a'); }}
-                className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
-                  chordVariation === 'part_a'
-                    ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
-                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
-                }`}
-              >
-                [ ท่อน A // THEME ]
-              </button>
-              <button
-                onClick={() => { pixelSound.play('ui_click'); setChordVariation('part_b'); }}
-                className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
-                  chordVariation === 'part_b'
-                    ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
-                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
-                }`}
-              >
-                [ ท่อน B // BRIDGE & COLOR ]
-              </button>
-            </div>
-
-            {/* Visual Interactive Chord Progression Strip */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
-              <span className="text-[9px] text-[#78716c] shrink-0">[ แตะเพื่อเปลี่ยนคอร์ด ]:</span>
-              {activePresetObj.chords.map((ch, idx) => {
-                const cName = typeof ch === 'object' && ch.name ? ch.name : `CH-${idx+1}`;
-                const cSec = typeof ch === 'object' && ch.section ? ch.section : (idx < 4 ? 'A' : 'B');
-                const isCurrent = currentPlayingChordName === cName;
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleSelectSpecificChord(idx)}
-                    className={`px-2.5 py-1 rounded-lg text-[9px] font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                      isCurrent
-                        ? 'bg-[#181615] text-[#E9F344] border-[#181615] scale-105 shadow-2xs ring-2 ring-[#E9F344]'
-                        : 'bg-white/80 text-[#181615] border-[#181615]/20 hover:border-[#181615] hover:bg-[#E9F344]/30'
-                    }`}
-                    title={`เล่นคอร์ด ${cName} (ท่อน ${cSec})`}
-                  >
-                    <span className="text-[7px] text-[#78716c] font-normal">{cSec}:</span>
-                    <span>{cName}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-1">
-            <button
-              onClick={handlePlayClick}
-              className={`px-6 py-3 rounded-xl border-2 border-[#181615] font-mono font-bold text-xs uppercase cursor-pointer transition-transform duration-100 ease-out shadow-xs ${
-                chillPlaying 
-                  ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]' 
-                  : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
-              }`}
-            >
-              {chillPlaying ? '[ ⏸ PAUSE SOUNDSCAPE // พักเสียง ]' : '[ ▶ START SOUNDSCAPE // เริ่มเปิดเสียง ]'}
-            </button>
-            <span className="font-mono text-[10px] text-[#78716c] hidden sm:inline">
-              WARM RHODES + LO-FI BEAT + BINAURAL 3D STEREO
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderHeadphonePromptModal = () => {
-    if (!showHeadphonePrompt) return null;
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-[fadeIn_0.15s_ease-out] font-sans">
-        <div className="w-full max-w-sm bg-[var(--color-paper)] border-2 border-[#181615] rounded-3xl p-6 shadow-xl text-center relative">
-          <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[#bd4924]">
-            [ BINAURAL AUDIO RECOMMENDATION ]
-          </div>
-          <h3 className="font-pixel text-xl font-bold uppercase tracking-wider text-[#181615] mb-2">
-            HEADPHONES RECOMMENDED
-          </h3>
-          <p className="text-xs text-[#57534e] font-sans leading-relaxed mb-5">
-            เพื่อมิติเสียงสังเคราะห์คลื่นน้ำริมแม่น้ำโขงและคอร์ดเพลง Lo-Fi ที่สมจริง แนะนำให้เชื่อมต่อหูฟังก่อนเริ่มฟังเพื่อมิติเสียงที่ดีที่สุดครับ
-          </p>
-          <div className="flex gap-2 font-mono text-xs">
-            <button
-              onClick={confirmHeadphonesAndPlay}
-              className="flex-1 py-2.5 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs"
-            >
-              [ พร้อมฟังแล้ว ]
-            </button>
-            <button
-              onClick={() => setShowHeadphonePrompt(false)}
-              className="px-4 py-2.5 bg-[#FAF7F2] text-[#181615] font-bold uppercase rounded-xl cursor-pointer hover:bg-[#F2ECE4] border-2 border-[#181615]"
-            >
-              [ ยกเลิก ]
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderClaimModal = () => {
     if (!showClaimModal) return null;
     const earnedRank = getArcadeRank(claimScore, activeMode === 'tai_pla' ? 'tai_pla' : 'flappy');
@@ -2306,10 +827,9 @@ export default function ArcadeLobby() {
             }
           }}
         />
-        {renderStickyMiniPlayer()}
-        {renderStudioModal()}
+        <LofiMiniPlayer lofi={lofi} onOpenStudio={() => setShowStudioModal(true)} />
+        <LofiStudio lofi={lofi} open={showStudioModal} onClose={() => setShowStudioModal(false)} />
         {renderClaimModal()}
-        {renderHeadphonePromptModal()}
       </div>
     );
   }
@@ -2332,10 +852,9 @@ export default function ArcadeLobby() {
             setActiveMode('hub');
           }}
         />
-        {renderStickyMiniPlayer()}
-        {renderStudioModal()}
+        <LofiMiniPlayer lofi={lofi} onOpenStudio={() => setShowStudioModal(true)} />
+        <LofiStudio lofi={lofi} open={showStudioModal} onClose={() => setShowStudioModal(false)} />
         {renderClaimModal()}
-        {renderHeadphonePromptModal()}
       </div>
     );
   }
@@ -2349,6 +868,28 @@ export default function ArcadeLobby() {
 
         html, body {
           overflow-x: clip !important;
+        }
+
+        #arcade-lobby-root,
+        #arcade-lobby-root .font-sans {
+          font-family: 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
+        }
+        #arcade-lobby-root .font-mono {
+          font-family: 'Space Mono', 'IBM Plex Sans Thai', ui-monospace, monospace;
+        }
+
+        .arcade-card {
+          transition: transform 140ms ease-out, box-shadow 140ms ease-out;
+        }
+        @media (hover: hover) {
+          .arcade-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 0 0 #181615;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .arcade-card { transition: none; }
+          .arcade-card:hover { transform: none; }
         }
 
         #arcade-lobby-root {
@@ -2449,6 +990,161 @@ export default function ArcadeLobby() {
       </header>
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-8">
+        <div className="flex flex-col gap-1 text-left select-none">
+          <h2 className="font-pixel text-xl sm:text-2xl font-bold uppercase tracking-wider text-[#181615]">
+            PICK A GAME
+          </h2>
+          <p className="text-sm text-[#57534e] font-sans leading-relaxed">
+            เลือกเกมแล้วแตะเพื่อเริ่มเล่นได้ทันที ไม่ต้องสมัครสมาชิก
+          </p>
+        </div>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <article className="arcade-card bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl overflow-hidden shadow-sm flex flex-col">
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => {
+                pixelSound.play('ui_click');
+                setActiveMode('tai_pla');
+              }}
+              className="relative block w-full cursor-pointer border-b-2 border-[#181615] bg-[#3B7BA8]"
+            >
+              <ArcadePreview game="tai_pla" />
+              <span className="absolute top-3 left-3 flex items-center gap-1.5 bg-[#181615] text-[#FAF7F5] font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                <span className={`px-1 rounded-sm border ${taiPlaRank.badgeBg} ${taiPlaRank.badgeText} ${taiPlaRank.badgeBorder}`}>
+                  {taiPlaRank.rank}
+                </span>
+                <span>สถิติของคุณ {taiPlaHighScore}</span>
+              </span>
+            </button>
+
+            <div className="flex flex-col gap-4 p-5 sm:p-6 flex-1">
+              <div className="flex flex-col gap-1">
+                <h3 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+                  TAI-PLA RUN
+                </h3>
+                <p className="text-sm text-[#57534e] font-sans leading-relaxed">
+                  วิ่งริมโขงนครพนม กระโดดหลบปีศาจพริก แล้วเก็บปลา สะตอ และหน่อไม้มาปรุงแกงไตปลา
+                </p>
+              </div>
+              <ul className="flex flex-wrap gap-2 font-mono text-[11px] font-bold text-[#181615]">
+                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">ตัวละคร 5 ตัว</li>
+                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">แตะเพื่อกระโดด</li>
+                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">ความเผ็ด 4 ระดับ</li>
+              </ul>
+              <button
+                type="button"
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  setActiveMode('tai_pla');
+                }}
+                className="mt-auto w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-base py-4 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer tracking-wide transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
+              >
+                เล่น Tai-Pla Run
+              </button>
+            </div>
+          </article>
+
+          <article className="arcade-card bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl overflow-hidden shadow-sm flex flex-col">
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => {
+                pixelSound.play('ui_click');
+                setActiveMode('flappy');
+              }}
+              className="relative block w-full cursor-pointer border-b-2 border-[#181615] bg-[#3B7BA8]"
+            >
+              <ArcadePreview game="flappy" />
+              <span className="absolute top-3 left-3 bg-[#181615] text-[#E9F344] font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                ได้เหรียญ XHAUS
+              </span>
+            </button>
+
+            <div className="flex flex-col gap-4 p-5 sm:p-6 flex-1">
+              <div className="flex flex-col gap-1">
+                <h3 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+                  FLAPPY CAT
+                </h3>
+                <p className="text-sm text-[#57534e] font-sans leading-relaxed">
+                  พาแมวส้มบินลอดฝักสะตอเหนือแม่น้ำโขง ยิ่งผ่านได้ไกล ยิ่งได้รางวัลจากร้าน
+                </p>
+              </div>
+              <ul className="flex flex-wrap gap-2 font-mono text-[11px] font-bold text-[#181615]">
+                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">20 ท่อ +1 XH</li>
+                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">35 ท่อ +1 XH</li>
+                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">40 ท่อ ตั๋วสุ่ม</li>
+              </ul>
+              <button
+                type="button"
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  setActiveMode('flappy');
+                }}
+                className="mt-auto w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-mono font-bold text-base py-4 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer tracking-wide transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
+              >
+                เล่น Flappy Cat
+              </button>
+            </div>
+          </article>
+
+          <article className="arcade-card md:col-span-2 bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl overflow-hidden shadow-sm grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <div className="relative border-b-2 md:border-b-0 md:border-r-2 border-[#181615] bg-[#0B1026]">
+              <ArcadePreview game="lofi" />
+              <span className={`absolute top-3 left-3 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg ${lofi.playing ? 'bg-[#E9F344] text-[#181615]' : 'bg-[#181615] text-[#FAF7F5]'}`}>
+                {lofi.playing ? 'กำลังเล่น' : 'ห้องฟังเพลง'}
+              </span>
+              <div className="absolute bottom-3 left-3 flex items-end gap-1 h-8" aria-hidden="true">
+                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-5 animate-bounce' : 'h-2'}`} />
+                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-7 animate-bounce [animation-delay:0.15s]' : 'h-3'}`} />
+                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-4 animate-bounce [animation-delay:0.3s]' : 'h-2'}`} />
+                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-6 animate-bounce [animation-delay:0.2s]' : 'h-3'}`} />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 p-5 sm:p-6 justify-center">
+              <div className="flex flex-col gap-1">
+                <h3 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+                  HAUS LO-FI
+                </h3>
+                <p className="text-sm text-[#57534e] font-sans leading-relaxed">
+                  เพลงคลอเบาๆ 6 บรรยากาศ พร้อมเสียงแม่น้ำโขง เปิดทิ้งไว้ระหว่างรออาหารหรือนั่งทำงานได้
+                </p>
+                <p className="font-mono text-[11px] font-bold text-[#181615] mt-1 truncate leading-relaxed">
+                  {lofi.track.name}
+                  {lofi.chordName ? ` · ${lofi.chordName}` : ''}
+                </p>
+              </div>
+              <div className="flex gap-2 font-mono">
+                <button
+                  type="button"
+                  onClick={lofi.toggle}
+                  className={`flex-1 py-3.5 px-3 rounded-2xl border-2 border-[#181615] font-bold text-sm cursor-pointer transition-colors shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924] ${
+                    lofi.playing
+                      ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]'
+                      : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
+                  }`}
+                >
+                  {lofi.playing ? 'พักเพลง' : 'เปิดเพลง'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pixelSound.play('ui_click');
+                    setShowStudioModal(true);
+                  }}
+                  className="py-3.5 px-4 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] rounded-2xl border-2 border-[#181615] font-bold text-sm cursor-pointer transition-colors shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
+                >
+                  เลือกเพลง
+                </button>
+              </div>
+            </div>
+          </article>
+        </section>
+
         <section className="w-full bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-4 sm:p-5 shadow-sm">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 divide-y sm:divide-y-0 sm:divide-x-2 divide-[#181615]/20 font-mono text-center">
             <div className="flex flex-col items-center justify-center p-2">
@@ -2490,241 +1186,6 @@ export default function ArcadeLobby() {
               <span className={`text-base sm:text-lg font-bold mt-0.5 ${userStats.todayRaffle40 ? 'text-[#bd4924]' : 'text-[#78716c]'}`}>
                 {userStats.todayRaffle40 ? '1 TICKET // ได้รับแล้ว' : 'สะสมครบ 40 ท่อ'}
               </span>
-            </div>
-          </div>
-        </section>
-
-        <div className="flex flex-col gap-1 text-left select-none">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615]" />
-            <h2 className="font-pixel text-xl sm:text-2xl font-bold uppercase tracking-wider text-[#181615]">
-              ARCADE SHOWCASE // เลือกจุดหมายของคุณ
-            </h2>
-          </div>
-          <p className="text-xs sm:text-sm text-[#57534e] font-sans">
-            เลือกเล่นเกมเรโทรสไตล์พิกเซลอาร์ตริมโขง หรือเปิดฟังดนตรีสังเคราะห์ Lo-Fi ผ่อนคลายได้ทันที
-          </p>
-        </div>
-
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-colors duration-150 group">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] font-bold text-[#181615] bg-[#E9F344] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
-                  [ 01 // 128-BIT RUNNER ]
-                </span>
-                <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold">
-                  <span className={`px-1.5 py-0.5 rounded border ${taiPlaRank.badgeBg} ${taiPlaRank.badgeText} ${taiPlaRank.badgeBorder}`}>
-                    [{taiPlaRank.rank}]
-                  </span>
-                  <span className="text-[#78716c]">HIGH: {taiPlaHighScore} PTS</span>
-                </div>
-              </div>
-
-              <div className="w-full aspect-[16/9] bg-[#faf6ed] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3 shadow-inner">
-                <div className="flex items-center justify-between z-10 font-mono text-[8px]">
-                  <span className="bg-[#181615] text-white px-2 py-0.5 rounded-md font-bold uppercase">
-                    5 SPECIES ROSTER
-                  </span>
-                  <span className="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md font-bold">
-                    POP-PIXEL + SFX
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-5 gap-1.5 my-auto z-10">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-11 bg-sky-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
-                      <span className="text-[9px] font-bold text-[#181615]">ไตปลา</span>
-                      <span className="text-[6px] text-sky-800 uppercase font-bold">2X JUMP</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-11 bg-amber-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
-                      <span className="text-[9px] font-bold text-[#181615]">ส้มสะตอ</span>
-                      <span className="text-[6px] text-amber-800 uppercase font-bold">GOD BOOST</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-11 bg-stone-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
-                      <span className="text-[9px] font-bold text-[#181615]">ข้าวหลาม</span>
-                      <span className="text-[6px] text-stone-700 uppercase font-bold">MAGNET</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-11 bg-rose-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
-                      <span className="text-[9px] font-bold text-[#181615]">กะปิ</span>
-                      <span className="text-[6px] text-rose-800 uppercase font-bold">2X SPICE</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-full h-11 bg-emerald-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
-                      <span className="text-[9px] font-bold text-[#181615]">นาคน้อย</span>
-                      <span className="text-[6px] text-emerald-800 uppercase font-bold">3X GLIDE</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between z-10 text-[8px] font-mono text-[#78716c]">
-                  <span>4 แทร็กเพลง + Chiptune SFX</span>
-                  <span>แตะเพื่อกระโดด 2-3 จังหวะ</span>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-pixel text-lg font-bold text-[#181615] uppercase tracking-wider">
-                  TAI-PLA RUN: 128-BIT
-                </h3>
-                <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  วิ่งตะลุยริมโขงนครพนม 5 คู่หูความสามารถเฉพาะตัว • กระโดด 2–3 จังหวะ • สปริงสะตอ • ปรุงแกงไตปลาสะสมเหรียญ XHAUS!
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                pixelSound.play('ui_click');
-                setActiveMode('tai_pla');
-              }}
-              className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-transform duration-100 ease-out"
-            >
-              <span className="whitespace-nowrap">[ ▶ เล่นเลย // PLAY RUNNER ]</span>
-            </button>
-          </div>
-
-          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-colors duration-150 group">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] font-bold text-[#FAF7F5] bg-[#181615] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
-                  [ 02 // RETRO CABINET ]
-                </span>
-                <span className="font-mono text-[9px] font-bold text-[#78716c]">
-                  ENGINE: PHASER + SFX
-                </span>
-              </div>
-
-              <div className="w-full aspect-[16/9] bg-[#181615] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
-                <div className="flex items-center justify-between z-10 font-mono text-[8px]">
-                  <span className="bg-[#E9F344] text-[#181615] px-2 py-0.5 rounded-md font-bold uppercase">
-                    FLAPPY CAT POP-PIXEL
-                  </span>
-                  <span className="text-[#A8A29E]">
-                    RANK S+ TO C
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-center gap-3 my-auto z-10">
-                  <div className="w-16 h-12 bg-[#2A2624] rounded-xl border-2 border-[#BD4924] flex flex-col items-center justify-center text-[10px] font-bold text-[#FAF7F5] font-mono shadow-md">
-                    <span>HAUS CAT</span>
-                    <span className="text-[7px] text-[#E9F344] font-bold">COLLAR BELL</span>
-                  </div>
-                  <div className="flex flex-col font-mono text-[9px] text-[#FAF7F5]">
-                    <span className="text-emerald-400 font-bold">[RANK A] 20 PIPES: +1.00 XH</span>
-                    <span className="text-amber-400 font-bold">[RANK S] 35 PIPES: +1.00 XH</span>
-                    <span className="text-[#E9F344] font-bold">[RANK S+] 40 PIPES: 1 TICKET</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between z-10 text-[8px] font-mono text-[#78716c]">
-                  <span>ฝักสะตอ Pop-Pixel 1:1</span>
-                  <span>สะสมเหรียญได้ทุกวัน</span>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-pixel text-lg font-bold text-[#181615] uppercase tracking-wider">
-                  FLAPPY CAT IN THE HAUS
-                </h3>
-                <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  แมวส้มปลอกคอ Haus ทะยานฟ้าริมโขง • บินฝ่าฝักสะตอพิกเซลพร้อมเสียง 8-Bit Chiptune สะสมเหรียญ XHAUS และตั๋วสุ่ม
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                pixelSound.play('ui_click');
-                setActiveMode('flappy');
-              }}
-              className="w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-transform duration-100 ease-out"
-            >
-              <span className="whitespace-nowrap">[ ▶ เล่นเลย // PLAY FLAPPY ]</span>
-            </button>
-          </div>
-
-          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-colors duration-150 group">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] font-bold text-[#181615] bg-[#E9F344] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
-                  [ 03 // BINAURAL LOUNGE ]
-                </span>
-                <span className={`font-mono text-[9px] font-bold ${chillPlaying ? 'text-emerald-700' : 'text-[#78716c]'}`}>
-                  {chillPlaying ? '[ ● ON AIR ]' : '[ ○ STANDBY ]'}
-                </span>
-              </div>
-
-              <div className="w-full aspect-[16/9] bg-[#1c2541] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
-                <div className="flex items-center justify-between z-10 font-mono text-[8px]">
-                  <span className="bg-sky-900/80 text-sky-200 px-2 py-0.5 rounded-md font-bold uppercase">
-                    13 SOUNDSCAPES + BEAT
-                  </span>
-                  <span className="text-[#93c5fd]">
-                    RHODES + 3D BINAURAL
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-center gap-3 my-auto z-10 text-center">
-                  <div className="flex items-end gap-1 h-8 text-[#E9F344]">
-                    <span className={`w-1.5 bg-[#E9F344] rounded-xs ${chillPlaying ? 'h-5 animate-bounce' : 'h-2'}`} />
-                    <span className={`w-1.5 bg-[#E9F344] rounded-xs ${chillPlaying ? 'h-7 animate-bounce [animation-delay:0.15s]' : 'h-3'}`} />
-                    <span className={`w-1.5 bg-[#E9F344] rounded-xs ${chillPlaying ? 'h-4 animate-bounce [animation-delay:0.3s]' : 'h-2'}`} />
-                    <span className={`w-1.5 bg-[#E9F344] rounded-xs ${chillPlaying ? 'h-6 animate-bounce [animation-delay:0.2s]' : 'h-3'}`} />
-                  </div>
-                  <div className="flex flex-col text-left font-mono text-[10px] text-white">
-                    <span className="font-bold truncate max-w-[130px]">
-                      {CHILL_PRESETS[chillPreset]?.name.split(' (')[0] || 'MEKONG JAZZ'}
-                    </span>
-                    <span className="text-[#E9F344] text-[8px] font-bold truncate">
-                      {currentPlayingChordName ? `CHORD: ${currentPlayingChordName}` : 'RHODES + LO-FI GROOVE'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between z-10 text-[8px] font-mono text-[#94a3b8]">
-                  <span>จังหวะกลอง + เบส + เมโลดี้สด</span>
-                  <span>ตั้งเวลาปิดอัตโนมัติ (Timer)</span>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-pixel text-lg font-bold text-[#181615] uppercase tracking-wider">
-                  HAUS BINAURAL LO-FI
-                </h3>
-                <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  13 ซาวด์แทร็คเปียโน Warm Rhodes คอร์ดแจ๊ส 9th/13th พร้อมจังหวะกลอง-เบส Lo-Fi Groove และคลื่นแม่น้ำโขง 3D Binaural
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2 font-mono text-xs">
-              <button
-                onClick={handlePlayClick}
-                className={`flex-1 py-3 px-2 rounded-2xl border-2 border-[#181615] font-bold text-xs cursor-pointer transition-colors shadow-xs ${
-                  chillPlaying 
-                    ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]' 
-                    : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
-                }`}
-              >
-                {chillPlaying ? '[ ⏸ พักเสียง ]' : '[ ▶ เปิดฟังคลอ ]'}
-              </button>
-              <button
-                onClick={() => {
-                  pixelSound.play('ui_click');
-                  setShowStudioModal(true);
-                }}
-                className="py-3 px-3.5 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] rounded-2xl border-2 border-[#181615] font-bold text-xs cursor-pointer transition-colors shadow-xs"
-              >
-                [ สตูดิโอ ]
-              </button>
             </div>
           </div>
         </section>
@@ -2832,10 +1293,9 @@ export default function ArcadeLobby() {
       </footer>
 
       {/* Modals & Persistent Overlays */}
-      {renderStickyMiniPlayer()}
-      {renderStudioModal()}
+      <LofiMiniPlayer lofi={lofi} onOpenStudio={() => setShowStudioModal(true)} />
+      <LofiStudio lofi={lofi} open={showStudioModal} onClose={() => setShowStudioModal(false)} />
       {renderClaimModal()}
-      {renderHeadphonePromptModal()}
     </div>
   );
 }

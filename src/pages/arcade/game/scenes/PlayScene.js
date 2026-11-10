@@ -64,7 +64,7 @@ export default class PlayScene extends Phaser.Scene {
     // 2. Logo in Top Left Corner (UX/UI brand placement)
     if (this.textures.exists('logo_pixelated')) {
       const cornerLogo = this.add.image(20, 20, 'logo_pixelated').setOrigin(0, 0).setDepth(20);
-      cornerLogo.setScale(1.2);
+      cornerLogo.setScale(1);
       cornerLogo.setAlpha(0.65); // Semi-transparent
     }
 
@@ -95,22 +95,20 @@ export default class PlayScene extends Phaser.Scene {
 
     // 4. Create Player (Cat - scaled up)
     this.player = this.physics.add.sprite(100, height / 2, 'cat');
-    this.player.setScale(1.35); // 35% larger
-    this.player.setFlipX(true); // Face right (direction of flight)
     this.player.setOrigin(0.5);
     this.player.setDepth(5);
     this.player.body.setGravityY(920); // gentle responsive gravity
     this.player.body.setCollideWorldBounds(false); // We handle boundary check manually
     
     // Forgiving capsule hitbox (prevents annoying edge clippings)
-    this.player.body.setSize(16, 16);
-    this.player.body.setOffset(8, 8);
+    this.player.body.setSize(22, 18);
+    this.player.body.setOffset(13, 15);
 
     // Cat flap animation
     if (!this.anims.exists('flap')) {
       this.anims.create({
         key: 'flap',
-        frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 1 }),
+        frames: this.anims.generateFrameNumbers('cat', { frames: [0, 1, 2, 1] }),
         frameRate: 10,
         repeat: -1
       });
@@ -299,9 +297,9 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isDashing) {
       // Spawn 3 flame particles per frame
       for (let i = 0; i < 3; i++) {
-        const pX = this.player.x - (16 * this.player.scaleX) + Phaser.Math.Between(-4, 4);
+        const pX = this.player.x - (20 * this.player.scaleX) + Phaser.Math.Between(-4, 4);
         const pY = this.player.y + (2 * this.player.scaleY) + Phaser.Math.Between(-8, 8);
-        const size = Phaser.Math.Between(4, 10) * (this.player.scaleX / 1.35);
+        const size = Phaser.Math.Between(2, 5) * 2 * this.player.scaleX;
         
         const rect = this.add.rectangle(pX, pY, size, size);
         rect.setDepth(4); // behind cat
@@ -385,7 +383,7 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     // Subtle jump squish effect scaled properly
-    const targetScale = this.isDashing ? 2.7 : 1.35;
+    const targetScale = this.isDashing ? 2 : 1;
     const squishScaleY = targetScale * 0.78;
     const squishScaleX = targetScale * 1.15;
 
@@ -398,7 +396,7 @@ export default class PlayScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => {
         if (!this.isGameOver) {
-          const resetScale = this.isDashing ? 2.7 : 1.35;
+          const resetScale = this.isDashing ? 2 : 1;
           this.player.scaleY = resetScale;
           this.player.scaleX = resetScale;
         }
@@ -508,13 +506,12 @@ export default class PlayScene extends Phaser.Scene {
       bean.moving = this.score >= 15;
       bean.spawnTime = this.time.now;
       
-      bean.setScale(1.5);
 
       // Luminous pulsating reward animation (clearly shows it is a friendly collectible)
       this.tweens.add({
         targets: bean,
-        scaleX: 1.85,
-        scaleY: 1.85,
+        scaleX: 1.25,
+        scaleY: 1.25,
         duration: 350,
         yoyo: true,
         repeat: -1,
@@ -718,7 +715,6 @@ export default class PlayScene extends Phaser.Scene {
     // Show Warning Icon flashing at the right edge
     const warningX = width - 40;
     const warningIcon = this.add.image(warningX, targetY, 'warning_icon').setDepth(20);
-    warningIcon.setScale(1.5);
     
     // Flashing warning sign (blinks 3 times)
     this.tweens.add({
@@ -895,8 +891,8 @@ export default class PlayScene extends Phaser.Scene {
     // Giant scale animation
     this.tweens.add({
       targets: this.player,
-      scaleX: 2.7,
-      scaleY: 2.7,
+      scaleX: 2,
+      scaleY: 2,
       duration: 200,
       ease: 'Quad.easeOut'
     });
@@ -941,8 +937,8 @@ export default class PlayScene extends Phaser.Scene {
     // Shrink scale animation
     this.tweens.add({
       targets: this.player,
-      scaleX: 1.35,
-      scaleY: 1.35,
+      scaleX: 1,
+      scaleY: 1,
       duration: 300,
       ease: 'Quad.easeOut'
     });

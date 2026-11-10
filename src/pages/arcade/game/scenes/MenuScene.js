@@ -18,7 +18,7 @@ export default class MenuScene extends Phaser.Scene {
     // 2. Logo / Header Section
     if (this.textures.exists('logo_pixelated')) {
       const logo = this.add.image(width / 2, 60, 'logo_pixelated').setOrigin(0.5).setDepth(5);
-      logo.setScale(1.8);
+      logo.setScale(2);
     } else {
       this.add.text(width / 2, 60, 'IN THE HAUS', {
         fontFamily: '"Geist Mono", "Space Mono", monospace',
@@ -48,13 +48,12 @@ export default class MenuScene extends Phaser.Scene {
 
     // Bouncing animated cat sprite
     const menuCat = this.add.sprite(width / 2, 195, 'cat').setDepth(5);
-    menuCat.setScale(1.45);
-    menuCat.setFlipX(true);
+    menuCat.setScale(2);
     
     if (!this.anims.exists('flap')) {
       this.anims.create({
         key: 'flap',
-        frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 1 }),
+        frames: this.anims.generateFrameNumbers('cat', { frames: [0, 1, 2, 1] }),
         frameRate: 10,
         repeat: -1
       });

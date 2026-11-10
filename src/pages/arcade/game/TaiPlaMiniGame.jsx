@@ -166,6 +166,25 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Size the play area to the largest 480:700 box that fits, so the canvas is never stretched or cropped
+  const arenaRef = useRef(null);
+  const [arenaSize, setArenaSize] = useState(null);
+  useEffect(() => {
+    const el = arenaRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const fit = () => {
+      const availW = el.clientWidth - 16;
+      const availH = el.clientHeight - 12;
+      if (availW <= 0 || availH <= 0) return;
+      const scale = Math.min(availW / 480, availH / 700, 1.3);
+      setArenaSize({ width: Math.floor(480 * scale), height: Math.floor(700 * scale) });
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [gameState]);
+
   // Vertical Portrait Ground Plane (Height 700, ground at 550)
   const defaultGroundY = 550;
 
@@ -1107,7 +1126,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             g.floatingTexts.push({
               x: elem.x,
               y: springTop - 15,
-              text: `🟢 SPRING LAUNCH! +${springPts}`,
+              text: `SPRING LAUNCH! +${springPts}`,
               color: '#22c55e',
               life: 1.2
             });
@@ -1621,20 +1640,20 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
   if (isDedicated || isFullscreen) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#FAF7F2] flex flex-col justify-between select-none overflow-hidden touch-none font-sans">
+      <div className="fixed inset-0 z-50 h-[100dvh] bg-[#FAF7F2] flex flex-col justify-between select-none overflow-hidden touch-none font-sans">
         {/* Top Navigation & Status Bar */}
         <header className="w-full bg-[#FAF7F2] border-b-2 border-[#181615] px-3 sm:px-6 py-2.5 flex items-center justify-between z-20 shrink-0 shadow-2xs">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={handleBack}
-              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] font-mono font-bold text-xs shadow-xs active:scale-95 transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] font-mono font-bold text-xs shadow-xs active:scale-95 transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
             >
-              <span>[ ← กลับโถงเกม ]</span>
+              <span>← กลับ</span>
             </button>
             <div className="flex items-center gap-1.5">
               <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
-              <span className="font-pixel text-xs sm:text-sm font-bold text-[#181615] uppercase tracking-wider">
-                TAI-PLA RUN // 128-BIT
+              <span className="hidden sm:inline font-pixel text-sm font-bold text-[#181615] uppercase tracking-wider">
+                TAI-PLA RUN
               </span>
             </div>
           </div>
@@ -1644,7 +1663,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             <span className={`hidden sm:inline-block px-2 py-1 rounded-lg border text-[10px] font-bold uppercase ${currentRank.badgeClass}`}>
               {currentRank.badge}
             </span>
-            <div className="bg-[#181615] text-[#FAF7F5] px-2.5 py-1 rounded-lg border border-[#3D3835] text-[11px] font-bold">
+            <div className="bg-[#181615] text-[#FAF7F5] px-2.5 py-1 rounded-lg border border-[#3D3835] text-[11px] font-bold whitespace-nowrap">
               <span>{score} PTS</span>
             </div>
             {earnedXhaus > 0 && (
@@ -1654,41 +1673,39 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             )}
             <button
               onClick={cycleBgmTrack}
-              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors uppercase"
-              title="เปลี่ยนแนวเพลง Lo-Fi"
+              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors uppercase whitespace-nowrap"
+              title="เปลี่ยนแนวเพลง"
             >
-              [ ♫ {currentBgmTrack.replace('_', ' ')} ]
+              <span className="sm:hidden">เพลง</span>
+              <span className="hidden sm:inline">{currentBgmTrack.replace('_', ' ')}</span>
             </button>
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors"
+              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors whitespace-nowrap"
             >
-              {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
+              {soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'}
             </button>
             <button
               onClick={handleToggleNativeFullscreen}
-              className={`px-2.5 py-1 rounded-lg border font-mono text-[10px] font-bold cursor-pointer transition-colors shadow-2xs ${
+              className={`px-2.5 py-1 rounded-lg border font-mono text-[10px] font-bold cursor-pointer transition-colors shadow-2xs whitespace-nowrap ${
                 isNativeFullscreen
                   ? 'bg-[#E9F344] text-[#181615] border-[#181615]'
                   : 'bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] border-[#181615]'
               }`}
               title="สลับโหมดเต็มจอระดับเบราว์เซอร์ (Native Fullscreen)"
             >
-              {isNativeFullscreen ? '[ ⛶ ย่อจอ ]' : '[ ⛶ เต็มจอ ]'}
+              {isNativeFullscreen ? 'ย่อจอ' : 'เต็มจอ'}
             </button>
           </div>
         </header>
 
         {/* Central Game Arena - Vertical Portrait (Flappy Cat style 480x700) */}
-        <main className="flex-1 w-full flex flex-col justify-center items-center px-2 sm:px-4 min-h-0 relative py-1 sm:py-2">
+        <main ref={arenaRef} className="flex-1 w-full flex flex-col justify-center items-center min-h-0 relative">
           <div 
             onClick={handleJumpPress}
             onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-            className={`relative w-full aspect-[9/16] bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all duration-200 ease-out ${
-              isNativeFullscreen 
-                ? 'max-w-[480px] max-h-[86vh] sm:max-h-[90vh]' 
-                : 'max-w-[420px] max-h-[72vh] sm:max-h-[76vh]'
-            }`}
+            className="relative box-content bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md"
+            style={arenaSize || { width: 'min(100%, 420px)', aspectRatio: '480 / 700' }}
           >
             <canvas 
               ref={canvasRef} 
@@ -1998,7 +2015,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       <div 
         onClick={handleJumpPress}
         onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-        className="relative w-full max-w-[420px] aspect-[9/16] max-h-[72vh] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
+        className="relative w-full max-w-[420px] aspect-[24/35] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
       >
         <canvas 
           ref={canvasRef} 
