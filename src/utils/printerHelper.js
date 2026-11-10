@@ -7,10 +7,24 @@ import { getBookingSplitRounds } from './splitPaymentHelper';
 let cachedPrinterConfig = null;
 let printerConfigChannel = null;
 
+export const applyDefaultSunmiMaxCols = (config = {}) => {
+    const next = { ...config };
+    const cashierType = next.cashier_printer_type || next.printer_type || 'sunmi';
+    const cashierPaper = next.cashier_paper_size || next.paper_width || '80mm';
+    if (cashierType === 'sunmi' && String(cashierPaper).includes('80') && (next.cashier_max_cols === undefined || next.cashier_max_cols === null || next.cashier_max_cols === '')) {
+        next.cashier_max_cols = 48;
+    }
+    const kitchenType = next.kitchen_printer_type || next.printer_type || 'sunmi';
+    const kitchenPaper = next.kitchen_paper_size || next.paper_width || '80mm';
+    if (kitchenType === 'sunmi' && String(kitchenPaper).includes('80') && (next.kitchen_max_cols === undefined || next.kitchen_max_cols === null || next.kitchen_max_cols === '')) {
+        next.kitchen_max_cols = 48;
+    }
+    return next;
+};
+
 export const getPrinterConfig = () => {
-    if (cachedPrinterConfig) return cachedPrinterConfig;
     try {
-        const stored = localStorage.getItem('onhaus_printer_config');
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('onhaus_printer_config') : null;
         if (stored) {
             cachedPrinterConfig = {
                 printer_type: 'sunmi',
@@ -24,6 +38,7 @@ export const getPrinterConfig = () => {
             return cachedPrinterConfig;
         }
     } catch (e) {}
+    if (cachedPrinterConfig) return cachedPrinterConfig;
     return {
         printer_type: 'sunmi',
         cashier_printer_type: 'sunmi',
@@ -142,6 +157,7 @@ export const fetchPrinterConfigOnline = async () => {
                 localStorage.setItem('receipt_shop_logo_url', settingsMap.receipt_shop_logo_url);
             }
 
+            config = applyDefaultSunmiMaxCols(config);
             cachedPrinterConfig = config;
             localStorage.setItem('onhaus_printer_config', JSON.stringify(config));
             return config;
@@ -535,17 +551,23 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
 
 // Resolve printer column width cleanly from configuration or fallback
 // role: 'cashier' | 'kitchen' picks the per-printer `<role>_max_cols` saved in Hardware Printers settings
-function resolveMaxCols(paperSize = '80mm', configuredMaxCols, role = 'cashier') {
-    const configured = Number(configuredMaxCols);
-    if (Number.isFinite(configured) && configured > 0) {
-        return Math.max(20, Math.min(64, Math.floor(configured)));
-    }
+function resolveMaxCols(paperSize = '80mm', configuredMaxCols, role = 'cashier', receiptConfig = {}) {
     const normalized = String(paperSize ?? '').toLowerCase().replace(/\s+/g, '');
     const is58mm = (
         normalized === '58mm' ||
         normalized === '58' ||
         Number(paperSize) === 58
     );
+    const hardwareCols = is58mm ? 32 : 48;
+
+    const configured = Number(configuredMaxCols);
+    if (Number.isFinite(configured) && configured > 0) {
+        return Math.max(20, Math.min(64, Math.floor(configured)));
+    }
+    const roleConfigured = Number(receiptConfig?.[`${role}_max_cols`]);
+    if (Number.isFinite(roleConfigured) && roleConfigured > 0) {
+        return Math.max(20, Math.min(hardwareCols, Math.floor(roleConfigured)));
+    }
     // Per-printer width chosen by the shop (e.g. 48 = full 80mm width on Sunmi built-in printers).
     // Never wider than the printhead's native column count, or lines hardware-wrap.
     let savedCols = NaN;
@@ -553,7 +575,6 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols, role = 'cashier')
         savedCols = Number(getPrinterConfig()?.[`${role}_max_cols`]);
     } catch (e) {}
     if (Number.isFinite(savedCols) && savedCols > 0) {
-        const hardwareCols = is58mm ? 32 : 48;
         return Math.max(20, Math.min(hardwareCols, Math.floor(savedCols)));
     }
     // Safe Column Limits: 36 for 80mm thermal paper rolls and 26 for 58mm rolls per Rule 3
@@ -874,14 +895,14 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols, isKitchenTab ? 'kitchen' : 'cashier');
+    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols, isKitchenTab ? 'kitchen' : 'cashier', receiptConfig);
     const colOpts = { visualGraphemes: true };
 
     // CRITICAL TIS-620 CENTERING INTERCEPTOR:
     // To ensure headers and body align perfectly, we intercept align() and size() calls.
     // Instead of using hardware centering (which centers based on 48 columns),
-    // we manually pad spaces to center within the software 'maxCols' (e.g. 42 columns).
-    // This makes the entire receipt block perfectly unified and left-aligned on the paper.
+    // we manually pad spaces to center within the software 'maxCols' (e.g. 42 or 48 columns).
+    // This makes the entire receipt or kitchen/bar block symmetrically centered on the paper.
     let currentAlign = 'left';
     let currentSizeW = 0;
 
@@ -918,9 +939,14 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             if (currentSizeW >= 1) {
                 const scale = currentSizeW + 1;
                 const targetCols = Math.floor(maxCols / scale);
-                // For kitchen and bar order slips in size(1, 1), remove excessive left padding
-                // so full 20-21 character item names and modifiers never clip or hardware-wrap on the right edge
-                const halfOffset = isKitchenTab ? 0 : Math.floor(offset / scale);
+                // Center headers/banners symmetrically across the printhead; for left-aligned kitchen
+                // item rows (which span at least 21 double-width = 42 normal cols on 80mm), center
+                // the item block symmetrically so it never shifts left or overflows the right edge.
+                const effectiveBlockCols = (isKitchenTab && currentAlign === 'left' && currentSizeW === 1 && is80mm)
+                    ? Math.max(42, maxCols)
+                    : maxCols;
+                const effectiveOffset = Math.floor(Math.max(0, hardwareCols - effectiveBlockCols) / 2);
+                const halfOffset = Math.floor(effectiveOffset / scale);
                 const margin = ' '.repeat(halfOffset);
                 if (currentAlign === 'center' && width < targetCols) {
                     const padding = Math.floor((targetCols - width) / 2);
@@ -939,9 +965,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                // Kitchen slips keep a 2-space gutter, but never more than the columns left over (none at full width)
-                const effectiveGlobalLeftMargin = isKitchenTab ? ' '.repeat(Math.min(2, paddingCols)) : globalLeftMargin;
-                return effectiveGlobalLeftMargin + processedLine;
+                return globalLeftMargin + processedLine;
             }
         });
 
@@ -1038,7 +1062,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(doubleDivider);
 
         if (shopAddress) {
-            encoder.line(shopAddress.toUpperCase());
+            wrapTextByWords(shopAddress.toUpperCase(), maxCols, false).forEach(l => encoder.line(l));
         }
         if (shopPhone) {
             encoder.line(`TEL: ${shopPhone}`);
@@ -1214,7 +1238,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const cleanName = cleanKitchenItemName(rawName).toUpperCase();
                 
                 // Kitchen & Bar Item: BIG Double-Width & Double-Height (size(1, 1)) for maximum readability
-                const maxDoubleCols = is80mm ? 21 : Math.max(12, Math.floor(maxCols / 2));
+                const maxDoubleCols = is80mm ? Math.max(21, Math.floor(maxCols / 2)) : Math.max(12, Math.floor(maxCols / 2));
                 const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
                 const nameLines = wrapTextByWords(cleanName, nameColWidth, false);
                 if (nameLines.length === 0) nameLines.push('');
@@ -2321,7 +2345,8 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = resolveMaxCols(paperSize, reportData?.maxCols);
+    const maxCols = resolveMaxCols(paperSize, reportData?.maxCols, 'cashier', reportData);
+    const reportItemColWidth = Math.max(19, maxCols - 17);
     const colOpts = { visualGraphemes: true };
     const truncateColOpts = { visualGraphemes: true, truncate: true };
 
@@ -2442,7 +2467,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
             if (cat.quantity > 0 || cat.amount > 0) {
                 totalQty += cat.quantity || 0;
                 totalAmt += cat.amount || 0;
-                const catName = formatReportItemName(cat.name, 19);
+                const catName = formatReportItemName(cat.name, reportItemColWidth);
                 encoder.line(formatThreeCols(catName, cat.quantity, formatReceiptMoney(cat.amount), maxCols, 5, 10, truncateColOpts));
             }
         });
@@ -2483,7 +2508,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         encoder.line(formatThreeCols('เมนู', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         reportData.topSellingItems.forEach((item, index) => {
             const rankLabel = `${index + 1}. ${item.name}`;
-            const itemLabel = formatReportItemName(rankLabel, 19);
+            const itemLabel = formatReportItemName(rankLabel, reportItemColWidth);
             encoder.line(formatThreeCols(itemLabel, item.quantity, formatReceiptMoney(item.amount), maxCols, 5, 10, truncateColOpts));
         });
     }
@@ -2494,7 +2519,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         encoder.bold(true).line(`สรุปยอดขายแยกตามกะ (${reportData.shifts.length} กะ)`).bold(false);
         encoder.line(formatThreeCols('กะ / พนักงาน', 'บิล', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         reportData.shifts.forEach((s) => {
-            const sName = formatReportItemName(`กะ ${s.index || 1}: ${s.staffName || s.staff_name || 'พนักงาน'}`, 19);
+            const sName = formatReportItemName(`กะ ${s.index || 1}: ${s.staffName || s.staff_name || 'พนักงาน'}`, reportItemColWidth);
             const sTotal = Number(s.totalSales ?? s.total_sales ?? 0);
             const sCount = s.txCount ? `${s.txCount}` : '-';
             encoder.line(formatThreeCols(sName, sCount, formatReceiptMoney(sTotal), maxCols, 5, 10, truncateColOpts));
@@ -2532,7 +2557,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
             encoder.line(formatThreeCols('การชำระเงินอื่นๆ', other.count, formatReceiptMoney(other.amount), maxCols, 5, 10, colOpts));
             if (other.subItems && other.subItems.length > 0) {
                 other.subItems.forEach(sub => {
-                    const subName = formatReportItemName(`  - ${sub.name}`, 19);
+                    const subName = formatReportItemName(`  - ${sub.name}`, reportItemColWidth);
                     encoder.line(formatThreeCols(subName, sub.count, formatReceiptMoney(sub.amount), maxCols, 5, 10, truncateColOpts));
                 });
             }
@@ -3315,7 +3340,7 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = resolveMaxCols(paperSize, booking?.maxCols);
+    const maxCols = resolveMaxCols(paperSize, booking?.maxCols ?? splitDetails?.maxCols, 'cashier', splitDetails);
     const colOpts = { visualGraphemes: true };
     const divider = generateDivider('dashed', maxCols);
 

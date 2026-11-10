@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { supabase } from '../../lib/supabaseClient'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, getBookingPaymentMethod, cleanKitchenItemName, extractCleanKitchenOptions } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, getBookingPaymentMethod, cleanKitchenItemName, extractCleanKitchenOptions, applyDefaultSunmiMaxCols } from '../../utils/printerHelper'
 import { formatOrderItemOptions } from '../../utils/menuHelper'
 import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 
@@ -46,9 +46,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const [printerConfig, setPrinterConfig] = useState(() => {
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
-            if (stored) return JSON.parse(stored);
+            if (stored) return applyDefaultSunmiMaxCols(JSON.parse(stored));
         } catch (e) {}
-        return { kitchen_categories: [], bar_categories: [] };
+        return applyDefaultSunmiMaxCols({ kitchen_categories: [], bar_categories: [] });
     });
 
     useEffect(() => {
@@ -56,7 +56,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
             try {
                 const stored = localStorage.getItem('onhaus_printer_config');
                 if (stored) {
-                    setPrinterConfig(JSON.parse(stored));
+                    setPrinterConfig(applyDefaultSunmiMaxCols(JSON.parse(stored)));
                 }
             } catch (e) {}
 
@@ -86,6 +86,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     if (settingsMap.receipt_shop_vat) setReceiptShopVat(settingsMap.receipt_shop_vat);
                     if (settingsMap.receipt_shop_logo_url) setReceiptShopLogoUrl(settingsMap.receipt_shop_logo_url);
 
+                    onlineConfig = applyDefaultSunmiMaxCols(onlineConfig);
                     setPrinterConfig(onlineConfig);
                     localStorage.setItem('onhaus_printer_config', JSON.stringify(onlineConfig));
                 }
@@ -227,6 +228,15 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         const stored = localStorage.getItem('onhaus_printer_config');
                         if (stored) currentPrinterConfig = JSON.parse(stored);
                     } catch (e) {}
+                    if (settingsMap.printer_config) {
+                        try {
+                            currentPrinterConfig = { ...currentPrinterConfig, ...JSON.parse(settingsMap.printer_config) };
+                        } catch (e) {}
+                    }
+                    currentPrinterConfig = applyDefaultSunmiMaxCols(currentPrinterConfig);
+                    try {
+                        localStorage.setItem('onhaus_printer_config', JSON.stringify(currentPrinterConfig));
+                    } catch (e) {}
 
                     loadedConfig = {
                         shopName: settingsMap.receipt_shop_name,
@@ -239,7 +249,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         divider_style: currentPrinterConfig.divider_style || printerConfig.divider_style || 'dashed',
                         footer_ascii_art: currentPrinterConfig.footer_ascii_art || printerConfig.footer_ascii_art || '',
                         kitchen_categories: currentPrinterConfig.kitchen_categories || printerConfig.kitchen_categories || [],
-                        bar_categories: currentPrinterConfig.bar_categories || printerConfig.bar_categories || []
+                        bar_categories: currentPrinterConfig.bar_categories || printerConfig.bar_categories || [],
+                        cashier_max_cols: currentPrinterConfig.cashier_max_cols ?? printerConfig.cashier_max_cols,
+                        kitchen_max_cols: currentPrinterConfig.kitchen_max_cols ?? printerConfig.kitchen_max_cols
                     };
                 }
             } catch (err) {
@@ -941,7 +953,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">พนักงาน / STAFF</span> <span class="val">${staffName}</span></div>` : ''}
                         
                         <!-- Proof Deposit Details -->
-                        ${(!isKitchenTab && depositAmt > 0) ? `
+                        ${(!isKitchen && depositAmt > 0) ? `
                             <div style="border-top: 1px dashed black; margin-top: 6px; padding-top: 6px;">
                                 <div class="row" style="font-weight: bold; color: #000;"><span>ยอดโอนมัดจำแล้ว:</span> <span>฿${Math.ceil(depositAmt).toLocaleString()}</span></div>
                                 <div class="row" style="font-weight: bold; color: #d00000;"><span>ยอดคงเหลือชำระเพิ่ม:</span> <span>฿${Math.ceil(balanceDue).toLocaleString()}</span></div>
@@ -962,7 +974,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     ${noteHtml}
 
                     ${(() => {
-                        if (!isKitchenTab) {
+                        if (!isKitchen) {
                             let art = printerConfig?.footer_ascii_art || getStoredShopSetting('footer_ascii_art', '');
                             return `
                                 ${art ? `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>` : ''}
@@ -1036,7 +1048,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
             shopFooter: receiptShopFooter,
             kitchen_categories: printerConfig.kitchen_categories || [],
             bar_categories: printerConfig.bar_categories || [],
-            divider_style: printerConfig.divider_style || 'dashed'
+            divider_style: printerConfig.divider_style || 'dashed',
+            cashier_max_cols: printerConfig.cashier_max_cols,
+            kitchen_max_cols: printerConfig.kitchen_max_cols
         };
 
         if (printerType === 'sunmi') {

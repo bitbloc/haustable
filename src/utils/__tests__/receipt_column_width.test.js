@@ -30,8 +30,20 @@ describe('receipt column width (80mm)', () => {
         expect(await dividerWidth({ cashier_paper_size: '80mm', cashier_max_cols: 64 })).toBe(48)
     })
 
-    it('drops the kitchen gutter at full width so kitchen lines do not wrap', async () => {
+    it('centres kitchen and bar order slips symmetrically on the 48-column head and uses full 48 columns when set to 48', async () => {
         expect(await dividerWidth({ kitchen_paper_size: '80mm', kitchen_max_cols: 48 }, 'kitchen')).toBe(48)
-        expect(await dividerWidth({ kitchen_paper_size: '80mm' }, 'kitchen')).toBe(38) // 2-space gutter + 36
+        expect(await dividerWidth({ kitchen_paper_size: '80mm' }, 'kitchen')).toBe(42) // 6-space margin + 36, centred just like receipt
+    })
+
+    it('defaults Sunmi 80mm printers to 48 columns via applyDefaultSunmiMaxCols while preserving explicit overrides', async () => {
+        const { applyDefaultSunmiMaxCols } = await import('../printerHelper')
+        expect(applyDefaultSunmiMaxCols({ cashier_printer_type: 'sunmi', cashier_paper_size: '80mm' })).toMatchObject({
+            cashier_max_cols: 48,
+            kitchen_max_cols: 48
+        })
+        expect(applyDefaultSunmiMaxCols({ cashier_printer_type: 'sunmi', cashier_paper_size: '80mm', cashier_max_cols: 36, kitchen_max_cols: 42 })).toMatchObject({
+            cashier_max_cols: 36,
+            kitchen_max_cols: 42
+        })
     })
 })

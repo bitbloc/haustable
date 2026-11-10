@@ -8,6 +8,7 @@ import { supabase } from './lib/supabaseClient';
 import { DEFAULT_CRM_TIERS, parseTiersConfig } from './utils/crmHelper';
 import { getAppOrigin } from './utils/urlHelper';
 import { logStaffActivity } from './utils/auditLogger';
+import { applyDefaultSunmiMaxCols } from './utils/printerHelper';
 
 // Subcomponents
 import CheckinManager from './components/admin/CheckinManager';
@@ -129,11 +130,13 @@ export default function AdminSettings() {
         cashier_printer_port: '9100',
         cashier_printer_bt_name: 'CashierPrinter',
         cashier_paper_size: '80mm',
+        cashier_max_cols: 48,
         kitchen_printer_type: 'sunmi',
         kitchen_printer_ip: '192.168.1.200',
         kitchen_printer_port: '9100',
         kitchen_printer_bt_name: 'KitchenPrinter',
         kitchen_paper_size: '80mm',
+        kitchen_max_cols: 48,
         footer_ascii_art: `T H A N K   Y O U\n  S E E   Y O U   A G A I N`,
         shop_footer_text: 'THANK YOU FOR YOUR VISIT',
         divider_style: 'dashed',
@@ -186,7 +189,7 @@ export default function AdminSettings() {
             const stored = localStorage.getItem('onhaus_printer_config');
             if (stored) {
                 try {
-                    setPrinterConfig(JSON.parse(stored));
+                    setPrinterConfig(applyDefaultSunmiMaxCols(JSON.parse(stored)));
                 } catch (err) {
                     console.error('Error reading stored printer settings:', err);
                 }
@@ -200,7 +203,7 @@ export default function AdminSettings() {
                     .maybeSingle();
 
                 if (data && data.value) {
-                    const onlineConfig = JSON.parse(data.value);
+                    const onlineConfig = applyDefaultSunmiMaxCols(JSON.parse(data.value));
                     setPrinterConfig(onlineConfig);
                     localStorage.setItem('onhaus_printer_config', JSON.stringify(onlineConfig));
                 }

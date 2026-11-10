@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
 import { Printer as CapgoPrinter } from '@capgo/capacitor-printer';
-import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from '../../../utils/printerHelper';
+import { printToBluetoothDirect, encodeShiftReportData, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from '../../../utils/printerHelper';
 import { simulateWmaOrder } from '../../../utils/wmaNativeBridge';
 import { getAudioVolume, setAudioVolume, isAudioMuted, setAudioMuted, toggleAudioMute, testPlayAlertSound, unlockAudioEngine } from '../../../utils/audioHelper';
 
@@ -38,24 +38,27 @@ const ASCII_ART_PRESETS = [
 ];
 
 // Text columns per receipt line. 80mm printheads fit 48 (58mm: 32); narrower widths leave side margins
-// but are safe on every printer model. Unset = 36 / 26 (project default).
+// but are safe on every printer model. Sunmi 80mm defaults to 48 (full width).
 const RECEIPT_WIDTH_OPTIONS = {
     '80mm': [
-        { value: '', label: '36 ตัวอักษร · ปลอดภัยทุกรุ่น (ค่าเริ่มต้น)' },
-        { value: '42', label: '42 ตัวอักษร' },
-        { value: '48', label: '48 ตัวอักษร · เต็มแผ่น (Sunmi D2s / เครื่องในตัว)' }
+        { value: '48', label: '48 ตัวอักษร · เต็มแผ่น 80mm (Sunmi D2s Plus / เครื่องในตัว · แนะนำ)' },
+        { value: '42', label: '42 ตัวอักษร · เว้นขอบมาตรฐาน (ซ้าย-ขวาฝั่งละ 3 ช่อง)' },
+        { value: '36', label: '36 ตัวอักษร · กะทัดรัด (ปลอดภัยสำหรับเครื่องพิมพ์ทุกรุ่น)' }
     ],
     '58mm': [
-        { value: '', label: '26 ตัวอักษร · ปลอดภัยทุกรุ่น (ค่าเริ่มต้น)' },
-        { value: '32', label: '32 ตัวอักษร · เต็มแผ่น' }
+        { value: '32', label: '32 ตัวอักษร · เต็มแผ่น 58mm' },
+        { value: '26', label: '26 ตัวอักษร · กะทัดรัด (ปลอดภัยทุกรุ่น)' }
     ]
 };
 
 function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
     const paper = (role === 'kitchen' ? printerConfig.kitchen_paper_size : printerConfig.cashier_paper_size) === '58mm' ? '58mm' : '80mm';
+    const printerType = (role === 'kitchen' ? printerConfig.kitchen_printer_type : printerConfig.cashier_printer_type) || 'sunmi';
     const key = `${role}_max_cols`;
     const options = RECEIPT_WIDTH_OPTIONS[paper];
-    const current = options.some(o => o.value === String(printerConfig[key] ?? '')) ? String(printerConfig[key] ?? '') : '';
+    const defaultVal = paper === '58mm' ? '26' : (printerType === 'sunmi' ? '48' : '36');
+    const rawVal = String(printerConfig[key] ?? '');
+    const current = options.some(o => o.value === rawVal) ? rawVal : defaultVal;
     return (
         <div>
             <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
@@ -66,10 +69,10 @@ function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
                 onChange={(e) => handleSavePrinter({ ...printerConfig, [key]: e.target.value ? Number(e.target.value) : null })}
                 className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] cursor-pointer"
             >
-                {options.map(o => <option key={o.value || 'default'} value={o.value}>{o.label}</option>)}
+                {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <p className="text-[10px] text-[var(--color-neutral)] mt-1 leading-relaxed">
-                หลังเปลี่ยน ให้กดพิมพ์ทดสอบ ถ้าบรรทัดล้นหรือตกบรรทัด ให้ลดลงหนึ่งระดับ
+                สำหรับ Sunmi D2s Plus (80mm) แนะนำ 48 ตัวอักษรเพื่อให้เต็มหน้ากระดาษพอดี หลังเปลี่ยนให้กดพิมพ์ทดสอบด้านล่าง
             </p>
         </div>
     );
@@ -201,12 +204,35 @@ export default function HardwarePrintersTab({
             discounts: 150,
             cashRevenue: 1300,
             qrRevenue: 1000,
-            netRevenue: 2300
+            netRevenue: 2300,
+            maxCols: printerConfig.cashier_max_cols,
+            cashier_max_cols: printerConfig.cashier_max_cols
+        };
+
+        const dummyKitchenBooking = {
+            id: 'TEST-01',
+            short_id: 'TEST',
+            created_at: new Date().toISOString(),
+            booking_type: 'dine_in',
+            pax: 2,
+            tables_layout: { table_name: '01' },
+            order_items: [
+                { quantity: 2, price_at_time: 120, custom_name: 'ข้าวซอสญี่ปุ่น - หมูซูวี', destination: 'kitchen', menu_items: { name: 'ข้าวซอสญี่ปุ่น - หมูซูวี' } },
+                { quantity: 1, price_at_time: 85, custom_name: 'ต้มยำกุ้งน้ำข้น', destination: 'kitchen', menu_items: { name: 'ต้มยำกุ้งน้ำข้น' } }
+            ]
+        };
+
+        const buildTestBytes = (targetPrinterType, defaultSize = '80mm') => {
+            const activeSize = configSize || defaultSize;
+            if (type === 'kitchen') {
+                return encodeReceiptData(dummyKitchenBooking, 'kitchen_all', 'cash', {}, activeSize, printerConfig, targetPrinterType);
+            }
+            return encodeShiftReportData(dummyReport, activeSize, targetPrinterType);
         };
 
         if (configType === 'sunmi') {
             try {
-                const rawBytes = encodeShiftReportData(dummyReport, '80mm', 'sunmi');
+                const rawBytes = buildTestBytes('sunmi', '80mm');
                 await printToSunmiBuiltIn(rawBytes);
                 toast.success(`ทดสอบพิมพ์ผ่าน SUNMI สำเร็จ`);
             } catch (err) {
@@ -215,7 +241,7 @@ export default function HardwarePrintersTab({
             }
         } else if (configType === 'rawbt') {
             try {
-                const rawBytes = encodeShiftReportData(dummyReport, configSize, 'rawbt');
+                const rawBytes = buildTestBytes('rawbt', '80mm');
                 toast.info(`กำลังส่งข้อมูลพิมพ์ไปที่แอป RawBT...`);
                 await printToRawBTWebSocket(rawBytes);
                 toast.success(`ทดสอบพิมพ์ผ่าน RawBT สำเร็จ`);
@@ -225,7 +251,7 @@ export default function HardwarePrintersTab({
             }
         } else if (configType === 'bluetooth') {
             try {
-                const rawBytes = encodeShiftReportData(dummyReport, '58mm', 'bluetooth');
+                const rawBytes = buildTestBytes('bluetooth', '58mm');
                 toast.info(`กำลังเชื่อมต่อบลูทูธ [${configBt}]...`);
                 await printToBluetoothDirect(configBt, rawBytes);
                 toast.success(`ส่งข้อมูลพิมพ์ไปยัง [${configBt}] เรียบร้อย`);
