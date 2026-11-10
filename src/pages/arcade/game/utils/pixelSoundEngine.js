@@ -34,7 +34,9 @@ class PixelSoundEngine {
   }
 
   setMuted(isMuted) {
-    this.muted = !!isMuted;
+    const next = !!isMuted;
+    if (this.muted === next) return;
+    this.muted = next;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('arcade_sound_muted', this.muted ? 'true' : 'false');
@@ -263,22 +265,67 @@ class PixelSoundEngine {
 export const pixelSound = new PixelSoundEngine();
 
 /**
- * Unified Haus Arcade Rank System
- * Evaluates a player's score according to the game mode ('flappy' | 'tai_pla' | 'leaderboard')
- * and returns complete Rank Badge metadata, Thai/English titles, and reward unlock progress.
+ * Returns current Bangkok (UTC+7) year-month key, e.g. "2026-11",
+ * and the UTC ISO timestamp corresponding to the 1st of the current month 00:00:00 in Bangkok.
  */
-export function getArcadeRank(score = 0, mode = 'leaderboard') {
-  const numScore = Math.max(0, Number(score) || 0);
+export function getBangkokMonthInfo() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const bkkNow = new Date(utcMs + 7 * 3600000);
+  const year = bkkNow.getFullYear();
+  const month = bkkNow.getMonth(); // 0-indexed
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-  // Thresholds:
-  // Flappy Cat (Pipe count): S+ >= 40, S >= 35, A >= 20, B >= 10, C < 10
-  // Tai-Pla Run (Runner points): S+ >= 100, S >= 60, A >= 35, B >= 15, C < 15
-  // Unified Leaderboard: Uses standard Arcade Reward milestones (40+ = S+, 35+ = S, 20+ = A, 10+ = B, <10 = C)
-  const isRunner = mode === 'tai_pla';
-  const tSPlus = isRunner ? 100 : 40;
-  const tS = isRunner ? 60 : 35;
-  const tA = isRunner ? 35 : 20;
-  const tB = isRunner ? 15 : 10;
+  // Midnight on day 1 of current month in Bangkok converted back to UTC
+  const bkkMonthStartUtcMs = Date.UTC(year, month, 1, 0, 0, 0, 0) - 7 * 3600000;
+  const monthStartISO = new Date(bkkMonthStartUtcMs).toISOString();
+
+  return { monthKey, monthStartISO, year, month: month + 1 };
+}
+
+/**
+ * Ensures localStorage arcade scores (guest leaderboard & high scores) reset automatically every month.
+ */
+export function syncMonthlyArcadeStorage() {
+  const { monthKey, monthStartISO } = getBangkokMonthInfo();
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const savedMonth = window.localStorage.getItem('arcade_leaderboard_month');
+      if (savedMonth !== monthKey) {
+        window.localStorage.setItem('arcade_leaderboard_month', monthKey);
+        window.localStorage.removeItem('local_guest_leaderboard');
+        window.localStorage.setItem('tai_pla_high_score', '0');
+      } else {
+        // Also prune any individual local guest entries older than current month
+        const rawLocal = JSON.parse(window.localStorage.getItem('local_guest_leaderboard') || '[]');
+        if (Array.isArray(rawLocal) && rawLocal.length > 0) {
+          const monthStartMs = new Date(monthStartISO).getTime();
+          const filtered = rawLocal.filter((item) => {
+            const ts = item?.created_at ? new Date(item.created_at).getTime() : 0;
+            return ts >= monthStartMs;
+          });
+          if (filtered.length !== rawLocal.length) {
+            window.localStorage.setItem('local_guest_leaderboard', JSON.stringify(filtered));
+          }
+        }
+      }
+    }
+  } catch (e) {}
+  return { monthKey, monthStartISO };
+}
+
+/**
+ * Unified Haus Arcade Rank System
+ * Evaluates a player's score using unified reward thresholds across all games:
+ * S+ >= 40, S >= 35, A >= 20, B >= 10, C < 10
+ */
+export function getArcadeRank(score = 0) {
+  const numScore = Math.max(0, Math.floor(Number(score) || 0));
+
+  const tSPlus = 40;
+  const tS = 35;
+  const tA = 20;
+  const tB = 10;
 
   if (numScore >= tSPlus) {
     return {
@@ -365,7 +412,7 @@ export function getArcadeRank(score = 0, mode = 'leaderboard') {
       badgeBg: 'bg-sky-200',
       badgeText: 'text-sky-950',
       badgeBorder: 'border-[#181615]',
-      rewardText: `อีก ${tA - numScore} ${isRunner ? 'แต้ม' : 'ท่อ'} ปลดล็อกเหรียญ +1.00 XH`,
+      rewardText: `อีก ${tA - numScore} แต้ม ปลดล็อกเหรียญ +1.00 XH`,
       nextTarget: tA,
       nextRank: 'A',
       nextTier: 'A'
@@ -387,7 +434,7 @@ export function getArcadeRank(score = 0, mode = 'leaderboard') {
     badgeBg: 'bg-stone-200',
     badgeText: 'text-stone-800',
     badgeBorder: 'border-[#181615]/40',
-    rewardText: `สะสมให้ถึง ${tB} ${isRunner ? 'แต้ม' : 'ท่อ'} เพื่อเลื่อนสู่ RANK B`,
+    rewardText: `สะสมให้ถึง ${tB} แต้ม เพื่อเลื่อนสู่ RANK B`,
     nextTarget: tB,
     nextRank: 'B',
     nextTier: 'B'
@@ -395,17 +442,27 @@ export function getArcadeRank(score = 0, mode = 'leaderboard') {
 }
 
 /**
- * Deduplicates and normalizes Leaderboard entries so each unique player (by profile_id or display_name)
- * only occupies ONE rank slot with their highest recorded score.
+ * Deduplicates and normalizes Leaderboard entries for the current month only,
+ * so each unique player occupies ONE rank slot with their highest current-month score.
  */
 export function normalizeLeaderboard(rawEntries = [], localGuestEntries = []) {
+  const { monthStartISO } = getBangkokMonthInfo();
+  const monthStartMs = new Date(monthStartISO).getTime();
   const playerMap = new Map();
 
   const processEntry = (entry) => {
     if (!entry) return;
+    // Ignore stale entries from previous months
+    if (entry.created_at) {
+      const entryMs = new Date(entry.created_at).getTime();
+      if (!Number.isNaN(entryMs) && entryMs < monthStartMs) return;
+    }
+
     const rawName = (entry.display_name || entry.profiles?.nickname || entry.profiles?.display_name || 'GUEST').trim();
     const displayName = rawName.toUpperCase();
     const score = Math.max(0, parseInt(entry.score || 0, 10));
+    if (score <= 0) return;
+
     const key = entry.profile_id ? `uid_${entry.profile_id}` : `name_${displayName}`;
     const nameKey = `name_${displayName}`;
 
@@ -432,7 +489,7 @@ export function normalizeLeaderboard(rawEntries = [], localGuestEntries = []) {
         score,
         created_at: entry.created_at || new Date().toISOString()
       };
-      playerMap.set(nameKey, record);
+      playerMap.set(key, record);
     }
   };
 

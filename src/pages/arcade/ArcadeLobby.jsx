@@ -12,7 +12,7 @@ import FlappyCatGame from './FlappyCatGame';
 import TaiPlaMiniGame from './game/TaiPlaMiniGame';
 import ArcadePreview from './ArcadePreview';
 import { useLofi, LofiMiniPlayer, LofiStudio } from './lofi/LofiLounge';
-import { pixelSound, getArcadeRank, normalizeLeaderboard } from './game/utils/pixelSoundEngine';
+import { pixelSound, getArcadeRank, normalizeLeaderboard, syncMonthlyArcadeStorage } from './game/utils/pixelSoundEngine';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 
@@ -33,6 +33,7 @@ export default function ArcadeLobby() {
   });
   const [showStudioModal, setShowStudioModal] = useState(() => queryTab === 'lofi' || queryTab === 'chill');
   const [taiPlaHighScore, setTaiPlaHighScore] = useState(() => {
+    syncMonthlyArcadeStorage();
     return parseInt(localStorage.getItem('tai_pla_high_score') || '0', 10);
   });
   const [activeTab, setActiveTab] = useState(() => {
@@ -119,7 +120,7 @@ export default function ArcadeLobby() {
     }
   }, [session]);
 
-  // Fetch real-time top scores from Supabase leaderboard (deduplicated per player)
+  // Fetch real-time top scores from Supabase leaderboard (deduplicated per player & auto-reset monthly)
   const fetchLeaderboard = async (isManual = false) => {
     try {
       if (isManual) {
@@ -128,6 +129,15 @@ export default function ArcadeLobby() {
       } else if (leaderboard.length === 0) {
         setLoading(true);
       }
+
+      const { monthStartISO } = syncMonthlyArcadeStorage();
+
+      // Purge any stale leaderboard records from previous months so no old scores remain stuck
+      await supabase
+        .from('leaderboard')
+        .delete()
+        .lt('created_at', monthStartISO);
+
       const { data, error } = await supabase
         .from('leaderboard')
         .select(`
@@ -141,6 +151,7 @@ export default function ArcadeLobby() {
             nickname
           )
         `)
+        .gte('created_at', monthStartISO)
         .order('score', { ascending: false })
         .limit(40);
 
@@ -410,10 +421,13 @@ export default function ArcadeLobby() {
     pixelSound.play('tier_up');
 
     try {
+      const { monthStartISO } = syncMonthlyArcadeStorage();
+      const safeScore = Math.max(0, Math.floor(Number(claimScore) || 0));
+
       // Check if this guest name already exists on the leaderboard to avoid duplicate rows
       const { data: existingRows } = await supabase
         .from('leaderboard')
-        .select('id, score')
+        .select('id, score, created_at')
         .ilike('display_name', finalName)
         .is('profile_id', null)
         .order('score', { ascending: false })
@@ -422,11 +436,12 @@ export default function ArcadeLobby() {
       let dbError = null;
       if (existingRows && existingRows.length > 0) {
         const bestExisting = existingRows[0];
-        if (claimScore > (bestExisting.score || 0)) {
+        const isStaleMonth = !bestExisting.created_at || new Date(bestExisting.created_at) < new Date(monthStartISO);
+        if (isStaleMonth || safeScore > (bestExisting.score || 0)) {
           const { error: updErr } = await supabase
             .from('leaderboard')
             .update({
-              score: claimScore,
+              score: safeScore,
               display_name: finalName,
               created_at: new Date().toISOString()
             })
@@ -438,7 +453,8 @@ export default function ArcadeLobby() {
           .from('leaderboard')
           .insert({
             display_name: finalName,
-            score: claimScore
+            score: safeScore,
+            created_at: new Date().toISOString()
           });
         dbError = insErr;
       }
@@ -448,15 +464,17 @@ export default function ArcadeLobby() {
         const localScores = JSON.parse(localStorage.getItem('local_guest_leaderboard') || '[]');
         const existingIdx = localScores.findIndex(s => (s.display_name || '').toUpperCase() === finalName);
         if (existingIdx !== -1) {
-          if (claimScore > localScores[existingIdx].score) {
-            localScores[existingIdx].score = claimScore;
+          const existingCreated = localScores[existingIdx].created_at;
+          const isLocalStale = !existingCreated || new Date(existingCreated) < new Date(monthStartISO);
+          if (isLocalStale || safeScore > localScores[existingIdx].score) {
+            localScores[existingIdx].score = safeScore;
             localScores[existingIdx].created_at = new Date().toISOString();
           }
         } else {
           localScores.push({
             id: `guest_${Date.now()}`,
             display_name: finalName,
-            score: claimScore,
+            score: safeScore,
             created_at: new Date().toISOString()
           });
         }
@@ -488,40 +506,14 @@ export default function ArcadeLobby() {
   };
 
   const processClaimScore = () => {
-    if (!navigator.geolocation) {
-      // Geolocation not supported, still allow saving high score to leaderboard
-      saveScoreToDatabase(false);
-      return;
-    }
-
-    setClaimStatus('checking_gps');
-    setGpsLoading(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const clientLat = position.coords.latitude;
-        const clientLng = position.coords.longitude;
-        
-        const dist = getDistanceInKm(clientLat, clientLng, SHOP_LAT, SHOP_LNG);
-        setDistance(dist);
-        setGpsLoading(false);
-
-        const isNearby = dist <= MAX_RADIUS_KM;
-        await saveScoreToDatabase(isNearby);
-      },
-      async (error) => {
-        setGpsLoading(false);
-        console.warn('GPS permission error or unavailable, saving leaderboard anyway:', error);
-        // Fallback: save score to leaderboard even if GPS denied/unavailable
-        await saveScoreToDatabase(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
+    saveScoreToDatabase(true);
   };
 
-  const saveScoreToDatabase = async (isNearby = true) => {
+  const saveScoreToDatabase = async () => {
     try {
       setClaimStatus('saving');
+      const { monthStartISO } = syncMonthlyArcadeStorage();
+      const safeScore = Math.max(0, Math.floor(Number(claimScore) || 0));
       
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -536,18 +528,19 @@ export default function ArcadeLobby() {
       // Check if there is an existing score for this user
       const { data: existingLeaderboard, error: selectError } = await supabase
         .from('leaderboard')
-        .select('id, score')
+        .select('id, score, created_at')
         .eq('profile_id', session.user.id)
         .maybeSingle();
 
       if (selectError) throw selectError;
 
       if (existingLeaderboard) {
-        if (claimScore > existingLeaderboard.score) {
+        const isStaleMonth = !existingLeaderboard.created_at || new Date(existingLeaderboard.created_at) < new Date(monthStartISO);
+        if (isStaleMonth || safeScore > (existingLeaderboard.score || 0)) {
           const { error: updateError } = await supabase
             .from('leaderboard')
             .update({
-              score: claimScore,
+              score: safeScore,
               display_name: nameToDisplay,
               created_at: new Date().toISOString()
             })
@@ -561,27 +554,24 @@ export default function ArcadeLobby() {
           .insert({
             profile_id: session.user.id,
             display_name: nameToDisplay,
-            score: claimScore
+            score: safeScore,
+            created_at: new Date().toISOString()
           });
 
         if (insertError) throw insertError;
       }
 
-      // Call RPC to securely claim P2E rewards if player is verified at the store
-      if (isNearby) {
-        try {
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('claim_arcade_rewards', { p_score: claimScore });
+      // Call RPC to securely claim P2E xhaus rewards & raffle tickets based on score milestones
+      try {
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('claim_arcade_rewards', { p_score: safeScore });
 
-          if (rpcError) console.warn('P2E RPC error:', rpcError);
-          const message = rpcData?.message || 'สะสมประวัติคะแนนและรับเหรียญ xhaus สำเร็จ!';
-          setClaimResultMessage(message);
-        } catch (rpcErr) {
-          console.warn('RPC execution exception:', rpcErr);
-          setClaimResultMessage('บันทึกคะแนนเข้าทำเนียบยอดฝีมือสำเร็จ!');
-        }
-      } else {
-        setClaimResultMessage('บันทึกคะแนนของคุณลงทำเนียบ Leaderboard สำเร็จ! (สิทธิ์รับเหรียญ xhaus เพิ่มเติมสงวนไว้สำหรับผู้เล่นที่ร้าน)');
+        if (rpcError) console.warn('P2E RPC error:', rpcError);
+        const message = rpcData?.message || 'สะสมประวัติคะแนนและรับเหรียญ xhaus สำเร็จ!';
+        setClaimResultMessage(message);
+      } catch (rpcErr) {
+        console.warn('RPC execution exception:', rpcErr);
+        setClaimResultMessage('บันทึกคะแนนเข้าทำเนียบยอดฝีมือประจำเดือนสำเร็จ!');
       }
 
       confetti({
@@ -696,7 +686,7 @@ export default function ArcadeLobby() {
             <div className="flex flex-col gap-4 mt-2 font-mono text-xs">
               <div>
                 <h2 className="text-[10px] font-bold tracking-widest text-[#bd4924] uppercase mb-1">
-                  // GPS LOCK VERIFICATION
+                  // SCORE & REWARD VERIFICATION
                 </h2>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <h3 className="text-xl font-bold text-[#181615] font-pixel uppercase tracking-wide">
@@ -710,7 +700,7 @@ export default function ArcadeLobby() {
                   {earnedRank.rewardText}
                 </p>
                 <p className="text-[11px] text-[#57534e] leading-relaxed font-sans">
-                  ยืนยันพิกัด GPS เพื่อรับเหรียญ xhaus และบันทึกสถิติของคุณเข้าบอร์ดประจำสัปดาห์
+                  บันทึกคะแนนลงอันดับประจำเดือนและรับเหรียญ xhaus ตามเกณฑ์คะแนนทันที
                 </p>
               </div>
               <button
@@ -720,7 +710,7 @@ export default function ArcadeLobby() {
                 }}
                 className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-bold py-3.5 rounded-2xl cursor-pointer font-mono text-xs uppercase shadow-xs border-2 border-[#181615]"
               >
-                [ ยืนยัน GPS & บันทึกสถิติ ]
+                [ บันทึกสถิติ & รับเหรียญ XHAUS ]
               </button>
             </div>
           )}
@@ -1012,37 +1002,31 @@ export default function ArcadeLobby() {
               className="relative block w-full cursor-pointer border-b-2 border-[#181615] bg-[#3B7BA8]"
             >
               <ArcadePreview game="tai_pla" />
-              <span className="absolute top-3 left-3 flex items-center gap-1.5 bg-[#181615] text-[#FAF7F5] font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                <span className={`px-1 rounded-sm border ${taiPlaRank.badgeBg} ${taiPlaRank.badgeText} ${taiPlaRank.badgeBorder}`}>
-                  {taiPlaRank.rank}
+              {taiPlaHighScore > 0 && (
+                <span className="absolute top-3 left-3 bg-[#181615] text-[#FAF7F5] font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                  BEST {taiPlaHighScore}
                 </span>
-                <span>สถิติของคุณ {taiPlaHighScore}</span>
-              </span>
+              )}
             </button>
 
-            <div className="flex flex-col gap-4 p-5 sm:p-6 flex-1">
-              <div className="flex flex-col gap-1">
-                <h3 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-4 p-5 sm:p-6">
+              <div>
+                <h3 className="font-pixel text-xl sm:text-2xl font-bold text-[#181615] uppercase tracking-wider">
                   TAI-PLA RUN
                 </h3>
-                <p className="text-sm text-[#57534e] font-sans leading-relaxed">
-                  วิ่งริมโขงนครพนม กระโดดหลบปีศาจพริก แล้วเก็บปลา สะตอ และหน่อไม้มาปรุงแกงไตปลา
+                <p className="text-xs text-[#57534e] font-sans mt-0.5">
+                  วิ่งเก็บวัตถุดิบริมโขง
                 </p>
               </div>
-              <ul className="flex flex-wrap gap-2 font-mono text-[11px] font-bold text-[#181615]">
-                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">ตัวละคร 5 ตัว</li>
-                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">แตะเพื่อกระโดด</li>
-                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">ความเผ็ด 4 ระดับ</li>
-              </ul>
               <button
                 type="button"
                 onClick={() => {
                   pixelSound.play('ui_click');
                   setActiveMode('tai_pla');
                 }}
-                className="mt-auto w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-base py-4 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer tracking-wide transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
+                className="px-6 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-sans font-bold text-sm rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer whitespace-nowrap transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
               >
-                เล่น Tai-Pla Run
+                เล่นเลย
               </button>
             </div>
           </article>
@@ -1059,34 +1043,26 @@ export default function ArcadeLobby() {
               className="relative block w-full cursor-pointer border-b-2 border-[#181615] bg-[#3B7BA8]"
             >
               <ArcadePreview game="flappy" />
-              <span className="absolute top-3 left-3 bg-[#181615] text-[#E9F344] font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                ได้เหรียญ XHAUS
-              </span>
             </button>
 
-            <div className="flex flex-col gap-4 p-5 sm:p-6 flex-1">
-              <div className="flex flex-col gap-1">
-                <h3 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+            <div className="flex items-center justify-between gap-4 p-5 sm:p-6">
+              <div>
+                <h3 className="font-pixel text-xl sm:text-2xl font-bold text-[#181615] uppercase tracking-wider">
                   FLAPPY CAT
                 </h3>
-                <p className="text-sm text-[#57534e] font-sans leading-relaxed">
-                  พาแมวส้มบินลอดฝักสะตอเหนือแม่น้ำโขง ยิ่งผ่านได้ไกล ยิ่งได้รางวัลจากร้าน
+                <p className="text-xs text-[#57534e] font-sans mt-0.5">
+                  บินลอดฝักสะตอรับเหรียญ XHAUS
                 </p>
               </div>
-              <ul className="flex flex-wrap gap-2 font-mono text-[11px] font-bold text-[#181615]">
-                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">20 ท่อ +1 XH</li>
-                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">35 ท่อ +1 XH</li>
-                <li className="px-2.5 py-1 rounded-lg border border-[#181615]/25">40 ท่อ ตั๋วสุ่ม</li>
-              </ul>
               <button
                 type="button"
                 onClick={() => {
                   pixelSound.play('ui_click');
                   setActiveMode('flappy');
                 }}
-                className="mt-auto w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-mono font-bold text-base py-4 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer tracking-wide transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
+                className="px-6 py-3 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-sans font-bold text-sm rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer whitespace-nowrap transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
               >
-                เล่น Flappy Cat
+                เล่นเลย
               </button>
             </div>
           </article>
@@ -1184,7 +1160,7 @@ export default function ArcadeLobby() {
                 WEEKLY RAFFLE (ตั๋วสุ่ม)
               </span>
               <span className={`text-base sm:text-lg font-bold mt-0.5 ${userStats.todayRaffle40 ? 'text-[#bd4924]' : 'text-[#78716c]'}`}>
-                {userStats.todayRaffle40 ? '1 TICKET // ได้รับแล้ว' : 'สะสมครบ 40 ท่อ'}
+                {userStats.todayRaffle40 ? '1 TICKET // ได้รับแล้ว' : 'สะสมครบ 40 แต้ม'}
               </span>
             </div>
           </div>
@@ -1195,7 +1171,7 @@ export default function ArcadeLobby() {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615]" />
               <h3 className="font-pixel text-base sm:text-lg font-bold uppercase tracking-wider text-[#181615]">
-                WEEKLY TOP 10 ROSTER // ทำเนียบยอดฝีมือประจำสัปดาห์
+                MONTHLY TOP 10 // อันดับสูงสุดประจำเดือน (รีเซ็ตทุกวันที่ 1)
               </h3>
             </div>
             <div className="flex items-center gap-2">

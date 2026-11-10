@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { getArcadeRank, normalizeLeaderboard } from '../../pages/arcade/game/utils/pixelSoundEngine'
+import { getArcadeRank, normalizeLeaderboard, syncMonthlyArcadeStorage } from '../../pages/arcade/game/utils/pixelSoundEngine'
 
 export default function AdminArcade() {
     const [leaderboard, setLeaderboard] = useState([])
@@ -17,10 +17,19 @@ export default function AdminArcade() {
         try {
             if (showLoadingState) setLoading(true)
 
-            // 1. Fetch Leaderboard & deduplicate by player
+            const { monthStartISO } = syncMonthlyArcadeStorage()
+
+            // Purge stale leaderboard entries from previous months automatically
+            await supabase
+                .from('leaderboard')
+                .delete()
+                .lt('created_at', monthStartISO)
+
+            // 1. Fetch Leaderboard (current month only) & deduplicate by player
             const { data: lbData, error: lbError } = await supabase
                 .from('leaderboard')
                 .select('*')
+                .gte('created_at', monthStartISO)
                 .order('score', { ascending: false })
 
             if (lbError) throw lbError

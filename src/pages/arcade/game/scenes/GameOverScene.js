@@ -30,6 +30,7 @@ export default class GameOverScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     const rankInfo = getArcadeRank(this.finalScore, 'flappy');
+    const currentRank = rankInfo.rank || rankInfo.tier || 'C';
 
     // 1. Static/Parallax backgrounds
     this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0).setDepth(0);
@@ -50,94 +51,48 @@ export default class GameOverScene extends Phaser.Scene {
       try { navigator.vibrate([40, 50, 40]); } catch (e) {}
     }
 
-    // 3. Central Atelier Rams Enclosure Card
-    const cardY = height / 2 - 15;
-    const cardW = Math.min(width - 44, 440);
-    const cardH = this.finalScore > 0 ? 430 : 370;
-    
-    // Card background (Tinted warm charcoal-ink)
+    // 3. Clean Minimal Enclosure Card
+    const cardY = height / 2 - 10;
+    const cardW = Math.min(width - 56, 320);
+    const cardH = this.finalScore > 0 ? 290 : 230;
+
     this.add.rectangle(width / 2, cardY, cardW, cardH, 0x181615, 0.95)
       .setOrigin(0.5)
       .setDepth(10)
       .setStrokeStyle(2, 0x5C544D);
 
-    // Subtle inner hairline divider
-    const headerLineY = cardY - cardH / 2 + 68;
-    const lineGraphics = this.add.graphics().setDepth(11);
-    lineGraphics.lineStyle(1, 0x3D3835, 1.0);
-    lineGraphics.lineBetween(width / 2 - cardW / 2 + 20, headerLineY, width / 2 + cardW / 2 - 20, headerLineY);
-
-    // 4. Header Section: Atelier Clean Upright Typography
-    const tagY = cardY - cardH / 2 + 24;
-    this.add.text(width / 2, tagY, 'IN THE HAUS • ATELIER ARCADE', {
+    // 4. Title & Big Score
+    const topY = cardY - cardH / 2 + 36;
+    this.add.text(width / 2, topY, 'GAME OVER', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
-      fontSize: '11px',
-      fill: '#89827B',
-      letterSpacing: 2
-    }).setOrigin(0.5).setDepth(12);
-
-    this.add.text(width / 2, tagY + 24, 'GAME OVER', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
-      fontSize: '24px',
-      fill: '#BD4924', // Terracotta clay accent
+      fontSize: '20px',
+      fill: '#BD4924',
       fontStyle: 'bold',
-      letterSpacing: 1
+      letterSpacing: 1.5
     }).setOrigin(0.5).setDepth(12);
 
-    // 5. Monospace Score Panel (Minimalist Instrument readout)
-    const scoreY = headerLineY + 46;
-    this.add.text(width / 2, scoreY - 20, 'FINAL SCORE / คะแนนสุทธิ', {
-      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '11px',
-      fill: '#89827B'
-    }).setOrigin(0.5).setDepth(12);
-
-    const scoreDisplay = this.add.text(width / 2, scoreY + 14, `${this.finalScore}`, {
+    const scoreDisplay = this.add.text(width / 2, topY + 52, `${this.finalScore}`, {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
-      fontSize: '46px',
-      fill: '#FAF7F5', // Warm cream
+      fontSize: '48px',
+      fill: '#FAF7F5',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(12);
 
-    // Subtle score entrance scale
     this.tweens.add({
       targets: scoreDisplay,
       scaleX: { from: 0.8, to: 1.0 },
       scaleY: { from: 0.8, to: 1.0 },
-      duration: 350,
+      duration: 300,
       ease: 'Back.easeOut'
     });
 
-    // 5B. Rank Tier & Reward Evaluation Box
-    const rankBoxY = scoreY + 68;
-    const rankBoxW = cardW - 48;
-    const currentRank = rankInfo.rank || rankInfo.tier || 'C';
-    const isGoldTier = currentRank === 'S+' || currentRank === 'S';
-    this.add.rectangle(width / 2, rankBoxY, rankBoxW, 56, 0x24201E, 1.0)
-      .setOrigin(0.5)
-      .setDepth(12)
-      .setStrokeStyle(1, isGoldTier ? 0xE9F344 : 0x5C544D);
-
-    const rankBadgeFill = currentRank === 'S+' ? '#E9F344' : (currentRank === 'S' ? '#FBBF24' : (currentRank === 'A' ? '#34D399' : '#FAF7F5'));
-    const displayBadge = rankInfo.badge || `[RANK ${currentRank}]`;
-    const displayTitle = rankInfo.titleTh || rankInfo.title || 'น้องใหม่ในบ้าน';
-
-    this.add.text(width / 2, rankBoxY - 11, `${displayBadge} — ${displayTitle}`, {
-      fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
-      fontSize: '13px',
+    const rankBadgeFill = currentRank === 'S+' ? '#E9F344' : (currentRank === 'S' ? '#FBBF24' : (currentRank === 'A' ? '#34D399' : '#A8A29E'));
+    this.add.text(width / 2, topY + 96, `RANK ${currentRank}`, {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '12px',
       fill: rankBadgeFill,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(13);
-
-    const nextRankName = rankInfo.nextTier || rankInfo.nextRank;
-    const rewardSub = (rankInfo.nextTarget && nextRankName)
-      ? `${rankInfo.rewardText || ''} (อีก ${Math.max(0, rankInfo.nextTarget - this.finalScore)} ท่อ สู่ RANK ${nextRankName})`
-      : (rankInfo.rewardText || 'ยินดีด้วย! คุณสะสมสถิติประจำวันสำเร็จ');
-
-    this.add.text(width / 2, rankBoxY + 12, rewardSub, {
-      fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
-      fontSize: '10px',
-      fill: '#D9D2CB'
+      fontStyle: 'bold',
+      letterSpacing: 1
     }).setOrigin(0.5).setDepth(13);
 
     const triggerRestart = () => {
@@ -153,61 +108,20 @@ export default class GameOverScene extends Phaser.Scene {
       this.scene.start('PlayScene');
     };
 
-    // 6. Action Buttons Section
-    let currentBtnY = rankBoxY + 58;
+    // 5. Action Buttons
+    let currentBtnY = topY + 142;
+    const btnW = cardW - 40;
 
-    // Direct Score Claim Button (if score > 0)
-    let claimBtn = null;
-    let claimBtnBg = null;
-    if (this.finalScore > 0) {
-      const btnW = cardW - 48;
-      claimBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 44, 0xBD4924)
-        .setOrigin(0.5)
-        .setDepth(20)
-        .setStrokeStyle(1, 0xE05A36)
-        .setInteractive({ useHandCursor: true });
-
-      claimBtn = this.add.text(width / 2, currentBtnY, '[ บันทึกแต้ม / SAVE SCORE ]', {
-        fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        fontSize: '13px',
-        fill: '#FAF7F5',
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
-
-      const handleClaimClick = (pointer) => {
-        if (pointer && pointer.event) pointer.event.stopPropagation();
-        this.isClaiming = true;
-        pixelSound.play('tier_up');
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          try { navigator.vibrate([20, 30]); } catch (e) {}
-        }
-        claimBtn.setText('กำลังเปิดหน้าต่างบันทึกคะแนน…');
-        claimBtnBg.setFillStyle(0x2B2725);
-        claimBtnBg.setStrokeStyle(1, 0x5C544D);
-
-        const onClaimScore = this.registry.get('onClaimScore');
-        if (onClaimScore) {
-          onClaimScore(this.finalScore);
-        }
-      };
-
-      claimBtn.on('pointerdown', handleClaimClick);
-      claimBtnBg.on('pointerdown', handleClaimClick);
-
-      currentBtnY += 54;
-    }
-
-    // "PLAY AGAIN / เล่นอีกครั้ง" Button
-    const retryBtnW = cardW - 48;
-    const restartBtnBg = this.add.rectangle(width / 2, currentBtnY, retryBtnW, 44, 0xE9F344)
+    // "เล่นอีกครั้ง" Button
+    const restartBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 44, 0xE9F344)
       .setOrigin(0.5)
       .setDepth(20)
       .setStrokeStyle(2, 0x181615)
       .setInteractive({ useHandCursor: true });
 
-    const restartBtn = this.add.text(width / 2, currentBtnY, '[ ▶ เล่นอีกครั้ง / PLAY AGAIN ]', {
-      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '13px',
+    const restartBtn = this.add.text(width / 2, currentBtnY, 'เล่นอีกครั้ง', {
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, sans-serif',
+      fontSize: '15px',
       fill: '#181615',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
@@ -224,47 +138,59 @@ export default class GameOverScene extends Phaser.Scene {
     restartBtn.on('pointerdown', handleRestartClick);
     restartBtnBg.on('pointerdown', handleRestartClick);
 
-    // 7. Cooldown Lockout & Helper Subtext
-    const subtextY = currentBtnY + 34;
-    const helperSubtext = this.add.text(width / 2, subtextY, 'โปรดรอสักครู่…', {
-      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '10px',
-      fill: '#69635D'
-    }).setOrigin(0.5).setDepth(15);
+    // Direct Score Claim Button (if score > 0)
+    let claimBtn = null;
+    let claimBtnBg = null;
+    if (this.finalScore > 0) {
+      currentBtnY += 54;
+      claimBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 42, 0xBD4924)
+        .setOrigin(0.5)
+        .setDepth(20)
+        .setStrokeStyle(1, 0xE05A36)
+        .setInteractive({ useHandCursor: true });
 
-    // 800ms cooldown timer to prevent accidental taps from death
-    this.time.delayedCall(800, () => {
+      claimBtn = this.add.text(width / 2, currentBtnY, 'บันทึกแต้ม', {
+        fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, sans-serif',
+        fontSize: '14px',
+        fill: '#FAF7F5',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
+
+      const handleClaimClick = (pointer) => {
+        if (pointer && pointer.event) pointer.event.stopPropagation();
+        this.isClaiming = true;
+        pixelSound.play('tier_up');
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate([20, 30]); } catch (e) {}
+        }
+        claimBtn.setText('กำลังบันทึก…');
+        claimBtnBg.setFillStyle(0x2B2725);
+        claimBtnBg.setStrokeStyle(1, 0x5C544D);
+
+        const onClaimScore = this.registry.get('onClaimScore');
+        if (onClaimScore) {
+          onClaimScore(this.finalScore);
+        }
+      };
+
+      claimBtn.on('pointerdown', handleClaimClick);
+      claimBtnBg.on('pointerdown', handleClaimClick);
+    }
+
+    // 6. Cooldown timer to prevent accidental taps from death
+    this.time.delayedCall(650, () => {
       this.canRestart = true;
-      if (helperSubtext && helperSubtext.active) {
-        helperSubtext.setText('แตะเพื่อเริ่มใหม่ • กด SPACE / ENTER');
-        helperSubtext.setFill('#89827B');
-        
-        // Gentle pulse on helper subtext
-        this.tweens.add({
-          targets: helperSubtext,
-          alpha: { from: 1.0, to: 0.5 },
-          duration: 900,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      }
     });
 
-    // 8. Controlled background tap: only triggers restart after 800ms cooldown and not when claiming
     this.input.on('pointerdown', (pointer) => {
       if (!this.canRestart || this.isClaiming) return;
-      
-      // If clicking inside the card's claim button zone, do not trigger background restart
       if (this.finalScore > 0 && claimBtnBg) {
         const bounds = claimBtnBg.getBounds();
         if (bounds.contains(pointer.x, pointer.y)) return;
       }
-
       triggerRestart();
     });
 
-    // Keyboard restart controls
     if (this.input.keyboard) {
       this.input.keyboard.on('keydown-SPACE', () => {
         if (this.canRestart && !this.isClaiming) triggerRestart();

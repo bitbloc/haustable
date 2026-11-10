@@ -68,8 +68,8 @@ export default class PlayScene extends Phaser.Scene {
       cornerLogo.setAlpha(0.65); // Semi-transparent
     }
 
-    // 3. Atelier Rams Monospace Scoreboard Pill & Live Rank Badge (Top-Center)
-    this.scorePill = this.add.rectangle(width / 2, 48, 88, 40, 0x181615, 0.88)
+    // 3. Minimal Monospace Scoreboard Pill (Top-Center)
+    this.scorePill = this.add.rectangle(width / 2, 48, 84, 40, 0x181615, 0.88)
       .setOrigin(0.5)
       .setDepth(99)
       .setStrokeStyle(2, 0x5C544D);
@@ -78,18 +78,6 @@ export default class PlayScene extends Phaser.Scene {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '26px',
       fill: '#FAF7F5',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(100);
-
-    this.rankPill = this.add.rectangle(width / 2, 82, 136, 20, 0x181615, 0.9)
-      .setOrigin(0.5)
-      .setDepth(99)
-      .setStrokeStyle(1, 0xBD4924);
-
-    this.rankText = this.add.text(width / 2, 82, '[RANK C] มือใหม่หัดบิน', {
-      fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
-      fontSize: '10px',
-      fill: '#E9F344',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(100);
 
@@ -542,56 +530,11 @@ export default class PlayScene extends Phaser.Scene {
       });
     }
 
-    // Update live Rank Badge & trigger Milestone Banner when crossing Rank thresholds (10, 20, 35, 40)
     const currentTier = rankInfo.rank || rankInfo.tier || 'C';
-    const badgeStr = rankInfo.badge || `[RANK ${currentTier}]`;
-    const titleStr = rankInfo.titleTh || rankInfo.title || '';
-    if (this.rankText) {
-      this.rankText.setText(`${badgeStr} ${titleStr}`.trim());
-    }
     if (currentTier !== this.currentRankTier) {
       this.currentRankTier = currentTier;
       pixelSound.play('rank_up');
-
-      if (this.rankPill && this.rankText) {
-        this.tweens.add({
-          targets: [this.rankPill, this.rankText],
-          scaleX: 1.25,
-          scaleY: 1.25,
-          duration: 180,
-          yoyo: true,
-          repeat: 1,
-          ease: 'Back.easeOut'
-        });
-      }
-
-      // Milestone Celebration Banner
-      const width = this.cameras.main.width;
-      const bannerBg = this.add.rectangle(width / 2, 122, width - 48, 34, 0x181615, 0.95)
-        .setOrigin(0.5)
-        .setDepth(105)
-        .setStrokeStyle(2, 0xE9F344);
-      const bannerTxt = this.add.text(width / 2, 122, `★ ${rankInfo.badge} UNLOCKED // ${rankInfo.rewardText} ★`, {
-        fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
-        fontSize: '11px',
-        fill: '#E9F344',
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(106);
-
-      this.tweens.add({
-        targets: [bannerBg, bannerTxt],
-        y: 114,
-        alpha: { from: 1, to: 0 },
-        delay: 1600,
-        duration: 450,
-        ease: 'Quad.easeOut',
-        onComplete: () => {
-          bannerBg.destroy();
-          bannerTxt.destroy();
-        }
-      });
     } else {
-      // Standard Pop-Pixel point chime
       pixelSound.play('point');
     }
 
@@ -703,14 +646,6 @@ export default class PlayScene extends Phaser.Scene {
 
     // Danger Telegraph Laser Guide Line (Crimson red)
     const dangerLine = this.add.rectangle(width / 2, targetY, width, 2, 0xef4444, 0.45).setDepth(18);
-    
-    // Danger tag
-    const dangerTag = this.add.text(width - 48, targetY - 14, '! มีดบิน', {
-      fontFamily: '"IBM Plex Sans Thai", monospace',
-      fontSize: '10px',
-      fill: '#ef4444',
-      fontStyle: 'bold'
-    }).setOrigin(1, 0.5).setDepth(20);
 
     // Show Warning Icon flashing at the right edge
     const warningX = width - 40;
@@ -718,7 +653,7 @@ export default class PlayScene extends Phaser.Scene {
     
     // Flashing warning sign (blinks 3 times)
     this.tweens.add({
-      targets: [warningIcon, dangerLine, dangerTag],
+      targets: [warningIcon, dangerLine],
       alpha: 0.1,
       duration: 150,
       yoyo: true,
@@ -726,7 +661,6 @@ export default class PlayScene extends Phaser.Scene {
       onComplete: () => {
         warningIcon.destroy();
         dangerLine.destroy();
-        dangerTag.destroy();
         if (!this.isGameOver) {
           this.spawnKnife(targetY);
         }
@@ -868,7 +802,7 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     // Floating Powerup Banner
-    const popup = this.add.text(this.player.x, this.player.y - 28, 'SUPER SATOW DASH!', {
+    const popup = this.add.text(this.player.x, this.player.y - 28, 'BOOST!', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '14px',
       fill: '#E9F344',

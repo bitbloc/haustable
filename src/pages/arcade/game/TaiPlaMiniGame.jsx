@@ -5,11 +5,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { taiPlaRenderer } from './renderers/TaiPla128Renderer';
-import { pixelSound, getArcadeRank } from './utils/pixelSoundEngine';
+import { pixelSound, getArcadeRank, syncMonthlyArcadeStorage } from './utils/pixelSoundEngine';
 import { toggleBrowserFullscreen, isBrowserFullscreen, onFullscreenChange, exitBrowserFullscreen } from './utils/arcadeFullscreenHelper';
 
-function PixelCharAvatar({ charId, size = 36, animate = false }) {
+function PixelCharAvatar({ charId, size = 36, animate = false, animated = false }) {
   const ref = useRef(null);
+  const shouldAnimate = animate || animated;
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -22,10 +23,10 @@ function PixelCharAvatar({ charId, size = 36, animate = false }) {
       ctx.clearRect(0, 0, 48, 48);
       const sheet = taiPlaRenderer.sprites[charId] || taiPlaRenderer.sprites.tai_pla;
       if (sheet) {
-        const frameIdx = animate ? Math.floor((tick / 8) % 4) : 0;
+        const frameIdx = shouldAnimate ? Math.floor((tick / 8) % 4) : 0;
         ctx.drawImage(sheet, frameIdx * 48, 0, 48, 48, 0, 0, 48, 48);
       }
-      if (animate) {
+      if (shouldAnimate) {
         tick++;
         animId = requestAnimationFrame(draw);
       }
@@ -34,7 +35,7 @@ function PixelCharAvatar({ charId, size = 36, animate = false }) {
     return () => {
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [charId, animate]);
+  }, [charId, shouldAnimate]);
 
   return (
     <canvas
@@ -50,9 +51,10 @@ function PixelCharAvatar({ charId, size = 36, animate = false }) {
 const CHARACTERS = {
   tai_pla: {
     id: 'tai_pla',
+    shortName: 'ไตปลามอน',
+    shortTrait: 'กระโดด 2 ชั้น',
     name: 'น้องไตปลามอน (Tai-Plamon)',
     title: 'WATER / SPICE CREATURE',
-    desc: 'สิ่งมีชีวิตธาตุวารีและเครื่องแกงริมโขง • หางปลายาวประดับทับทิมแกงไตปลา คล่องแคล่วว่องไวพร้อมก้าวกระโดด 2 จังหวะ',
     trait: 'DOUBLE JUMP (วารีกระโดด 2 จังหวะ)',
     badgeColor: 'bg-sky-50 text-sky-900 border-sky-300',
     color: '#0284c7',
@@ -64,9 +66,10 @@ const CHARACTERS = {
   },
   som_satow: {
     id: 'som_satow',
+    shortName: 'ส้มสะตอ',
+    shortTrait: 'ร่างทองนานขึ้น',
     name: 'พี่ส้มสะตอกง (Satow-Beast)',
     title: 'FIRE / FLORA BEAST',
-    desc: 'อสูรพืชพันธุ์และเปลวเพลิง • เขาฝักสะตอมรกตคู่โต ทรงพลัง แปลงร่างสะตอเพลิงได้นาน 3.5 วินาที (+1.0s)',
     trait: 'SOLAR GOD MODE (ร่างสะตอเพลิง 3.5 วิ)',
     badgeColor: 'bg-amber-50 text-amber-900 border-amber-300',
     color: '#ea580c',
@@ -77,9 +80,10 @@ const CHARACTERS = {
   },
   khao_lam: {
     id: 'khao_lam',
+    shortName: 'ข้าวหลาม',
+    shortTrait: 'ดูดของระยะไกล',
     name: 'เจ้าตูบข้าวหลาม (Bamboopup)',
     title: 'GRASS / EARTH PUPPY',
-    desc: 'สิ่งมีชีวิตสายพืชและผืนดิน • ปลอกคอกระบอกไม้ไผ่พร้อมกระพรวนทองเหลืองโบราณ ดึงดูดอาหารและวัตถุระยะไกลพิเศษ',
     trait: 'SUPER MAGNET (กระพรวนดูดอาหารระยะไกล)',
     badgeColor: 'bg-stone-50 text-stone-900 border-stone-300',
     color: '#78716c',
@@ -90,9 +94,10 @@ const CHARACTERS = {
   },
   barista_cat: {
     id: 'barista_cat',
+    shortName: 'บาริสต้า',
+    shortTrait: 'กระโดดสูง 2 ชั้น',
     name: 'บาริสต้าเหมียว (Barista Cat)',
     title: 'COFFEE / WIND FELINE',
-    desc: 'แมวทักซิโด้บาริสต้าประจำร้านในบ้าน • สวมผ้ากันเปื้อนลินินและหมวกเบเร่ต์ ทะยานตัวด้วยสปริงฟองนมและดึงดูดเมล็ดกาแฟ',
     trait: 'STEAM LAUNCH (สปริงฟองนมดีดตัวสูง)',
     badgeColor: 'bg-amber-50 text-amber-900 border-amber-300',
     color: '#b45309',
@@ -104,9 +109,10 @@ const CHARACTERS = {
   },
   baby_naga: {
     id: 'baby_naga',
+    shortName: 'นาคาน้อย',
+    shortTrait: 'กระโดด 3 ชั้น',
     name: 'พญานาคาน้อย (Baby Nakkhi)',
     title: 'SPIRIT / WATER SERPENT',
-    desc: 'นาคาน้อยผู้พิทักษ์สายน้ำโขง • ลอยละล่องบนเมฆหมอกมรกต มีเศียรทองคำ 3 เศียร ร่อนเหินเวหา 3 จังหวะพร้อมรัศมีคุ้มภัย',
     trait: 'TRIPLE JUMP (ร่อนเหิน 3 จังหวะ)',
     badgeColor: 'bg-emerald-50 text-emerald-900 border-emerald-300',
     color: '#059669',
@@ -130,6 +136,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [gameState, setGameState] = useState('idle'); // 'idle' | 'playing' | 'gameover'
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
+    syncMonthlyArcadeStorage();
     return parseInt(localStorage.getItem('tai_pla_high_score') || '0', 10);
   });
   const [potIngredients, setPotIngredients] = useState({ fish: 0, satow: 0, bamboo: 0 });
@@ -189,6 +196,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const defaultGroundY = 550;
 
   const canvasRef = useRef(null);
+  const canvasBoxRef = useRef(null);
+  const lastTapTimeRef = useRef(0);
   const animationFrameRef = useRef(null);
   const audioCtxRef = useRef(null);
   const bgmIntervalRef = useRef(null);
@@ -282,12 +291,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     };
   }, [gameState, selectedCharId]);
 
-  // 8-Bit / 16-Bit Pop-Pixel Chiptune Synthesizer
+  // 8-Bit / 16-Bit Pop-Pixel Chiptune Synthesizer (Deferred off critical touch path for zero input lag)
   const playRetroSound = (type) => {
     if (!soundEnabled) return;
-    pixelSound.setMuted(false);
-    pixelSound.play(type);
-    triggerHaptic(type);
+    setTimeout(() => {
+      pixelSound.setMuted(false);
+      pixelSound.play(type);
+      triggerHaptic(type);
+    }, 0);
   };
 
   // =========================================================================
@@ -310,10 +321,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     stopBgm();
     if (!soundEnabled) return;
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
-        audioCtxRef.current = new AudioCtx();
-      }
+      const sharedCtx = pixelSound.getContext();
+      if (!sharedCtx) return;
+      audioCtxRef.current = sharedCtx;
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
 
@@ -698,8 +708,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     startBgm(currentBgmTrack);
   };
 
-  // Ultra-Snappy Jump with Double / Triple Jump & Coyote Time
+  // Ultra-Snappy Jump with Double / Triple Jump, Instant Lift & Coyote Time
   const handleJumpPress = () => {
+    const now = performance.now();
+    if (now - lastTapTimeRef.current < 35) return;
+    lastTapTimeRef.current = now;
+
     if (gameState !== 'playing') {
       if (gameState === 'idle') {
         startGame();
@@ -710,14 +724,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     const g = gameRef.current;
     const char = CHARACTERS[g.charId] || CHARACTERS.tai_pla;
 
-    // Ground jump
-    if (g.isGrounded || g.coyoteTimer > 0) {
+    // Ground jump (or near-ground early tap within 22px while falling)
+    const isNearGroundLanding = !g.isGrounded && g.catVy > 0 && (g.groundY - g.catY) <= 22 && g.jumpCount >= g.maxJumps;
+    if (g.isGrounded || g.coyoteTimer > 0 || isNearGroundLanding) {
       g.catVy = char.jumpPower || -17.2;
+      g.catY = Math.min(g.catY, g.groundY) - 6;
       g.isGrounded = false;
       g.jumpCount = 1;
       g.coyoteTimer = 0;
-      g.scaleX = 0.85;
-      g.scaleY = 1.25;
+      g.jumpBufferTimer = 0;
+      g.scaleX = 0.82;
+      g.scaleY = 1.28;
       playRetroSound('jump');
 
       // Sparkle / Dust particles on jump
@@ -736,19 +753,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     // Mid-air Double / Triple Jump
     else if (g.jumpCount < g.maxJumps) {
       g.catVy = char.doubleJumpPower || -15.2;
+      g.catY -= 4;
       g.jumpCount += 1;
       const isTriple = g.jumpCount >= 3;
       g.scaleX = 0.78;
       g.scaleY = 1.32;
       playRetroSound(isTriple ? 'triple_jump' : 'double_jump');
-
-      g.floatingTexts.push({
-        x: g.catX + 4,
-        y: g.catY - 46,
-        text: isTriple ? 'TRIPLE NAGA GLIDE!' : 'DOUBLE JUMP!',
-        color: isTriple ? '#facc15' : '#38bdf8',
-        life: 0.95
-      });
 
       // Ring of spin sparkles for mid-air flip
       for (let i = 0; i < (isTriple ? 12 : 8); i++) {
@@ -764,7 +774,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         });
       }
     } else {
-      g.jumpBufferTimer = 0.16;
+      g.jumpBufferTimer = 0.24;
     }
   };
 
@@ -809,6 +819,23 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, isFullscreen, selectedCharId, canRestart, isClaiming]);
 
+  // Native non-passive touchstart listener for zero-latency mobile jump response
+  useEffect(() => {
+    if (gameState !== 'playing') return undefined;
+    const target = arenaRef.current || canvasBoxRef.current;
+    if (!target) return undefined;
+
+    const onNativeTouchStart = (e) => {
+      if (e.cancelable) e.preventDefault();
+      handleJumpPress();
+    };
+
+    target.addEventListener('touchstart', onNativeTouchStart, { passive: false });
+    return () => {
+      target.removeEventListener('touchstart', onNativeTouchStart);
+    };
+  }, [gameState]);
+
   // Main Canvas Render & Physics Loop
   useEffect(() => {
     if (gameState !== 'playing') return;
@@ -836,14 +863,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         g.feverTimer = Math.max(0, g.feverTimer - dt);
       }
 
-      // 3. Distance Milestone Score (+1 point every 140px run, 2x in Fever)
+      // 3. Distance Milestone (build happiness smoothly while running; points are earned strictly from actions & ingredients)
       if (g.distanceRun - g.lastDistanceScore >= 140) {
         g.lastDistanceScore = g.distanceRun;
-        const addPts = g.feverTimer > 0 ? 2 : 1;
-        g.score += addPts;
-
-        // Slowly build happiness while running smoothly
-        g.happiness = Math.min(100, g.happiness + 1.5);
+        g.happiness = Math.min(100, g.happiness + 2.5);
       }
 
       // Check Happiness Meter Trigger for Happy Fever Mode
@@ -862,48 +885,38 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         g.floatingTexts.push({
           x: g.catX + 10,
           y: g.catY - 48,
-          text: 'HAPPY FEVER! 2X PTS',
+          text: 'FEVER ×2',
           color: '#f59e0b',
-          life: 2.0
+          life: 1.5
         });
       }
 
-      // 4. Progressive Difficulty & 4 Spicy Tiers Scaling (Snappy & Challenging)
+      // 4. Progressive Difficulty & 4 Spicy Tiers Scaling (Calibrated to 10 / 20 / 35 / 40 PTS)
       let tier = 1;
-      if (g.score >= 100) {
-        tier = 4; // เผ็ดนรกแตก EXTREME (100+ PTS)
-        g.speed = Math.min(14.0, 11.0 + Math.floor((g.score - 100) / 10) * 0.4);
-      } else if (g.score >= 60) {
-        tier = 3; // เผ็ดหูดับตับไหม้ (60-99 PTS)
-        g.speed = Math.min(10.8, 8.5 + Math.floor((g.score - 60) / 6) * 0.35);
-      } else if (g.score >= 25) {
-        tier = 2; // เผ็ดปากเปิด (25-59 PTS)
-        g.speed = Math.min(8.2, 6.2 + Math.floor((g.score - 25) / 5) * 0.28);
+      if (g.score >= 35) {
+        tier = 4;
+        g.speed = Math.min(12.5, 9.5 + Math.floor((g.score - 35) / 5) * 0.35);
+      } else if (g.score >= 20) {
+        tier = 3;
+        g.speed = Math.min(9.5, 7.5 + Math.floor((g.score - 20) / 4) * 0.32);
+      } else if (g.score >= 10) {
+        tier = 2;
+        g.speed = Math.min(7.5, 5.8 + Math.floor((g.score - 10) / 3) * 0.25);
       } else {
-        tier = 1; // เผ็ดอนุบาล (0-24 PTS)
-        g.speed = Math.min(5.8, 4.5 + Math.floor(g.score / 4) * 0.22);
+        tier = 1;
+        g.speed = Math.min(5.8, 4.6 + Math.floor(g.score / 3) * 0.22);
       }
 
       if (tier !== g.spicyTier) {
         g.spicyTier = tier;
         playRetroSound('tier_up');
 
-        const tierMeta = {
-          2: { title: '[ TIER 2 // 25+ PTS ] เผ็ดปากเปิด', sub: 'สปีดเร็วขึ้น • เพิ่มเหยี่ยวโขง, ผีหม้อดิน & ท่อไอน้ำเดือด' },
-          3: { title: '[ TIER 3 // 60+ PTS ] เผ็ดหูดับตับไหม้', sub: 'คนหัวร้อน & สายฟ้าพญานาค • สปีดจัดจ้าน ใช้สปริงสะตอกระโดดหลบ!' },
-          4: { title: '[ TIER 4 // 100+ PTS ] เผ็ดนรกแตก EXTREME', sub: 'สปีดสูงสุด 14.0+ • ครกหินยักษ์ถล่ม • เก็บครกหินทองคำลอยฟ้า +15 PTS!' }
-        };
-        const info = tierMeta[tier] || { title: `TIER ${tier}`, sub: '' };
-        g.tierAnnounceTimer = 2.5;
-        g.tierAnnounceTitle = info.title;
-        g.tierAnnounceSubtitle = info.sub;
-
         g.floatingTexts.push({
-          x: canvas.width / 2 - 80,
-          y: 65,
-          text: info.title,
+          x: canvas.width / 2 - 36,
+          y: 90,
+          text: `LEVEL ${tier}`,
           color: tier === 4 ? '#ef4444' : (tier === 3 ? '#f97316' : '#eab308'),
-          life: 2.2
+          life: 1.5
         });
       }
 
@@ -920,7 +933,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       // 5. Platformer Physics (Crisp & Snappy Arcade Drop)
       if (g.isGrounded) {
-        g.coyoteTimer = 0.08;
+        g.coyoteTimer = 0.12;
         g.jumpCount = 0;
       } else {
         g.coyoteTimer = Math.max(0, g.coyoteTimer - dt);
@@ -928,9 +941,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       g.jumpBufferTimer = Math.max(0, g.jumpBufferTimer - dt);
 
-      const gravity = g.catVy > 0 ? 46 : 38; // Snappy, decisive gravity for 700px height
+      const frameScale = dt * 60;
+      const gravity = g.catVy > 0 ? 48 : 40; // Snappy, decisive gravity for 700px height
       g.catVy += gravity * dt;
-      g.catY += g.catVy;
+      g.catY += g.catVy * Math.min(1.35, Math.max(0.75, frameScale));
 
       g.scaleX += (1.0 - g.scaleX) * 0.2;
       g.scaleY += (1.0 - g.scaleY) * 0.2;
@@ -954,11 +968,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       // 6. Spawn Director (Enemies, Elements, Ingredients based on Tier)
       const nowMs = Date.now();
-      let spawnInterval = 1100 - g.score * 12;
-      if (g.spicyTier === 2) spawnInterval = 850 - (g.score - 25) * 6;
-      else if (g.spicyTier === 3) spawnInterval = 650 - (g.score - 60) * 4;
-      else if (g.spicyTier === 4) spawnInterval = 480;
-      spawnInterval = Math.max(450, spawnInterval);
+      let spawnInterval = 1050 - g.score * 20;
+      if (g.spicyTier === 2) spawnInterval = 850 - (g.score - 10) * 14;
+      else if (g.spicyTier === 3) spawnInterval = 680 - (g.score - 20) * 10;
+      else if (g.spicyTier === 4) spawnInterval = 500;
+      spawnInterval = Math.max(460, spawnInterval);
 
       if (nowMs - g.lastSpawn > spawnInterval) {
         g.lastSpawn = nowMs;
@@ -1119,16 +1133,16 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             g.scaleY = 1.4;
             playRetroSound('spring');
 
-            const springPts = g.feverTimer > 0 ? 6 : 3;
+            const springPts = g.feverTimer > 0 ? 2 : 1;
             g.score += springPts;
             setScore(g.score);
 
             g.floatingTexts.push({
               x: elem.x,
               y: springTop - 15,
-              text: `SPRING LAUNCH! +${springPts}`,
+              text: `+${springPts}`,
               color: '#22c55e',
-              life: 1.2
+              life: 1.0
             });
 
             for (let p = 0; p < 8; p++) {
@@ -1162,13 +1176,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               if (g.godModeTimer > 0) {
                 // Dissipate steam safely in God Mode
                 elem.isBursting = false;
-                g.score += 2;
+                g.score += 1;
+                setScore(g.score);
                 g.floatingTexts.push({
                   x: elem.x,
                   y: g.groundY - 40,
-                  text: 'STEAM DEFLECTED! +2',
+                  text: '+1',
                   color: '#38bdf8',
-                  life: 1.0
+                  life: 0.9
                 });
               } else {
                 // Scalded by steam -> Game Over
@@ -1210,32 +1225,27 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
           // Secret Item: Golden Mortar
           if (item.type === 'golden_mortar') {
-            g.score += 15;
+            g.score += 5;
             setScore(g.score);
             g.happiness = 100;
             setHappiness(100);
             g.feverTimer = 10.0;
             setIsFeverActive(true);
             setFeverRemaining(10);
-            setEarnedXhaus(ex => {
-              const updated = +(ex + 0.25).toFixed(2);
-              if (onCoinEarned) onCoinEarned(0.25);
-              return updated;
-            });
             playRetroSound('golden_mortar');
             confetti({ particleCount: 90, spread: 80, origin: { y: 0.5 } });
 
             g.floatingTexts.push({
               x: g.catX + 10,
               y: g.catY - 48,
-              text: 'GOLDEN MORTAR! +15 PTS // +0.25 XH!',
+              text: '+5',
               color: '#facc15',
-              life: 2.2
+              life: 1.5
             });
             continue;
           }
 
-          const basePts = item.type === 'satow' ? 3 : (item.type === 'fish' ? 1 : 2);
+          const basePts = 1;
           const pts = g.feverTimer > 0 ? basePts * 2 : basePts;
           g.score += pts;
           setScore(g.score);
@@ -1250,9 +1260,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             g.floatingTexts.push({
               x: g.catX + 10,
               y: g.catY - 42,
-              text: `SOLAR GOD MODE! (${g.godModeDuration.toFixed(1)}s)`,
+              text: 'BOOST!',
               color: '#16a34a',
-              life: 1.5
+              life: 1.2
             });
           } else {
             playRetroSound('collect');
@@ -1273,28 +1283,22 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           if (potCompleted) {
             setCompletedPots(cp => cp + 1);
 
-            const potBonus = g.feverTimer > 0 ? 10 : 6;
+            const potBonus = g.feverTimer > 0 ? 5 : 3;
             g.score += potBonus;
             setScore(g.score);
 
             g.happiness = Math.min(100, g.happiness + 35);
             setHappiness(Math.floor(g.happiness));
 
-            setEarnedXhaus(ex => {
-              const bonusCoin = g.feverTimer > 0 ? 0.15 : 0.10;
-              const updated = +(ex + bonusCoin).toFixed(2);
-              if (onCoinEarned) onCoinEarned(bonusCoin);
-              return updated;
-            });
             playRetroSound('pot_complete');
             triggerHaptic('pot_complete');
 
             g.floatingTexts.push({
               x: g.catX + 16,
               y: g.catY - 32,
-              text: `+${potBonus} PTS // +0.10 XH // POT COMPLETED!`,
+              text: `POT +${potBonus}`,
               color: '#ea580c',
-              life: 1.5
+              life: 1.2
             });
           }
 
@@ -1450,16 +1454,16 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             const isGiant = mon.type === 'giant_mortar';
             playRetroSound(isGiant ? 'mortar_smash' : 'smash');
             g.monsters.splice(idx, 1);
-            const smashPts = isGiant ? 8 : (g.feverTimer > 0 ? 4 : 2);
+            const smashPts = isGiant ? 2 : 1;
             g.score += smashPts;
             setScore(g.score);
 
             g.floatingTexts.push({
               x: mon.x,
               y: monY - 30,
-              text: isGiant ? `MORTAR SMASHED! +${smashPts}` : `SMASH! +${smashPts}`,
+              text: `+${smashPts}`,
               color: '#facc15',
-              life: 1.4
+              life: 1.1
             });
 
             const isChili = mon.type === 'hop_chili' || mon.type === 'hawk';
@@ -1554,34 +1558,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       // 7. Floating Texts
       g.floatingTexts.forEach(ft => {
-        ctx.font = 'bold 12px Space Mono, monospace';
+        ctx.font = 'bold 13px Space Mono, monospace';
         ctx.fillStyle = '#1c1917';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
       });
-
-      // 8. Tier Transition Big Announcement Banner
-      if (g.tierAnnounceTimer > 0) {
-        g.tierAnnounceTimer = Math.max(0, g.tierAnnounceTimer - dt);
-        const alpha = Math.min(1.0, g.tierAnnounceTimer * 1.5);
-        ctx.save();
-        ctx.fillStyle = `rgba(24, 22, 21, ${alpha * 0.88})`;
-        ctx.fillRect(20, 60, canvas.width - 40, 56);
-        ctx.strokeStyle = g.spicyTier === 4 ? '#ef4444' : (g.spicyTier === 3 ? '#f97316' : '#facc15');
-        ctx.lineWidth = 2;
-        ctx.strokeRect(20, 60, canvas.width - 40, 56);
-
-        ctx.font = 'bold 14px Space Mono, monospace';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = g.spicyTier === 4 ? '#fca5a5' : '#fef08a';
-        ctx.fillText(g.tierAnnounceTitle, canvas.width / 2, 84);
-
-        ctx.font = '11px sans-serif';
-        ctx.fillStyle = '#f5f5f4';
-        ctx.fillText(g.tierAnnounceSubtitle, canvas.width / 2, 102);
-        ctx.restore();
-      }
 
       ctx.restore();
 
@@ -1633,473 +1615,253 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     }
   };
 
-  const handleSelectCharacter = (charId) => {
+  const handleSelectCharacter = (charId, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
     setSelectedCharId(charId);
     playRetroSound('char_select');
   };
 
+  const renderInGameCharSelector = (dark = false) => (
+    <div
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      className="w-full max-w-[340px] flex flex-col items-center gap-2"
+    >
+      <div className="grid grid-cols-5 gap-1.5 w-full">
+        {Object.values(CHARACTERS).map((char) => {
+          const isSelected = selectedCharId === char.id;
+          return (
+            <button
+              key={char.id}
+              type="button"
+              onPointerDown={(e) => handleSelectCharacter(char.id, e)}
+              onClick={(e) => handleSelectCharacter(char.id, e)}
+              className={`py-2 px-1 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                isSelected
+                  ? 'bg-[#E9F344] text-[#181615] border-[#181615] shadow-[2px_2px_0px_#181615] -translate-y-0.5'
+                  : dark
+                    ? 'bg-[#252220] text-[#D9D2CB] border-[#3D3835] hover:border-[#FAF7F5]/50'
+                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:border-[#181615]'
+              }`}
+            >
+              <PixelCharAvatar charId={char.id} size={34} animate={isSelected} />
+              <span className="font-sans text-[10px] font-bold truncate w-full text-center leading-tight">
+                {char.shortName}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div
+        className={`px-3 py-1 rounded-lg border text-[11px] font-mono font-bold ${
+          dark
+            ? 'bg-[#252220] text-[#FAF7F5] border-[#3D3835]'
+            : 'bg-[#FAF7F2] text-[#181615] border-[#181615]'
+        }`}
+      >
+        {activeChar.shortName} · <span className={dark ? 'text-[#E9F344]' : 'text-[#bd4924]'}>{activeChar.shortTrait}</span>
+      </div>
+    </div>
+  );
+
+  const renderGameCanvasBox = (customStyle) => (
+    <div
+      ref={canvasBoxRef}
+      onPointerDown={(e) => {
+        if (gameState === 'playing') {
+          e.preventDefault();
+          e.stopPropagation();
+          handleJumpPress();
+        }
+      }}
+      className="relative box-content bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none touch-none shadow-md"
+      style={{ ...customStyle, touchAction: 'none', WebkitTapHighlightColor: 'transparent' }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={480}
+        height={700}
+        className="w-full h-full block pointer-events-none"
+        style={{ imageRendering: 'pixelated' }}
+      />
+
+      {/* Minimal In-Game HUD when playing */}
+      {gameState === 'playing' && (
+        <div className="absolute top-3 inset-x-3 z-10 flex items-center justify-between pointer-events-none font-mono">
+          <div className="flex items-center gap-1.5">
+            <div className="bg-[#181615]/90 text-[#FAF7F5] px-3 py-1 rounded-xl border border-[#5C544D] text-base font-bold leading-none">
+              {score}
+            </div>
+            {isFeverActive && (
+              <span className="bg-[#E9F344] text-[#181615] px-2 py-0.5 rounded-lg border border-[#181615] text-[10px] font-bold">
+                ×2
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 bg-[#181615]/85 text-[#FAF7F5] px-2.5 py-1 rounded-xl border border-[#5C544D] text-[10px] font-bold">
+            <span className={potIngredients.fish ? 'text-[#38bdf8]' : 'text-[#FAF7F5]/50'}>ปลา {potIngredients.fish}</span>
+            <span className="text-[#FAF7F5]/30">·</span>
+            <span className={potIngredients.satow ? 'text-[#4ade80]' : 'text-[#FAF7F5]/50'}>สะตอ {potIngredients.satow}</span>
+            <span className="text-[#FAF7F5]/30">·</span>
+            <span className={potIngredients.bamboo ? 'text-[#fbbf24]' : 'text-[#FAF7F5]/50'}>หน่อไม้ {potIngredients.bamboo}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Clean Start Screen with In-Game Character Selection */}
+      {gameState === 'idle' && (
+        <div
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            startGame();
+          }}
+          className="absolute inset-0 bg-[#181615]/45 backdrop-blur-[1px] flex flex-col items-center justify-between py-8 px-4 text-center cursor-pointer select-none"
+        >
+          <div className="flex flex-col items-center gap-1 mt-2">
+            <h2
+              className="font-pixel text-3xl font-bold text-[#FAF7F5] uppercase tracking-wider"
+              style={{ textShadow: '0 3px 0 #181615' }}
+            >
+              TAI-PLA RUN
+            </h2>
+            {highScore > 0 && (
+              <span className="bg-[#181615]/90 text-[#E9F344] px-2.5 py-0.5 rounded-md font-mono text-[11px] font-bold border border-[#5C544D]">
+                BEST {highScore}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col items-center gap-4 w-full mb-2">
+            {renderInGameCharSelector(false)}
+
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                startGame();
+              }}
+              className="w-full max-w-[220px] py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-sans text-base font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95 transition-transform"
+            >
+              เริ่มเล่น
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Clean Game Over Screen with In-Game Character Selection */}
+      {gameState === 'gameover' && (
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute inset-0 bg-[#181615]/92 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4 text-center p-5 animate-[fadeIn_0.15s_ease-out] select-none"
+        >
+          <div className="flex flex-col items-center gap-1">
+            <span className="font-mono text-lg font-bold text-[#BD4924] uppercase tracking-widest">
+              GAME OVER
+            </span>
+            <span className="font-mono text-5xl font-bold text-[#FAF7F5] leading-none mt-1">
+              {score}
+            </span>
+            <span className="font-mono text-xs font-bold text-[#E9F344] mt-1">
+              RANK {currentRank.rank}
+            </span>
+          </div>
+
+          {renderInGameCharSelector(true)}
+
+          <div className="flex flex-col gap-2.5 w-full max-w-[240px] mt-1">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                if (!canRestart) return;
+                startGame();
+              }}
+              disabled={!canRestart}
+              className={`w-full py-3 font-sans text-sm font-bold rounded-xl cursor-pointer transition-transform active:scale-95 ${
+                canRestart
+                  ? 'bg-[#E9F344] text-[#181615] border-2 border-[#181615]'
+                  : 'bg-[#252220] text-[#69635D] border border-[#3D3835] cursor-not-allowed'
+              }`}
+            >
+              เล่นอีกครั้ง
+            </button>
+
+            {score > 0 && (
+              <button
+                type="button"
+                onClick={handleClaim}
+                className="w-full py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-sans text-sm font-bold rounded-xl border border-[#E05A36] cursor-pointer active:scale-95 transition-colors"
+              >
+                {isClaiming ? 'บันทึกแล้ว' : 'บันทึกแต้ม'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   if (isDedicated || isFullscreen) {
     return (
-      <div className="fixed inset-0 z-50 h-[100dvh] bg-[#FAF7F2] flex flex-col justify-between select-none overflow-hidden touch-none font-sans">
-        {/* Top Navigation & Status Bar */}
-        <header className="w-full bg-[#FAF7F2] border-b-2 border-[#181615] px-3 sm:px-6 py-2.5 flex items-center justify-between z-20 shrink-0 shadow-2xs">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={handleBack}
-              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] font-mono font-bold text-xs shadow-xs active:scale-95 transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <span>← กลับ</span>
-            </button>
-            <div className="flex items-center gap-1.5">
-              <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
-              <span className="hidden sm:inline font-pixel text-sm font-bold text-[#181615] uppercase tracking-wider">
-                TAI-PLA RUN
-              </span>
-            </div>
-          </div>
+      <div className="fixed inset-0 z-50 h-[100dvh] bg-[#181615] flex flex-col justify-between select-none overflow-hidden touch-none font-sans">
+        {/* Floating Minimal Controls (matching FlappyCatGame) */}
+        <button
+          onClick={handleBack}
+          className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5 transition-colors"
+        >
+          <span className="whitespace-nowrap">← กลับ</span>
+        </button>
 
-          {/* Right score, rank, music and sound controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-xs">
-            <span className={`hidden sm:inline-block px-2 py-1 rounded-lg border text-[10px] font-bold uppercase ${currentRank.badgeClass}`}>
-              {currentRank.badge}
-            </span>
-            <div className="bg-[#181615] text-[#FAF7F5] px-2.5 py-1 rounded-lg border border-[#3D3835] text-[11px] font-bold whitespace-nowrap">
-              <span>{score} PTS</span>
-            </div>
-            {earnedXhaus > 0 && (
-              <div className="bg-[#E9F344] text-[#181615] px-2 py-1 rounded-lg border-2 border-[#181615] text-[10px] font-bold">
-                +{earnedXhaus.toFixed(2)} XH
-              </div>
-            )}
-            <button
-              onClick={cycleBgmTrack}
-              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors uppercase whitespace-nowrap"
-              title="เปลี่ยนแนวเพลง"
-            >
-              <span className="sm:hidden">เพลง</span>
-              <span className="hidden sm:inline">{currentBgmTrack.replace('_', ' ')}</span>
-            </button>
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors whitespace-nowrap"
-            >
-              {soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'}
-            </button>
-            <button
-              onClick={handleToggleNativeFullscreen}
-              className={`px-2.5 py-1 rounded-lg border font-mono text-[10px] font-bold cursor-pointer transition-colors shadow-2xs whitespace-nowrap ${
-                isNativeFullscreen
-                  ? 'bg-[#E9F344] text-[#181615] border-[#181615]'
-                  : 'bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] border-[#181615]'
-              }`}
-              title="สลับโหมดเต็มจอระดับเบราว์เซอร์ (Native Fullscreen)"
-            >
-              {isNativeFullscreen ? 'ย่อจอ' : 'เต็มจอ'}
-            </button>
-          </div>
-        </header>
-
-        {/* Central Game Arena - Vertical Portrait (Flappy Cat style 480x700) */}
-        <main ref={arenaRef} className="flex-1 w-full flex flex-col justify-center items-center min-h-0 relative">
-          <div 
-            onClick={handleJumpPress}
-            onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-            className="relative box-content bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md"
-            style={arenaSize || { width: 'min(100%, 420px)', aspectRatio: '480 / 700' }}
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-2 font-mono">
+          <button
+            onClick={cycleBgmTrack}
+            className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] transition-colors active:scale-95 cursor-pointer font-bold tracking-wider whitespace-nowrap"
           >
-            <canvas 
-              ref={canvasRef} 
-              width={480} 
-              height={700} 
-              className="w-full h-full block"
-              style={{ imageRendering: 'pixelated' }}
-            />
+            เพลง
+          </button>
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#E9F344] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] transition-colors active:scale-95 cursor-pointer font-bold tracking-wider whitespace-nowrap"
+          >
+            {soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'}
+          </button>
+          <button
+            onClick={handleToggleNativeFullscreen}
+            className={`px-3 py-1.5 rounded-xl border-2 shadow-xl text-[11px] transition-colors active:scale-95 cursor-pointer font-bold tracking-wider ${
+              isNativeFullscreen
+                ? 'bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] border-[#181615]'
+                : 'bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] border-[#5C544D]'
+            }`}
+          >
+            {isNativeFullscreen ? 'ย่อจอ' : 'เต็มจอ'}
+          </button>
+        </div>
 
-            {/* In The Haus Badge & Spicy Tier Indicator Overlay */}
-            {gameState === 'playing' && (
-              <div className="absolute top-2.5 left-3.5 z-10 flex items-center gap-1.5 font-mono text-[9px] flex-wrap">
-                <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
-                  <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
-                  <span className="font-bold text-[#fef08a] tracking-wider uppercase font-pixel">HAUS 128-BIT</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
-                  <span className="font-bold tracking-wider uppercase text-[10px]">
-                    {currentSpicyTier === 4 ? '[ TIER 4 // HELL EXTREME ]' : (currentSpicyTier === 3 ? '[ TIER 3 // ULTRA SPICY ]' : (currentSpicyTier === 2 ? '[ TIER 2 // SPICY UP ]' : '[ TIER 1 // CHILL RUN ]'))}
-                  </span>
-                </div>
-
-                <div className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${currentRank.badgeClass}`}>
-                  {currentRank.badge}
-                </div>
-              </div>
-            )}
-
-            {/* Start Overlay */}
-            {gameState === 'idle' && (
-              <div 
-                onClick={(e) => { e.stopPropagation(); startGame(); }}
-                className="absolute inset-0 bg-[#FAF7F5]/82 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3 text-center p-4 sm:p-6 cursor-pointer select-none"
-              >
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="bg-[#181615] px-3.5 py-1 rounded border border-[#3D3835] flex items-center gap-2 shadow-xs">
-                    <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
-                    <img src="/logo-secondary.png" alt="In The Haus" className="h-5 object-contain" />
-                  </div>
-                  <div className="font-mono text-[9px] text-[oklch(52%_0.16_28)] font-bold tracking-widest uppercase">
-                    [ MEKONG SPEED RUNNER // CREATURE COMPENDIUM ]
-                  </div>
-                </div>
-
-                {/* Pop-Pixel Companion Portrait Box */}
-                <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-2xl px-4 py-2.5 shadow-[3px_3px_0px_#181615] flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#F4EFE6] border border-[#181615] flex items-center justify-center shrink-0">
-                    <PixelCharAvatar charId={activeChar.id} size={44} animated={true} />
-                  </div>
-                  <div className="text-left">
-                    <h4 className="font-pixel text-base sm:text-lg font-bold text-[#181615] uppercase tracking-wider leading-tight">
-                      {activeChar.name}
-                    </h4>
-                    <p className="font-mono text-[9px] text-[oklch(45%_0.010_28)] uppercase tracking-wider mt-0.5">
-                      {activeChar.title}
-                    </p>
-                    <span className={`inline-block mt-1 text-[8px] px-1.5 py-0.5 rounded font-mono font-bold border ${activeChar.badgeColor}`}>
-                      {activeChar.trait}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-[#181615] font-sans max-w-sm leading-relaxed bg-[#FAF7F2]/90 px-3 py-1.5 rounded-lg border border-[#181615]/20 hidden sm:block">
-                  แตะหน้าจอเพื่อกระโดดหลบสิ่งกีดขวางริมแม่น้ำโขงนครพนม<br/>
-                  สะสมวัตถุดิบครบหม้อรับเหรียญ XHAUS และปลดล็อก Rank S+!
-                </p>
-
-                <button
-                  onClick={(e) => { e.stopPropagation(); startGame(); }}
-                  className="btn-action mt-1 px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95 transition-transform duration-100 ease-out"
-                >
-                  [ ▶ START RUN // แตะเพื่อเริ่มวิ่ง ]
-                </button>
-              </div>
-            )}
-
-            {/* Game Over Overlay */}
-            {gameState === 'gameover' && (
-              <div 
-                onClick={(e) => e.stopPropagation()} 
-                className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-2.5 text-center p-4 sm:p-6 animate-[fadeIn_0.15s_ease-out] select-none"
-              >
-                <div className="flex items-center gap-2 bg-[#252220] px-3.5 py-1 rounded border border-[#3D3835]">
-                  <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
-                  <span className="font-mono text-[9px] text-[#D9D2CB] font-bold uppercase tracking-wider">HAUS ARCADE SYSTEM</span>
-                </div>
-
-                <div>
-                  <h4 className="font-pixel text-xl sm:text-2xl font-bold text-[#BD4924] uppercase tracking-widest">
-                    RUN TERMINATED
-                  </h4>
-                  <p className="text-xs text-[#D9D2CB] font-mono mt-1">
-                    FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
-                  </p>
-                </div>
-
-                {/* Earned Rank Evaluation Card */}
-                <div className="bg-[#252220] border border-[#3D3835] rounded-xl px-4 py-2.5 w-full max-w-xs flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2.5 py-0.5 rounded border font-mono text-[11px] font-bold uppercase ${currentRank.badgeClass}`}>
-                      {currentRank.badge}
-                    </span>
-                    <span className="font-mono text-xs font-bold text-[#FAF7F5]">
-                      {currentRank.titleTh}
-                    </span>
-                  </div>
-                  <span className="font-mono text-[10px] text-[#E9F344] font-bold">
-                    {currentRank.rewardText}
-                  </span>
-                  {currentRank.nextTarget && (
-                    <span className="font-mono text-[9px] text-[#A8A29E]">
-                      อีก {Math.max(0, currentRank.nextTarget - score)} PTS เพื่อเลื่อนขั้นสู่ [RANK {currentRank.nextTier}]
-                    </span>
-                  )}
-                </div>
-
-                {earnedXhaus > 0 && (
-                  <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-3 py-1 rounded font-mono text-xs font-bold">
-                    + {earnedXhaus.toFixed(2)} XHAUS COIN RECORDED
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2 justify-center font-mono text-xs mt-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!canRestart) return;
-                      startGame();
-                    }}
-                    disabled={!canRestart}
-                    className={`px-5 py-2.5 font-bold uppercase rounded-xl cursor-pointer shadow-sm active:scale-95 transition-transform duration-100 ease-out ${
-                      canRestart 
-                        ? 'bg-[#E9F344] text-[#181615] border-2 border-[#181615]' 
-                        : 'bg-[#181615] text-[#69635D] border border-[#2B2725] cursor-not-allowed'
-                    }`}
-                  >
-                    {canRestart ? '[ ▶ เล่นอีกครั้ง ]' : '[ INITIALIZING… ]'}
-                  </button>
-
-                  {score > 0 && (
-                    <button
-                      onClick={handleClaim}
-                      className="px-5 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-bold uppercase rounded-xl border border-[#E05A36] cursor-pointer shadow-sm active:scale-95 transition-colors"
-                    >
-                      {isClaiming ? '[ SAVED ]' : '[ บันทึกคะแนน ]'}
-                    </button>
-                  )}
-
-                  {onBackToHub && (
-                    <button
-                      onClick={handleBack}
-                      className="px-4 py-2.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-sm active:scale-95 transition-colors"
-                    >
-                      [ กลับโถงเกม ]
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Full-Height Game Arena */}
+        <main
+          ref={arenaRef}
+          onPointerDown={(e) => {
+            if (gameState === 'playing') {
+              e.preventDefault();
+              handleJumpPress();
+            }
+          }}
+          className="flex-1 w-full flex flex-col justify-center items-center min-h-0 relative touch-none"
+          style={{ touchAction: 'none', WebkitTapHighlightColor: 'transparent' }}
+        >
+          {renderGameCanvasBox(arenaSize || { width: 'min(100%, 420px)', aspectRatio: '480 / 700' })}
         </main>
-
-        {/* Bottom Mobile Action Deck (Giant Touch Zone & Controls) */}
-        <footer className="w-full bg-[#FAF7F2] border-t-2 border-[#181615] p-3 sm:p-4 flex flex-col items-center gap-2.5 shrink-0 select-none shadow-2xs">
-          {/* Ingredient & Happy Vibes telemetry strip */}
-          <div className="flex items-center justify-between w-full max-w-md px-1 text-[10px] font-mono">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[#181615] uppercase">[ VIBES: {happiness}% ]</span>
-              <div className="w-16 sm:w-24 h-2 bg-neutral-200 rounded-full overflow-hidden border border-neutral-300">
-                <div 
-                  className={`h-full ${isFeverActive ? 'bg-amber-400 animate-pulse' : 'bg-[#181615]'}`}
-                  style={{ width: `${isFeverActive ? 100 : happiness}%` }}
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 font-bold text-[#181615]">
-              <span className="bg-sky-100 px-1.5 py-0.5 rounded border border-sky-300">ปลา {potIngredients.fish}/1</span>
-              <span className="bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">สะตอ {potIngredients.satow}/1</span>
-              <span className="bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">หน่อไม้ {potIngredients.bamboo}/1</span>
-            </div>
-          </div>
-
-          {/* Giant Mobile Touch Jump Zone */}
-          <div 
-            onClick={handleJumpPress}
-            onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-            className="w-full max-w-md py-3 sm:py-3.5 px-4 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm sm:text-base rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] transition-transform text-center flex flex-col items-center justify-center cursor-pointer select-none"
-          >
-            <span className="tracking-wide uppercase">[ แตะตรงไหนก็ได้เพื่อกระโดด // TAP TO JUMP ]</span>
-            <span className="text-[10px] font-normal text-[#181615]/80 mt-0.5">
-              {selectedCharId === 'naga' ? 'พญานาคน้อยกระโดดได้ 3 จังหวะ (Triple Naga Glide)!' : 'แตะ 2 ครั้งเพื่อกระโดด 2 จังหวะ (Double Jump)'}
-            </span>
-          </div>
-
-          {/* Companion character switcher when idle */}
-          {gameState !== 'playing' && (
-            <div className="flex items-center gap-1.5 w-full max-w-md overflow-x-auto pb-0.5 text-[10px] font-mono">
-              {Object.values(CHARACTERS).map((char) => (
-                <button
-                  key={char.id}
-                  onClick={() => handleSelectCharacter(char.id)}
-                  className={`flex-1 py-1 px-2 rounded-xl border-2 font-bold uppercase truncate transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                    selectedCharId === char.id
-                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-[2px_2px_0px_#BD4924]'
-                      : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:bg-[#F2ECE4]'
-                  }`}
-                >
-                  <PixelCharAvatar charId={char.id} size={18} animated={selectedCharId === char.id} />
-                  <span>{char.name.split(' ')[0]}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </footer>
       </div>
     );
   }
 
   // Standard inline frame fallback
   return (
-    <div className="w-full bg-[var(--color-paper)] rounded-2xl border-2 border-[#181615] p-4 sm:p-6 shadow-sm flex flex-col gap-4 font-sans">
-      {/* Clean Header Bar & Character Selector */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-xl bg-[#FAF7F5] flex items-center justify-center border-2 border-[#181615] shrink-0 overflow-hidden relative shadow-2xs p-0.5">
-            <PixelCharAvatar charId={activeChar.id} size={38} animated={true} />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-mono text-sm font-bold text-[#181615] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-[#bd4924]">ในบ้าน</span>
-                <span className="text-zinc-400">•</span>
-                <span>{activeChar.name}</span>
-                <span className="text-[11px] font-normal text-[oklch(45%_0.010_28)]">({activeChar.title})</span>
-              </h3>
-              <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold border whitespace-nowrap ${activeChar.badgeColor}`}>
-                {activeChar.trait}
-              </span>
-            </div>
-            <p className="text-[11px] text-[oklch(45%_0.010_28)] font-sans truncate sm:whitespace-normal">
-              {activeChar.desc}
-            </p>
-          </div>
-        </div>
-
-        {/* Status Score & LCD Coins Deck */}
-        <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto flex-wrap">
-          <span className={`px-2.5 py-1 rounded-xl border text-[10px] font-bold uppercase ${currentRank.badgeClass}`}>
-            {currentRank.badge}
-          </span>
-          {earnedXhaus > 0 && (
-            <div className="bg-[#E9F344] border-2 border-[#181615] px-2.5 py-1 rounded-xl text-[#181615] font-bold text-[11px]">
-              +{earnedXhaus.toFixed(2)} XH
-            </div>
-          )}
-          <div className="bg-[#181615] text-[#FAF7F5] border border-[#3D3835] px-3 py-1 rounded-xl">
-            <span className="text-[8px] text-[#A8A29E] block">SCORE</span>
-            <span className="font-bold text-sm">{score}</span>
-          </div>
-          <button
-            onClick={cycleBgmTrack}
-            className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer transition-colors uppercase"
-            title="เปลี่ยนแนวเพลง Lo-Fi"
-          >
-            [ ♫ {currentBgmTrack.replace('_', ' ')} ]
-          </button>
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#F2ECE4] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer transition-colors"
-          >
-            {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
-          </button>
-          <button
-            onClick={() => {
-              setIsFullscreen(true);
-              handleToggleNativeFullscreen();
-            }}
-            className="px-3 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform"
-          >
-            [ ⛶ เล่นเต็มจอ // FULL ]
-          </button>
-        </div>
-      </div>
-
-      {/* Companion character switcher when idle in inline mode */}
-      {gameState !== 'playing' && (
-        <div className="flex items-center gap-1.5 w-full max-w-md mx-auto overflow-x-auto pb-1 text-[10px] font-mono">
-          {Object.values(CHARACTERS).map((char) => (
-            <button
-              key={char.id}
-              onClick={() => handleSelectCharacter(char.id)}
-              className={`flex-1 py-1.5 px-2 rounded-xl border-2 font-bold uppercase truncate transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                selectedCharId === char.id
-                  ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-[2px_2px_0px_#BD4924]'
-                  : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:bg-[#F2ECE4]'
-              }`}
-            >
-              <PixelCharAvatar charId={char.id} size={18} animated={selectedCharId === char.id} />
-              <span>{char.name.split(' ')[0]}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Canvas Container - Vertical 9:16 Portrait */}
-      <div 
-        onClick={handleJumpPress}
-        onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-        className="relative w-full max-w-[420px] aspect-[24/35] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
-      >
-        <canvas 
-          ref={canvasRef} 
-          width={480} 
-          height={700} 
-          className="w-full h-full block"
-          style={{ imageRendering: 'pixelated' }}
-        />
-
-        {gameState === 'idle' && (
-          <div 
-            onClick={(e) => { e.stopPropagation(); startGame(); }}
-            className="absolute inset-0 bg-[#FAF7F5]/82 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3 text-center p-6 cursor-pointer select-none"
-          >
-            <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-2xl px-4 py-2.5 shadow-[3px_3px_0px_#181615] flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#F4EFE6] border border-[#181615] flex items-center justify-center shrink-0">
-                <PixelCharAvatar charId={activeChar.id} size={44} animated={true} />
-              </div>
-              <div className="text-left">
-                <h4 className="font-pixel text-lg font-bold text-[#181615] uppercase tracking-wider">
-                  {activeChar.name}
-                </h4>
-                <p className="font-mono text-[9px] text-[oklch(45%_0.010_28)] uppercase tracking-wider">
-                  {activeChar.title} // {activeChar.trait}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); startGame(); }}
-              className="px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95"
-            >
-              [ START RUN // เริ่มออกวิ่ง ]
-            </button>
-          </div>
-        )}
-
-        {gameState === 'gameover' && (
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 select-none"
-          >
-            <h4 className="font-pixel text-2xl font-bold text-[#BD4924] uppercase tracking-widest">
-              RUN TERMINATED
-            </h4>
-            <p className="text-xs text-[#D9D2CB] font-mono mt-1">
-              FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
-            </p>
-            <div className="bg-[#252220] border border-[#3D3835] rounded-xl px-4 py-2 w-full max-w-xs flex flex-col items-center gap-1">
-              <span className={`px-2.5 py-0.5 rounded border font-mono text-[11px] font-bold uppercase ${currentRank.badgeClass}`}>
-                {currentRank.badge} — {currentRank.titleTh}
-              </span>
-              <span className="font-mono text-[10px] text-[#E9F344] font-bold">
-                {currentRank.rewardText}
-              </span>
-            </div>
-            <div className="flex gap-3 font-mono text-xs mt-2">
-              <button
-                onClick={(e) => { e.stopPropagation(); startGame(); }}
-                className="px-6 py-2.5 bg-[#E9F344] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95"
-              >
-                [ RESTART RUN ]
-              </button>
-              {score > 0 && (
-                <button
-                  onClick={handleClaim}
-                  className="px-6 py-2.5 bg-[#BD4924] text-[#FAF7F5] font-bold uppercase rounded-xl border border-[#E05A36] cursor-pointer shadow-sm active:scale-95"
-                >
-                  [ CLAIM REWARD ]
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Progressive Tiers Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#FAF7F2] border-2 border-[#181615] p-3 rounded-xl text-xs font-mono">
-        <span className="font-bold text-[#181615]">[ 4 TIERS ]: (1) ชิลล์ → (2) ปากเปิด → (3) หูดับ → (4) นรกแตก 100+p</span>
-        <div className="flex items-center gap-2">
-          <span>ปลา: {potIngredients.fish}/1</span>
-          <span>สะตอ: {potIngredients.satow}/1</span>
-          <span>หน่อไม้: {potIngredients.bamboo}/1</span>
-        </div>
-      </div>
+    <div className="relative w-full flex justify-center items-center select-none">
+      {renderGameCanvasBox({ width: 'min(100%, 420px)', aspectRatio: '480 / 700' })}
     </div>
   );
 }

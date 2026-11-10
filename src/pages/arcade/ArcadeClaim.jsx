@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { generateScoreHash } from './game/scenes/GameOverScene';
-import { getArcadeRank, pixelSound } from './game/utils/pixelSoundEngine';
+import { getArcadeRank, pixelSound, syncMonthlyArcadeStorage } from './game/utils/pixelSoundEngine';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 
@@ -154,20 +154,22 @@ export default function ArcadeClaim() {
       if (profileError) throw profileError;
 
       const nameToDisplay = profile.nickname || profile.display_name || 'MEMBER';
-      const newScore = parseInt(score);
+      const newScore = Math.max(0, Math.floor(parseInt(score, 10) || 0));
+      const { monthStartISO } = syncMonthlyArcadeStorage();
 
       // Check if there is an existing score for this user
       const { data: existingLeaderboard, error: selectError } = await supabase
         .from('leaderboard')
-        .select('id, score')
+        .select('id, score, created_at')
         .eq('profile_id', session.user.id)
         .maybeSingle();
 
       if (selectError) throw selectError;
 
       if (existingLeaderboard) {
-        // Only update if the new score is higher than the existing high score
-        if (newScore > existingLeaderboard.score) {
+        const isStaleMonth = !existingLeaderboard.created_at || new Date(existingLeaderboard.created_at) < new Date(monthStartISO);
+        // Update if existing row is from a previous month or new score is higher
+        if (isStaleMonth || newScore > (existingLeaderboard.score || 0)) {
           const { error: updateError } = await supabase
             .from('leaderboard')
             .update({
@@ -186,7 +188,8 @@ export default function ArcadeClaim() {
           .insert({
             profile_id: session.user.id,
             display_name: nameToDisplay,
-            score: newScore
+            score: newScore,
+            created_at: new Date().toISOString()
           });
 
         if (insertError) throw insertError;
