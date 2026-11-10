@@ -41,8 +41,8 @@ const ASCII_ART_PRESETS = [
 // but are safe on every printer model. Sunmi 80mm defaults to 48 (full width).
 const RECEIPT_WIDTH_OPTIONS = {
     '80mm': [
-        { value: '48', label: '48 ตัวอักษร · เต็มแผ่น 80mm (Sunmi D2s Plus / เครื่องในตัว · แนะนำ)' },
-        { value: '42', label: '42 ตัวอักษร · เว้นขอบมาตรฐาน (ซ้าย-ขวาฝั่งละ 3 ช่อง)' },
+        { value: '42', label: '42 ตัวอักษร · มาตรฐาน 80mm เต็มใบไม่ตกบรรทัด (แนะนำสำหรับใบเสร็จ)' },
+        { value: '48', label: '48 ตัวอักษร · เต็มหัวพิมพ์ 80mm (แนะนำสำหรับสลิปครัว/บาร์)' },
         { value: '36', label: '36 ตัวอักษร · กะทัดรัด (ปลอดภัยสำหรับเครื่องพิมพ์ทุกรุ่น)' }
     ],
     '58mm': [
@@ -56,7 +56,7 @@ function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
     const printerType = (role === 'kitchen' ? printerConfig.kitchen_printer_type : printerConfig.cashier_printer_type) || 'sunmi';
     const key = `${role}_max_cols`;
     const options = RECEIPT_WIDTH_OPTIONS[paper];
-    const defaultVal = paper === '58mm' ? '26' : (printerType === 'sunmi' ? '48' : '36');
+    const defaultVal = paper === '58mm' ? '26' : (printerType === 'sunmi' ? (role === 'kitchen' ? '48' : '42') : '36');
     const rawVal = String(printerConfig[key] ?? '');
     const current = options.some(o => o.value === rawVal) ? rawVal : defaultVal;
     return (
@@ -66,13 +66,17 @@ function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
             </label>
             <select
                 value={current}
-                onChange={(e) => handleSavePrinter({ ...printerConfig, [key]: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => handleSavePrinter({
+                    ...printerConfig,
+                    [key]: e.target.value ? Number(e.target.value) : null,
+                    [`${key}_explicit`]: true
+                })}
                 className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] cursor-pointer"
             >
                 {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <p className="text-[10px] text-[var(--color-neutral)] mt-1 leading-relaxed">
-                สำหรับ Sunmi D2s Plus (80mm) แนะนำ 48 ตัวอักษรเพื่อให้เต็มหน้ากระดาษพอดี หลังเปลี่ยนให้กดพิมพ์ทดสอบด้านล่าง
+                สำหรับ Sunmi D2s Plus (80mm) แนะนำ 42 ตัวอักษรสำหรับใบเสร็จ (ป้องกันตัวเลข .00 ตกบรรทัดจากสระไทย) และ 48 ตัวอักษรสำหรับสลิปครัว/บาร์
             </p>
         </div>
     );

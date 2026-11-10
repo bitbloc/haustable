@@ -130,7 +130,7 @@ export default function AdminSettings() {
         cashier_printer_port: '9100',
         cashier_printer_bt_name: 'CashierPrinter',
         cashier_paper_size: '80mm',
-        cashier_max_cols: 48,
+        cashier_max_cols: 42,
         kitchen_printer_type: 'sunmi',
         kitchen_printer_ip: '192.168.1.200',
         kitchen_printer_port: '9100',

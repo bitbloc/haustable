@@ -11,8 +11,12 @@ export const applyDefaultSunmiMaxCols = (config = {}) => {
     const next = { ...config };
     const cashierType = next.cashier_printer_type || next.printer_type || 'sunmi';
     const cashierPaper = next.cashier_paper_size || next.paper_width || '80mm';
-    if (cashierType === 'sunmi' && String(cashierPaper).includes('80') && (next.cashier_max_cols === undefined || next.cashier_max_cols === null || next.cashier_max_cols === '')) {
-        next.cashier_max_cols = 48;
+    // For 80mm Cashier Receipts on Sunmi, 42 visual columns (+ 2 left margin = 44 visual cols, 46 bytes with Thai marks)
+    // fills the 80mm roll cleanly while leaving buffer headroom so Thai lines never wrap '.00' or 'ชิ้น'.
+    if (cashierType === 'sunmi' && String(cashierPaper).includes('80')) {
+        if (next.cashier_max_cols === undefined || next.cashier_max_cols === null || next.cashier_max_cols === '' || (next.cashier_max_cols === 48 && !next.cashier_max_cols_explicit)) {
+            next.cashier_max_cols = 42;
+        }
     }
     const kitchenType = next.kitchen_printer_type || next.printer_type || 'sunmi';
     const kitchenPaper = next.kitchen_paper_size || next.paper_width || '80mm';
@@ -549,6 +553,24 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
     return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
 }
 
+// Prevent Sunmi/ESC-POS hardware auto-wrap on lines containing Thai characters.
+// On 80mm (48-col) TIS-620 printers, lines with Thai vowels/tone marks wrap if raw bytes exceed 46.
+function fitThaiLineToHardwareBuffer(line, hardwareCols = 48) {
+    if (!line || !/[\u0E00-\u0E7F]/.test(line)) return line;
+    const safeMaxBytes = Math.max(24, hardwareCols - 2);
+    const rawByteLen = getPrinterCellWidth(line, true);
+    if (rawByteLen <= safeMaxBytes) return line;
+
+    let excess = rawByteLen - safeMaxBytes;
+    // Shrink internal padding spaces (between left label and right value) while keeping at least 1 space
+    return line.replace(/(\S)( {2,})(\S)/g, (match, leftChar, spaces, rightChar) => {
+        if (excess <= 0) return match;
+        const removable = Math.min(excess, spaces.length - 1);
+        excess -= removable;
+        return leftChar + ' '.repeat(spaces.length - removable) + rightChar;
+    });
+}
+
 // Resolve printer column width cleanly from configuration or fallback
 // role: 'cashier' | 'kitchen' picks the per-printer `<role>_max_cols` saved in Hardware Printers settings
 function resolveMaxCols(paperSize = '80mm', configuredMaxCols, role = 'cashier', receiptConfig = {}) {
@@ -921,10 +943,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     };
 
     const is80mm = String(paperSize ?? '').toLowerCase().includes('80');
-    // If maxCols is 36 and hardware is 48, offset is 6 spaces to physically center the block
+    // If maxCols is 36 and hardware is 48, offset is 6 spaces to physically center the block.
+    // For 42-col customer receipts on 80mm, use a 2-space left margin (2 + 42 = 44 visual cols),
+    // leaving 4 bytes of right-side hardware buffer headroom for Thai combining vowels/tone marks.
     const hardwareCols = is80mm ? 48 : 32;
     const paddingCols = Math.max(0, hardwareCols - maxCols);
-    const offset = Math.floor(paddingCols / 2);
+    const offset = (!isKitchenTab && is80mm && maxCols === 42) ? 2 : Math.floor(paddingCols / 2);
     const globalLeftMargin = ' '.repeat(offset);
 
     const originalLine = encoder.line.bind(encoder);
@@ -965,7 +989,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                return globalLeftMargin + processedLine;
+                return fitThaiLineToHardwareBuffer(globalLeftMargin + processedLine, hardwareCols);
             }
         });
 
@@ -1210,7 +1234,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             encoder.line(divider)
                    .bold(true)
                    .line(formatTwoCols('ยอดโอนมัดจำแล้ว:', `฿${depositAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}`, maxCols, null, colOpts))
+                   .size(0, 1)
                    .line(formatTwoCols('ยอดคงเหลือชำระเพิ่ม:', `฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}`, maxCols, null, colOpts))
+                   .size(0, 0)
                    .bold(false);
         }
     }
@@ -1278,8 +1304,17 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const priceStr = formatReceiptMoney(lineTotalNum);
                 const calculationText = `${qtyNum} x ${unitPriceStr}`;
 
-                // Fix P0 newline bug by calling encoder.line() instead of encoder.text()
-                encoder.line(formatItemLine(calculationText, name, priceStr, maxCols));
+                // Functional hierarchy: Dish name in bold, qty x unit price & line total in normal weight
+                const formattedItemBlock = formatItemLine(calculationText, name, priceStr, maxCols).split('\n');
+                if (formattedItemBlock.length > 1) {
+                    const itemNameLines = formattedItemBlock.slice(0, -1);
+                    const itemPriceRow = formattedItemBlock[formattedItemBlock.length - 1];
+                    encoder.bold(true);
+                    itemNameLines.forEach(l => encoder.line(l));
+                    encoder.bold(false).line(itemPriceRow);
+                } else {
+                    encoder.line(formattedItemBlock[0]);
+                }
 
                 if (item.selected_options || item.item_note) {
                     let optionsList = [];
@@ -1338,11 +1373,16 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('left').size(0, 0);
         rows.forEach(row => {
             if (row.type === 'total') {
-                encoder.line(divider).bold(true);
-            }
-            encoder.line(formatTwoCols(row.label, row.value, maxCols, null, colOpts));
-            if (row.type === 'total') {
+                // Functional Accent: Double-height bold (size(0, 1)) for Grand Total so it stands out clearly
+                encoder.line(divider).bold(true).size(0, 1);
+                encoder.line(formatTwoCols(row.label, row.value, maxCols, null, colOpts));
+                encoder.size(0, 0).bold(false);
+            } else if (row.type === 'discount' || row.type === 'xhaus_discount') {
+                encoder.bold(true);
+                encoder.line(formatTwoCols(row.label, row.value, maxCols, null, colOpts));
                 encoder.bold(false);
+            } else {
+                encoder.line(formatTwoCols(row.label, row.value, maxCols, null, colOpts));
             }
         });
         encoder.line(doubleDivider);
@@ -1405,7 +1445,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         }
         
         encoder.align('center')
-               .line(`ช่องทางชำระเงิน: ${methodLabel}`);
+               .bold(true)
+               .line(`ช่องทางชำระเงิน: ${methodLabel}`)
+               .bold(false);
                
         if (isCashMethod) {
             encoder.align('left').size(0, 0);
@@ -1415,14 +1457,28 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const cashRecvVal = formatReceiptMoney(cashDetails.received);
                 const cashChangeVal = formatReceiptMoney(cashDetails.change || 0);
                 encoder.line(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols, null, colOpts));
-                encoder.line(formatTwoCols('เงินทอน', cashChangeVal, maxCols, null, colOpts));
+                encoder.bold(true)
+                       .size(0, 1)
+                       .line(formatTwoCols('เงินทอน', cashChangeVal, maxCols, null, colOpts))
+                       .size(0, 0)
+                       .bold(false);
             }
         }
         
         encoder.align('center')
                .line('')
                .bold(true)
+               .size(0, 1)
                .line('[ ชำระเงินแล้ว ]')
+               .size(0, 0)
+               .bold(false)
+               .line(doubleDivider);
+    } else if (activeTab === 'billing') {
+        encoder.align('center')
+               .bold(true)
+               .size(0, 1)
+               .line(depositAmt > 0 ? `[ ค้างชำระ ฿${formatReceiptMoney(balanceDue)} ]` : '[ ใบแจ้งยอด / รอชำระเงิน ]')
+               .size(0, 0)
                .bold(false)
                .line(doubleDivider);
     }
@@ -2403,7 +2459,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                return globalLeftMargin + processedLine;
+                return fitThaiLineToHardwareBuffer(globalLeftMargin + processedLine, hardwareCols);
             }
         });
 
@@ -3396,7 +3452,7 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                return globalLeftMargin + processedLine;
+                return fitThaiLineToHardwareBuffer(globalLeftMargin + processedLine, hardwareCols);
             }
         });
 

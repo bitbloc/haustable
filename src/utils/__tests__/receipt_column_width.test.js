@@ -35,10 +35,10 @@ describe('receipt column width (80mm)', () => {
         expect(await dividerWidth({ kitchen_paper_size: '80mm' }, 'kitchen')).toBe(42) // 6-space margin + 36, centred just like receipt
     })
 
-    it('defaults Sunmi 80mm printers to 48 columns via applyDefaultSunmiMaxCols while preserving explicit overrides', async () => {
+    it('defaults Sunmi 80mm printers to 42 columns for cashier and 48 for kitchen via applyDefaultSunmiMaxCols', async () => {
         const { applyDefaultSunmiMaxCols } = await import('../printerHelper')
         expect(applyDefaultSunmiMaxCols({ cashier_printer_type: 'sunmi', cashier_paper_size: '80mm' })).toMatchObject({
-            cashier_max_cols: 48,
+            cashier_max_cols: 42,
             kitchen_max_cols: 48
         })
         expect(applyDefaultSunmiMaxCols({ cashier_printer_type: 'sunmi', cashier_paper_size: '80mm', cashier_max_cols: 36, kitchen_max_cols: 42 })).toMatchObject({
