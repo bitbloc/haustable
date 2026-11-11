@@ -58,6 +58,8 @@ const STRINGS = {
         categoryFallback: 'รายการ',
         otherGroup: 'อื่นๆ',
         emptyCategory: 'ไม่พบรายการอาหารในหมวดหมู่นี้',
+        searchEmpty: 'ไม่พบเมนูที่ตรงกับ "{q}"',
+        searchEmptyHint: 'ลองพิมพ์คำสั้นลง เช่น ชาไทย, เบียร์, latte',
         hasOptions: 'มีตัวเลือก',
         signatureBadge: 'SIGNATURE',
 
@@ -307,6 +309,8 @@ const STRINGS = {
         categoryFallback: 'Items',
         otherGroup: 'Other',
         emptyCategory: 'No items in this category',
+        searchEmpty: 'No items match "{q}"',
+        searchEmptyHint: 'Try a shorter word, like tea, beer or latte',
         hasOptions: 'Options',
         signatureBadge: 'SIGNATURE',
 

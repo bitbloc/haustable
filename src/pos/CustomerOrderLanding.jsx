@@ -69,6 +69,71 @@ const SEARCH_ALIASES = {
     'fries': ['เฟรนช์ฟรายส์'],
     'dessert': ['ของหวาน', 'ไอศกรีม', 'บราวนี่'],
     'ice cream': ['ไอศกรีม'],
+    'iced': ['เย็น'],
+    'hot': ['ร้อน'],
+    'เย็น': ['iced'],
+    'ร้อน': ['hot'],
+    // Common misspellings
+    'มัชฉะ': ['มัทฉะ'],
+    'มัจฉะ': ['มัทฉะ'],
+    'มัจชะ': ['มัทฉะ'],
+};
+
+// ── Search matching ──
+// Thai has no spaces and guests often skip tone marks, so both sides are normalized:
+// lower-case, spaces and punctuation removed. A query typed without any tone mark / ไม้ไต่คู้ / การันต์
+// is compared with marks stripped (โกโก → โกโก้, คอกเทล → ค็อกเทล); a query that has marks is compared
+// strictly, so น้ำ does not turn into นำ and match แนะนำ.
+const THAI_MARKS = /[็-์]/g;
+const HAS_THAI_MARK = /[็-์]/;
+const NON_WORD = /[\s\p{P}\p{S}]+/gu;
+const normalizeSearch = (text, stripMarks = false) => {
+    const base = String(text || '').normalize('NFC').toLowerCase().replace(NON_WORD, '');
+    return stripMarks ? base.replace(THAI_MARKS, '') : base;
+};
+
+const thaiSegmenter = (() => {
+    try { return typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'word' }) : null; }
+    catch { return null; }
+})();
+
+// "ชาไทยเย็น" → ["ชา", "ไทย", "เย็น"]; "iced latte" → ["iced", "latte"]
+const tokenizeSearch = (query) => {
+    const tokens = [];
+    query.trim().toLowerCase().split(/\s+/).filter(Boolean).forEach(chunk => {
+        if (thaiSegmenter && /[฀-๿]/.test(chunk)) {
+            for (const seg of thaiSegmenter.segment(chunk)) {
+                if (seg.isWordLike) tokens.push(seg.segment);
+            }
+        } else {
+            tokens.push(chunk);
+        }
+    });
+    return tokens;
+};
+
+const buildSearchMatcher = (query) => {
+    const raw = query.trim().toLowerCase();
+    if (!raw) return null;
+    const loose = !HAS_THAI_MARK.test(raw);
+    // Each term matches as itself or any of its aliases
+    const expandTerm = (term) => [term, ...(SEARCH_ALIASES[term] || [])].map(t => normalizeSearch(t, loose)).filter(Boolean);
+    const whole = expandTerm(raw);
+    const tokens = tokenizeSearch(raw).map(expandTerm).filter(variants => variants.length > 0);
+    const hasAll = (text) => tokens.length > 0 && tokens.every(variants => variants.some(v => text.includes(v)));
+    const hasWhole = (text) => whole.some(v => text.includes(v));
+
+    // Rank: name starts with the query → name contains it → name has every word → description / category contains it
+    return (entry) => {
+        const nameText = loose ? entry.nameLoose : entry.nameText;
+        const fullText = loose ? entry.fullLoose : entry.fullText;
+        if (whole.some(v => nameText.startsWith(v))) return 0;
+        if (hasWhole(nameText)) return 1;
+        if (hasAll(nameText)) return 2;
+        // Descriptions need the whole query: word-by-word on long text finds ชา in รสชาติ and ไทย in ของไทย
+        if (hasWhole(fullText)) return 3;
+        return -1;
+    };
 };
 
 // An unseated advance table reservation (dine_in, pending/confirmed) is not a live table session:
@@ -111,7 +176,7 @@ export default function CustomerOrderLanding() {
     const [submitting, setSubmitting] = useState(false);
     const submittingRef = useRef(false);
     const [search, setSearch] = useState('');
-    const [activeCategory, setActiveCategory] = useState('all');
+    const [activeSection, setActiveSection] = useState(null);
     const [cartOpen, setCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
@@ -1117,68 +1182,58 @@ export default function CustomerOrderLanding() {
         return visibleMenuItems.filter(item => item.is_recommended === true);
     }, [visibleMenuItems]);
 
-    // Active Category auto-reset if selected category becomes closed
-    useEffect(() => {
-        if (isKitchenClosed && activeCategory !== 'all' && activeCategory !== 'recommended') {
-            const isSelectedClosed = closedCategoryIdentifiers.has(String(activeCategory)) || 
-                categories.some(c => String(c.id) === String(activeCategory) && c.hide_on_kitchen_close === true);
-            if (isSelectedClosed) {
-                setActiveCategory('all');
-            }
-        }
-    }, [isKitchenClosed, activeCategory, closedCategoryIdentifiers, categories]);
-
     const isItemInCategory = useCallback((item, cat) => {
         const iCatId = item.category_id ? String(item.category_id) : '';
         const iCatName = (item.category || item.category_name || '').trim().toLowerCase();
         return iCatId === String(cat.id) || iCatName === (cat.name || '').trim().toLowerCase();
     }, []);
 
-    // Filtered Items for Display
+    // Search results (the menu itself is one continuous list; categories are jump targets, not filters)
+    const isSearching = search.trim().length > 0;
+    // Normalized text per item, built once per menu load rather than on every keystroke
+    const searchIndex = useMemo(() => visibleMenuItems.map(item => {
+        const itemCat = categories.find(c => isItemInCategory(item, c));
+        const name = [item.name, item.name_en].filter(Boolean).join(' ');
+        const full = [item.name, item.name_en, item.description, item.description_en, item.category, itemCat?.name, itemCat?.name_en].filter(Boolean).join(' ');
+        return {
+            item,
+            nameText: normalizeSearch(name),
+            fullText: normalizeSearch(full),
+            nameLoose: normalizeSearch(name, true),
+            fullLoose: normalizeSearch(full, true),
+        };
+    }), [visibleMenuItems, categories, isItemInCategory]);
+
     const filteredItems = useMemo(() => {
-        const searchTrim = search.trim().toLowerCase();
-        const searchTerms = searchTrim ? [searchTrim, ...(SEARCH_ALIASES[searchTrim] || [])] : [];
+        const match = buildSearchMatcher(search);
+        if (!match) return visibleMenuItems;
 
-        return visibleMenuItems.filter(item => {
-            let matchesCat = true;
-            if (activeCategory === 'all') {
-                matchesCat = true;
-            } else if (activeCategory === 'recommended') {
-                matchesCat = item.is_recommended === true;
-            } else {
-                const catId = item.category_id ? String(item.category_id) : '';
-                const catName = (item.category || item.category_name || '').trim().toLowerCase();
-                const targetCat = categories.find(c => String(c.id) === String(activeCategory));
-                const targetName = targetCat ? targetCat.name.trim().toLowerCase() : String(activeCategory).toLowerCase();
-                
-                matchesCat = (catId === String(activeCategory)) || (catName === targetName);
-            }
+        return searchIndex
+            .map((entry, index) => ({ item: entry.item, index, rank: match(entry) }))
+            .filter(result => result.rank >= 0)
+            .sort((a, b) => a.rank - b.rank || a.index - b.index)
+            .map(result => result.item);
+    }, [visibleMenuItems, search, searchIndex]);
 
-            let matchesSearch = true;
-            if (searchTerms.length > 0) {
-                const itemCat = categories.find(c => isItemInCategory(item, c));
-                const haystack = [item.name, item.name_en, item.description, item.description_en, item.category, itemCat?.name, itemCat?.name_en]
-                    .filter(Boolean)
-                    .join(' ')
-                    .toLowerCase();
-                matchesSearch = searchTerms.some(term => haystack.includes(term));
-            }
-
-            return matchesCat && matchesSearch;
-        });
-    }, [visibleMenuItems, activeCategory, search, categories, isItemInCategory]);
-
-    // "All" view without search: group items under their category heading
+    // Category sections in menu order; items without a known category fall into "Other"
     const groupedItems = useMemo(() => {
-        if (activeCategory !== 'all' || search.trim()) return null;
         const groups = visibleCategories
-            .map(cat => ({ key: String(cat.id), title: cat.name, cat, items: filteredItems.filter(item => isItemInCategory(item, cat)) }))
+            .map(cat => ({ key: String(cat.id), title: cat.name, cat, items: visibleMenuItems.filter(item => isItemInCategory(item, cat)) }))
             .filter(group => group.items.length > 0);
         const groupedIds = new Set(groups.flatMap(group => group.items.map(item => item.id)));
-        const ungrouped = filteredItems.filter(item => !groupedIds.has(item.id));
+        const ungrouped = visibleMenuItems.filter(item => !groupedIds.has(item.id));
         if (ungrouped.length > 0) groups.push({ key: 'other', title: tt('otherGroup'), items: ungrouped });
         return groups;
-    }, [activeCategory, search, visibleCategories, filteredItems, isItemInCategory, tt]);
+    }, [visibleCategories, visibleMenuItems, isItemInCategory, tt]);
+
+    // Recommended rail shows at most 6; the chip count matches what the rail shows
+    const recommendedRail = useMemo(() => recommendedMenuItems.slice(0, 6), [recommendedMenuItems]);
+
+    // Jump targets in page order: the chip row mirrors this list
+    const sectionKeys = useMemo(() => [
+        ...(recommendedRail.length > 0 ? ['recommended'] : []),
+        ...groupedItems.map(group => group.key),
+    ], [recommendedRail.length, groupedItems]);
 
     // Cart Operations
     const handleAddToCart = (item) => {
@@ -1529,11 +1584,106 @@ export default function CustomerOrderLanding() {
         return () => { clearTimeout(toTimer); clearTimeout(backTimer); };
     }, [loading, visibleCategories.length]);
 
-    // Keep the selected chip fully in view
+    // ── Category jump + scroll-spy ──
+    // The sticky search/chip bar sits under the sticky header; sections land just below its stuck bottom edge.
+    const menuNavRef = useRef(null);
+    const jumpLockRef = useRef(null);
+    const [pendingJump, setPendingJump] = useState(null);
+    const [stuckNavBottom, setStuckNavBottom] = useState(0);
+
+    const getStuckNavBottom = useCallback(() => {
+        const nav = menuNavRef.current;
+        if (!nav) return 0;
+        return (parseFloat(window.getComputedStyle(nav).top) || 0) + nav.offsetHeight;
+    }, []);
+
     useEffect(() => {
-        const chip = chipRowRef.current?.querySelector(`[data-cat="${String(activeCategory)}"]`);
-        chip?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
-    }, [activeCategory]);
+        const measure = () => setStuckNavBottom(getStuckNavBottom());
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [getStuckNavBottom, loading, isKitchenClosed]);
+
+    const updateActiveSection = useCallback(() => {
+        if (jumpLockRef.current) return;
+        const line = getStuckNavBottom() + 16;
+        let current = null;
+        for (const key of sectionKeys) {
+            const el = document.getElementById(`menu-sec-${key}`);
+            if (!el) continue;
+            if (current === null || el.getBoundingClientRect().top <= line) current = key;
+            else break;
+        }
+        setActiveSection(prev => (prev === current ? prev : current));
+    }, [sectionKeys, getStuckNavBottom]);
+
+    useEffect(() => {
+        let frame = 0;
+        const onScroll = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => { frame = 0; updateActiveSection(); });
+        };
+        updateActiveSection();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+            if (frame) cancelAnimationFrame(frame);
+        };
+    }, [updateActiveSection, loading, isSearching]);
+
+    const jumpToSection = useCallback((key) => {
+        const el = document.getElementById(`menu-sec-${key}`);
+        if (!el) return;
+        // First section returns to the page top so the member strip and banners come back into view
+        const top = key === sectionKeys[0]
+            ? 0
+            : Math.max(0, el.getBoundingClientRect().top + window.scrollY - getStuckNavBottom() - 12);
+        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+        // Hold the tapped chip active while the page glides past other sections
+        setActiveSection(key);
+        clearTimeout(jumpLockRef.current);
+        const release = () => {
+            clearTimeout(jumpLockRef.current);
+            jumpLockRef.current = null;
+            updateActiveSection();
+        };
+        jumpLockRef.current = setTimeout(release, 1200);
+        window.addEventListener('scrollend', release, { once: true });
+        window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }, [sectionKeys, getStuckNavBottom, updateActiveSection]);
+
+    useEffect(() => () => clearTimeout(jumpLockRef.current), []);
+
+    const handleChipTap = (key) => {
+        if (isSearching) {
+            setSearch('');
+            setPendingJump(key);
+            return;
+        }
+        jumpToSection(key);
+    };
+
+    // A chip tapped during search clears the search first, then jumps once the sections are back
+    useEffect(() => {
+        if (!pendingJump || isSearching) return;
+        const frame = requestAnimationFrame(() => { jumpToSection(pendingJump); setPendingJump(null); });
+        return () => cancelAnimationFrame(frame);
+    }, [pendingJump, isSearching, jumpToSection]);
+
+    // Keep the active chip visible in the chip row (scrolls the row only, never the page)
+    useEffect(() => {
+        const row = chipRowRef.current;
+        const chip = activeSection ? row?.querySelector(`[data-cat="${activeSection}"]`) : null;
+        if (!row || !chip) return;
+        const edge = 40; // width of the arrow cells
+        const chipLeft = chip.offsetLeft;
+        const chipRight = chipLeft + chip.offsetWidth;
+        if (chipLeft < row.scrollLeft + edge || chipRight > row.scrollLeft + row.clientWidth - edge) {
+            // Instant while a chip jump is gliding the page: Chrome cancels a smooth page scroll when another element starts one
+            row.scrollTo({ left: Math.max(0, chipLeft - edge - 8), behavior: jumpLockRef.current ? 'auto' : 'smooth' });
+        }
+    }, [activeSection]);
 
     if (loading) {
         const isNumeric = /^\d+$/.test((tableId || '').trim());
@@ -1586,8 +1736,6 @@ export default function CustomerOrderLanding() {
         toastRequired: tt('optToastRequired'),
         toastError: tt('optToastError'),
     };
-
-    const currentCategoryObj = categories.find(c => String(c.id) === String(activeCategory));
 
     // Thai view shows the Thai description; translated views show only a translated one (no Thai fallback)
     const cardDescription = (item) => (lang === 'th' ? item.description : (item[`description_${lang}`] || item.description_en || ''));
@@ -1661,6 +1809,79 @@ export default function CustomerOrderLanding() {
                 </div>
             </motion.div>
         );
+    };
+
+    // Compact row for the main list: thumbnail, name, one line of description, price. ~6-7 rows per phone screen.
+    const renderMenuRow = (item) => {
+        const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
+        const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
+
+        return (
+            <motion.button
+                type="button"
+                key={item.id}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => handleAddToCart(item)}
+                className="w-full py-3 flex items-start gap-3 text-left border-b border-[var(--color-rule)] cursor-pointer group"
+            >
+                <div className="w-16 h-16 shrink-0 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] overflow-hidden relative">
+                    {item.image_url ? (
+                        <img src={item.image_url} alt={loc(item)} className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] font-bold text-base uppercase font-mono">
+                            {item.name.charAt(0)}
+                        </div>
+                    )}
+                </div>
+
+                {/* Line-height 1.5+ keeps stacked Thai marks of clamped lines from clipping or bleeding */}
+                <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-normal">
+                        {loc(item)}
+                    </h4>
+                    {lang !== 'th' && loc(item) !== item.name && (
+                        <p className="text-xs text-[var(--color-neutral)] truncate leading-normal">{item.name}</p>
+                    )}
+                    {cardDescription(item) && (
+                        <p className="text-xs text-[var(--color-neutral)] line-clamp-1 leading-relaxed mt-0.5">
+                            {cardDescription(item)}
+                        </p>
+                    )}
+                    <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-[var(--color-ink)] font-mono font-bold text-sm">
+                            ฿{Number(item.price).toLocaleString()}
+                        </span>
+                        {hasOptions && (
+                            <span className="text-[11px] text-[var(--color-neutral)] whitespace-nowrap">{tt('hasOptions')}</span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="self-center shrink-0">
+                    {inCartCount > 0 ? (
+                        <span className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-bold text-xs flex items-center justify-center">
+                            {inCartCount}
+                        </span>
+                    ) : (
+                        <span className="w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
+                            <Plus size={14} />
+                        </span>
+                    )}
+                </div>
+            </motion.button>
+        );
+    };
+
+    const chipClass = (key, accent = false) => {
+        const active = activeSection === key && !isSearching;
+        if (accent) {
+            return active
+                ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-paper)]'
+                : 'bg-[var(--color-paper)] border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]';
+        }
+        return active
+            ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]'
+            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]';
     };
 
     return (
@@ -1828,7 +2049,7 @@ export default function CustomerOrderLanding() {
                 )}
 
                 {/* Menu Search & Category Navigation */}
-                <div className="px-3 pt-3 pb-2.5 sticky top-[59px] bg-[var(--color-paper)] z-30 space-y-2.5 border-b border-[var(--color-rule)]">
+                <div ref={menuNavRef} className="px-3 pt-3 pb-2.5 sticky top-[59px] bg-[var(--color-paper)] z-30 space-y-2.5 border-b border-[var(--color-rule)]">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={15} />
                         <input 
@@ -1849,61 +2070,33 @@ export default function CustomerOrderLanding() {
                     <div
                         ref={chipRowRef}
                         onScroll={updateChipScroll}
-                        className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        className="relative flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     >
-                        {/* All Menu Pill */}
-                        <button
-                            data-cat="all"
-                            onClick={() => setActiveCategory('all')}
-                            className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
-                                activeCategory === 'all' 
-                                    ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]' 
-                                    : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
-                            }`}
-                        >
-                            {tt('chipAll', { n: visibleMenuItems.length })}
-                        </button>
-
-                        {/* Recommended Pill */}
-                        {recommendedMenuItems.length > 0 && (
+                        {/* Chips jump to their section; the active one follows the scroll position */}
+                        {recommendedRail.length > 0 && (
                             <button
+                                type="button"
                                 data-cat="recommended"
-                                onClick={() => setActiveCategory('recommended')}
-                                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
-                                    activeCategory === 'recommended' 
-                                        ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-paper)]' 
-                                        : 'bg-[var(--color-paper)] border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]'
-                                }`}
+                                onClick={() => handleChipTap('recommended')}
+                                aria-current={activeSection === 'recommended' && !isSearching ? 'true' : undefined}
+                                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass('recommended', true)}`}
                             >
-                                {tt('chipRecommended', { n: recommendedMenuItems.length })}
+                                {tt('chipRecommended', { n: recommendedRail.length })}
                             </button>
                         )}
 
-                        {/* Dynamic Category List */}
-                        {visibleCategories.map(cat => {
-                            const catIdStr = String(cat.id);
-                            const catNameStr = (cat.name || '').trim().toLowerCase();
-                            const count = visibleMenuItems.filter(i => {
-                                const iCatId = i.category_id ? String(i.category_id) : '';
-                                const iCatName = (i.category || i.category_name || '').trim().toLowerCase();
-                                return iCatId === catIdStr || iCatName === catNameStr;
-                            }).length;
-
-                            return (
-                                <button
-                                    key={cat.id}
-                                    data-cat={String(cat.id)}
-                                    onClick={() => setActiveCategory(cat.id)}
-                                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
-                                        activeCategory === cat.id 
-                                            ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]' 
-                                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
-                                    }`}
-                                >
-                                    {loc(cat)} {count > 0 && `(${count})`}
-                                </button>
-                            );
-                        })}
+                        {groupedItems.map(group => (
+                            <button
+                                type="button"
+                                key={group.key}
+                                data-cat={group.key}
+                                onClick={() => handleChipTap(group.key)}
+                                aria-current={activeSection === group.key && !isSearching ? 'true' : undefined}
+                                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass(group.key)}`}
+                            >
+                                {group.cat ? loc(group.cat) : group.title} ({group.items.length})
+                            </button>
+                        ))}
                         {/* End spacer so the last chip clears the arrow cell */}
                         <span className="shrink-0 w-9" aria-hidden="true" />
                     </div>
@@ -1934,65 +2127,73 @@ export default function CustomerOrderLanding() {
 
                 {/* Menu Grid Listing */}
                 <main className="flex-1 p-3">
-                    {/* Top Highlight Showcase: HAUS SIGNATURE & RECOMMENDED */}
-                    {activeCategory === 'all' && !search.trim() && recommendedMenuItems.length > 0 && (
-                        <section className="mb-8 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-3.5">
-                            <div className="flex items-baseline justify-between mb-3">
-                                <h3 className="text-base font-bold text-[var(--color-ink)] leading-snug">
-                                    {tt('recommendedTitle')}
-                                </h3>
-                                <button
-                                    onClick={() => setActiveCategory('recommended')}
-                                    className="text-sm font-semibold text-[var(--color-accent)] hover:underline underline-offset-2 flex items-center gap-0.5 cursor-pointer"
-                                >
-                                    <span>{tt('seeAll', { n: recommendedMenuItems.length })}</span>
-                                    <ChevronRight size={14} />
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                                {recommendedMenuItems.slice(0, 6).map(item => renderMenuCard(item, 'rec-'))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Section Title Header (grouped "All" view carries its own category headings) */}
-                    {!groupedItems && (
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-base font-bold text-[var(--color-ink)] leading-snug">
-                                {search.trim() ? (
-                                    tt('searchResults', { q: search.trim() })
-                                ) : activeCategory === 'recommended' ? (
-                                    tt('recommendedTitle')
-                                ) : (
-                                    (currentCategoryObj && loc(currentCategoryObj)) || tt('categoryFallback')
-                                )}
+                    {isSearching ? (
+                        <section>
+                            <h3 className="text-base font-bold text-[var(--color-ink)] leading-normal">
+                                {tt('searchResults', { q: search.trim() })}
                                 <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{filteredItems.length}</span>
                             </h3>
-                        </div>
-                    )}
-
-                    {groupedItems ? (
+                            <div>{filteredItems.map(item => renderMenuRow(item))}</div>
+                        </section>
+                    ) : (
                         <div className="space-y-8">
-                            {groupedItems.map(group => (
-                                <section key={group.key} aria-labelledby={`cat-${group.key}`}>
-                                    <h3 id={`cat-${group.key}`} className="mb-3 text-base font-bold text-[var(--color-ink)] leading-snug">
+                            {/* Recommended rail: the only place with large photo cards; scrolls sideways to keep it one row tall */}
+                            {recommendedRail.length > 0 && (
+                                <section id="menu-sec-recommended" aria-labelledby="cat-recommended">
+                                    <h3 id="cat-recommended" className="mb-3 text-base font-bold text-[var(--color-ink)] leading-normal">
+                                        {tt('recommendedTitle')}
+                                        <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{recommendedRail.length}</span>
+                                    </h3>
+                                    <div className="-mx-3 px-3 flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                        {recommendedRail.map(item => (
+                                            <div key={`rec-${item.id}`} className="w-40 sm:w-48 shrink-0 snap-start grid">
+                                                {renderMenuCard(item, 'rec-')}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {groupedItems.map((group, index) => (
+                                <section
+                                    key={group.key}
+                                    id={`menu-sec-${group.key}`}
+                                    aria-labelledby={`cat-${group.key}`}
+                                    // The last section is tall enough to reach the top, so its chip can always become active
+                                    style={index === groupedItems.length - 1 && stuckNavBottom > 0
+                                        ? { minHeight: `calc(100dvh - ${stuckNavBottom + 160}px)` }
+                                        : undefined}
+                                >
+                                    <h3 id={`cat-${group.key}`} className="text-base font-bold text-[var(--color-ink)] leading-normal">
                                         {group.cat ? loc(group.cat) : group.title}
                                         <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{group.items.length}</span>
                                     </h3>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                                        {group.items.map(item => renderMenuCard(item))}
-                                    </div>
+                                    <div>{group.items.map(item => renderMenuRow(item))}</div>
                                 </section>
                             ))}
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                            {filteredItems.map(item => renderMenuCard(item))}
+                    )}
+
+                    {filteredItems.length === 0 && isSearching && (
+                        <div className="py-12 text-center space-y-2">
+                            <p className="text-sm font-bold text-[var(--color-ink)] leading-normal">{tt('searchEmpty', { q: search.trim() })}</p>
+                            <p className="text-xs text-[var(--color-neutral)] leading-relaxed">{tt('searchEmptyHint')}</p>
+                            {isKitchenClosed && (
+                                <p className="text-xs text-[var(--color-accent)] leading-relaxed">
+                                    {tt('kitchenClosedEmpty', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' })}
+                                </p>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setSearch('')}
+                                className="mt-2 px-4 py-2 rounded-sm border border-[var(--color-rule)] text-xs font-semibold text-[var(--color-ink)] hover:border-[var(--color-ink)] cursor-pointer"
+                            >
+                                {tt('clearSearch')}
+                            </button>
                         </div>
                     )}
 
-                    {filteredItems.length === 0 && (
+                    {filteredItems.length === 0 && !isSearching && (
                         <div className="py-16 text-center text-[var(--color-neutral)] font-mono text-xs uppercase tracking-wider space-y-2">
                             <p>{tt('emptyCategory')}</p>
                             {isKitchenClosed && (
