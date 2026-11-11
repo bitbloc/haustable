@@ -51,6 +51,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
     handleDuplicate,
     handleToggleStock,
     handleTogglePickup, 
+    handleToggleRecommended,
     isOverlay = false 
 }) {
     const isRecommended = item.is_recommended
@@ -137,14 +138,9 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                     <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="font-bold truncate text-sm sm:text-base text-[oklch(18%_0.012_28)]" title={item.name}>
+                            <h4 className="font-bold truncate text-sm sm:text-base text-[oklch(18%_0.012_28)] leading-normal" title={item.name}>
                                 {item.name}
                             </h4>
-                            {isRecommended && (
-                                <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
-                                    REC
-                                </span>
-                            )}
                         </div>
                         <div className="font-mono font-bold text-[oklch(52%_0.16_28)] text-sm mt-0.5 tabular-nums">
                             ฿{item.price}
@@ -236,6 +232,20 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     onPointerDown={(e) => e.stopPropagation()} 
                     onClick={(e) => e.stopPropagation()}
                 >
+                    {/* Quick Recommended Toggle (Silent Update) */}
+                    <button
+                        onClick={(e) => handleToggleRecommended(e, item)}
+                        aria-pressed={isRecommended === true}
+                        className={`px-2 py-1 rounded-xs text-[10px] font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                            isRecommended
+                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] hover:bg-[oklch(47%_0.16_28)]'
+                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
+                        }`}
+                        title={isRecommended ? 'คลิกเพื่อนำออกจากเมนูแนะนำ' : 'คลิกเพื่อเพิ่มเป็นเมนูแนะนำ'}
+                    >
+                        {isRecommended ? '★ แนะนำ' : '☆ แนะนำ'}
+                    </button>
+
                     {/* Quick Stock Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleToggleStock(e, item)}
@@ -274,7 +284,8 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
     handleDelete,
     handleDuplicate,
     handleToggleStock,
-    handleTogglePickup
+    handleTogglePickup,
+    handleToggleRecommended
 }) {
     const isOutOfStock = item.is_available === false
     const {
@@ -329,12 +340,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             {/* Name & Category */}
             <td className="py-2 px-3">
                 <div className="flex items-center gap-2">
-                    <span className="font-bold font-sans text-sm text-[oklch(18%_0.012_28)]">{item.name}</span>
-                    {item.is_recommended && (
-                        <span className="text-[9px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
-                            REC
-                        </span>
-                    )}
+                    <span className="font-bold font-sans text-sm text-[oklch(18%_0.012_28)] leading-normal">{item.name}</span>
                     {item.is_drink_stamp_eligible && (
                         <span className="text-[9px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
                             10 FREE 1
@@ -366,6 +372,22 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                 ) : (
                     <span className="text-[10px] text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
                 )}
+            </td>
+
+            {/* Quick Recommended Toggle */}
+            <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
+                <button
+                    onClick={(e) => handleToggleRecommended(e, item)}
+                    aria-pressed={item.is_recommended === true}
+                    className={`px-2 py-1 rounded-xs text-[10px] font-bold font-sans border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                        item.is_recommended
+                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
+                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
+                    }`}
+                    title={item.is_recommended ? 'นำออกจากเมนูแนะนำ' : 'เพิ่มเป็นเมนูแนะนำ'}
+                >
+                    {item.is_recommended ? '★ แนะนำ' : '☆'}
+                </button>
             </td>
 
             {/* Quick In Stock Toggle */}
@@ -736,6 +758,59 @@ export default function MenuItemList() {
         }
     }
 
+    // Recommended = the customer table page's showcase row. It shows the first 6 in-stock recommended items in sort order.
+    const RECOMMENDED_SLOTS = 6
+    const recommendedItems = useMemo(() => menuItems.filter(i => i.is_recommended === true), [menuItems])
+    const recommendedShownIds = useMemo(() => new Set(
+        recommendedItems.filter(i => i.is_available !== false).slice(0, RECOMMENDED_SLOTS).map(i => i.id)
+    ), [recommendedItems])
+
+    const handleToggleRecommended = async (e, item) => {
+        if (e && e.stopPropagation) e.stopPropagation()
+        const newValue = item.is_recommended !== true
+
+        setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_recommended: newValue } : i))
+
+        try {
+            const { data: updatedRows, error } = await supabase
+                .from('menu_items')
+                .update({ is_recommended: newValue })
+                .eq('id', item.id)
+                .select('id')
+
+            if (error) throw error
+            if (!updatedRows || updatedRows.length === 0) {
+                throw new Error('ไม่มีสิทธิ์ในการเปลี่ยนเมนูแนะนำ (สิทธิ์ไม่เพียงพอในระบบ RLS)')
+            }
+            logStaffActivity('admin', 'menu_toggle_recommended', {
+                reason: `${newValue ? 'เพิ่ม' : 'นำออกจาก'}เมนูแนะนำ: ${item.name}`,
+                metadata: { item_id: item.id, name: item.name, is_recommended: newValue }
+            });
+            notifyMenuChange();
+            const inStockCount = recommendedItems.filter(i => i.is_available !== false).length
+            if (newValue && item.is_available !== false && inStockCount >= RECOMMENDED_SLOTS) {
+                toast(`หน้าสั่งอาหารแสดงเมนูแนะนำ ${RECOMMENDED_SLOTS} รายการแรก จัดลำดับได้ที่แผงเมนูแนะนำ`)
+            }
+        } catch (err) {
+            console.error('Toggle recommended error:', err)
+            setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_recommended: !newValue } : i))
+            toast.error(err.message || 'อัปเดตเมนูแนะนำไม่สำเร็จ')
+        }
+    }
+
+    // Move a recommended item one step up/down among recommended items (swaps place in the global sort order)
+    const handleMoveRecommended = (item, direction) => {
+        const pos = recommendedItems.findIndex(i => i.id === item.id)
+        const neighbor = recommendedItems[pos + direction]
+        if (pos === -1 || !neighbor) return
+        const from = menuItems.findIndex(i => i.id === item.id)
+        const to = menuItems.findIndex(i => i.id === neighbor.id)
+        if (from === -1 || to === -1) return
+        const reordered = arrayMove(menuItems, from, to)
+        setMenuItems(reordered)
+        persistOrder(reordered)
+    }
+
     const handleDuplicate = (item) => {
         setConfirmModal({
             isOpen: true,
@@ -1092,7 +1167,10 @@ export default function MenuItemList() {
 
         const reordered = arrayMove(menuItems, oldIndex, newIndex)
         setMenuItems(reordered)
+        persistOrder(reordered)
+    }
 
+    const persistOrder = async (reordered) => {
         setIsSavingOrder(true)
         try {
             const updates = reordered.map((item, idx) => ({
@@ -1268,7 +1346,7 @@ export default function MenuItemList() {
                                 : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
-                        REC ({menuItems.filter(i => i.is_recommended).length})
+                        เมนูแนะนำ ({recommendedItems.length})
                     </button>
 
                     {categories.map(cat => {
@@ -1289,6 +1367,104 @@ export default function MenuItemList() {
                     })}
                 </div>
             </div>
+
+            {/* Recommended Panel: what the customer table page shows in its showcase row, in that order */}
+            {!loading && (
+                <section className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm mb-5 shadow-xs" aria-labelledby="rec-panel-title">
+                    <div className="px-3 py-2.5 flex items-center justify-between gap-3 border-b border-[oklch(85%_0.012_28)]">
+                        <div className="min-w-0">
+                            <h3 id="rec-panel-title" className="text-sm font-bold text-[oklch(18%_0.012_28)] leading-normal">
+                                เมนูแนะนำ
+                                <span className="ml-2 font-mono text-xs font-normal text-[oklch(55%_0.010_28)] tabular-nums">
+                                    แสดง {recommendedShownIds.size} / {RECOMMENDED_SLOTS} ช่อง
+                                </span>
+                            </h3>
+                            <p className="text-xs text-[oklch(55%_0.010_28)] leading-normal">
+                                หน้าสั่งอาหารที่โต๊ะแสดง {RECOMMENDED_SLOTS} รายการแรกที่มีของ เรียงตามลำดับนี้
+                            </p>
+                        </div>
+                        {recommendedItems.length > 0 && selectedCategoryTab !== 'recommended' && (
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCategoryTab('recommended')}
+                                className="shrink-0 text-xs font-bold text-[oklch(52%_0.16_28)] hover:underline underline-offset-2 cursor-pointer whitespace-nowrap"
+                            >
+                                กรองเฉพาะเมนูแนะนำ
+                            </button>
+                        )}
+                    </div>
+
+                    {recommendedItems.length === 0 ? (
+                        <p className="px-3 py-4 text-xs text-[oklch(55%_0.010_28)] leading-normal">
+                            ยังไม่มีเมนูแนะนำ กดปุ่ม ☆ แนะนำ ที่การ์ดเมนูด้านล่างเพื่อเพิ่ม
+                        </p>
+                    ) : (
+                        <ol>
+                            {recommendedItems.map((item, index) => {
+                                const isShown = recommendedShownIds.has(item.id)
+                                const isOut = item.is_available === false
+                                return (
+                                    <li
+                                        key={item.id}
+                                        className={`px-3 py-2 flex items-center gap-3 border-b last:border-b-0 border-[oklch(90%_0.010_28)] ${isShown ? '' : 'bg-[oklch(96%_0.006_28)]'}`}
+                                    >
+                                        <span className="w-5 shrink-0 font-mono text-xs text-[oklch(55%_0.010_28)] tabular-nums text-right">{index + 1}</span>
+                                        <div className={`w-10 h-10 shrink-0 bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden border border-[oklch(85%_0.012_28)] flex items-center justify-center ${isShown ? '' : 'opacity-60'}`}>
+                                            {item.image_url ? (
+                                                <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                            ) : (
+                                                <ImageIcon size={14} className="text-[oklch(55%_0.010_28)]" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className={`text-sm font-bold truncate leading-normal ${isShown ? 'text-[oklch(18%_0.012_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                                {item.name}
+                                            </div>
+                                            <div className="text-xs leading-normal text-[oklch(55%_0.010_28)]">
+                                                <span className="font-mono tabular-nums">฿{item.price}</span>
+                                                {isOut ? (
+                                                    <span className="ml-2 text-red-700">ของหมด · ไม่แสดง</span>
+                                                ) : !isShown ? (
+                                                    <span className="ml-2">เกิน {RECOMMENDED_SLOTS} ช่อง · ไม่แสดง</span>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-stretch shrink-0 border border-[oklch(85%_0.012_28)] rounded-xs divide-x divide-[oklch(85%_0.012_28)] overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleMoveRecommended(item, -1)}
+                                                disabled={index === 0 || isSavingOrder}
+                                                className="w-9 h-9 flex items-center justify-center text-sm text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(80%_0.010_28)] disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
+                                                aria-label={`เลื่อน ${item.name} ขึ้น`}
+                                            >
+                                                ↑
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleMoveRecommended(item, 1)}
+                                                disabled={index === recommendedItems.length - 1 || isSavingOrder}
+                                                className="w-9 h-9 flex items-center justify-center text-sm text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(80%_0.010_28)] disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
+                                                aria-label={`เลื่อน ${item.name} ลง`}
+                                            >
+                                                ↓
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => handleToggleRecommended(e, item)}
+                                                className="w-9 h-9 flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                                                aria-label={`นำ ${item.name} ออกจากเมนูแนะนำ`}
+                                                title="นำออกจากเมนูแนะนำ"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </li>
+                                )
+                            })}
+                        </ol>
+                    )}
+                </section>
+            )}
 
             {/* Menu Items Rendering (Grid vs Tabular Mode) */}
             {loading ? (
@@ -1318,6 +1494,7 @@ export default function MenuItemList() {
                                     <th className="py-2.5 px-3 font-bold">ชื่อเมนู / หมวดหมู่</th>
                                     <th className="py-2.5 px-3 text-right">ราคา</th>
                                     <th className="py-2.5 px-3 text-center">สต็อก</th>
+                                    <th className="py-2.5 px-3 text-center">แนะนำ</th>
                                     <th className="py-2.5 px-3 text-center">สถานะขาย</th>
                                     <th className="py-2.5 px-3 text-center">PICK-UP</th>
                                     <th className="py-2.5 px-3 text-right">จัดการ</th>
@@ -1334,6 +1511,7 @@ export default function MenuItemList() {
                                             handleDuplicate={handleDuplicate}
                                             handleToggleStock={handleToggleStock}
                                             handleTogglePickup={handleTogglePickup}
+                                            handleToggleRecommended={handleToggleRecommended}
                                         />
                                     ))}
                                 </tbody>
@@ -1360,6 +1538,7 @@ export default function MenuItemList() {
                                     handleDuplicate={handleDuplicate}
                                     handleToggleStock={handleToggleStock}
                                     handleTogglePickup={handleTogglePickup}
+                                    handleToggleRecommended={handleToggleRecommended}
                                 />
                             ))}
                         </div>
