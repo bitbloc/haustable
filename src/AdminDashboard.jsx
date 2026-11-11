@@ -1138,7 +1138,8 @@ export default function AdminDashboard() {
                 {/* Tax Invoice Full Modal */}
                 {taxInvoiceBooking && (
                     <TaxInvoiceModal
-                        booking={taxInvoiceBooking}
+                        booking={taxInvoiceBooking?.invoice_number ? null : taxInvoiceBooking}
+                        existingInvoice={taxInvoiceBooking?.invoice_number ? taxInvoiceBooking : null}
                         companySettings={companySettings}
                         onClose={() => setTaxInvoiceBooking(null)}
                         onSaveSuccess={(savedInvoice, printImmediately) => {
@@ -1157,6 +1158,10 @@ export default function AdminDashboard() {
                         invoice={activePrintInvoice}
                         companySettings={companySettings}
                         onClose={() => setActivePrintInvoice(null)}
+                        onEdit={(inv) => {
+                            setActivePrintInvoice(null);
+                            setTaxInvoiceBooking(inv);
+                        }}
                     />
                 )}
             </Suspense>

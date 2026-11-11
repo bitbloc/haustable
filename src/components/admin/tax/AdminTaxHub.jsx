@@ -14,7 +14,8 @@ import {
     ShoppingCart,
     ShieldAlert,
     Mail,
-    Scale
+    Scale,
+    Edit3
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
@@ -750,6 +751,19 @@ export default function AdminTaxHub() {
 
                                                             <button
                                                                 onClick={() => {
+                                                                    setEditingInvoice(inv);
+                                                                    setSelectedBookingForInvoice(linkedB || null);
+                                                                    setShowInvoiceModal(true);
+                                                                }}
+                                                                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                                                                title="แก้ไขข้อมูลเอกสารใบนี้ (รวมรายการ / แก้ไขชื่อ / ยอดเงิน)"
+                                                            >
+                                                                <Edit3 size={11} />
+                                                                <span>EDIT</span>
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => {
                                                                     setPrintModalInitialEmail(true);
                                                                     setActivePrintInvoice(inv);
                                                                 }}
@@ -913,6 +927,14 @@ export default function AdminTaxHub() {
                     onClose={() => {
                         setActivePrintInvoice(null);
                         setPrintModalInitialEmail(false);
+                    }}
+                    onEdit={(invToEdit) => {
+                        setActivePrintInvoice(null);
+                        setPrintModalInitialEmail(false);
+                        setEditingInvoice(invToEdit);
+                        const linkedB = invToEdit.booking_id ? bookingById.get(invToEdit.booking_id) : null;
+                        setSelectedBookingForInvoice(linkedB || null);
+                        setShowInvoiceModal(true);
                     }}
                 />
             )}

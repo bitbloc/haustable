@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, X, Loader2, Receipt, Printer } from 'lucide-react';
+import { FileText, X, Loader2, Receipt, Printer, Edit3 } from 'lucide-react';
 import { getShortBookingId, extractCashDetails } from '../utils/printerHelper';
 import { supabase } from '../lib/supabaseClient';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
@@ -57,6 +57,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
     const [fetchedBooking, setFetchedBooking] = useState(null);
     const [showTaxModal, setShowTaxModal] = useState(false);
     const [printInvoiceData, setPrintInvoiceData] = useState(null);
+    const [existingInvoice, setExistingInvoice] = useState(null);
     const [companySettings, setCompanySettings] = useState(() => {
         try {
             const local = localStorage.getItem('onhaus_tax_settings');
@@ -67,6 +68,33 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
     });
 
     const booking = fetchedBooking || initialBooking;
+
+    const fetchExistingInvoice = React.useCallback(async (bId) => {
+        if (!bId) return;
+        try {
+            const { data, error } = await supabase
+                .from('tax_invoices')
+                .select('*')
+                .eq('booking_id', bId)
+                .neq('status', 'cancelled')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (!error && data && data.length > 0) {
+                setExistingInvoice(data[0]);
+            } else {
+                setExistingInvoice(null);
+            }
+        } catch {
+            setExistingInvoice(null);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (booking?.id) {
+            fetchExistingInvoice(booking.id);
+        }
+    }, [booking?.id, fetchExistingInvoice]);
 
     useEffect(() => {
         supabase
@@ -485,14 +513,37 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 
                 {/* Footer */}
                 <div className="p-4 bg-white border-t border-[#D1D1CD] shrink-0 flex items-center gap-2">
-                    <button 
-                        type="button"
-                        onClick={() => setShowTaxModal(true)}
-                        className="flex-1 cursor-pointer bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md"
-                    >
-                        <Receipt size={15} />
-                        <span>ออกใบเสร็จ / ใบกำกับภาษี</span>
-                    </button>
+                    {existingInvoice ? (
+                        <div className="flex-1 flex items-center gap-2">
+                            <button 
+                                type="button"
+                                onClick={() => setPrintInvoiceData(existingInvoice)}
+                                className="flex-1 cursor-pointer bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md"
+                                title="เปิดดู/พิมพ์ใบเสร็จหรือใบกำกับภาษีที่ออกแล้ว"
+                            >
+                                <Receipt size={14} />
+                                <span>ดูใบเสร็จ ({existingInvoice.invoice_number})</span>
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setShowTaxModal(true)}
+                                className="px-3 cursor-pointer bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1 shadow-md"
+                                title="แก้ไขใบเสร็จนี้ (รวมรายการ / แก้ไขชื่อ / ยอดเงิน)"
+                            >
+                                <Edit3 size={13} />
+                                <span>แก้ไข</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <button 
+                            type="button"
+                            onClick={() => setShowTaxModal(true)}
+                            className="flex-1 cursor-pointer bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md"
+                        >
+                            <Receipt size={15} />
+                            <span>ออกใบเสร็จ / ใบกำกับภาษี</span>
+                        </button>
+                    )}
                     
                     <button 
                         type="button"
@@ -504,14 +555,16 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 </div>
             </div>
 
-            {/* Modal: Issue Tax Invoice from this bill */}
+            {/* Modal: Issue / Edit Tax Invoice from this bill */}
             {showTaxModal && (
                 <TaxInvoiceModal
                     booking={booking}
+                    existingInvoice={existingInvoice}
                     companySettings={companySettings}
                     onClose={() => setShowTaxModal(false)}
                     onSaveSuccess={(savedInvoice, printImmediately) => {
                         setShowTaxModal(false);
+                        setExistingInvoice(savedInvoice);
                         if (printImmediately) {
                             setPrintInvoiceData(savedInvoice);
                         }
@@ -525,6 +578,11 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                     invoice={printInvoiceData}
                     companySettings={companySettings}
                     onClose={() => setPrintInvoiceData(null)}
+                    onEdit={(inv) => {
+                        setPrintInvoiceData(null);
+                        setExistingInvoice(inv);
+                        setShowTaxModal(true);
+                    }}
                 />
             )}
         </div>

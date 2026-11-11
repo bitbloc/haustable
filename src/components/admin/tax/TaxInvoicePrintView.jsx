@@ -20,14 +20,15 @@ import {
     Loader2,
     Paperclip,
     FileCheck,
-    Smartphone
+    Smartphone,
+    Edit3
 } from 'lucide-react';
 import { thaiBahtText, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf, saveOrShareTaxPdf, openPdfInNewTab, isMobileBrowser } from '../../../utils/taxPdfHelper';
 import { supabase } from '../../../lib/supabaseClient';
 import { toast } from 'sonner';
 
-export default function TaxInvoicePrintView({ invoice, companySettings, onClose, initialShowEmail = false }) {
+export default function TaxInvoicePrintView({ invoice, companySettings, onClose, onEdit, initialShowEmail = false }) {
     const [copied, setCopied] = useState(false);
     const [activeCopyType, setActiveCopyType] = useState('original'); // 'original' | 'copy'
     const printableSheetRef = useRef(null);
@@ -510,6 +511,19 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                         <span>JSON</span>
                     </button>
+
+                    {/* Edit Document */}
+                    {onEdit && (
+                        <button
+                            type="button"
+                            onClick={() => onEdit(invoice)}
+                            className="px-2.5 sm:px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[10.5px] sm:text-[11px] shadow-xs"
+                            title="แก้ไขข้อมูลเอกสารใบนี้ (รวมรายการ / แก้ไขชื่อ / ยอดเงิน)"
+                        >
+                            <Edit3 size={13} />
+                            <span>แก้ไข (EDIT)</span>
+                        </button>
+                    )}
 
                     {/* Close Modal */}
                     <button

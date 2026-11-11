@@ -15,7 +15,9 @@ import {
     CheckCircle2,
     Receipt,
     Link2,
-    Unlink
+    Unlink,
+    Sparkles,
+    RotateCcw
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { 
@@ -144,6 +146,89 @@ export default function TaxInvoiceModal({
             { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 0, selected_options: '' }
         ];
     });
+
+    // Backup detailed items for 1-click restore
+    const detailedBackupRef = React.useRef(null);
+
+    // Sync state when existingInvoice prop changes
+    useEffect(() => {
+        if (existingInvoice) {
+            if (existingInvoice.doc_type) setDocType(existingInvoice.doc_type);
+            if (existingInvoice.customer_type) setCustomerType(existingInvoice.customer_type);
+            if (existingInvoice.customer_name) setCustomerName(existingInvoice.customer_name);
+            if (existingInvoice.customer_tax_id !== undefined) setCustomerTaxId(existingInvoice.customer_tax_id || '');
+            if (existingInvoice.customer_branch_type) setCustomerBranchType(existingInvoice.customer_branch_type);
+            if (existingInvoice.customer_branch_code) setCustomerBranchCode(existingInvoice.customer_branch_code);
+            if (existingInvoice.customer_address !== undefined) setCustomerAddress(existingInvoice.customer_address || '');
+            if (existingInvoice.customer_phone !== undefined) setCustomerPhone(existingInvoice.customer_phone || '');
+            if (existingInvoice.customer_email !== undefined) setCustomerEmail(existingInvoice.customer_email || '');
+            if (Array.isArray(existingInvoice.items) && existingInvoice.items.length > 0) {
+                setItems(existingInvoice.items);
+            }
+            if (existingInvoice.issued_at) {
+                setIssuedDate(toLocalDateInput(existingInvoice.issued_at));
+            }
+            if (existingInvoice.discount_amount !== undefined) {
+                setDiscountAmount(Number(existingInvoice.discount_amount || 0));
+            }
+            if (existingInvoice.wht_rate !== undefined) {
+                setWhtRate(Number(existingInvoice.wht_rate || 0));
+            }
+            if (existingInvoice.payment_method) {
+                setPaymentMethod(existingInvoice.payment_method);
+            }
+            if (existingInvoice.notes !== undefined) {
+                setNotes(existingInvoice.notes || '');
+            }
+        }
+    }, [existingInvoice]);
+
+    // 1-Click: Consolidate all items to single line (e.g. อาหารและเครื่องดื่ม ฿XXX)
+    const handleConsolidateToOneItem = (customLabel = 'อาหารและเครื่องดื่ม') => {
+        if (items.length > 1) {
+            detailedBackupRef.current = items;
+        }
+        
+        const currentSum = items.reduce((acc, item) => {
+            const p = parseFloat(item.price || item.price_at_time || 0);
+            const q = parseFloat(item.quantity || 1);
+            return acc + (p * q);
+        }, 0);
+
+        const activeB = linkedBooking || booking;
+        const targetTotal = currentSum > 0 
+            ? currentSum 
+            : Number(activeB?.total_amount || existingInvoice?.total_amount || existingInvoice?.subtotal || 0);
+
+        setItems([
+            {
+                name: customLabel,
+                quantity: 1,
+                price: targetTotal,
+                selected_options: ''
+            }
+        ]);
+        toast.success(`รวมเป็น 1 รายการ: "${customLabel}" ยอด ฿${targetTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+    };
+
+    // 1-Click: Restore detailed line items from POS bill or backup
+    const handleRestoreDetailedItems = () => {
+        if (detailedBackupRef.current && detailedBackupRef.current.length > 1) {
+            setItems(detailedBackupRef.current);
+            toast.info(`คืนค่ารายการแจกแจง (${detailedBackupRef.current.length} รายการ) เรียบร้อย`);
+            return;
+        }
+
+        const activeB = linkedBooking || booking;
+        if (activeB?.order_items && Array.isArray(activeB.order_items) && activeB.order_items.length > 0) {
+            const mapped = mapBookingOrderItems(activeB);
+            setItems(mapped);
+            toast.info(`คืนค่ารายการแจกแจงจากบิล POS (${mapped.length} รายการ) เรียบร้อย`);
+            return;
+        }
+
+        toast.warning('ไม่พบข้อมูลรายการแยกย่อยของบิลนี้');
+    };
 
     const [discountAmount, setDiscountAmount] = useState(
         existingInvoice?.discount_amount || 
@@ -344,7 +429,9 @@ export default function TaxInvoiceModal({
                 issuer_branch: activeCompanySettings?.tax_branch_code || '00000',
                 issuer_address: activeCompanySettings?.tax_address || '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000',
                 issuer_phone: activeCompanySettings?.tax_phone || '',
-                status: existingInvoice?.status || 'issued',
+                status: 'issued',
+                cancellation_reason: null,
+                cancelled_at: null,
                 notes: notes.trim(),
                 issued_at: resolvedIssuedAt
             };
@@ -781,29 +868,95 @@ export default function TaxInvoiceModal({
 
                     {/* Order Items Table Editor */}
                     <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
-                        <div className="flex justify-between items-center border-b border-zinc-200 pb-2">
-                            <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-800">
-                                รายการสินค้าและบริการ (Line Items)
-                            </span>
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-2.5">
+                            <div>
+                                <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-800 block">
+                                    รายการสินค้าและบริการ (Line Items)
+                                </span>
+                                <span className="text-[10px] text-zinc-500 font-mono">
+                                    {items.length === 1 
+                                        ? `• สรุปยอดรวม 1 รายการ (฿${(Number(items[0]?.quantity || 1) * Number(items[0]?.price || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })})` 
+                                        : `• แจกแจงตามบิล ${items.length} รายการ`}
+                                </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {/* Quick 1-Click: Consolidate to 1 item for Company Expense */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleConsolidateToOneItem('อาหารและเครื่องดื่ม')}
+                                    className={`px-2.5 py-1 rounded font-mono text-[11px] font-bold flex items-center gap-1 border transition-colors cursor-pointer ${
+                                        items.length === 1 && items[0]?.name?.includes('อาหาร')
+                                            ? 'bg-emerald-800 text-white border-emerald-900 shadow-xs'
+                                            : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                                    }`}
+                                    title="รวมทุกรายการเป็น 1 รายการ 'อาหารและเครื่องดื่ม' สำหรับเบิกบริษัท"
+                                >
+                                    <Sparkles size={12} className={items.length === 1 && items[0]?.name?.includes('อาหาร') ? 'text-emerald-200' : 'text-emerald-700'} />
+                                    <span>รวมเป็น 1 รายการ (อาหารและเครื่องดื่ม)</span>
+                                </button>
+
+                                {/* Quick 1-Click: Restore detailed breakdown */}
+                                <button
+                                    type="button"
+                                    onClick={handleRestoreDetailedItems}
+                                    className={`px-2.5 py-1 rounded font-mono text-[11px] font-bold flex items-center gap-1 border transition-colors cursor-pointer ${
+                                        items.length > 1
+                                            ? 'bg-zinc-800 text-white border-zinc-900 shadow-xs'
+                                            : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-300'
+                                    }`}
+                                    title="แจกแจงแยกรายการอาหาร/เครื่องดื่มตามบิล POS"
+                                >
+                                    <RotateCcw size={11} />
+                                    <span>แยกรายการตามบิล</span>
+                                </button>
+
                                 <button
                                     type="button"
                                     onClick={() => setShowReceiptPicker(true)}
                                     className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded font-mono text-[11px] font-bold flex items-center gap-1 border border-amber-300 transition-colors cursor-pointer"
+                                    title="เลือกดึงรายการจากบิล POS อื่น"
                                 >
                                     <Receipt size={12} />
-                                    <span>ดึงจากใบเสร็จ POS</span>
+                                    <span>ดึงจากบิล POS</span>
                                 </button>
+
                                 <button
                                     type="button"
                                     onClick={handleAddItem}
                                     className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded font-mono text-[11px] font-bold flex items-center gap-1 border border-zinc-300 transition-colors cursor-pointer"
                                 >
                                     <Plus size={13} />
-                                    <span>เพิ่มรายการ</span>
+                                    <span>เพิ่มแถว</span>
                                 </button>
                             </div>
                         </div>
+
+                        {/* Quick Preset Wording Chips (Only shown when 1 item is active) */}
+                        {items.length === 1 && (
+                            <div className="flex flex-wrap items-center gap-1.5 bg-emerald-50/60 border border-emerald-200 p-2 rounded-lg text-[10px] font-mono">
+                                <span className="text-emerald-900 font-bold uppercase">ข้อความด่วนสำหรับ 1 รายการ:</span>
+                                {[
+                                    'อาหารและเครื่องดื่ม',
+                                    'ค่าอาหารและเครื่องดื่ม',
+                                    'อาหารและเครื่องดื่ม (Food & Beverage)',
+                                    'ค่าบริการอาหารและเครื่องดื่ม'
+                                ].map((preset) => (
+                                    <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => handleUpdateItem(0, 'name', preset)}
+                                        className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                            items[0]?.name === preset
+                                                ? 'bg-emerald-800 text-white border-emerald-900 font-bold'
+                                                : 'bg-white hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                                        }`}
+                                    >
+                                        {preset}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             {items.map((item, idx) => (
