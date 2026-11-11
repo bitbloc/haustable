@@ -1749,7 +1749,7 @@ export default function CustomerOrderLanding() {
                 key={`${keyPrefix}${item.id}`}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleAddToCart(item)}
-                className="bg-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] p-2.5 flex flex-col justify-between text-left group cursor-pointer hover:border-[var(--color-ink)] transition-all relative"
+                className="min-w-0 bg-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] p-2.5 flex flex-col justify-between text-left group cursor-pointer hover:border-[var(--color-ink)] transition-all relative"
             >
                 <div>
                     {/* Image Frame */}
@@ -2146,7 +2146,9 @@ export default function CustomerOrderLanding() {
                                     </h3>
                                     <div className="-mx-3 px-3 flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                         {recommendedRail.map(item => (
-                                            <div key={`rec-${item.id}`} className="w-40 sm:w-48 shrink-0 snap-start grid">
+                                            // grid-cols-1 = minmax(0,1fr): the card cannot grow past the slot when a
+                                            // nowrap/truncated line (the Thai subtitle in EN view) is longer than the card
+                                            <div key={`rec-${item.id}`} className="w-40 sm:w-48 shrink-0 snap-start grid grid-cols-1">
                                                 {renderMenuCard(item, 'rec-')}
                                             </div>
                                         ))}
