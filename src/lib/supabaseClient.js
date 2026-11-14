@@ -18,7 +18,8 @@ export const IS_POS_READONLY_PREVIEW =
 const PREVIEW_ALLOWED_RPCS = new Set([
   'get_staff_list_safe',
   'search_member_crm_pos',
-  'get_member_tier_details'
+  'get_member_tier_details',
+  'stock_closing_status'
 ])
 
 function readOnlyPreviewFetch(input, init = {}) {

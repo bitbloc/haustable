@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { logStaffActivity } from '../../utils/auditLogger';
 import { usagePerStockUnit } from '../../utils/recipeGraph';
 import {
-    COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines
+    COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines, addDays, carryOverClosing
 } from '../../utils/stockCount';
 import { buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, normalizeBarcode } from '../../utils/stockBarcode';
 import ScanStrip from './ScanStrip';
@@ -159,6 +159,8 @@ export default function StockCountPage() {
     const [unknownCode, setUnknownCode] = useState(null);
     const [linking, setLinking] = useState(false);
     const gateRef = useRef(createScanGate(1200));
+    // Yesterday's closing count, offered as today's opening
+    const [lastClosing, setLastClosing] = useState(null); // { sessions, lines }
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => setUser(data?.user || null));
@@ -174,6 +176,32 @@ export default function StockCountPage() {
             .finally(() => setLoading(false));
         loadExtraBarcodes().then(setExtraBarcodes);
     }, []);
+
+    useEffect(() => {
+        if (kind !== 'opening') return;
+        let cancelled = false;
+        (async () => {
+            const { data: sessions } = await supabase.from('stock_count_sessions')
+                .select('id, performed_by, created_at, line_count')
+                .eq('shop_day', addDays(shopDay, -1)).eq('kind', 'closing').order('created_at');
+            if (cancelled || !sessions?.length) { if (!cancelled) setLastClosing(null); return; }
+            const { data: lines } = await supabase.from('stock_count_lines')
+                .select('session_id, stock_item_id, counted_qty')
+                .in('session_id', sessions.map(x => x.id));
+            if (cancelled) return;
+            const at = new Map(sessions.map(x => [x.id, x.created_at]));
+            setLastClosing({ sessions, lines: (lines || []).map(l => ({ ...l, created_at: at.get(l.session_id) })) });
+        })();
+        return () => { cancelled = true; };
+    }, [kind, shopDay]);
+
+    const applyLastClosing = () => {
+        if (!lastClosing) return;
+        const { counts: next, filled } = carryOverClosing(lastClosing.lines, new Set(items.map(i => i.id)), counts);
+        setCounts(next);
+        if (filled && scope === 'daily' && lastClosing.lines.some(l => itemsById.get(l.stock_item_id)?.track_mode !== 'daily')) setScope('all');
+        toast.success(filled ? `ใส่ยอดปิดเมื่อวาน ${filled} รายการ แก้เฉพาะตัวที่ไม่ตรงแล้วบันทึก` : 'ทุกรายการกรอกไว้แล้ว');
+    };
 
     const barcodeIndex = useMemo(() => buildBarcodeIndex(items, extraBarcodes), [items, extraBarcodes]);
     const itemsById = useMemo(() => new Map(items.map(i => [i.id, i])), [items]);
@@ -420,6 +448,19 @@ export default function StockCountPage() {
                                 <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
                                     นับปิดร้านแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
                                 </p>
+                            )}
+                            {kind === 'opening' && lastClosing && (
+                                <div className="grid grid-cols-[1fr_auto] gap-3 items-center border border-[oklch(85%_0.012_28)] bg-white px-3 py-2">
+                                    <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">
+                                        เมื่อวานนับปิดร้าน <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{new Set(lastClosing.lines.map(l => l.stock_item_id)).size}</span> รายการ
+                                        {' '}({lastClosing.sessions.map(x => `${new Date(x.created_at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} ${x.performed_by || ''}`.trim()).join(', ')})
+                                        <span className="block">ถ้าไม่มีอะไรเปลี่ยนตอนปิด ใช้ยอดนั้นเป็นยอดเปิด แล้วแก้เฉพาะที่ไม่ตรง</span>
+                                    </p>
+                                    <button type="button" onClick={applyLastClosing}
+                                        className="px-3 py-2 font-sans font-bold text-[13px] leading-5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer whitespace-nowrap">
+                                        ใส่ยอดปิดเมื่อวาน
+                                    </button>
+                                </div>
                             )}
                         </div>
 

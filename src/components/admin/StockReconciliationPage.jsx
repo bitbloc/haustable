@@ -3,7 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import {
-    shopDayOf, addDays, displayUnit, isAbnormal, summarizeReconciliation, sortReconciliation, COUNT_KINDS
+    shopDayOf, addDays, displayUnit, isAbnormal, summarizeReconciliation, sortReconciliation, COUNT_KINDS,
+    DEFAULT_THRESHOLDS, THRESHOLD_KEYS, thresholdsFromSettings
 } from '../../utils/stockCount';
 import { exportElementImage, downloadDataUrl, copyDataUrlImage } from '../../utils/reportImageExport';
 import { rankVariance, summarizeRanking, shopDayRange } from '../../utils/stockReports';
@@ -43,6 +44,31 @@ export default function StockReconciliationPage() {
     const [view, setView] = useState('day'); // 'day' | 7 | 30 (days of accumulated variance)
     const [ranking, setRanking] = useState({ loading: false, rows: [], days: 0, error: null });
     const [cardFor, setCardFor] = useState(null); // { id, name, unit }
+    // "Abnormal" = off by more than X% AND more than ฿Y (app_settings, shared with Telegram)
+    const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
+    const [thDraft, setThDraft] = useState(null); // { percent, baht } while editing
+
+    useEffect(() => {
+        supabase.from('app_settings').select('key, value').in('key', Object.values(THRESHOLD_KEYS))
+            .then(({ data }) => setThresholds(thresholdsFromSettings(data || [])));
+    }, []);
+
+    const saveThresholds = async () => {
+        const p = Number(thDraft?.percent);
+        const b = Number(thDraft?.baht);
+        if (!Number.isFinite(p) || p < 0 || !Number.isFinite(b) || b < 0) {
+            toast.error('ใส่ตัวเลขตั้งแต่ 0 ขึ้นไป');
+            return;
+        }
+        const { error } = await supabase.from('app_settings').upsert([
+            { key: THRESHOLD_KEYS.percent, value: String(p) },
+            { key: THRESHOLD_KEYS.baht, value: String(b) }
+        ]);
+        if (error) { toast.error('บันทึกเกณฑ์ไม่สำเร็จ: ' + error.message); return; }
+        setThresholds({ percent: p, baht: b });
+        setThDraft(null);
+        toast.success(`เกณฑ์ผิดปกติ: ต่างเกิน ${p}% และเกิน ฿${b}`);
+    };
     const reportRef = useRef(null);
 
     useEffect(() => {
@@ -54,11 +80,11 @@ export default function StockReconciliationPage() {
             .then(({ data, error }) => { if (error) throw error; return { day: d, rows: data || [] }; })))
             .then(results => {
                 if (cancelled) return;
-                setRanking({ loading: false, rows: rankVariance(results), days: results.filter(r => r.rows.some(x => x.closing_qty !== null)).length, error: null });
+                setRanking({ loading: false, rows: rankVariance(results, thresholds), days: results.filter(r => r.rows.some(x => x.closing_qty !== null)).length, error: null });
             })
             .catch(err => { if (!cancelled) setRanking({ loading: false, rows: [], days: 0, error: err }); });
         return () => { cancelled = true; };
-    }, [view, day]);
+    }, [view, day, thresholds]);
 
     const rankSummary = useMemo(() => summarizeRanking(ranking.rows), [ranking.rows]);
 
@@ -87,13 +113,13 @@ export default function StockReconciliationPage() {
 
     useEffect(() => { load(); }, [load]);
 
-    const summary = useMemo(() => summarizeReconciliation(rows), [rows]);
+    const summary = useMemo(() => summarizeReconciliation(rows, thresholds), [rows, thresholds]);
     const visible = useMemo(() => {
-        const sorted = sortReconciliation(rows);
-        if (filter === 'abnormal') return sorted.filter(r => isAbnormal(r));
+        const sorted = sortReconciliation(rows, thresholds);
+        if (filter === 'abnormal') return sorted.filter(r => isAbnormal(r, thresholds));
         if (filter === 'counted') return sorted.filter(r => r.closing_qty !== null);
         return sorted;
-    }, [rows, filter]);
+    }, [rows, filter, thresholds]);
 
     const today = shopDayOf(new Date());
     const missingRpc = error && (error.code === 'PGRST202' || /could not find the function/i.test(error.message || ''));
@@ -317,7 +343,7 @@ export default function StockReconciliationPage() {
                                 </thead>
                                 <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
                                     {visible.map(r => {
-                                        const bad = isAbnormal(r);
+                                        const bad = isAbnormal(r, thresholds);
                                         const v = Number(r.variance);
                                         return (
                                             <tr key={r.stock_item_id} className={bad ? 'bg-[oklch(97%_0.02_28)]' : ''}>
@@ -354,9 +380,27 @@ export default function StockReconciliationPage() {
                         </div>
                     )}
 
-                    <p className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)]">
-                        ผิดปกติ = ต่างเกิน 5% ของยอดที่ควรเหลือ และเกิน ฿100 (รายการที่ไม่มีราคาใช้เฉพาะ %) · ใช้ตามยอดขายคำนวณจากสูตร ยังไม่ได้ตัดสต๊อกจริง · กดชื่อเพื่อดูความเคลื่อนไหว
-                    </p>
+                    <div className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)] flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {thDraft ? (
+                            <span className="flex flex-wrap items-center gap-1.5" data-export-hide>
+                                ผิดปกติเมื่อต่างเกิน
+                                <input type="text" inputMode="decimal" value={thDraft.percent} onChange={e => setThDraft(d => ({ ...d, percent: e.target.value }))} aria-label="เปอร์เซ็นต์"
+                                    className="w-12 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-white font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
+                                % และเกิน ฿
+                                <input type="text" inputMode="decimal" value={thDraft.baht} onChange={e => setThDraft(d => ({ ...d, baht: e.target.value }))} aria-label="บาท"
+                                    className="w-16 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-white font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
+                                <button type="button" onClick={saveThresholds} className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold cursor-pointer">บันทึก</button>
+                                <button type="button" onClick={() => setThDraft(null)} className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-white font-bold cursor-pointer">ยกเลิก</button>
+                            </span>
+                        ) : (
+                            <span>
+                                ผิดปกติ = ต่างเกิน {thresholds.percent}% ของยอดที่ควรเหลือ และเกิน ฿{thresholds.baht} (รายการที่ไม่มีราคาใช้เฉพาะ %)
+                                {' '}<button type="button" data-export-hide onClick={() => setThDraft({ percent: String(thresholds.percent), baht: String(thresholds.baht) })}
+                                    className="font-bold underline underline-offset-2 hover:text-[oklch(18%_0.012_28)] cursor-pointer">ตั้งเกณฑ์</button>
+                            </span>
+                        )}
+                        <span>ใช้ตามยอดขายคำนวณจากสูตร ยังไม่ได้ตัดสต๊อกจริง · กดชื่อเพื่อดูความเคลื่อนไหว</span>
+                    </div>
                 </div>
             )}
 

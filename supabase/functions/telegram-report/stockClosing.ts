@@ -50,14 +50,17 @@ export const thaiDay = (ymd: string) => {
 }
 
 /** Same rule as the app: off by more than 5% of what should be left AND by more than ฿100 (unpriced: % only). */
-export const isAbnormal = (r: ReconRow) => {
+export type Thresholds = { percent: number; baht: number }
+const DEFAULT_THRESHOLDS: Thresholds = { percent: PERCENT_LIMIT, baht: BAHT_LIMIT }
+
+export const isAbnormal = (r: ReconRow, t: Thresholds = DEFAULT_THRESHOLDS) => {
   if (r.variance === null || r.variance === undefined || r.closing_qty === null || r.closing_qty === undefined) return false
   const v = num(r.variance)
   if (v === 0) return false
   const expected = Math.abs(num(r.expected_close))
   const pct = expected > 0 ? (Math.abs(v) / expected) * 100 : 100
   const priced = num(r.unit_cost) > 0
-  return pct > PERCENT_LIMIT && (!priced || Math.abs(num(r.variance_value)) > BAHT_LIMIT)
+  return pct > t.percent && (!priced || Math.abs(num(r.variance_value)) > t.baht)
 }
 
 export const needsReorder = (i: ReorderItem) => {
@@ -74,10 +77,12 @@ export function buildStockClosingMessage(input: {
   timeLabel: string
   rows: ReconRow[]
   reorder: ReorderItem[]
+  thresholds?: Thresholds
 }): string {
+  const t = input.thresholds || DEFAULT_THRESHOLDS
   const counted = input.rows.filter((r) => r.closing_qty !== null && r.closing_qty !== undefined)
   const abnormal = counted
-    .filter(isAbnormal)
+    .filter((r) => isAbnormal(r, t))
     .sort((a, b) => num(a.variance_value) - num(b.variance_value) || num(a.variance) - num(b.variance))
   const short = counted.reduce((s, r) => s + Math.min(0, num(r.variance_value)), 0)
   const reorder = input.reorder.filter(needsReorder).sort((a, b) => a.name.localeCompare(b.name, 'th'))

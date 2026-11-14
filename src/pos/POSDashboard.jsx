@@ -268,6 +268,8 @@ export default function POSDashboard() {
     const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
     const [openShiftForm, setOpenShiftForm] = useState({ staffName: '', openingFloat: '1000' });
     const [closeShiftForm, setCloseShiftForm] = useState({ actualCash: '' });
+    // Stock closing count done today? Only a reminder: closing the cash shift is never blocked.
+    const [stockClosing, setStockClosing] = useState(null);
     const [closeShiftMode, setCloseShiftMode] = useState('handover'); // 'handover' or 'end_of_day'
     const [openTablesInShift, setOpenTablesInShift] = useState([]);
     const [showForceVoidConfirm, setShowForceVoidConfirm] = useState(false);
@@ -660,6 +662,12 @@ export default function POSDashboard() {
             checkAndRestoreActiveShift().then(fresh => {
                 if (fresh) setActiveShift(fresh);
             });
+            setStockClosing(null);
+            if (isOnline()) {
+                supabase.rpc('stock_closing_status').then(({ data, error }) => {
+                    if (!error && data) setStockClosing(data);
+                }).catch(() => {});
+            }
             setShowForceVoidConfirm(false);
 
             // Fetch live open tables to provide clear warning & handover options
@@ -6846,6 +6854,15 @@ export default function POSDashboard() {
                                     ฿{Number(summary.expectedCash || 0).toLocaleString(undefined, { minimumFractionDigits: ((summary.expectedCash || 0) % 1 !== 0) ? 2 : 0, maximumFractionDigits: 2 })}.-
                                 </span>
                             </div>
+
+                            {stockClosing && !stockClosing.counted && closeShiftMode === 'end_of_day' && (
+                                <div className="shrink-0 border border-[var(--color-rule)] bg-[var(--color-paper-2)] px-3 py-2.5 rounded-lg" role="note">
+                                    <p className="text-[12px] font-bold leading-5 text-[var(--color-ink)]">ยังไม่ได้นับสต๊อกปิดร้านวันนี้</p>
+                                    <p className="text-[11px] leading-5 text-[var(--color-neutral)]">
+                                        ปิดกะได้ตามปกติ แต่ควรนับปิดร้านที่หน้าคลัง → นับสต๊อก → ปิดร้าน ก่อนกลับ ไม่อย่างนั้นวันนี้จะไม่มีผลต่างให้ตรวจ
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Input for Actual cash */}
                             <form onSubmit={handleCloseShiftSubmit} className="flex flex-col gap-4 shrink-0">

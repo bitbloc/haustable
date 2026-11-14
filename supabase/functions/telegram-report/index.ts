@@ -374,6 +374,17 @@ async function onOnlineOrder(s: Settings, p: any) {
 }
 
 // ปิดรอบ · ฿12,400
+// Was the stock closing count done for the current shop day? (shown on the shift close message)
+async function stockCountLine() {
+  try {
+    const { data, error } = await supabase.rpc('stock_closing_status')
+    if (error || !data) return null
+    return data.counted ? `นับสต๊อกปิดร้านแล้ว ${data.items} รายการ` : 'ยังไม่ได้นับสต๊อกปิดร้าน'
+  } catch {
+    return null
+  }
+}
+
 async function onShiftClosed(s: Settings, p: any) {
   if (!flag(s, 'telegram_notify_shift')) return 'skipped'
   const { data: sh } = await supabase.from('pos_shifts').select('*').eq('id', p.shift_id).maybeSingle()
@@ -389,6 +400,7 @@ async function onShiftClosed(s: Settings, p: any) {
       `ควรมี  <code>${baht(sh.expected_cash)}</code> · นับได้  <code>${baht(sh.closed_cash)}</code>`,
     )),
     diff === 0 ? 'เงินสดตรง' : `<b>ส่วนต่าง ${diff > 0 ? '+' : '−'}${baht(Math.abs(diff))}</b>`,
+    await stockCountLine(),
   )
   await sendTelegram(s.telegram_chat_id, text)
   return 'sent'
@@ -554,7 +566,16 @@ async function sendStockClosing(s: Settings, day: string, sessionId?: string) {
     (i.track_mode ?? 'weekly') !== 'none' &&
     (i.item_type === 'raw' || (i.item_type === 'prep' && (i.prep_mode ?? 'stocked') === 'stocked')))
 
+  // Same "abnormal" thresholds as Stock Recon (Admin can change them there)
+  const { data: th } = await supabase.from('app_settings').select('key, value')
+    .in('key', ['stock_variance_percent', 'stock_variance_baht'])
+  const thVal = (k: string, d: number) => {
+    const v = Number(((th || []).find((x: any) => x.key === k) || {}).value)
+    return Number.isFinite(v) && v >= 0 ? v : d
+  }
+
   const text = buildStockClosingMessage({
+    thresholds: { percent: thVal('stock_variance_percent', 5), baht: thVal('stock_variance_baht', 100) },
     day,
     session,
     round: idx + 1,

@@ -106,3 +106,43 @@ export const sortReconciliation = (rows = [], thresholds = DEFAULT_THRESHOLDS) =
     if (vb !== 0) return vb;
     return String(a.name || '').localeCompare(String(b.name || ''), 'th');
 });
+
+/**
+ * Yesterday's closing count -> today's opening count.
+ * lines: stock_count_lines of closing sessions ({ stock_item_id, counted_qty, created_at })
+ *        (several closing rounds possible: the latest per item wins)
+ * Fills only empty fields of `counts`, only for items in `itemIds`.
+ * Returns { counts, filled }.
+ */
+export const carryOverClosing = (lines = [], itemIds = new Set(), counts = {}) => {
+    const latest = new Map();
+    for (const l of lines) {
+        const prev = latest.get(l.stock_item_id);
+        if (!prev || String(l.created_at || '') >= String(prev.created_at || '')) latest.set(l.stock_item_id, l);
+    }
+    const next = { ...counts };
+    let filled = 0;
+    for (const [id, l] of latest) {
+        if (!itemIds.has(id)) continue;
+        if (String(next[id] ?? '').trim() !== '') continue;
+        const n = Number(l.counted_qty);
+        if (!Number.isFinite(n)) continue;
+        next[id] = String(Math.round(n * 10000) / 10000);
+        filled += 1;
+    }
+    return { counts: next, filled };
+};
+
+export const THRESHOLD_KEYS = Object.freeze({ percent: 'stock_variance_percent', baht: 'stock_variance_baht' });
+
+/** app_settings rows -> thresholds; anything missing or invalid falls back to the default. */
+export const thresholdsFromSettings = (rows = []) => {
+    const get = (k) => {
+        const v = Number((rows.find(r => r.key === k) || {}).value);
+        return Number.isFinite(v) && v >= 0 ? v : null;
+    };
+    return {
+        percent: get(THRESHOLD_KEYS.percent) ?? DEFAULT_THRESHOLDS.percent,
+        baht: get(THRESHOLD_KEYS.baht) ?? DEFAULT_THRESHOLDS.baht
+    };
+};

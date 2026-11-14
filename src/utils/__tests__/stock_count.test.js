@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     shopDayOf, addDays, defaultCountKind, displayUnit, parseCount, buildCountLines,
-    isAbnormal, summarizeReconciliation, sortReconciliation
+    isAbnormal, summarizeReconciliation, sortReconciliation, carryOverClosing, thresholdsFromSettings
 } from '../stockCount';
 
 // Bangkok is UTC+7 all year.
@@ -87,5 +87,31 @@ describe('reconciliation', () => {
     it('puts abnormal items first, then the biggest money variance', () => {
         expect(sortReconciliation([salt, soda, whisky, unpriced, exact]).map(r => r.name))
             .toEqual(['Jameson', 'ยูซุ', 'โซดา', 'เกลือ', 'เบียร์']);
+    });
+});
+
+describe('carryOverClosing', () => {
+    const lines = [
+        { stock_item_id: 'milk', counted_qty: 3, created_at: '2026-11-14T15:00:00Z' },
+        { stock_item_id: 'milk', counted_qty: 2.5, created_at: '2026-11-14T16:00:00Z' },
+        { stock_item_id: 'soda', counted_qty: 12, created_at: '2026-11-14T15:00:00Z' },
+        { stock_item_id: 'gone', counted_qty: 1, created_at: '2026-11-14T15:00:00Z' }
+    ];
+    it('uses the latest closing count and keeps what is already typed', () => {
+        const res = carryOverClosing(lines, new Set(['milk', 'soda']), { soda: '11' });
+        expect(res).toEqual({ counts: { milk: '2.5', soda: '11' }, filled: 1 });
+    });
+});
+
+describe('thresholdsFromSettings', () => {
+    it('reads the two settings and falls back to 5% / ฿100', () => {
+        expect(thresholdsFromSettings([])).toEqual({ percent: 5, baht: 100 });
+        expect(thresholdsFromSettings([{ key: 'stock_variance_percent', value: '8' }, { key: 'stock_variance_baht', value: '50' }])).toEqual({ percent: 8, baht: 50 });
+        expect(thresholdsFromSettings([{ key: 'stock_variance_percent', value: 'abc' }])).toEqual({ percent: 5, baht: 100 });
+    });
+    it('changes what counts as abnormal', () => {
+        const row = { closing_qty: 9, variance: -1, expected_close: 10, variance_value: -80, unit_cost: 80 };
+        expect(isAbnormal(row)).toBe(false);
+        expect(isAbnormal(row, { percent: 5, baht: 50 })).toBe(true);
     });
 });
