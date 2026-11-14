@@ -1,5 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo } from 'react';
+import RecipeBuilder from '../recipes/RecipeBuilder';
+import { mergeLinkedIngredients } from '../../utils/sopLinks';
 import { 
     ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, 
     Settings, RefreshCw, Link as LinkIcon, Download, Copy, FileText, 
@@ -271,11 +273,13 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                             [LINKED]
                         </span>
                     )}
-                    <input 
-                        value={ing.name || ''} 
-                        onChange={e => onUpdate(index, { ...ing, name: e.target.value })} 
-                        placeholder="ชื่อวัตถุดิบ" 
-                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold outline-none focus:border-black" 
+                    <input
+                        value={ing.name || ''}
+                        onChange={e => onUpdate(index, { ...ing, name: e.target.value })}
+                        readOnly={ing.isLinked}
+                        title={ing.isLinked ? 'แก้ชื่อและปริมาณที่สูตรของเมนู / เบส' : undefined}
+                        placeholder="ชื่อวัตถุดิบ"
+                        className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-bold outline-none focus:border-black ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-white'}`}
                     />
                 </div>
                 
@@ -284,8 +288,9 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                         <input 
                             type="number" 
                             value={ing.qty || ''} 
-                            onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })} 
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs text-center font-mono font-bold outline-none focus:border-black tabular-nums" 
+                            onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })}
+                            readOnly={ing.isLinked}
+                            className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs text-center font-mono font-bold outline-none focus:border-black tabular-nums ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-white'}`}  
                             placeholder="จำนวน" 
                         />
                     </div>
@@ -293,7 +298,8 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                     <div className="w-20 flex items-center relative">
                         <input 
                             value={ing.unit || ''} 
-                            onChange={e => onUpdate(index, { ...ing, unit: e.target.value })} 
+                            onChange={e => onUpdate(index, { ...ing, unit: e.target.value })}
+                            readOnly={ing.isLinked}
                             list="sop-units"
                             className={`w-full p-2 border text-xs text-center font-mono outline-none ${showWarning ? 'border-[oklch(60%_0.15_28)] bg-[oklch(95%_0.02_45)]/20' : 'border-[oklch(85%_0.012_28)] bg-white'}`} 
                             placeholder="หน่วย" 
@@ -327,14 +333,16 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                         <span className="text-[11px]">ซ่อน</span>
                     </label>
 
-                    <button 
+                    {!ing.isLinked && (
+                    <button
                         type="button"
-                        onClick={() => onDelete(index)} 
+                        onClick={() => onDelete(index)}
                         className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 rounded transition-colors"
                         title="ลบวัตถุดิบ"
                     >
                         <Trash2 size={14} />
                     </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -589,11 +597,11 @@ function ImportModal({ onClose, onImport }) {
         const fetch = async () => {
             const [{ data: menus }, { data: stocks }] = await Promise.all([
                 supabase.from('menu_items').select('id, name, price').order('name'),
-                supabase.from('stock_items').select('id, name').eq('is_base_recipe', true).order('name')
+                supabase.from('stock_items').select('id, name, item_type').eq('is_base_recipe', true).order('name')
             ]);
             setItems([
                 ...(menus || []).map(m => ({ ...m, type: 'menu' })),
-                ...(stocks || []).map(s => ({ ...s, type: 'stock' }))
+                ...(stocks || []).filter(s => s.item_type !== 'recipe').map(s => ({ ...s, type: 'stock' }))
             ]);
             setLoading(false);
         };
@@ -607,7 +615,7 @@ function ImportModal({ onClose, onImport }) {
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xs w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
                 <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(94%_0.010_28)]">
                     <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                        IMPORT จาก RECIPE LAB / เมนู
+                        ผูก SOP กับเมนู / เบส
                     </h3>
                     <button onClick={onClose} className="p-1 hover:bg-[oklch(90%_0.012_28)] text-[oklch(55%_0.010_28)]"><X size={16} /></button>
                 </div>
@@ -634,7 +642,7 @@ function ImportModal({ onClose, onImport }) {
                                     {item.type === 'stock' && <span className="px-1.5 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] text-[9px] font-mono font-bold">BASE</span>}
                                     {item.name}
                                 </div>
-                                <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">{item.type === 'menu' ? 'Menu Item' : 'Stock Recipe'}</div>
+                                <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">{item.type === 'menu' ? 'เมนู' : 'เบส / ของเตรียม'}</div>
                             </div>
                             <Download size={14} className="text-[oklch(55%_0.010_28)]" />
                         </button>
@@ -646,7 +654,7 @@ function ImportModal({ onClose, onImport }) {
 }
 
 // ── Main SOPEditorPage (Dieter Rams Single-Scroll Layout with Simplicity Controls) ──
-export default function SOPEditorPage({ isEmbedded = false }) {
+export default function SOPEditorPage({ isEmbedded = false, focus = null, onClose = null }) {
     const { 
         recipes, 
         categories, 
@@ -681,6 +689,8 @@ export default function SOPEditorPage({ isEmbedded = false }) {
 
     const [expandedStepIndex, setExpandedStepIndex] = useState(0);
     const [activeAnchor, setActiveAnchor] = useState('basic');
+    const [recipeEditorFor, setRecipeEditorFor] = useState(null); // { type, id }
+    const focusOpenedRef = React.useRef(false);
 
     // ── Create new empty recipe ──
     const handleNew = () => {
@@ -701,6 +711,49 @@ export default function SOPEditorPage({ isEmbedded = false }) {
         setEditorMode('simple');
         setExpandedStepIndex(0);
         setActiveAnchor('basic');
+    };
+
+    // Opened from Food & Drink for one menu / base: edit its SOP, or start one linked to it.
+    useEffect(() => {
+        if (!focus || loading || focusOpenedRef.current) return;
+        focusOpenedRef.current = true;
+        const found = recipes.find(r => (focus.type === 'menu'
+            ? String(r.source_menu_item_id) === String(focus.id)
+            : String(r.source_stock_item_id) === String(focus.id)));
+        if (found) {
+            setEditing(found);
+            setEditorMode('simple');
+            return;
+        }
+        handleNew();
+        (async () => {
+            const linked = await fetchRecipeLabSummary(focus.id, focus.type);
+            setEditing(prev => prev && ({
+                ...prev,
+                name: focus.name || '',
+                source_menu_item_id: focus.type === 'menu' ? focus.id : null,
+                source_stock_item_id: focus.type === 'stock' ? focus.id : null,
+                ingredients: mergeLinkedIngredients([], (linked || []).map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name } })))
+            }));
+        })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focus, loading, recipes]);
+
+    useEffect(() => {
+        if (focus && focusOpenedRef.current && editing === null && onClose) onClose();
+    }, [focus, editing, onClose]);
+
+    // Ingredients come from the linked recipe; after editing it, take the new rows.
+    const reloadLinkedIngredients = async () => {
+        if (!editing) return;
+        const type = editing.source_menu_item_id ? 'menu' : editing.source_stock_item_id ? 'stock' : null;
+        const id = editing.source_menu_item_id || editing.source_stock_item_id;
+        if (!type) return;
+        const linked = await fetchRecipeLabSummary(id, type);
+        setEditing(prev => prev && ({
+            ...prev,
+            ingredients: mergeLinkedIngredients(prev.ingredients || [], (linked || []).map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name } })))
+        }));
     };
 
     // ── Apply Quick Paste parsed recipe ──
@@ -782,23 +835,18 @@ export default function SOPEditorPage({ isEmbedded = false }) {
     const handleLink = async (sourceId, sourceType) => {
         const linkedIngs = await fetchRecipeLabSummary(sourceId, sourceType);
         
-        setEditing(prev => {
-            const currentManuals = (prev.ingredients || []).filter(i => !i.isLinked);
-            const freshLinked = linkedIngs.map(i => ({
-                ...i,
-                isLinked: true
-            }));
-            
-            return {
-                ...prev,
-                source_menu_item_id: sourceType === 'menu' ? sourceId : null,
-                source_stock_item_id: sourceType === 'stock' ? sourceId : null,
-                ingredients: [...freshLinked, ...currentManuals]
-            };
-        });
-        
+        setEditing(prev => ({
+            ...prev,
+            source_menu_item_id: sourceType === 'menu' ? sourceId : null,
+            source_stock_item_id: sourceType === 'stock' ? sourceId : null,
+            ingredients: mergeLinkedIngredients(
+                (prev.ingredients || []).filter(i => i.isLinked || !linkedIngs.some(l => (l.name || '').trim() === (i.name || '').trim())),
+                linkedIngs.map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name } }))
+            )
+        }));
+
         setShowImport(false);
-        toast.success('เชื่อมโยงส่วนผสมจาก Recipe Lab เรียบร้อย');
+        toast.success(`ผูกกับ${sourceType === 'menu' ? 'เมนู' : 'เบส'}แล้ว ส่วนผสมดึงจากสูตรนั้น`);
     };
 
     // ── Duplicate Recipe (1-Click) ──
@@ -1465,16 +1513,30 @@ export default function SOPEditorPage({ isEmbedded = false }) {
                                 <FileText size={12} />
                                 <span>วางข้อความนำเข้า</span>
                             </button>
-                            <button 
-                                type="button" 
-                                onClick={() => setShowImport(true)} 
+                            <button
+                                type="button"
+                                onClick={() => setShowImport(true)}
                                 className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(94%_0.010_28)] flex items-center gap-1"
                             >
                                 <Download size={12} />
-                                <span>Recipe Lab Link</span>
+                                <span>{editing.source_menu_item_id || editing.source_stock_item_id ? 'เปลี่ยนเมนู / เบส' : 'ผูกกับเมนู / เบส'}</span>
                             </button>
+                            {(editing.source_menu_item_id || editing.source_stock_item_id) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setRecipeEditorFor({ type: editing.source_menu_item_id ? 'menu' : 'stock', id: editing.source_menu_item_id || editing.source_stock_item_id })}
+                                    className="px-2.5 py-1 border border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-black flex items-center gap-1"
+                                >
+                                    <span>แก้ส่วนผสมในสูตร</span>
+                                </button>
+                            )}
                         </div>
                     </div>
+                    <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)] font-sans">
+                        {editing.source_menu_item_id || editing.source_stock_item_id
+                            ? 'ส่วนผสมที่มีป้าย [LINKED] มาจากสูตรของเมนู / เบส ใช้ทั้งคิดต้นทุนและตัดสต๊อก แก้ปริมาณได้ที่ปุ่ม "แก้ส่วนผสมในสูตร" ส่วนที่นี่ตั้งได้แค่ SCALE / SWEETENER / ซ่อน / หมายเหตุ'
+                            : 'SOP นี้ยังไม่ได้ผูกกับเมนูหรือเบส ส่วนผสมด้านล่างเป็นแค่ข้อความ ไม่คิดต้นทุนและไม่ตัดสต๊อก'}
+                    </p>
 
                     {/* Integrated Ingredients List */}
                     <div className="space-y-2.5">
@@ -1491,7 +1553,7 @@ export default function SOPEditorPage({ isEmbedded = false }) {
                             onClick={addIngredient} 
                             className="w-full py-2.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] font-mono font-bold text-xs text-[oklch(42%_0.010_28)] hover:text-black hover:border-black transition-colors uppercase"
                         >
-                            + เพิ่มวัตถุดิบ (ADD INGREDIENT)
+                            {editing.source_menu_item_id || editing.source_stock_item_id ? '+ เพิ่มบรรทัดที่ไม่ใช่ของในสต๊อก (เช่น น้ำแข็ง)' : '+ เพิ่มวัตถุดิบ (ADD INGREDIENT)'}
                         </button>
                     </div>
 
@@ -1917,6 +1979,16 @@ export default function SOPEditorPage({ isEmbedded = false }) {
 
             {/* Sub-modals */}
             {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleLink} />}
+            {recipeEditorFor && (
+                <RecipeBuilder
+                    parentId={recipeEditorFor.id}
+                    parentType={recipeEditorFor.type}
+                    onClose={() => {
+                        setRecipeEditorFor(null);
+                        reloadLinkedIngredients();
+                    }}
+                />
+            )}
             {showQuickPaste && <QuickPasteModal onClose={() => setShowQuickPaste(false)} onApply={handleApplyQuickPaste} />}
 
             <datalist id="sop-units">
