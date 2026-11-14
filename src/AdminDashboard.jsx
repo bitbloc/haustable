@@ -726,58 +726,52 @@ export default function AdminDashboard() {
             />
             
             <div className="pb-24 w-full min-w-0 overflow-x-clip">
-                {/* Executive Header Bar (Dieter Rams Minimalist Instrument Cluster) */}
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 mb-5 pb-4 border-b border-[oklch(85%_0.012_28)]">
+                {/* Executive Header Bar (Bento Minimalist Harmony) */}
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 mb-5 pb-4 border-b border-[oklch(88%_0.012_28)]">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] bg-[oklch(92%_0.010_28)] px-2 py-0.5 rounded-xs">
-                                SYSTEM COCKPIT // 2026
-                            </span>
-                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] tracking-wider">
-                                BACKOFFICE OVERVIEW
-                            </span>
-                        </div>
+                        <p className="text-xs font-medium text-[oklch(50%_0.010_28)] mb-0.5">
+                            In The Haus · Backoffice Overview
+                        </p>
                         <h1 className="font-sans text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">
-                            EXECUTIVE OVERVIEW
+                            ภาพรวมและการดำเนินงานหน้าร้าน
                         </h1>
                     </div>
 
                     {/* Date Picker & Controls Ribbon */}
                     <div className="flex items-stretch sm:items-center gap-2 flex-wrap sm:flex-nowrap">
                         {/* Quick Date Switcher */}
-                        <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-1 font-mono text-xs flex-1 sm:flex-none">
-                            <span className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] ml-1 shrink-0">[DATE]</span>
+                        <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-xl p-1 font-mono text-xs flex-1 sm:flex-none shadow-2xs">
                             <input
                                 type="date"
                                 value={selectedDate}
                                 onChange={(e) => handleDateChange(e.target.value)}
-                                className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-bold focus:outline-none cursor-pointer min-w-0"
+                                className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-semibold px-1.5 focus:outline-none cursor-pointer min-w-0"
                             />
                             <button
                                 type="button"
                                 onClick={() => handleDateChange(getThaiDate())}
-                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
                             >
                                 วันนี้
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handleDateChange(getYesterdayDate())}
-                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
                             >
                                 เมื่อวาน
                             </button>
                         </div>
 
-                        {/* Audio Alert Toggle - ONLY shown if sound is muted or active alert required */}
+                        {/* Audio Alert Toggle */}
                         {(soundMuted || pendingBookings.length > 0) && (
                             <button
                                 type="button"
                                 onClick={() => setSoundMuted(!soundMuted)}
-                                className={`px-2 py-1 rounded-xs border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                                className={`px-3 py-1.5 rounded-xl border font-mono text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
                                     soundMuted 
-                                        ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]' 
-                                        : 'bg-[oklch(92%_0.02_28)] border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]'
+                                        ? 'bg-[oklch(94%_0.010_28)] border-[oklch(88%_0.012_28)] text-[oklch(50%_0.010_28)]' 
+                                        : 'bg-[oklch(94%_0.02_28)] border-[oklch(75%_0.10_28)] text-[oklch(48%_0.15_28)]'
                                 }`}
                                 title={soundMuted ? 'เปิดเสียงแจ้งเตือน' : 'มีคำขอรอการตรวจสอบ'}
                             >
@@ -790,12 +784,11 @@ export default function AdminDashboard() {
                         <button 
                             type="button"
                             onClick={() => setShowDailySummaryModal(true)}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-medium rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                            className="px-3 py-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(93%_0.010_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-medium rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                             title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
                         >
-                            <span className="font-bold text-[10px] text-[oklch(52%_0.16_28)]">[Z-REPORT]</span>
-                            <span className="font-sans">สลิปปิดวัน</span>
-                            <span className="hidden sm:inline text-[10px] text-[oklch(55%_0.010_28)]">(PNG)</span>
+                            <span className="font-mono text-[10.5px] font-semibold text-[oklch(52%_0.16_28)]">[Z-REPORT]</span>
+                            <span>สลิปปิดวัน</span>
                         </button>
 
                         {/* Refresh */}
@@ -803,7 +796,7 @@ export default function AdminDashboard() {
                             type="button"
                             onClick={() => fetchData(false, selectedDate)} 
                             disabled={loading}
-                            className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                             title="รีเฟรชข้อมูลล่าสุด"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -812,18 +805,18 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* SHIFT STATUS BANNER (Dieter Rams / Thai Modern Structural Indicator) */}
+                {/* SHIFT STATUS BANNER (Quiet Bento Status Pill Strip) */}
                 {(() => {
                     const isToday = selectedDate === getThaiDate()
                     return (
-                        <div className={`mb-4 px-3.5 py-2 rounded-xs border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none ${
+                        <div className={`mb-4 px-4 py-2.5 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none ${
                             !isToday
-                                ? 'bg-[oklch(95%_0.008_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                ? 'bg-[oklch(95.5%_0.008_28)] border-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
                                 : isShiftOpen
-                                    ? 'bg-[oklch(96%_0.02_140)] border-[oklch(80%_0.08_140)] text-[oklch(25%_0.08_140)]'
-                                    : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                    ? 'bg-[oklch(95%_0.02_140)] border-[oklch(84%_0.04_140)] text-[oklch(28%_0.08_140)]'
+                                    : 'bg-[oklch(95.5%_0.008_28)] border-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
                         }`}>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5 flex-wrap">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${
                                     !isToday
                                         ? 'bg-[oklch(55%_0.010_28)]'
@@ -831,7 +824,7 @@ export default function AdminDashboard() {
                                             ? 'bg-[oklch(45%_0.08_140)]' 
                                             : 'bg-[oklch(55%_0.010_28)]'
                                 }`} />
-                                <span className="font-mono font-bold tracking-wider text-[11px] uppercase">
+                                <span className="font-mono font-semibold text-[11.5px]">
                                     {!isToday
                                         ? 'HISTORICAL RECORD // รอบขายย้อนหลัง'
                                         : isShiftOpen 
@@ -839,81 +832,81 @@ export default function AdminDashboard() {
                                             : 'POS SHIFT CLOSED // กะปิดอยู่'
                                     }
                                 </span>
-                                <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                                <span className="font-sans font-medium text-xs">
+                                <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">·</span>
+                                <span className="font-sans font-normal text-xs">
                                     {!isToday ? (
                                         latestClosedShift ? (
-                                            <>รอบการขายสิ้นสุดสมบูรณ์ (ปิดรอบเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>{shifts.length > 1 ? ` · ทั้งหมด ${shifts.length} กะ` : ''})</>
+                                            <>ปิดรอบเมื่อ <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-semibold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>{shifts.length > 1 ? ` · ทั้งหมด ${shifts.length} กะ` : ''}</>
                                         ) : (
-                                            <>ไม่มีประวัติรอบการขายบนเครื่อง POS ในวันที่ {formatThaiDateOnly(selectedDate)}</>
+                                            <>ไม่มีประวัติรอบขาย POS ในวันที่ {formatThaiDateOnly(selectedDate)}</>
                                         )
                                     ) : isShiftOpen ? (
-                                        <>พนักงานประจำเครื่อง: <strong className="font-bold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดรอบเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
+                                        <>ประจำเครื่อง: <strong className="font-semibold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
                                     ) : latestClosedShift ? (
-                                        <>หน้าร้านยังไม่เปิดรอบขาย (รอบล่าสุดปิดเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
+                                        <>หน้าร้านยังไม่เปิดรอบขาย (ล่าสุดปิด {formatThaiTimeOnly(latestClosedShift.closed_at)} โดย <strong className="font-semibold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
                                     ) : (
                                         <>หน้าร้านยังไม่มีการเปิดรอบการขายบนเครื่อง POS</>
                                     )}
                                 </span>
                             </div>
 
-                            <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] self-end sm:self-auto uppercase">
+                            <div className="font-mono text-[11px] text-[oklch(50%_0.010_28)] self-end sm:self-auto">
                                 {!isToday 
-                                    ? (latestClosedShift ? '[ARCHIVED SHIFT]' : '[NO SHIFT RECORD]')
-                                    : isShiftOpen ? '[ONLINE TERMINAL ACTIVE]' : '[TERMINAL CLOSED]'}
+                                    ? (latestClosedShift ? 'บันทึกย้อนหลัง' : 'ไม่มีกะ')
+                                    : isShiftOpen ? 'POS เชื่อมต่ออยู่' : 'POS ปิดกะ'}
                             </div>
                         </div>
                     )
                 })()}
 
-                {/* MASTER COCKPIT MODE SWITCHER (Tabular Grid - Dieter Rams Zero-wrap / Responsive 2-Tier Stack) */}
-                <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xs gap-0.5 mb-5 text-xs sm:text-sm">
+                {/* MASTER COCKPIT MODE SWITCHER (Clean Bento Segmented Switch) */}
+                <div className="grid grid-cols-2 border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] p-1 rounded-2xl gap-1 mb-6 text-xs sm:text-sm">
                     <button
                         type="button"
                         onClick={() => handleSetOverviewMode('simplified')}
-                        className={`py-1.5 sm:py-2 px-2 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center select-none ${
+                        className={`py-2 px-3 sm:px-6 rounded-xl font-medium transition-colors cursor-pointer flex items-center justify-center select-none ${
                             overviewMode === 'simplified'
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
-                                : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                         }`}
                     >
                         {/* Mobile: 2-Tier Stacked Layout */}
                         <div className="flex sm:hidden flex-col items-center justify-center leading-tight py-0.5">
-                            <span className="flex items-center gap-1 font-mono text-[9.5px] tracking-wider opacity-80 uppercase">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-40'}`} />
-                                LIVE NOW
+                            <span className="flex items-center gap-1.5 font-mono text-[10px] opacity-85">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-40'}`} />
+                                Live Now
                             </span>
-                            <span className="font-sans font-medium text-[11.5px] mt-0.5">โต๊ะสดหน้าร้าน</span>
+                            <span className="font-sans font-medium text-xs mt-0.5">โต๊ะสดหน้าร้าน</span>
                         </div>
 
                         {/* Desktop: Single-Line Tabular Layout */}
                         <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
-                            <span className="font-mono tracking-wide">LIVE NOW // <span className="font-sans font-medium">โต๊ะสดหน้าร้าน</span></span>
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-30'}`} />
+                            <span className="font-medium">Live Now · โต๊ะสดหน้าร้าน</span>
                         </div>
                     </button>
                     <button
                         type="button"
                         onClick={() => handleSetOverviewMode('pro')}
-                        className={`py-1.5 sm:py-2 px-2 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center select-none ${
+                        className={`py-2 px-3 sm:px-6 rounded-xl font-medium transition-colors cursor-pointer flex items-center justify-center select-none ${
                             overviewMode === 'pro'
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
-                                : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                         }`}
                     >
                         {/* Mobile: 2-Tier Stacked Layout */}
                         <div className="flex sm:hidden flex-col items-center justify-center leading-tight py-0.5">
-                            <span className="flex items-center gap-1 font-mono text-[9.5px] tracking-wider opacity-80 uppercase">
-                                <span className={`w-1.5 h-1.5 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-40'}`} />
-                                PRO ANALYTICS
+                            <span className="flex items-center gap-1.5 font-mono text-[10px] opacity-85">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(52%_0.16_28)]' : 'bg-current opacity-40'}`} />
+                                Pro Analytics
                             </span>
-                            <span className="font-sans font-medium text-[11.5px] mt-0.5">ภาพรวม &amp; เชิงลึก</span>
+                            <span className="font-sans font-medium text-xs mt-0.5">ภาพรวมและเชิงลึก</span>
                         </div>
 
                         {/* Desktop: Single-Line Tabular Layout */}
                         <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
-                            <span className={`w-2 h-2 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
-                            <span className="font-mono tracking-wide">PRO ANALYTICS // <span className="font-sans font-medium">ภาพรวม &amp; วิเคราะห์เชิงลึก</span></span>
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(52%_0.16_28)]' : 'bg-current opacity-30'}`} />
+                            <span className="font-medium">Pro Analytics · ภาพรวมและเชิงลึก</span>
                         </div>
                     </button>
                 </div>
@@ -948,7 +941,7 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <div className="space-y-6 mb-6">
-                        {/* 0. Modern Bento Executive Data Visualization Dashboard (Modeled after design-taste-frontend) */}
+                        {/* 0. Modern Bento Executive Data Visualization Dashboard */}
                         <AdminExecutiveDataVizDashboard
                             bookings={dailyBookings}
                             revenueToday={revenueToday}
@@ -981,46 +974,45 @@ export default function AdminDashboard() {
                             loading={loading}
                         />
 
-                        {/* 1. Deep Predictive Analytics: Intraday Velocity & Daypart Cockpit */}
+                        {/* 2. Intraday Velocity & Daypart Chart (Compact Header Mode avoids duplicate KPI clutter) */}
                         <IntradayVelocityDaypartCockpit
                             bookings={dailyBookings}
                             selectedDate={selectedDate}
                             loading={loading}
-                            totalSeats={floorOccupancy.totalTables > 0 ? floorOccupancy.totalTables * 3 : 45}
+                            totalSeats={derivedFloorOccupancy.totalTables > 0 ? derivedFloorOccupancy.totalTables * 3 : 45}
                             filterMode="day"
+                            compactMode={true}
                         />
 
-                        {/* 2. Owner Direct Broadcast to POS Screen */}
+                        {/* 3. Owner Direct Broadcast to POS Screen */}
                         <OwnerPosBroadcastBar />
 
-                        {/* 3. Segmented Filter Tabs (Tabular Brutalist Division) */}
-                        <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] pt-2 font-mono text-xs no-scrollbar">
+                        {/* 4. Segmented Filter Tabs (Clean Bento Pill Bar) */}
+                        <div className="flex gap-1.5 overflow-x-auto bg-[oklch(94%_0.010_28)] p-1.5 rounded-2xl border border-[oklch(88%_0.012_28)] text-xs no-scrollbar">
                             {[
-                                { key: 'bills', code: '01', label: 'ALL BILLS', count: dailyBookings.length },
-                                { key: 'shifts', code: '02', label: 'SHIFTS (กะเงินสด)', count: shifts.length },
-                                { key: 'inbox', code: '03', label: 'INBOX', count: pendingBookings.length },
-                                { key: 'schedule', code: '04', label: 'SCHEDULE', count: scheduleBookings.length },
-                                { key: 'dine_in', code: '05', label: 'DINE-IN', count: dineInCount },
-                                { key: 'pickup', code: '06', label: 'PICKUP', count: pickupCount },
-                                { key: 'floor', code: '07', label: 'FLOOR CONTROL', count: derivedFloorOccupancy.occupiedTables }
+                                { key: 'bills', code: '01', label: 'บิลทั้งหมด', count: dailyBookings.length },
+                                { key: 'shifts', code: '02', label: 'กะเงินสด (Shifts)', count: shifts.length },
+                                { key: 'inbox', code: '03', label: 'คำขอรอตรวจ', count: pendingBookings.length },
+                                { key: 'schedule', code: '04', label: 'ตารางจอง', count: scheduleBookings.length },
+                                { key: 'dine_in', code: '05', label: 'ทานที่ร้าน', count: dineInCount },
+                                { key: 'pickup', code: '06', label: 'สั่งกลับบ้าน', count: pickupCount },
+                                { key: 'floor', code: '07', label: 'ผังโต๊ะ', count: derivedFloorOccupancy.occupiedTables }
                             ].map((tab) => {
                                 const isActive = activeTab === tab.key
                                 return (
                                     <button
                                         key={tab.key}
+                                        type="button"
                                         onClick={() => setActiveTab(tab.key)}
-                                        className={`pb-2.5 px-3.5 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[1px] flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                                        className={`py-1.5 px-3 rounded-xl font-medium transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                                             isActive 
-                                                ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)]' 
-                                                : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
+                                                : 'text-[oklch(45%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                         }`}
                                     >
-                                        <span className={`text-[10px] font-mono tracking-tighter ${isActive ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
-                                            {tab.code} //
-                                        </span>
                                         <span>{tab.label}</span>
-                                        <span className={`px-1.5 py-0.2 rounded-xs text-[10px] tabular-nums font-mono ${
-                                            isActive ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]'
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[10.5px] tabular-nums font-mono ${
+                                            isActive ? 'bg-[oklch(97%_0.008_28)]/18 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(89%_0.010_28)] text-[oklch(38%_0.010_28)]'
                                         }`}>
                                             {tab.count}
                                         </span>
@@ -1029,7 +1021,7 @@ export default function AdminDashboard() {
                             })}
                         </div>
 
-                        {/* 4. Tab Content: Master Bills Hub / Shifts / Inbox / Schedule / Floor Control */}
+                        {/* 5. Tab Content */}
                         <div>
                             {getTabContent()}
                         </div>

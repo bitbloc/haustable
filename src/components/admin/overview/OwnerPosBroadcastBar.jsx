@@ -157,35 +157,31 @@ export default function OwnerPosBroadcastBar() {
     }
 
     return (
-        <div className="bg-[oklch(98%_0.006_28)] border-2 border-[oklch(85%_0.012_28)] rounded-xl p-4 md:p-5 space-y-3 shadow-xs">
+        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3.5 shadow-2xs font-sans">
             {/* Title */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[oklch(85%_0.012_28)] font-mono">
-                <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[10px] font-bold rounded-2xs">
-                        [BROADCAST]
-                    </span>
-                    <div>
-                        <h3 className="text-xs md:text-sm font-black uppercase text-[oklch(18%_0.012_28)]">
-                            OWNER DIRECT BROADCAST TO POS // ส่งคำสั่งด่วนถึงหน้าร้าน
-                        </h3>
-                        <p className="text-[10px] text-[oklch(42%_0.010_28)]">
-                            ข้อความจะแจ้งเตือนบนหน้าจอ POS ทุกเครื่องของพนักงานทันทีแบบ Real-time
-                        </p>
-                    </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[oklch(88%_0.012_28)]">
+                <div>
+                    <h3 className="text-sm font-semibold text-[oklch(18%_0.012_28)] tracking-tight">
+                        ส่งข้อความประกาศถึงหน้าจอ POS
+                    </h3>
+                    <p className="text-xs text-[oklch(50%_0.010_28)] mt-0.5">
+                        แสดงการแจ้งเตือนบนหน้าจอ POS ทุกเครื่องของพนักงานทันทีแบบเรียลไทม์
+                    </p>
                 </div>
 
                 {activeBroadcast && (
-                    <div className="flex items-center gap-2 font-mono text-[11px] self-start sm:self-auto">
-                        <span className="px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.04_140)] rounded-xs font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_140)]" />
-                            <span>ACTIVE ON POS</span>
+                    <div className="flex items-center gap-2 text-xs self-start sm:self-auto">
+                        <span className="px-2.5 py-0.5 bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(84%_0.04_140)] rounded-full font-medium flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
+                            <span>กำลังแสดงบน POS</span>
                         </span>
                         <button
+                            type="button"
                             onClick={handleClearBroadcast}
-                            className="px-2 py-0.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xs font-bold transition-colors"
+                            className="px-2.5 py-0.5 bg-[oklch(94%_0.02_28)] hover:bg-[oklch(90%_0.03_28)] text-[oklch(45%_0.15_28)] border border-[oklch(85%_0.04_28)] rounded-full font-medium transition-colors cursor-pointer"
                             title="ลบประกาศออกจากหน้าจอ POS"
                         >
-                            ลบประกาศ
+                            ล้างประกาศ
                         </button>
                     </div>
                 )}
@@ -193,23 +189,23 @@ export default function OwnerPosBroadcastBar() {
 
             {/* Active Announcement Preview */}
             {activeBroadcast && (
-                <div className="bg-[oklch(96%_0.015_28)] border border-[oklch(88%_0.02_28)] rounded-lg p-2.5 flex items-center justify-between gap-3 font-mono text-xs">
+                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2 truncate">
-                        <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider text-[10px] shrink-0">
-                            ประกาศปัจจุบัน:
+                        <span className="font-medium text-[oklch(52%_0.16_28)] shrink-0">
+                            ประกาศล่าสุด:
                         </span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)] truncate">
-                            "{activeBroadcast.text}"
+                        <span className="font-semibold text-[oklch(18%_0.012_28)] truncate">
+                            &ldquo;{activeBroadcast.text}&rdquo;
                         </span>
                     </div>
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] shrink-0">
+                    <span className="font-mono text-[11px] text-[oklch(50%_0.010_28)] shrink-0 tabular-nums">
                         {activeBroadcast.timestamp ? new Date(activeBroadcast.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                 </div>
             )}
 
             {/* Input Bar */}
-            <div className="flex flex-col sm:flex-row items-center gap-2 font-mono text-xs">
+            <div className="flex flex-col sm:flex-row items-center gap-2 text-xs">
                 <input
                     type="text"
                     placeholder="พิมพ์คำสั่งด่วนหรือประกาศถึงพนักงานหน้าร้าน..."
@@ -221,28 +217,31 @@ export default function OwnerPosBroadcastBar() {
                             handleSendBroadcast()
                         }
                     }}
-                    className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg px-3.5 py-2 text-xs text-[oklch(18%_0.012_28)] placeholder:text-gray-400 focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                    className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(86%_0.012_28)] rounded-xl px-3.5 py-2.5 text-xs text-[oklch(18%_0.012_28)] placeholder:text-[oklch(60%_0.010_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                 />
                 <button
+                    type="button"
                     onClick={() => handleSendBroadcast()}
                     disabled={sending || !message.trim()}
-                    className="w-full sm:w-auto px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-50 text-white rounded-lg font-black flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
+                    className="w-full sm:w-auto px-4 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] disabled:opacity-45 text-[oklch(97%_0.008_28)] rounded-xl font-medium flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                    <span>{sending ? 'กำลังส่ง...' : 'SEND TO POS ➔'}</span>
+                    <span>{sending ? 'กำลังส่ง...' : 'ส่งถึง POS'}</span>
+                    {!sending && <span aria-hidden="true">&rarr;</span>}
                 </button>
             </div>
 
             {/* Quick Preset Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap font-mono text-[11px] pt-1">
-                <span className="text-[oklch(55%_0.010_28)] text-[10px] font-bold uppercase">ข้อความด่วน:</span>
+            <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+                <span className="text-[oklch(50%_0.010_28)] font-medium mr-0.5">ข้อความด่วน:</span>
                 {QUICK_CHIPS.map((chip, idx) => (
                     <button
                         key={idx}
+                        type="button"
                         onClick={() => {
                             setMessage(chip)
                             handleSendBroadcast(chip)
                         }}
-                        className="px-2.5 py-1 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm font-semibold transition-colors"
+                        className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(28%_0.012_28)] rounded-full font-medium transition-colors cursor-pointer"
                     >
                         + {chip}
                     </button>

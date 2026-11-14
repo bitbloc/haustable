@@ -231,42 +231,40 @@ export default function OnlineAdvanceOrdersHub({
     }
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-xs overflow-hidden shadow-2xs font-sans transition-all">
-            {/* 1. Header Strip (Dieter Rams Monospace Architecture) */}
-            <div className="p-3 sm:p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl overflow-hidden shadow-2xs font-sans">
+            {/* 1. Clean Bento Header Strip */}
+            <div className="p-4 md:p-5 bg-[oklch(97%_0.008_28)] border-b border-[oklch(88%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(97%_0.008_28)] bg-[oklch(18%_0.012_28)] px-2 py-0.5 rounded-xs">
-                        ONLINE FEED // OMNI-DATE
-                    </span>
-                    <span className="font-sans font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)] tracking-tight">
-                        ออเดอร์ออนไลน์และการจองล่วงหน้า
-                    </span>
-                    <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)] bg-[oklch(90%_0.02_28)] px-2 py-0.5 rounded-xs">
+                    <h3 className="font-semibold text-base text-[oklch(18%_0.012_28)] tracking-tight">
+                        ออเดอร์ออนไลน์และจองล่วงหน้า
+                    </h3>
+                    <span className="font-mono text-xs font-medium text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] px-2.5 py-0.5 rounded-full tabular-nums">
                         {metrics.total} รายการ
                     </span>
                     {metrics.urgentCount > 0 && (
-                        <span className="font-mono text-[11px] font-bold text-[oklch(97%_0.008_28)] bg-[oklch(52%_0.16_28)] px-2 py-0.5 rounded-xs animate-pulse">
-                            [ต้องจัดการ {metrics.urgentCount}]
+                        <span className="font-mono text-xs font-semibold text-[oklch(97%_0.008_28)] bg-[oklch(52%_0.16_28)] px-2.5 py-0.5 rounded-full tabular-nums">
+                            ต้องจัดการ {metrics.urgentCount}
                         </span>
                     )}
                 </div>
 
                 {/* Right controls: Collapse / Expand & Pro Mode jump */}
-                <div className="flex items-center gap-2 self-start md:self-auto font-mono text-xs">
+                <div className="flex items-center gap-2 self-start md:self-auto text-xs">
                     <button
                         type="button"
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="px-2.5 py-1 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs cursor-pointer transition-colors"
+                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium rounded-xl cursor-pointer transition-colors"
                     >
-                        {isCollapsed ? '[+] ขยายคิวออเดอร์' : '[-] ยุบแถบคิว'}
+                        {isCollapsed ? 'แสดงคิวออเดอร์' : 'ย่อแถบคิว'}
                     </button>
                     {onOpenProMode && (
                         <button
                             type="button"
                             onClick={onOpenProMode}
-                            className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-xs cursor-pointer transition-colors hidden sm:inline-block"
+                            className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-medium rounded-xl cursor-pointer transition-colors hidden sm:inline-flex items-center gap-1"
                         >
-                            [INBOX ลึก ➔]
+                            <span>เปิด Inbox</span>
+                            <span aria-hidden="true">&rarr;</span>
                         </button>
                     )}
                 </div>
@@ -274,12 +272,12 @@ export default function OnlineAdvanceOrdersHub({
 
             {!isCollapsed && (
                 <>
-                    {/* 2. Tabular Filter Ribbons (Two-Tier Multi-Dimensional Matrix) */}
-                    <div className="px-3 sm:px-4 py-2.5 bg-[oklch(96%_0.008_28)] border-b border-[oklch(88%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-mono">
+                    {/* 2. Clean Pill Filter Ribbons */}
+                    <div className="px-4 md:px-5 py-2.5 bg-[oklch(95.5%_0.008_28)] border-b border-[oklch(88%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
                         {/* Horizon Selector (Date Horizons) */}
-                        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)] font-bold mr-1 shrink-0 uppercase">
-                                [ช่วงวัน]
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                            <span className="text-[11px] text-[oklch(50%_0.010_28)] font-medium mr-0.5 shrink-0">
+                                ช่วงวัน:
                             </span>
                             {[
                                 { key: 'all', label: 'ทุกวัน', count: metrics.total },
@@ -294,25 +292,25 @@ export default function OnlineAdvanceOrdersHub({
                                         key={item.key}
                                         type="button"
                                         onClick={() => setHorizonFilter(item.key)}
-                                        className={`px-2 py-1 rounded-xs font-bold transition-all cursor-pointer whitespace-nowrap text-[11px] border ${
+                                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-[11px] border ${
                                             isActive
                                                 ? item.isUrgent
                                                     ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
                                                     : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
+                                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:border-[oklch(75%_0.012_28)]'
                                         }`}
                                     >
                                         <span>{item.label}</span>
-                                        <span className="ml-1 opacity-80">({item.count})</span>
+                                        <span className="ml-1 font-mono opacity-75 tabular-nums">{item.count}</span>
                                     </button>
                                 )
                             })}
                         </div>
 
                         {/* Channel / Type Selector */}
-                        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)] font-bold mr-1 shrink-0 uppercase">
-                                [ช่องทาง]
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                            <span className="text-[11px] text-[oklch(50%_0.010_28)] font-medium mr-0.5 shrink-0">
+                                ช่องทาง:
                             </span>
                             {[
                                 { key: 'all', label: 'ทั้งหมด', count: metrics.total },
@@ -326,25 +324,25 @@ export default function OnlineAdvanceOrdersHub({
                                         key={item.key}
                                         type="button"
                                         onClick={() => setChannelFilter(item.key)}
-                                        className={`px-2 py-1 rounded-xs font-bold transition-all cursor-pointer whitespace-nowrap text-[11px] border ${
+                                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-[11px] border ${
                                             isActive
                                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
+                                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:border-[oklch(75%_0.012_28)]'
                                         }`}
                                     >
                                         <span>{item.label}</span>
-                                        <span className="ml-1 opacity-80">({item.count})</span>
+                                        <span className="ml-1 font-mono opacity-75 tabular-nums">{item.count}</span>
                                     </button>
                                 )
                             })}
                         </div>
                     </div>
 
-                    {/* 3. Orders Grid & List (Zero-Icon Tabular Division) */}
+                    {/* 3. Orders List (Clean Dividers) */}
                     <div className="divide-y divide-[oklch(88%_0.012_28)] max-h-[380px] overflow-y-auto">
                         {filteredOrders.length === 0 ? (
-                            <div className="p-8 text-center font-mono text-xs text-[oklch(55%_0.010_28)]">
-                                [EMPTY] ไม่มีรายการออเดอร์ออนไลน์หรือการจองตามเงื่อนไขที่เลือก
+                            <div className="p-8 text-center text-xs text-[oklch(55%_0.010_28)]">
+                                ไม่มีรายการออเดอร์ออนไลน์หรือการจองตามเงื่อนไขที่เลือก
                             </div>
                         ) : (
                             filteredOrders.map(order => {
@@ -368,67 +366,64 @@ export default function OnlineAdvanceOrdersHub({
                                     <div
                                         key={order.id}
                                         onClick={() => onInspectBill && onInspectBill(order)}
-                                        className={`p-3 sm:p-4 hover:bg-[oklch(95%_0.010_28)] transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 border-l-4 ${classified.accentClass} ${
-                                            isUrgent ? 'bg-[oklch(96%_0.018_28)]' : 'bg-[oklch(97%_0.008_28)]'
+                                        className={`p-3.5 sm:px-5 sm:py-3.5 hover:bg-[oklch(95%_0.010_28)] transition-colors cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 border-l-4 ${classified.accentClass} ${
+                                            isUrgent ? 'bg-[oklch(96%_0.016_28)]' : 'bg-[oklch(97%_0.008_28)]'
                                         }`}
                                     >
                                         {/* Left Side: Timing, Customer & Channel */}
-                                        <div className="space-y-1 min-w-0">
+                                        <div className="space-y-1.5 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                {/* Date & Time Badge */}
-                                                <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-xs ${
+                                                <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-md ${
                                                     horizon === 'today'
                                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                                         : horizon === 'tomorrow'
-                                                            ? 'bg-[oklch(90%_0.02_28)] text-[oklch(40%_0.14_28)] font-black'
-                                                            : 'bg-[oklch(92%_0.010_28)] text-[oklch(35%_0.08_140)] font-semibold'
+                                                            ? 'bg-[oklch(92%_0.02_28)] text-[oklch(42%_0.14_28)] font-bold'
+                                                            : 'bg-[oklch(93%_0.010_28)] text-[oklch(35%_0.08_140)] font-medium'
                                                 }`}>
                                                     {scheduleLabel}
                                                 </span>
 
-                                                {/* Channel / Type Tag */}
-                                                <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-xs border ${classified.tagClass}`}>
+                                                <span className={`font-mono text-[11px] font-medium px-2 py-0.5 rounded-md border ${classified.tagClass}`}>
                                                     {classified.shortTag}
                                                 </span>
 
-                                                {/* Status Tag */}
-                                                <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-xs border ${
+                                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${
                                                     isPending
-                                                        ? 'bg-[oklch(92%_0.04_28)] text-[oklch(40%_0.16_28)] border-[oklch(75%_0.16_28)]'
+                                                        ? 'bg-[oklch(94%_0.03_28)] text-[oklch(42%_0.15_28)] border-[oklch(80%_0.10_28)]'
                                                         : isConfirmed
-                                                            ? 'bg-[oklch(92%_0.02_140)] text-[oklch(35%_0.08_140)] border-[oklch(75%_0.08_140)]'
+                                                            ? 'bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border-[oklch(82%_0.05_140)]'
                                                             : isReady
-                                                                ? 'bg-[oklch(90%_0.04_140)] text-[oklch(30%_0.10_140)] border-[oklch(70%_0.10_140)]'
-                                                                : 'bg-[oklch(92%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                                ? 'bg-[oklch(92%_0.03_140)] text-[oklch(32%_0.09_140)] border-[oklch(76%_0.06_140)]'
+                                                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)]'
                                                 }`}>
-                                                    {isPending ? '[รอตรวจสอบ/คอนเฟิร์ม]' : isConfirmed ? '[ยืนยันแล้ว]' : isPreparing ? '[กำลังเตรียม]' : isReady ? '[พร้อมรับ]' : isSeated ? '[นั่งที่โต๊ะ]' : `[${order.status}]`}
+                                                    {isPending ? 'รอตรวจสอบ' : isConfirmed ? 'ยืนยันแล้ว' : isPreparing ? 'กำลังเตรียม' : isReady ? 'พร้อมรับ' : isSeated ? 'นั่งที่โต๊ะ' : order.status}
                                                 </span>
 
                                                 {hasSlip && (
-                                                    <span className="font-mono text-[10px] font-bold bg-[oklch(90%_0.02_28)] text-[oklch(42%_0.14_28)] px-1.5 py-0.5 rounded-xs border border-[oklch(80%_0.04_28)]">
-                                                        [มีสลิปโอน]
+                                                    <span className="text-[11px] font-medium bg-[oklch(93%_0.02_28)] text-[oklch(42%_0.14_28)] px-2 py-0.5 rounded-md border border-[oklch(84%_0.04_28)]">
+                                                        มีสลิปโอน
                                                     </span>
                                                 )}
                                             </div>
 
                                             {/* Customer Name & Notes */}
                                             <div className="flex items-baseline gap-2 flex-wrap text-sm">
-                                                <span className="font-bold text-[oklch(18%_0.012_28)] truncate">
+                                                <span className="font-semibold text-[oklch(18%_0.012_28)] truncate">
                                                     {customerName}
                                                 </span>
                                                 {classified.type === 'dine_in' && (
-                                                    <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">
-                                                        ({guestCount} ท่าน {order.tables_layout?.table_name ? `· โต๊ะ ${order.tables_layout.table_name}` : ''})
+                                                    <span className="font-mono text-xs text-[oklch(50%_0.010_28)]">
+                                                        {guestCount} ท่าน {order.tables_layout?.table_name ? `· โต๊ะ ${order.tables_layout.table_name}` : ''}
                                                     </span>
                                                 )}
                                                 {contactPhone && (
-                                                    <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">
+                                                    <span className="font-mono text-xs text-[oklch(50%_0.010_28)]">
                                                         · {contactPhone}
                                                     </span>
                                                 )}
                                                 {order.customer_note && (
-                                                    <span className="text-xs text-[oklch(52%_0.16_28)] italic truncate max-w-[280px]">
-                                                        "{order.customer_note}"
+                                                    <span className="text-xs text-[oklch(52%_0.16_28)] truncate max-w-[280px]">
+                                                        &ldquo;{order.customer_note}&rdquo;
                                                     </span>
                                                 )}
                                             </div>
@@ -440,13 +435,13 @@ export default function OnlineAdvanceOrdersHub({
                                                 <div className="font-mono font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)] tabular-nums">
                                                     ฿{amount.toLocaleString()}
                                                 </div>
-                                                <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                                <div className="font-mono text-[11px] text-[oklch(50%_0.010_28)] tabular-nums">
                                                     {itemCount > 0 ? `${itemCount} รายการ` : 'ยังไม่มีรายการ'}
                                                 </div>
                                             </div>
 
                                             {/* Action Buttons */}
-                                            <div className="flex items-center gap-1.5 font-mono text-xs">
+                                            <div className="flex items-center gap-1.5 text-xs">
                                                 {hasSlip && onViewSlip && (
                                                     <button
                                                         type="button"
@@ -454,7 +449,7 @@ export default function OnlineAdvanceOrdersHub({
                                                             e.stopPropagation()
                                                             onViewSlip(order.payment_slip_url)
                                                         }}
-                                                        className="px-2 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-colors"
+                                                        className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium rounded-xl cursor-pointer transition-colors"
                                                     >
                                                         ดูสลิป
                                                     </button>
@@ -466,7 +461,7 @@ export default function OnlineAdvanceOrdersHub({
                                                         e.stopPropagation()
                                                         if (onInspectBill) onInspectBill(order)
                                                     }}
-                                                    className="px-2 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-colors"
+                                                    className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium rounded-xl cursor-pointer transition-colors"
                                                 >
                                                     ดูบิล
                                                 </button>
@@ -477,7 +472,7 @@ export default function OnlineAdvanceOrdersHub({
                                                         type="button"
                                                         disabled={actionId === order.id}
                                                         onClick={(e) => handleAction(order.id, 'confirmed', e)}
-                                                        className="px-2.5 py-1 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-colors whitespace-nowrap shadow-2xs"
+                                                        className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
                                                     >
                                                         {actionId === order.id ? '...' : 'ยืนยัน'}
                                                     </button>
@@ -488,7 +483,7 @@ export default function OnlineAdvanceOrdersHub({
                                                         type="button"
                                                         disabled={actionId === order.id}
                                                         onClick={(e) => handleAction(order.id, 'ready', e)}
-                                                        className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-colors whitespace-nowrap shadow-2xs"
+                                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
                                                     >
                                                         {actionId === order.id ? '...' : (classified.type === 'pickup' ? 'พร้อมรับ' : 'พร้อมบริการ')}
                                                     </button>
@@ -501,19 +496,19 @@ export default function OnlineAdvanceOrdersHub({
                         )}
                     </div>
 
-                    {/* 4. Footer Summary (Hallmark Monospace Dignity) */}
-                    <div className="p-2.5 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)]">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <span>กำลังแสดง: <strong className="text-[oklch(18%_0.012_28)]">{filteredOrders.length}</strong> จาก {metrics.total} รายการ</span>
-                            <span>•</span>
-                            <span>วันนี้: <strong className="text-[oklch(18%_0.012_28)]">{metrics.todayCount}</strong></span>
-                            <span>•</span>
-                            <span>พรุ่งนี้: <strong className="text-[oklch(18%_0.012_28)]">{metrics.tomorrowCount}</strong></span>
-                            <span>•</span>
-                            <span>7 วันข้างหน้า: <strong className="text-[oklch(18%_0.012_28)]">{metrics.upcomingCount}</strong></span>
+                    {/* 4. Quiet Footer Summary */}
+                    <div className="px-4 md:px-5 py-2.5 bg-[oklch(95.5%_0.008_28)] border-t border-[oklch(88%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[oklch(50%_0.010_28)]">
+                        <div className="flex items-center gap-3 flex-wrap tabular-nums">
+                            <span>กำลังแสดง <strong className="text-[oklch(18%_0.012_28)]">{filteredOrders.length}</strong> / {metrics.total} รายการ</span>
+                            <span>·</span>
+                            <span>วันนี้ <strong className="text-[oklch(18%_0.012_28)]">{metrics.todayCount}</strong></span>
+                            <span>·</span>
+                            <span>พรุ่งนี้ <strong className="text-[oklch(18%_0.012_28)]">{metrics.tomorrowCount}</strong></span>
+                            <span>·</span>
+                            <span>7 วันหน้า <strong className="text-[oklch(18%_0.012_28)]">{metrics.upcomingCount}</strong></span>
                         </div>
-                        <span className="text-[10px] text-[oklch(42%_0.010_28)]">
-                            [AUTO-SYNCED REALTIME]
+                        <span className="font-mono text-[11px] text-[oklch(50%_0.010_28)]">
+                            ซิงก์ข้อมูลเรียลไทม์
                         </span>
                     </div>
                 </>

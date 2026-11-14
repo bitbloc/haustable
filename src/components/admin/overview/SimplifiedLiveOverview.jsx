@@ -631,10 +631,10 @@ function OverviewTableCard({
                                     e.stopPropagation()
                                     onInspect(item)
                                 }}
-                                className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-colors active:scale-95 flex items-center gap-1"
+                                className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-medium rounded-lg cursor-pointer transition-colors flex items-center gap-1"
                             >
                                 <span>ดูบิลเต็ม ({orderItems.length})</span>
-                                <span className="opacity-60 text-[9px]">➔</span>
+                                <span className="opacity-60 text-[10px]" aria-hidden="true">&rarr;</span>
                             </button>
                         )}
                     </>
@@ -819,7 +819,7 @@ export default function SimplifiedLiveOverview({
         }
 
         if (hasNewOrderOrItems) {
-            console.log('🔔 [Simplified Overview] New order / additional items detected! Triggering notiadmin.mp3')
+            console.log('[Simplified Overview] New order / additional items detected! Triggering notiadmin.mp3')
             playAdminOrderAlert('simplified_overview_new_order', 500)
             toast.info('[NEW ORDER] มีออเดอร์ใหม่ / สั่งอาหารเพิ่ม', { duration: 3000 })
 
@@ -1273,36 +1273,36 @@ export default function SimplifiedLiveOverview({
                     <button
                         type="button"
                         onClick={handleToggleFullscreen}
-                        className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold rounded-xs shadow-lg cursor-pointer flex items-center gap-1.5 transition-all active:scale-95"
+                        className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(88%_0.012_28)] font-mono text-xs font-semibold rounded-xl shadow-lg cursor-pointer flex items-center gap-1.5 transition-colors"
                         title="ออกจากโหมดเต็มจอ (ESC)"
                     >
-                        <span>✕ ออกจากโหมดเต็มจอ</span>
+                        <span>ออกจากโหมดเต็มจอ</span>
                         <span className="opacity-60 text-[10px] hidden sm:inline">[ESC]</span>
                     </button>
                 </div>
             )}
 
             {/* 1. Hero Pulse or Compact Floor Control Bar */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 sm:p-4 rounded-xs shadow-2xs">
+            <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 sm:p-5 rounded-2xl shadow-2xs">
                 {!hideHeroKpis && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] mb-4 pb-3 border-b border-[oklch(88%_0.012_28)]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(88%_0.012_28)] mb-4 pb-4 border-b border-[oklch(88%_0.012_28)]">
                         {/* KPI 1: LIVE NOW / FLOOR STATUS / DATE SUMMARY */}
                         <div className="pt-2 first:pt-0 sm:pt-0 sm:px-4 first:pl-0">
                             <div className="flex items-center justify-between">
-                                <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                    {!isToday ? 'DATE SUMMARY' : isShiftOpen ? 'LIVE NOW' : 'FLOOR STATUS'}
+                                <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                    {!isToday ? 'สรุปยอดประจำวัน' : isShiftOpen ? 'โต๊ะที่กำลังใช้บริการ' : 'สถานะหน้าร้าน'}
                                 </span>
-                                <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[oklch(55%_0.010_28)]' : isShiftOpen ? 'bg-[oklch(18%_0.012_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[oklch(55%_0.010_28)]' : isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(55%_0.010_28)]'}`} />
                             </div>
                             <div className="mt-1 flex items-baseline gap-2">
                                 <h2 className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     {!isToday ? liveBookings.length : (isShiftOpen ? counts.occupied : 0)}
                                 </h2>
-                                <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
+                                <span className="font-sans text-xs text-[oklch(50%_0.010_28)] font-medium">
                                     {!isToday 
-                                        ? `บันทึกประวัติย้อนหลัง · ${liveBookings.length} ออเดอร์`
+                                        ? `ออเดอร์ที่บันทึก · ${liveBookings.length} รายการ`
                                         : isShiftOpen 
-                                            ? `${counts.occupied === 1 ? '1 order' : `${counts.occupied} orders`} · ${counts.occupancyPct}% occupied`
+                                            ? `${counts.occupied} โต๊ะ · ${counts.occupancyPct}% ของร้าน`
                                             : 'กะปิดอยู่ · ยังไม่เปิดรอบขาย'
                                     }
                                 </span>
@@ -1312,20 +1312,20 @@ export default function SimplifiedLiveOverview({
                         {/* KPI 2: PEOPLE IN STORE / GUESTS ON DATE */}
                         <div className="pt-3 sm:pt-0 sm:px-4">
                             <div className="flex items-center justify-between">
-                                <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                    {!isToday ? 'GUESTS ON DATE' : 'PEOPLE IN STORE'}
+                                <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                    {!isToday ? 'จำนวนลูกค้าทั้งหมด' : 'ลูกค้าในร้านตอนนี้'}
                                 </span>
                             </div>
                             <div className="mt-1 flex items-baseline gap-2">
                                 <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     {!isToday ? totalGuestsOnDate : (isShiftOpen ? counts.totalGuests : 0)}
                                 </div>
-                                <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
+                                <span className="font-sans text-xs text-[oklch(50%_0.010_28)] font-medium">
                                     {!isToday 
-                                        ? `pax รวมตลอดวัน (${formatThaiDateOnly(selectedDate)})`
+                                        ? `ท่านตลอดวัน (${formatThaiDateOnly(selectedDate)})`
                                         : isShiftOpen 
-                                            ? `pax ในร้าน (${counts.occupied}/${counts.total} โต๊ะ)`
-                                            : '0 pax (หน้าร้านปิดรอบขาย)'
+                                            ? `ท่าน (${counts.occupied}/${counts.total} โต๊ะ)`
+                                            : '0 ท่าน (หน้าร้านปิดกะ)'
                                     }
                                 </span>
                             </div>
@@ -1334,15 +1334,15 @@ export default function SimplifiedLiveOverview({
                         {/* KPI 3: SALES TODAY / DAILY REVENUE */}
                         <div className="pt-3 sm:pt-0 sm:px-4">
                             <div className="flex items-center justify-between">
-                                <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                    {!isToday ? 'DAILY REVENUE' : 'SALES TODAY'}
+                                <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                    {!isToday ? 'ยอดขายประจำวัน' : 'ยอดขายวันนี้'}
                                 </span>
                             </div>
                             <div className="mt-1">
                                 <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     ฿{revenueToday.toLocaleString()}
                                 </div>
-                                <div className="font-mono text-[11px] font-medium text-[oklch(55%_0.010_28)] mt-0.5">
+                                <div className="font-mono text-[11px] font-medium text-[oklch(50%_0.010_28)] mt-0.5 tabular-nums">
                                     {trendText}
                                 </div>
                             </div>
@@ -1350,28 +1350,28 @@ export default function SimplifiedLiveOverview({
                     </div>
                 )}
 
-                {/* Sub-bar: Size Scaler, View Density Switcher & Fullscreen (Restrained and Aligned) */}
+                {/* Sub-bar: Size Scaler, View Density Switcher & Fullscreen */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
-                    <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)] flex-wrap">
-                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase">{!isToday ? 'FLOOR SNAPSHOT' : 'CURRENT ACTIVITY'}</span>
-                        <span>//</span>
-                        <span>{!isToday ? `ผังโต๊ะบันทึกย้อนหลัง (${counts.total} โต๊ะ)` : isShiftOpen ? `${counts.occupied} โต๊ะกำลังทาน` : 'กะปิดหน้าร้าน (0 โต๊ะกำลังทาน)'}</span>
+                    <div className="flex items-center gap-2 text-xs text-[oklch(48%_0.010_28)] flex-wrap">
+                        <span className="font-semibold text-[oklch(18%_0.012_28)]">{!isToday ? 'ภาพรวมผังโต๊ะ' : 'ผังโต๊ะสด'}</span>
+                        <span>·</span>
+                        <span>{!isToday ? `บันทึกย้อนหลัง (${counts.total} โต๊ะ)` : isShiftOpen ? `${counts.occupied} โต๊ะกำลังทาน` : 'ปิดกะหน้าร้าน (0 โต๊ะกำลังทาน)'}</span>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                        {/* Sort Order Selector: เลขโต๊ะ | ออเดอร์ล่าสุด */}
+                        {/* Sort Order Selector */}
                         <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[11px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                            <span className="text-[11px] font-medium text-[oklch(48%_0.010_28)]">
                                 เรียง:
                             </span>
-                            <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                            <div className="flex items-center border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xl text-[11px] font-sans">
                                 <button
                                     type="button"
                                     onClick={() => handleSetSortBy('table')}
-                                    className={`px-2 sm:px-2.5 py-1 rounded-xs font-semibold transition-all cursor-pointer ${
+                                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                                         sortBy === 'table'
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                            : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                     }`}
                                     title="เรียงตามเลขโต๊ะปกติ (A-Z)"
                                 >
@@ -1380,14 +1380,14 @@ export default function SimplifiedLiveOverview({
                                 <button
                                     type="button"
                                     onClick={() => handleSetSortBy('recent')}
-                                    className={`px-2 sm:px-2.5 py-1 rounded-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                                    className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-1 ${
                                         sortBy === 'recent'
-                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                            : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                     }`}
-                                    title="เรียงโต๊ะที่สั่งล่าสุดขึ้นก่อน (เหมาะสำหรับตรวจออเดอร์ในร้านหลายโต๊ะ)"
+                                    title="เรียงโต๊ะที่สั่งล่าสุดขึ้นก่อน"
                                 >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(97%_0.008_28)] shrink-0" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80 shrink-0" />
                                     <span>ออเดอร์ล่าสุด</span>
                                 </button>
                             </div>
@@ -1395,10 +1395,10 @@ export default function SimplifiedLiveOverview({
 
                         {/* Font & Grid Scale Selector: เล็ก - กลาง - ใหญ่ - Extra */}
                         <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[11px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                            <span className="text-[11px] font-medium text-[oklch(48%_0.010_28)]">
                                 ขนาด:
                             </span>
-                            <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                            <div className="flex items-center border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xl text-[11px] font-sans">
                                 {[
                                     { id: 'sm', label: 'เล็ก', hint: 'Compact' },
                                     { id: 'md', label: 'กลาง', hint: 'Normal' },
@@ -1411,10 +1411,10 @@ export default function SimplifiedLiveOverview({
                                             key={size.id}
                                             type="button"
                                             onClick={() => handleSetOverviewSize(size.id)}
-                                            className={`px-2 sm:px-2.5 py-1 rounded-xs font-semibold transition-all cursor-pointer ${
+                                            className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                                                 isSelected
-                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
-                                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                                    : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                             }`}
                                             title={`ปรับขนาดฟอนต์และผัง: ${size.label} (${size.hint})`}
                                         >
@@ -1426,14 +1426,14 @@ export default function SimplifiedLiveOverview({
                         </div>
 
                         {/* View Density Toggle */}
-                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                        <div className="flex items-center border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xl text-[11px] font-sans">
                             <button
                                 type="button"
                                 onClick={() => setZoomMode('card')}
-                                className={`px-2.5 py-1 rounded-xs font-medium transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                                     zoomMode !== 'list'
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                        : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                                 title="ผังการ์ดอาหาร"
                             >
@@ -1442,10 +1442,10 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setZoomMode('list')}
-                                className={`px-2.5 py-1 rounded-xs font-medium transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
                                     zoomMode === 'list'
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                        : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                                 title="List สรุปโต๊ะ"
                             >
@@ -1460,21 +1460,21 @@ export default function SimplifiedLiveOverview({
                                 playAdminOrderAlert('manual_test', 300)
                                 toast.success('[ADMIN ALERT] เสียงเตือนออเดอร์ใหม่ (notiadmin.mp3)')
                             }}
-                            className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(92%_0.012_28)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[oklch(60%_0.15_28)] active:scale-95 text-[oklch(18%_0.012_28)] text-[11px] font-mono rounded-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                            className="px-2.5 py-1.5 border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[oklch(60%_0.15_28)] text-[oklch(18%_0.012_28)] text-[11px] font-medium rounded-xl cursor-pointer flex items-center gap-1.5 transition-colors"
                             title="ทดสอบฟังเสียงแจ้งเตือนออเดอร์ใหม่ (notiadmin.mp3)"
                             aria-label="ทดสอบฟังเสียงแจ้งเตือนออเดอร์ใหม่ (notiadmin.mp3)"
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
-                            <span className="font-bold">ลองเสียง [NOTI]</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />
+                            <span>ลองเสียง [NOTI]</span>
                         </button>
 
                         {/* Fullscreen Button */}
                         <button
                             type="button"
                             onClick={handleToggleFullscreen}
-                            className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-mono rounded-xs cursor-pointer"
+                            className="px-2.5 py-1.5 border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-medium rounded-xl cursor-pointer transition-colors"
                         >
-                            {isFullscreen ? '✕ EXIT' : '⛶ เต็มจอ'}
+                            {isFullscreen ? 'ออกจากเต็มจอ' : 'เต็มจอ'}
                         </button>
 
                     </div>
@@ -1512,7 +1512,7 @@ export default function SimplifiedLiveOverview({
                 />
             )}
 
-            {/* 2. Rapid Filter Chips (4px/8px scale, Thai font-sans, monospace counts) */}
+            {/* 2. Rapid Filter Chips */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-sans">
                 {[
                     { id: 'occupied', label: 'กำลังเปิดโต๊ะ', count: counts.occupied, isDefault: true },
@@ -1523,16 +1523,16 @@ export default function SimplifiedLiveOverview({
                         key={chip.id}
                         type="button"
                         onClick={() => setSelectedFilter(chip.id)}
-                        className={`px-3 py-1.5 rounded-sm font-semibold transition-all whitespace-nowrap border cursor-pointer flex items-center gap-2 ${
+                        className={`px-3 py-1.5 rounded-xl font-medium transition-colors whitespace-nowrap border cursor-pointer flex items-center gap-2 ${
                             selectedFilter === chip.id
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm'
-                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-2xs'
+                                : 'bg-[oklch(95.5%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:bg-[oklch(92%_0.010_28)]'
                         } ${chip.alert ? 'ring-1 ring-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]' : ''}`}
                     >
                         {chip.isDefault && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />}
                         <span>{chip.label}</span>
-                        <span className={`px-1.5 py-0.5 font-mono text-[10px] font-bold rounded-xs tabular-nums ${
-                            selectedFilter === chip.id ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                        <span className={`px-1.5 py-0.5 font-mono text-[10.5px] font-semibold rounded-md tabular-nums ${
+                            selectedFilter === chip.id ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(89%_0.010_28)] text-[oklch(28%_0.012_28)]'
                         }`}>
                             {chip.count}
                         </span>
@@ -1542,16 +1542,16 @@ export default function SimplifiedLiveOverview({
 
             {/* 3. Table Views Based on Zoom Level */}
             {isDataLoading ? (
-                <div className="py-16 text-center text-xs text-[oklch(55%_0.010_28)] font-sans animate-pulse border border-dashed border-[oklch(85%_0.012_28)]">
+                <div className="py-16 text-center text-xs text-[oklch(55%_0.010_28)] font-sans border border-dashed border-[oklch(88%_0.012_28)] rounded-2xl">
                     กำลังดึงข้อมูลโต๊ะสดแบบเรียลไทม์...
                 </div>
             ) : filteredFloor.length === 0 ? (
-                <div className="py-12 px-4 text-center font-sans border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-sm space-y-3">
+                <div className="py-12 px-4 text-center font-sans border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)] rounded-2xl space-y-3">
                     <div className="w-2.5 h-2.5 rounded-full bg-[oklch(45%_0.08_140)] mx-auto" />
-                    <h4 className="font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)]">
+                    <h4 className="font-semibold text-sm sm:text-base text-[oklch(18%_0.012_28)]">
                         {selectedFilter === 'occupied' ? `ไม่มีโต๊ะที่กำลังเปิดอยู่ในขณะนี้ (0/${counts.total} โต๊ะ)` : 'ไม่มีโต๊ะในหมวดหมู่นี้'}
                     </h4>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] max-w-sm mx-auto">
+                    <p className="text-xs text-[oklch(50%_0.010_28)] max-w-sm mx-auto">
                         {selectedFilter === 'occupied' 
                             ? 'ทุกโต๊ะว่างและพร้อมให้บริการ หรือยังไม่มีลูกค้าเปิดโต๊ะเช็คอิน'
                             : 'ลองเลือกตัวกรองอื่นเพื่อดูรายการโต๊ะ'}
@@ -1561,7 +1561,7 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setSelectedFilter('all')}
-                                className="px-3.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
+                                className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-medium rounded-xl cursor-pointer hover:bg-[oklch(28%_0.012_28)] transition-colors"
                             >
                                 ดูผังโต๊ะทั้งหมด ({counts.total} โต๊ะ)
                             </button>
@@ -1570,9 +1570,9 @@ export default function SimplifiedLiveOverview({
                 </div>
             ) : zoomMode === 'list' ? (
                 /* -------------------------------------------------------------
-                   LIST VIEW: SUMMARY TABLE (กระชับ & ปลอดภัยต่อจอเล็ก)
+                   LIST VIEW: SUMMARY TABLE
                 ------------------------------------------------------------- */
-                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-sm overflow-hidden shadow-2xs">
+                <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl overflow-hidden shadow-2xs">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse font-sans">
                             <thead>
@@ -1683,7 +1683,7 @@ export default function SimplifiedLiveOverview({
 
                                                     {/* Call Alert Badge */}
                                                     {(item.hasCallBill || item.hasCallStaff) && (
-                                                        <span className={`px-1.5 py-0.5 font-bold bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] rounded-xs animate-pulse ${cfg.roundsBadge}`}>
+                                                        <span className={`px-1.5 py-0.5 font-semibold bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] rounded-md ${cfg.roundsBadge}`}>
                                                             {item.hasCallBill ? 'เช็คบิล' : 'เรียกพนักงาน'}
                                                         </span>
                                                     )}
@@ -1754,7 +1754,7 @@ export default function SimplifiedLiveOverview({
                                                                 title="แตะเพื่อดูเช็คลิสต์รายการอาหารครบถ้วน"
                                                             >
                                                                 <span>ดูบิลอาหาร ({orderItems.length})</span>
-                                                                <span>➔</span>
+                                                                <span aria-hidden="true">&rarr;</span>
                                                             </button>
                                                         ) : (
                                                             <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] font-semibold">
@@ -1850,9 +1850,9 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setInspectingTable(null)}
-                                className="text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1 cursor-pointer"
+                                className="text-xs font-medium text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-lg bg-[oklch(94%_0.010_28)] cursor-pointer transition-colors"
                             >
-                                ✕ ปิด
+                                ปิด
                             </button>
                         </div>
 
@@ -2140,9 +2140,9 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setInspectingTable(null)}
-                                className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-xs rounded-sm cursor-pointer whitespace-nowrap"
+                                className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-medium text-xs rounded-xl cursor-pointer whitespace-nowrap transition-colors"
                             >
-                                ✕ ปิดหน้าต่าง
+                                ปิดหน้าต่าง
                             </button>
                         </div>
                     </div>

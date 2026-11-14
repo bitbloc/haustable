@@ -198,7 +198,8 @@ export default function IntradayVelocityDaypartCockpit({
     selectedYear,
     totalSeats = 45,
     loading = false,
-    totalExpenses = 0
+    totalExpenses = 0,
+    compactMode = false
 }) {
     const [hoveredHour, setHoveredHour] = useState(null)
     const [drilldownHour, setDrilldownHour] = useState(null)
@@ -325,32 +326,33 @@ export default function IntradayVelocityDaypartCockpit({
     // Operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
 
-    // Track dynamic container width for 100% responsive SVG scaling (resilient against micro-jitter loops & iPhone address bar reflow)
+    // Track dynamic inner plot container width for 100% responsive SVG scaling without right-edge clipping
     useEffect(() => {
-        if (!containerRef.current) return
+        const measureInnerWidth = () => {
+            if (chartScrollRef.current && chartScrollRef.current.clientWidth > 0) {
+                return Math.round(chartScrollRef.current.clientWidth)
+            }
+            if (containerRef.current) {
+                const outerW = containerRef.current.clientWidth || containerRef.current.offsetWidth || 800
+                const innerPad = outerW >= 768 ? 48 : 32
+                return Math.max(260, Math.round(outerW - innerPad))
+            }
+            return 0
+        }
+
         let rAF = null
         const updateWidth = () => {
-            if (containerRef.current) {
-                const w = containerRef.current.clientWidth || containerRef.current.offsetWidth
-                if (w > 0) {
-                    setContainerWidth(prev => (Math.abs(prev - w) > 4 ? Math.round(w) : prev))
-                }
+            const w = measureInnerWidth()
+            if (w > 0) {
+                setContainerWidth(prev => (Math.abs(prev - w) > 4 ? w : prev))
             }
         }
         updateWidth()
 
-        if (typeof ResizeObserver !== 'undefined') {
-            const ro = new ResizeObserver((entries) => {
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+            const ro = new ResizeObserver(() => {
                 if (rAF) cancelAnimationFrame(rAF)
-                rAF = requestAnimationFrame(() => {
-                    for (let entry of entries) {
-                        const w = entry.contentRect.width
-                        if (w > 0) {
-                            const rounded = Math.round(w)
-                            setContainerWidth(prev => (Math.abs(prev - rounded) > 8 ? rounded : prev))
-                        }
-                    }
-                })
+                rAF = requestAnimationFrame(updateWidth)
             })
             ro.observe(containerRef.current)
             return () => {
@@ -361,7 +363,7 @@ export default function IntradayVelocityDaypartCockpit({
             window.addEventListener('resize', updateWidth)
             return () => window.removeEventListener('resize', updateWidth)
         }
-    }, [])
+    }, [activeSubTab, monthViewMode])
 
     // Determine current date & time in Bangkok timezone
     const todayBangkok = useMemo(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }), [])
@@ -1359,12 +1361,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             return (
                                 <div 
                                     key={idx} 
-                                    className="p-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between transition-colors hover:border-[oklch(75%_0.012_28)]"
+                                    className="p-4 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-xl flex flex-col justify-between transition-colors hover:border-[oklch(75%_0.012_28)]"
                                 >
                                     <div>
-                                        <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wide border-b border-[oklch(85%_0.012_28)] pb-1.5 mb-2.5 flex items-center gap-1.5">
+                                        <div className="font-semibold text-xs text-[oklch(18%_0.012_28)] border-b border-[oklch(88%_0.012_28)] pb-2 mb-2.5 flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />
-                                            <span className="truncate">[{sec.title}]</span>
+                                            <span className="truncate">{sec.title}</span>
                                         </div>
                                         <div className="text-xs text-[oklch(28%_0.012_28)] leading-relaxed space-y-2">
                                             {lines.map((line, lIdx) => {
@@ -1414,13 +1416,13 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     // 6. SVG RENDER DIMENSIONS & DUAL-LAYER PROJECTION ENGINE
     // =========================================================================
     const isMobile = containerWidth < 560
-    // Hybrid Mode: Ensure minimum comfortable width of 520px on mobile for smooth pan & zero collision
-    const svgWidth = isMobile ? Math.max(520, containerWidth) : Math.max(560, containerWidth)
-    const svgHeight = isMobile ? 260 : 290
-    const padLeft = isMobile ? 38 : 50
-    const padRight = isMobile ? 42 : 56 // Ample right margin for 23:00 prediction tags
-    const padYTop = isMobile ? 36 : 32
-    const padYBottom = isMobile ? 34 : 38
+    // Fit exact inner scroll width on desktop (prevents 23:00 clipping), minimum 540px on mobile pan
+    const svgWidth = isMobile ? Math.max(540, containerWidth) : Math.max(560, containerWidth)
+    const svgHeight = isMobile ? 268 : 292
+    const padLeft = isMobile ? 38 : 48
+    const padRight = isMobile ? 40 : 46 // Clean right margin reserved strictly for Pax axis labels
+    const padYTop = isMobile ? 46 : 46   // Dedicated two-tier headroom prevents NOW pill overlapping dayparts
+    const padYBottom = isMobile ? 34 : 36
     const plotWidth = Math.max(svgWidth - padLeft - padRight, 200)
     const plotHeight = Math.max(svgHeight - padYTop - padYBottom, 120)
 
@@ -1590,58 +1592,56 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     }, [currentDaypart, dayMetrics?.paceDeltaPct])
 
     return (
-        <div ref={containerRef} className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] font-sans text-[oklch(18%_0.012_28)] w-full max-w-full overflow-hidden">
+        <div ref={containerRef} className="rounded-2xl border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(88%_0.012_28)] font-sans text-[oklch(18%_0.012_28)] w-full max-w-full overflow-hidden shadow-2xs">
 
             {/* ========================================================================= */}
-            {/* 1. HEADER TOOLBAR: TITLE, BADGES & VIEW SWITCHER                          */}
+            {/* 1. CLEAN BENTO HEADER TOOLBAR: TITLE, STATUS PILL & SEGMENTED TABS        */}
             {/* ========================================================================= */}
-            <div className="p-4 md:p-5 bg-[oklch(94%_0.010_28)] flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase tracking-widest">
-                            {filterMode === 'month' ? 'MONTHLY PACING // 05' : 'INTRADAY VELOCITY // 01'}
-                        </span>
-                        <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)]">
+            <div className="p-4 md:p-5 bg-[oklch(97%_0.008_28)] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <h3 className="font-semibold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
                             {filterMode === 'month'
-                                ? `ความเร็วยอดขายและทราฟฟิกแยกช่วงเวลา (Monthly Daypart & Velocity)`
-                                : `ความเร็วยอดขายและทราฟฟิกลูกค้า (Intraday Traffic & Sales Velocity)`}
+                                ? 'ความเร็วยอดขายและทราฟฟิกรายเดือน'
+                                : 'ความเร็วยอดขายและทราฟฟิกรายชั่วโมง'}
                         </h3>
                         {filterMode === 'day' && isViewingToday && (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 font-bold border bg-[oklch(97%_0.008_28)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]/40">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-0.5 rounded-full font-medium bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(84%_0.04_140)]">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
-                                LIVE PACING ({currentBangkokTime.label} น.)
+                                <span className="tabular-nums">Live {currentBangkokTime.label} น.</span>
                             </span>
                         )}
                         {filterMode === 'month' && (
-                            <span className="text-[10px] font-mono px-2 py-0.5 bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] font-bold border border-[oklch(85%_0.012_28)]">
-                                {monthMetrics?.activeDaysCount || 0} วันทำการในเดือน
+                            <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-medium border border-[oklch(88%_0.012_28)] tabular-nums">
+                                {monthMetrics?.activeDaysCount || 0} วันทำการ
                             </span>
                         )}
                     </div>
-                    <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-1">
+                    <p className="text-xs text-[oklch(50%_0.010_28)] mt-0.5">
                         {filterMode === 'month'
-                            ? `วิเคราะห์แนวโน้มความเร็วเฉลี่ยรายชั่วโมง และสัดส่วน 4 Dayparts ประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}`
-                            : `ผสานสถิติความเร็วยอดขายสะสมรายชั่วโมง (฿) คู่กับเส้นประพยากรณ์ทราฟฟิก (Pax Predict Stream) และกรอบสูง-ต่ำ`}
+                            ? `แนวโน้มยอดขายเฉลี่ยรายชั่วโมงและสัดส่วน 4 ช่วงเวลา · เดือน ${selectedMonth || todayBangkok.slice(0, 7)}`
+                            : 'ยอดขายสะสมรายชั่วโมงเทียบเกณฑ์เป้าหมาย พร้อมคาดการณ์จำนวนลูกค้า'}
                     </p>
                 </div>
 
-                {/* Sub-Tabs Action Ribbon */}
-                <div className="flex items-center gap-2 flex-wrap max-w-full overflow-x-auto pb-1 md:pb-0">
+                {/* Rounded Segmented Pill Switcher (Non-clipping wrap) */}
+                <div className="flex items-center flex-wrap gap-1 self-start lg:self-auto">
                     {filterMode === 'month' ? (
-                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs shrink-0">
+                        <div className="inline-flex flex-wrap items-center gap-1 bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(88%_0.012_28)] text-xs">
                             {[
-                                { id: 'pacing', label: 'เส้นความเร็วเฉลี่ย [PACING]' },
-                                { id: 'weekday_weekend', label: 'จันทร์-ศุกร์ VS เสาร์-อาทิตย์' },
-                                { id: 'dayparts', label: 'สัดส่วน 4 ช่วงเวลา [DAYPARTS]' },
-                                { id: 'ranking', label: 'จัดอันดับวัน [RANKING]' }
+                                { id: 'pacing', label: 'เส้นความเร็ว' },
+                                { id: 'weekday_weekend', label: 'ธรรมดา vs วันหยุด' },
+                                { id: 'dayparts', label: '4 ช่วงเวลา' },
+                                { id: 'ranking', label: 'อันดับวัน' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
+                                    type="button"
                                     onClick={() => setMonthViewMode(tab.id)}
-                                    className={`px-3 py-1.5 font-bold transition-colors ${
+                                    className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
                                         monthViewMode === tab.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                     }`}
                                 >
                                     {tab.label}
@@ -1649,19 +1649,20 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             ))}
                         </div>
                     ) : (
-                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs shrink-0">
+                        <div className="inline-flex flex-wrap items-center gap-1 bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(88%_0.012_28)] text-xs">
                             {[
-                                { id: 'chart', label: 'กราฟรวม [COCKPIT]' },
-                                { id: 'dayparts', label: '4 ช่วงเวลา [DAYPARTS]' },
-                                { id: 'ad_briefing', label: aiBriefing ? 'AI กลยุทธ์ [READY]' : 'AI กลยุทธ์ [BRIEFING]' }
+                                { id: 'chart', label: 'กราฟรวม' },
+                                { id: 'dayparts', label: '4 ช่วงเวลา' },
+                                { id: 'ad_briefing', label: aiBriefing ? 'AI กลยุทธ์ (พร้อมดู)' : 'AI กลยุทธ์' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
+                                    type="button"
                                     onClick={() => setActiveSubTab(tab.id)}
-                                    className={`px-3 py-1.5 font-bold transition-colors ${
+                                    className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
                                         activeSubTab === tab.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                     }`}
                                 >
                                     {tab.label}
@@ -1673,182 +1674,165 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             </div>
 
             {/* ========================================================================= */}
-            {/* 2. CORE KPI METRICS GRID (Dieter Rams 4-Cell Structural Bar)               */}
+            {/* 2. PACING SUMMARY STRIP (Compact on AdminDashboard, Full Grid Standalone) */}
             {/* ========================================================================= */}
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
-                {filterMode === 'month' ? (
-                    <>
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">01 // MONTHLY REVENUE</div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                                ฿{monthMetrics?.monthGross.toLocaleString()}
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                เฉลี่ย ฿{monthMetrics ? Math.round(monthMetrics.monthGross / monthMetrics.activeDaysCount).toLocaleString() : 0} / วัน
-                            </div>
+            {compactMode && filterMode === 'day' ? (
+                <div className="px-4 md:px-5 py-3 bg-[oklch(95.5%_0.008_28)] grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
+                    <div className="min-w-0">
+                        <div className="text-[11px] text-[oklch(50%_0.010_28)]">ช่วงเวลาตอนนี้</div>
+                        <div className="font-semibold text-[oklch(18%_0.012_28)] mt-0.5 truncate">
+                            {currentDaypart.thaiLabel} · <span className="font-mono font-normal text-[oklch(42%_0.010_28)]">{currentDaypart.rangeText}</span>
                         </div>
-
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">02 // MONTHLY TRAFFIC</div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)]">
-                                {monthMetrics?.monthPax.toLocaleString()} ท่าน
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                เฉลี่ย {monthMetrics ? Math.round(monthMetrics.monthPax / monthMetrics.activeDaysCount) : 0} ท่าน / วัน
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">03 // BREAK-EVEN HOUR</div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(45%_0.08_140)]">
-                                {monthMetrics?.breakEvenHour || '—'}
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                เวลาคุ้มทุนรายวันเฉลี่ย (เป้า ฿{monthMetrics?.dailyExpenseTarget.toLocaleString()})
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">04 // TOP DAYPART SHARE</div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                                {monthMetrics?.monthlyDayparts?.reduce((max, dp) => dp.sales > (max?.sales || 0) ? dp : max, null)?.label || '—'}
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                สัดส่วน {monthMetrics?.monthlyDayparts?.reduce((max, dp) => dp.sales > (max?.sales || 0) ? dp : max, null)?.percent || 0}% ของยอดทั้งเดือน
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className={`p-4 space-y-1.5 transition-colors ${dayMetrics?.isDailyGoalExceeded ? 'bg-[oklch(96%_0.02_142)] border-b-2 border-b-[oklch(50%_0.15_142)]' : ''}`}>
-                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                                <span>01 // CUMULATIVE SALES</span>
-                                {dayMetrics?.isDailyGoalExceeded ? (
-                                    <span className="text-[oklch(38%_0.14_142)] font-bold flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_142)]" />
-                                        [DAILY GOAL MET ({dayMetrics.pctOfTarget}%)]
-                                    </span>
-                                ) : dayMetrics?.pctOfTarget > 0 ? (
-                                    <span className="text-[oklch(18%_0.012_28)] font-bold">{dayMetrics.pctOfTarget}% OF TARGET</span>
-                                ) : null}
-                            </div>
-                            <div className={`font-mono text-xl md:text-2xl font-bold tracking-tight ${dayMetrics?.isDailyGoalExceeded ? 'text-[oklch(35%_0.14_142)]' : 'text-[oklch(18%_0.012_28)]'}`}>
-                                ฿{dayMetrics?.totalGross.toLocaleString()}
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)] flex items-center gap-1.5 flex-wrap">
-                                <span>เป้า: ฿{dayMetrics?.defaultTarget.toLocaleString()}</span>
-                                <span className="text-[oklch(85%_0.012_28)]">·</span>
-                                <span className={dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)] font-bold" : "text-[oklch(52%_0.16_28)] font-bold"}>
-                                    {dayMetrics?.paceDeltaPct >= 0 ? `▲ +${dayMetrics?.paceDeltaPct}%` : `▼ ${dayMetrics?.paceDeltaPct}%`} vs expected
-                                </span>
-                                {dayMetrics?.goalExceededHoursCount > 0 && (
-                                    <>
-                                        <span className="text-[oklch(85%_0.012_28)]">·</span>
-                                        <span className="text-[oklch(38%_0.12_142)] font-bold">
-                                            ทะลุเป้า {dayMetrics.goalExceededHoursCount} ชม.
-                                        </span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-1.5">
-                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                                <span>02 // GUEST TRAFFIC</span>
-                                <span className={dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? "text-[oklch(45%_0.08_140)] font-bold" : "text-[oklch(52%_0.16_28)] font-bold"}>
-                                    {dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ON PACE' : 'BELOW NORMAL'}
-                                </span>
-                            </div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)]">
-                                {dayMetrics?.totalGuests} Pax
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                {dayMetrics?.totalGuests > 0
-                                    ? `Forecast ปิดวัน: ~${dayMetrics?.projectedClosingPax} Pax (กรอบ ${dayMetrics?.forecastedClosingPaxLow}-${dayMetrics?.forecastedClosingPaxHigh})`
-                                    : `สถิติเดิม (${dayOfWeekThai}): ~${historicalBaseline.totalPax} Pax`}
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-1.5">
-                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                                <span>03 // SALES VELOCITY</span>
-                                <span className="text-[oklch(18%_0.012_28)] font-bold">{isViewingToday ? (currentBangkokTime.hour >= 11 ? `11:00 - ${currentBangkokTime.label}` : 'รอเปิดร้าน 11:00 น.') : '11:00 - 23:00'}</span>
-                            </div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                                ฿{dayMetrics?.currentVelocityPerHour?.toLocaleString() || 0} <span className="text-sm font-normal text-[oklch(42%_0.010_28)]">/ hr</span>
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                {dayMetrics?.peakHourPoint?.sale > 0
-                                    ? `พีคสุด: ฿${dayMetrics.peakHourPoint.sale.toLocaleString()} (${dayMetrics.peakHourPoint.hour}.00 น.)`
-                                    : `ช่วงพีคตามสถิติ: 18.00 - 20.00 น.`}
-                            </div>
-                        </div>
-
-                        <div className="p-4 space-y-1.5">
-                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                                <span>04 // ONLINE INTENT LEADS</span>
-                                <span className="text-[oklch(45%_0.08_140)] font-bold">ACTIVE FUNNEL</span>
-                            </div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(45%_0.08_140)]">
-                                {dayMetrics?.adHighIntent} สัญญาณ
-                            </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                แผนที่ {dayMetrics?.adDirs || 0} · โทร {dayMetrics?.adCalls || 0} · ไลน์/จอง {dayMetrics?.adBookings || 0}
-                                {dayMetrics?.preOpeningAdSignals > 0 && (
-                                    <span className="text-[oklch(55%_0.010_28)] block sm:inline sm:ml-1">
-                                        (ช่วงเช้าก่อนเปิด {dayMetrics.preOpeningAdSignals})
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {/* ========================================================================= */}
-            {/* 2.5 OPERATING SIGNAL & NOW ANCHOR BAR (Control Panel Action Anchor)      */}
-            {/* ========================================================================= */}
-            {filterMode === 'day' && isViewingToday && (
-                <div className="px-4 py-2.5 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs font-mono">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold tracking-wider text-[11px]">
-                            NOW {currentBangkokTime.label}
-                        </span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">
-                            {currentDaypart.label.toUpperCase()} ({currentDaypart.rangeText})
-                        </span>
-                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                        <span className="text-[oklch(42%_0.010_28)]">
-                            TRAFFIC: <strong className={currentBangkokTime.hour < 11 ? "text-[oklch(55%_0.010_28)]" : (dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]")}>
-                                {currentBangkokTime.hour < 11
-                                    ? (currentBangkokTime.hour >= 6 ? 'PRE-OPENING PREP' : 'OVERNIGHT CLOSED')
-                                    : (dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ON PACE' : 'BELOW EXPECTED')}
-                            </strong>
-                        </span>
-                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                        <span className="text-[oklch(42%_0.010_28)]">
-                            SALES PACE: <strong className={currentBangkokTime.hour < 11 ? "text-[oklch(55%_0.010_28)]" : (dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]")}>
-                                {currentBangkokTime.hour < 11
-                                    ? 'OPENS AT 11:00'
-                                    : (dayMetrics?.paceDeltaPct >= 0 ? `+${dayMetrics?.paceDeltaPct}% (ON PACE)` : `${dayMetrics?.paceDeltaPct}% (BEHIND)`)}
-                            </strong>
-                        </span>
-                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                        <span className="text-[oklch(42%_0.010_28)]">
-                            NEXT 60M: <strong className="text-[oklch(18%_0.012_28)]">
-                                {currentBangkokTime.hour < 10
-                                    ? `เป้าเที่ยง ~฿${(historicalBaseline.sales[11] || 1500).toLocaleString()}`
-                                    : `~฿${Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 0.8 / 50) * 50} - ฿${Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 1.25 / 50) * 50}`}
-                            </strong>
-                        </span>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-[oklch(42%_0.010_28)] font-bold tracking-wider">ACTION:</span>
-                        <span className="px-2 py-0.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-semibold text-[oklch(18%_0.012_28)] text-[11px]">
+                    <div className="min-w-0">
+                        <div className="text-[11px] text-[oklch(50%_0.010_28)]">อัตราขายต่อชั่วโมง</div>
+                        <div className="font-mono font-semibold text-[oklch(18%_0.012_28)] mt-0.5 tabular-nums flex items-baseline gap-1.5 flex-wrap">
+                            <span>฿{dayMetrics?.currentVelocityPerHour?.toLocaleString() || 0}/ชม.</span>
+                            {dayMetrics?.peakHourPoint?.sale > 0 && (
+                                <span className="text-[11px] font-normal text-[oklch(50%_0.010_28)]">
+                                    พีค {dayMetrics.peakHourPoint.hour}:00 น.
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="min-w-0">
+                        <div className="text-[11px] text-[oklch(50%_0.010_28)]">แนวโน้มปิดวัน & เป้า</div>
+                        <div className="font-mono font-semibold mt-0.5 tabular-nums flex items-baseline gap-1.5 flex-wrap">
+                            <span className={dayMetrics?.paceDeltaPct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}>
+                                {dayMetrics?.paceDeltaPct >= 0 ? `+${dayMetrics?.paceDeltaPct}%` : `${dayMetrics?.paceDeltaPct}%`} เทียบเป้า
+                            </span>
+                            {dayMetrics?.totalGuests > 0 && (
+                                <span className="text-[11px] font-normal text-[oklch(50%_0.010_28)]">
+                                    · ปิดวัน ~{dayMetrics?.projectedClosingPax} คน
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="min-w-0 col-span-2 lg:col-span-1">
+                        <div className="text-[11px] text-[oklch(50%_0.010_28)]">คำแนะนำปฏิบัติการ</div>
+                        <div className="font-medium text-[oklch(18%_0.012_28)] mt-0.5 truncate" title={operatingActionText}>
                             {operatingActionText}
-                        </span>
+                        </div>
                     </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+                    {filterMode === 'month' ? (
+                        <>
+                            <div className="p-4 space-y-1">
+                                <div className="text-xs text-[oklch(50%_0.010_28)]">ยอดขายสะสมทั้งเดือน</div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                                    ฿{monthMetrics?.monthGross.toLocaleString()}
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    เฉลี่ย ฿{monthMetrics ? Math.round(monthMetrics.monthGross / monthMetrics.activeDaysCount).toLocaleString() : 0} / วัน
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-1">
+                                <div className="text-xs text-[oklch(50%_0.010_28)]">จำนวนลูกค้ารวม</div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
+                                    {monthMetrics?.monthPax.toLocaleString()} ท่าน
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    เฉลี่ย {monthMetrics ? Math.round(monthMetrics.monthPax / monthMetrics.activeDaysCount) : 0} ท่าน / วัน
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-1">
+                                <div className="text-xs text-[oklch(50%_0.010_28)]">เวลาคุ้มทุนเฉลี่ย</div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(45%_0.08_140)] tabular-nums">
+                                    {monthMetrics?.breakEvenHour || '—'}
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    เป้าขั้นต่ำ ฿{monthMetrics?.dailyExpenseTarget.toLocaleString()}/วัน
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-1">
+                                <div className="text-xs text-[oklch(50%_0.010_28)]">ช่วงเวลาทำยอดสูงสุด</div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                                    {monthMetrics?.monthlyDayparts?.reduce((max, dp) => dp.sales > (max?.sales || 0) ? dp : max, null)?.label || '—'}
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    สัดส่วน {monthMetrics?.monthlyDayparts?.reduce((max, dp) => dp.sales > (max?.sales || 0) ? dp : max, null)?.percent || 0}% ของเดือน
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className={`p-4 space-y-1 transition-colors ${dayMetrics?.isDailyGoalExceeded ? 'bg-[oklch(96%_0.02_140)]' : ''}`}>
+                                <div className="flex items-center justify-between text-xs text-[oklch(50%_0.010_28)]">
+                                    <span>ยอดขายสะสม</span>
+                                    {dayMetrics?.isDailyGoalExceeded ? (
+                                        <span className="text-[oklch(38%_0.10_140)] font-mono font-semibold text-[11px] tabular-nums">
+                                            ทะลุเป้า ({dayMetrics.pctOfTarget}%)
+                                        </span>
+                                    ) : dayMetrics?.pctOfTarget > 0 ? (
+                                        <span className="text-[oklch(18%_0.012_28)] font-mono font-semibold text-[11px] tabular-nums">{dayMetrics.pctOfTarget}%</span>
+                                    ) : null}
+                                </div>
+                                <div className={`font-mono text-xl md:text-2xl font-bold tracking-tight tabular-nums ${dayMetrics?.isDailyGoalExceeded ? 'text-[oklch(38%_0.10_140)]' : 'text-[oklch(18%_0.012_28)]'}`}>
+                                    ฿{dayMetrics?.totalGross.toLocaleString()}
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] flex items-center gap-1.5 flex-wrap tabular-nums">
+                                    <span>เป้า ฿{dayMetrics?.defaultTarget.toLocaleString()}</span>
+                                    <span>·</span>
+                                    <span className={dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)] font-semibold" : "text-[oklch(52%_0.16_28)] font-semibold"}>
+                                        {dayMetrics?.paceDeltaPct >= 0 ? `+${dayMetrics?.paceDeltaPct}%` : `${dayMetrics?.paceDeltaPct}%`}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-1">
+                                <div className="flex items-center justify-between text-xs text-[oklch(50%_0.010_28)]">
+                                    <span>จำนวนลูกค้า</span>
+                                    <span className={`font-mono text-[11px] font-semibold ${dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                                        {dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ตามเป้า' : 'ชะลอตัว'}
+                                    </span>
+                                </div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
+                                    {dayMetrics?.totalGuests} ท่าน
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    {dayMetrics?.totalGuests > 0
+                                        ? `คาดปิดวัน ~${dayMetrics?.projectedClosingPax} ท่าน (${dayMetrics?.forecastedClosingPaxLow}-${dayMetrics?.forecastedClosingPaxHigh})`
+                                        : `สถิติ (${dayOfWeekThai}): ~${historicalBaseline.totalPax} ท่าน`}
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-1">
+                                <div className="flex items-center justify-between text-xs text-[oklch(50%_0.010_28)]">
+                                    <span>ความเร็วขาย</span>
+                                    <span className="font-mono text-[11px] tabular-nums">{isViewingToday ? (currentBangkokTime.hour >= 11 ? `11:00–${currentBangkokTime.label}` : 'รอเปิด 11:00') : '11:00–23:00'}</span>
+                                </div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                                    ฿{dayMetrics?.currentVelocityPerHour?.toLocaleString() || 0} <span className="text-xs font-normal text-[oklch(50%_0.010_28)]">/ ชม.</span>
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    {dayMetrics?.peakHourPoint?.sale > 0
+                                        ? `พีคสุด ฿${dayMetrics.peakHourPoint.sale.toLocaleString()} (${dayMetrics.peakHourPoint.hour}:00 น.)`
+                                        : 'ช่วงพีคปกติ 18:00–20:00 น.'}
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-1">
+                                <div className="flex items-center justify-between text-xs text-[oklch(50%_0.010_28)]">
+                                    <span>สัญญาณออนไลน์</span>
+                                    <span className="font-mono text-[11px] text-[oklch(45%_0.08_140)] font-medium">Intent</span>
+                                </div>
+                                <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(45%_0.08_140)] tabular-nums">
+                                    {dayMetrics?.adHighIntent} สัญญาณ
+                                </div>
+                                <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                    แผนที่ {dayMetrics?.adDirs || 0} · โทร {dayMetrics?.adCalls || 0} · จอง {dayMetrics?.adBookings || 0}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -1858,155 +1842,104 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             {((filterMode === 'day' && activeSubTab === 'chart') ||
               (filterMode === 'month' && (monthViewMode === 'pacing' || monthViewMode === 'weekday_weekend'))) && (
                 <div ref={chartWrapperRef} className="p-4 md:p-6 bg-[oklch(97%_0.008_28)] relative">
-                    {/* Visual Legend */}
-                    <div className="flex items-center justify-between gap-3 text-xs font-mono mb-4 flex-wrap">
-                        <div className="flex items-center gap-3.5 flex-wrap">
+                    {/* Visual Legend (Streamlined inline cluster + rounded pills) */}
+                    <div className="flex items-center justify-between gap-3 text-xs mb-4 flex-wrap">
+                        <div className="flex items-center gap-3 md:gap-4 flex-wrap text-[11.5px] text-[oklch(42%_0.010_28)]">
                             {filterMode === 'month' && monthViewMode === 'weekday_weekend' ? (
                                 <>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-3.5 h-1 bg-[oklch(52%_0.16_28)]" />
-                                        <span className="text-[oklch(18%_0.012_28)] font-bold">วันจันทร์-ศุกร์ (Weekdays Avg)</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-3.5 h-1 bg-[oklch(45%_0.08_140)]" />
-                                        <span className="text-[oklch(18%_0.012_28)] font-bold">วันเสาร์-อาทิตย์ (Weekends Avg)</span>
-                                    </div>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span className="w-3 h-1 rounded-full bg-[oklch(52%_0.16_28)]" />
+                                        <span className="text-[oklch(18%_0.012_28)] font-medium">จันทร์–ศุกร์ (เฉลี่ย)</span>
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span className="w-3 h-1 rounded-full bg-[oklch(45%_0.08_140)]" />
+                                        <span className="text-[oklch(18%_0.012_28)] font-medium">เสาร์–อาทิตย์ (เฉลี่ย)</span>
+                                    </span>
                                 </>
                             ) : (
-                                <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                                    {/* 1. กลุ่มลูกค้า (PAX TRAFFIC CLUSTER) */}
-                                    <div className="flex items-center gap-2.5 flex-wrap sm:pr-3.5 sm:border-r border-[oklch(85%_0.012_28)]">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="w-2.5 h-2.5 bg-[oklch(52%_0.16_28)]" />
-                                            <span className="text-[oklch(18%_0.012_28)] font-bold">
-                                                {filterMode === 'month' ? 'ยอดขายเฉลี่ยรายชม. (฿)' : 'ลูกค้าจริง (Pax)'}
-                                            </span>
-                                        </div>
-                                        {filterMode === 'day' && (
-                                            <>
-                                                <div className="flex items-center gap-1.5" title="สถิติจำนวนลูกค้าเฉลี่ยรอบ 4 สัปดาห์ (วันเดียวกัน)">
-                                                    <span className="w-3.5 h-0.5 border-t-2 border-dotted border-[oklch(62%_0.08_28)]" />
-                                                    <span className="text-[oklch(48%_0.08_28)]">
-                                                        สถิติลูกค้าเดิม ({dayOfWeekThai}) [Pax]
-                                                    </span>
-                                                </div>
-                                                {showPredict && (
-                                                    <>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="w-4 h-0.5 border-t-2 border-dashed border-[oklch(52%_0.16_28)]" />
-                                                            <span className="text-[oklch(52%_0.16_28)] font-bold">
-                                                                เส้นพยากรณ์ลูกค้า (Forecast Pax)
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="w-3 h-2 bg-[oklch(52%_0.16_28)]/20 border border-dashed border-[oklch(45%_0.08_140)]" />
-                                                            <span className="text-[oklch(45%_0.08_140)]">
-                                                                กรอบพยากรณ์ลูกค้า (Pax สูง-ต่ำ)
-                                                            </span>
-                                                        </div>
-                                                    </>
-                                                )}
-                                                {dayMetrics?.adHighIntent > 0 && (
-                                                    <div className="flex items-center gap-1.5" title="หมุดระบุชั่วโมงที่ได้รับสัญญาณค้นหาและติดต่อจาก Ad Leads">
-                                                        <span className="px-1 py-0.5 bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] font-mono text-[7.5px] font-bold rounded-2xs leading-none">
-                                                            SIG
-                                                        </span>
-                                                        <span className="text-[oklch(45%_0.08_140)] font-medium">
-                                                            หมุดสัญญาณ Ad Leads
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* 2. กลุ่มยอดขายสะสม (SALES VELOCITY CLUSTER) */}
-                                    <div className="flex items-center gap-2.5 flex-wrap">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="w-3.5 h-1 bg-[oklch(18%_0.012_28)]" />
-                                            <span className="text-[oklch(18%_0.012_28)] font-bold">
-                                                {filterMode === 'month' ? 'เส้นสะสมเฉลี่ยต่อวัน (฿)' : 'ยอดขายสะสมจริง (฿)'}
-                                            </span>
-                                        </div>
-                                        {filterMode === 'day' && (
-                                            <>
-                                                <div className="flex items-center gap-1.5" title="เกณฑ์เป้าหมายยอดขายสะสมตามช่วงเวลา (Benchmark Target)">
-                                                    <span className="w-3.5 h-0.5 border-t-2 border-dashed border-[oklch(45%_0.015_28)]" />
-                                                    <span className="text-[oklch(38%_0.015_28)] font-medium">
-                                                        เกณฑ์เป้าหมายสะสม (Benchmark ฿)
-                                                    </span>
-                                                </div>
-                                                {showPredict && (
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(18%_0.012_28)]" />
-                                                        <span className="text-[oklch(18%_0.012_28)]">คาดการณ์สะสมปิดวัน</span>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-
-                                        {/* 3. สัญลักษณ์ทะลุเป้าหมาย (GOAL EXCEEDED MARKER) */}
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[oklch(94%_0.03_142)] border border-[oklch(80%_0.08_142)] rounded-2xs" title="ช่วงเวลาที่ยอดขายหรือลูกค้าทำได้เกินเป้าหมาย (Goal Hit)">
-                                            <span className="w-2 h-2 bg-[oklch(50%_0.15_142)] rounded-2xs" />
-                                            <span className="text-[oklch(35%_0.12_142)] font-bold">
-                                                ทะลุเป้า (Goal Hit)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                                <>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-xs bg-[oklch(52%_0.16_28)]" />
+                                        <span className="text-[oklch(18%_0.012_28)] font-medium">
+                                            {filterMode === 'month' ? 'ยอดขายเฉลี่ย/ชม.' : 'ลูกค้าจริง (คน)'}
+                                        </span>
+                                    </span>
+                                    {filterMode === 'day' && (
+                                        <span className="inline-flex items-center gap-1.5" title="สถิติลูกค้าเฉลี่ยรอบ 4 สัปดาห์ (วันเดียวกัน)">
+                                            <span className="w-3 h-2.5 rounded-xs bg-[oklch(90%_0.010_28)] border border-[oklch(80%_0.012_28)]" />
+                                            <span>สถิติ {dayOfWeekThai}</span>
+                                        </span>
+                                    )}
+                                    {filterMode === 'day' && showPredict && (
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <span className="w-3.5 h-0 border-t-2 border-dashed border-[oklch(52%_0.16_28)]" />
+                                            <span className="text-[oklch(52%_0.16_28)] font-medium">พยากรณ์ลูกค้า</span>
+                                        </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-1.5 sm:pl-3 sm:border-l border-[oklch(88%_0.012_28)]">
+                                        <span className="w-3.5 h-1 rounded-full bg-[oklch(18%_0.012_28)]" />
+                                        <span className="text-[oklch(18%_0.012_28)] font-medium">
+                                            {filterMode === 'month' ? 'ยอดสะสม/วัน' : 'ยอดสะสม (฿)'}
+                                        </span>
+                                    </span>
+                                    {filterMode === 'day' && (
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <span className="w-3.5 h-0 border-t-2 border-dashed border-[oklch(45%_0.015_28)]" />
+                                            <span>เป้าสะสม</span>
+                                        </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-1.5" title="ชั่วโมงที่ทำยอดเกินเป้าหมาย">
+                                        <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
+                                        <span className="text-[oklch(38%_0.08_140)] font-medium">ทะลุเป้า</span>
+                                    </span>
+                                </>
                             )}
                         </div>
 
-                        {/* Right Action: Minimal Mode & Predict Toggle Button & Hours */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                            {/* Minimal Mode Toggle for iPhone / Mobile Resilience */}
+                        {/* Right Action: Clean Minimal & Predict Pills */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
                             <button
                                 type="button"
                                 onClick={toggleMinimalMode}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
                                     minimalMode
-                                        ? 'bg-[oklch(45%_0.08_140)] text-white border-[oklch(45%_0.08_140)] shadow-xs'
-                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] border-[oklch(45%_0.08_140)]'
+                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
-                                title="โหมดมินิมอล: ลดทอนเอฟเฟกต์ประมวลผลสูง สำหรับดูบนมือถือ/iPhone ลื่นไหล 60fps ไม่หน่วง ไม่ค้าง"
+                                title="โหมดกระชับสำหรับมือถือ 60fps"
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full ${minimalMode ? 'bg-white' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                                <span>{minimalMode ? '[MINIMAL: ON]' : '[MINIMAL: OFF]'}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${minimalMode ? 'bg-[oklch(97%_0.008_28)]' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                <span>{minimalMode ? 'Minimal · ON' : 'Minimal'}</span>
                             </button>
 
                             {filterMode === 'day' && !minimalMode && (
                                 <button
+                                    type="button"
                                     onClick={togglePredict}
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
                                         showPredict
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-xs'
-                                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
+                                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
                                     }`}
-                                    title="คลิกเพื่อเปิด/ปิดเส้นประพยากรณ์และกรอบความแปรผัน (Predict Layer Toggle)"
+                                    title="เปิดหรือปิดเส้นพยากรณ์ลูกค้าและยอดขาย"
                                 >
                                     <span className={`w-1.5 h-1.5 rounded-full ${showPredict ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                                    <span>{showPredict ? 'เส้น PREDICT [ON]' : 'เส้น PREDICT [OFF]'}</span>
+                                    <span>{showPredict ? 'เส้นคาดการณ์ · ON' : 'เส้นคาดการณ์'}</span>
                                 </button>
                             )}
-                            <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono hidden sm:block">
-                                {minimalMode ? 'โหมดมินิมอล // Low Latency 60fps' : 'เปิดบริการ 11:00 - 23:00 // Dual Horizon'}
-                            </div>
                         </div>
                     </div>
 
                     {/* Minimal Mode Active Status Bar on Mobile */}
                     {minimalMode && (
-                        <div className="mb-3 px-3 py-1.5 bg-[oklch(95%_0.02_140)] border border-[oklch(85%_0.06_140)] rounded-xs flex items-center justify-between font-mono text-[10.5px] text-[oklch(28%_0.08_140)]">
-                            <div className="flex items-center gap-1.5">
-                                <span className="font-bold">MINIMAL MODE //</span>
-                                <span>แสดงผลแบบกระชับ ตัดเอฟเฟกต์ประมวลผลสูง ไม่ค้างบน iPhone</span>
-                            </div>
+                        <div className="mb-3 px-3 py-1.5 bg-[oklch(94%_0.02_140)] border border-[oklch(85%_0.04_140)] rounded-xl flex items-center justify-between text-[11px] text-[oklch(32%_0.08_140)]">
+                            <span>โหมดแสดงผลกระชับเพื่อความลื่นไหลบนมือถือ</span>
                             <button
                                 type="button"
                                 onClick={toggleMinimalMode}
-                                className="underline hover:text-[oklch(18%_0.012_28)] cursor-pointer font-bold shrink-0 ml-2"
+                                className="underline hover:text-[oklch(18%_0.012_28)] cursor-pointer font-semibold shrink-0 ml-2"
                             >
-                                สลับดูกราฟเต็ม ➔
+                                แสดงรายละเอียดครบ &rarr;
                             </button>
                         </div>
                     )}
@@ -2025,9 +1958,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         onTouchStart={() => setHoveredHour(null)}
                     >
                         <svg
-                            width={svgWidth}
-                            height={svgHeight}
-                            className="overflow-visible select-none"
+                            width={isMobile ? svgWidth : '100%'}
+                            height={isMobile ? svgHeight : undefined}
+                            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                            className="block h-auto overflow-visible select-none"
                         >
                             <defs>
                                 <style>{`
@@ -2053,19 +1987,20 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 `}</style>
                             </defs>
 
-                            {/* 1. Daypart Background Bands */}
+                            {/* 1. Daypart Background Bands (Concise tier below NOW rail) */}
                             {DAYPARTS.map((dp, idx) => {
                                 const startX = getX(dp.hours[0]) - (plotWidth / (hours.length - 1)) * 0.45
                                 const endX = getX(dp.hours[dp.hours.length - 1]) + (plotWidth / (hours.length - 1)) * 0.45
                                 const bandWidth = Math.max(10, endX - startX)
                                 const isAlt = idx % 2 === 1
                                 const startHourStr = String(dp.rangeText || '').split(' - ')[0]
-                                const compactLabel = isMobile
-                                    ? (dp.id === 'lunch' ? `LUNCH (${startHourStr})`
-                                        : dp.id === 'afternoon' ? `AFTN (${startHourStr})`
-                                        : dp.id === 'dinner' ? `DINNER (${startHourStr})`
-                                        : `LATE (${startHourStr})`)
-                                    : `${dp.label.toUpperCase()} (${startHourStr})`
+                                const compactLabel = dp.id === 'lunch'
+                                    ? `Lunch (${startHourStr})`
+                                    : dp.id === 'afternoon'
+                                    ? `Afternoon (${startHourStr})`
+                                    : dp.id === 'dinner'
+                                    ? `Dinner (${startHourStr})`
+                                    : `Late (${startHourStr})`
 
                                 return (
                                     <g key={dp.id} pointerEvents="none">
@@ -2074,15 +2009,16 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             y={padYTop}
                                             width={bandWidth}
                                             height={plotHeight}
-                                            fill={isAlt ? 'oklch(94% 0.010 28)' : 'transparent'}
-                                            opacity="0.6"
+                                            rx={4}
+                                            fill={isAlt ? 'oklch(94.5%_0.009_28)' : 'transparent'}
+                                            opacity="0.65"
                                         />
                                         <text
                                             x={startX + 6}
                                             y={padYTop - 8}
-                                            fontSize="8.5"
+                                            fontSize="9"
                                             fontFamily="monospace"
-                                            fontWeight="bold"
+                                            fontWeight="600"
                                             fill={colorMuted}
                                         >
                                             {compactLabel}
@@ -2095,7 +2031,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 y2={padYTop + plotHeight}
                                                 stroke={colorRule}
                                                 strokeWidth="1"
-                                                strokeDasharray="2 2"
+                                                strokeDasharray="2 3"
+                                                opacity="0.7"
                                             />
                                         )}
                                     </g>
@@ -2117,10 +2054,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             y2={y}
                                             stroke={colorRule}
                                             strokeWidth="1"
+                                            opacity={idx === 0 ? '0.9' : '0.55'}
                                         />
                                         {/* Left: Money Axis */}
                                         <text
-                                            x={padLeft - 6}
+                                            x={padLeft - 8}
                                             y={y + 3}
                                             textAnchor="end"
                                             fontSize="9"
@@ -2132,13 +2070,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         {/* Right: Pax Axis (in Day mode) */}
                                         {filterMode === 'day' && (
                                             <text
-                                                x={padLeft + plotWidth + 6}
+                                                x={padLeft + plotWidth + 8}
                                                 y={y + 3}
                                                 textAnchor="start"
                                                 fontSize="9"
                                                 fontFamily="monospace"
-                                                fill={colorAccent}
-                                                fontWeight="bold"
+                                                fill={colorNeutral}
                                             >
                                                 {valPax}p
                                             </text>
@@ -2147,21 +2084,23 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 )
                             })}
 
-                            {/* 3. Live Current Time Indicator Marker (Dedicated top tier to prevent label collision) */}
+                            {/* 3. Live Current Time Indicator Marker (Clean upper rail, zero overlap with Daypart labels) */}
                             {filterMode === 'day' && isViewingToday && currentBangkokTime.hour >= 11 && currentBangkokTime.hour <= 23 && (() => {
                                 const curFraction = (currentBangkokTime.hour - 11 + currentBangkokTime.minute / 60) / (hours.length - 1)
                                 const curX = padLeft + Math.max(0, Math.min(1, curFraction)) * plotWidth
-                                const nowPillY = padYTop - (isMobile ? 32 : 24)
+                                const pillW = 54
+                                const clampedPillX = Math.max(padLeft + pillW / 2, Math.min(padLeft + plotWidth - pillW / 2, curX))
+                                const nowPillY = 4
                                 return (
-                                    <g key="live-time-indicator">
+                                    <g key="live-time-indicator" pointerEvents="none">
                                         <line
                                             x1={curX}
-                                            y1={nowPillY + 13}
+                                            y1={nowPillY + 16}
                                             x2={curX}
                                             y2={padYTop + plotHeight}
                                             stroke={colorAccent2}
-                                            strokeWidth="1.5"
-                                            strokeDasharray="3 2"
+                                            strokeWidth="1.25"
+                                            strokeDasharray="3 3"
                                         />
                                         <circle
                                             cx={curX}
@@ -2170,23 +2109,23 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             fill={colorAccent2}
                                         />
                                         <rect
-                                            x={curX - 24}
+                                            x={clampedPillX - pillW / 2}
                                             y={nowPillY}
-                                            width="48"
-                                            height="13"
+                                            width={pillW}
+                                            height="15"
                                             fill={colorAccent2}
-                                            rx="2"
+                                            rx="6"
                                         />
                                         <text
-                                            x={curX}
-                                            y={nowPillY + 9.5}
+                                            x={clampedPillX}
+                                            y={nowPillY + 10.5}
                                             textAnchor="middle"
-                                            fontSize="8"
+                                            fontSize="8.5"
                                             fontFamily="monospace"
                                             fontWeight="bold"
                                             fill={colorPaper}
                                         >
-                                            NOW {currentBangkokTime.label}
+                                            {currentBangkokTime.label} น.
                                         </text>
                                     </g>
                                 )
@@ -2250,10 +2189,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 y={padYTop + plotHeight - barH}
                                                 width={16}
                                                 height={barH}
-                                                rx={2}
+                                                rx={3}
                                                 fill={isMonthGoalExceeded
-                                                    ? (isHovered ? 'oklch(44% 0.17 142)' : 'oklch(50% 0.15 142)')
-                                                    : (isHovered ? colorAccent : 'oklch(85% 0.012 28)')}
+                                                    ? (isHovered ? 'oklch(40% 0.09 140)' : 'oklch(45% 0.08 140)')
+                                                    : (isHovered ? colorAccent : 'oklch(82% 0.015 28)')}
                                                 className="rams-bar-motion cursor-pointer"
                                                 onMouseEnter={() => {
                                                     if (!minimalMode && !isTouchDevice && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
@@ -2287,10 +2226,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     const isDrilldown = drilldownHour === pt.hour
                                     const isGoalExceeded = !!pt.isGoalExceeded
 
-                                    // Color changes to Thai Modern Emerald Olive when hour exceeded target
+                                    // Calmer Thai Modern Olive when hour exceeded target, Terracotta Clay for active bars
                                     const barFill = isGoalExceeded
-                                        ? (isDrilldown || isHovered ? 'oklch(44% 0.17 142)' : 'oklch(50% 0.15 142)')
-                                        : (isDrilldown || isHovered || isPeak ? colorAccent : 'oklch(60% 0.12 28)')
+                                        ? (isDrilldown || isHovered ? 'oklch(40% 0.09 140)' : 'oklch(45% 0.08 140)')
+                                        : (isDrilldown || isHovered || isPeak ? colorAccent : 'oklch(62% 0.11 28)')
 
                                     return (
                                         <g key={pt.hour}>
@@ -2301,10 +2240,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop}
                                                     width={(plotWidth / (hours.length - 1)) * 0.96}
                                                     height={plotHeight}
+                                                    rx={4}
                                                     fill={colorAccent}
-                                                    fillOpacity="0.12"
+                                                    fillOpacity="0.10"
                                                     stroke={colorAccent}
-                                                    strokeOpacity="0.5"
+                                                    strokeOpacity="0.45"
                                                     strokeWidth="1.2"
                                                     strokeDasharray="3 3"
                                                     className="pointer-events-none"
@@ -2329,10 +2269,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop + plotHeight - ghostBarH}
                                                     width={14}
                                                     height={ghostBarH}
-                                                    fill="oklch(93% 0.012 28)"
-                                                    stroke="oklch(85% 0.012 28)"
-                                                    strokeWidth="1"
-                                                    strokeDasharray="2 2"
+                                                    rx={3}
+                                                    fill="oklch(92% 0.010 28)"
+                                                    stroke="oklch(86% 0.012 28)"
+                                                    strokeWidth="0.8"
                                                     className="pointer-events-none"
                                                 />
                                             )}
@@ -2344,42 +2284,30 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop + plotHeight - actualBarH}
                                                     width={14}
                                                     height={actualBarH}
-                                                    rx={2}
+                                                    rx={3}
                                                     fill={barFill}
                                                     className="rams-bar-motion pointer-events-none"
                                                 />
                                             )}
 
-                                            {/* Celebratory Goal Beacon & Micro-Motion if hour exceeded target */}
+                                            {/* Celebratory Goal Beacon if hour exceeded target (Clean dot + delta label) */}
                                             {isGoalExceeded && actualBarH > 8 && (
                                                 <g className="goal-beacon-group select-none pointer-events-none">
-                                                    {!minimalMode && (
-                                                        <circle
-                                                            cx={x}
-                                                            cy={padYTop + plotHeight - actualBarH - 6}
-                                                            r="4.5"
-                                                            fill="none"
-                                                            stroke="oklch(50% 0.15 142)"
-                                                            strokeWidth="1.2"
-                                                            opacity="0.8"
-                                                            className="pointer-events-none"
-                                                        />
-                                                    )}
                                                     <circle
                                                         cx={x}
                                                         cy={padYTop + plotHeight - actualBarH - 6}
                                                         r="2.5"
-                                                        fill="oklch(50% 0.15 142)"
+                                                        fill="oklch(45% 0.08 140)"
                                                     />
                                                     {!minimalMode && pt.goalDeltaPct > 0 && (
                                                         <text
                                                             x={x}
                                                             y={padYTop + plotHeight - actualBarH - 12}
                                                             textAnchor="middle"
-                                                            fontSize="7.5"
+                                                            fontSize="8"
                                                             fontFamily="monospace"
-                                                            fontWeight="bold"
-                                                            fill="oklch(44% 0.17 142)"
+                                                            fontWeight="600"
+                                                            fill="oklch(38% 0.08 140)"
                                                             className="tabular-nums"
                                                         >
                                                             +{pt.goalDeltaPct}%
@@ -2539,40 +2467,22 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     <g>
                                                         <circle cx={fx} cy={fyHigh} r="2.5" fill="oklch(45% 0.08 140)" />
                                                         <text
-                                                            x={fx + 5}
-                                                            y={fyHigh + 3}
-                                                            textAnchor="start"
-                                                            className="font-mono text-[8px] font-bold fill-[oklch(45%_0.08_140)] tabular-nums"
+                                                            x={fx - 6}
+                                                            y={fyHigh - 5}
+                                                            textAnchor="end"
+                                                            className="font-mono text-[8px] font-semibold fill-[oklch(45%_0.08_140)] tabular-nums"
                                                         >
                                                             สูง ~{lastPt.forecastHigh}p
                                                         </text>
                                                     </g>
                                                 )}
 
-                                                {/* Base Tag (เส้นเดิม) */}
-                                                <circle cx={fx} cy={fyBase} r="3" fill="oklch(52% 0.16 28)" />
-                                                <text
-                                                    x={fx + 5}
-                                                    y={fyBase + 3}
-                                                    textAnchor="start"
-                                                    className="font-mono text-[8px] font-bold fill-[oklch(52%_0.16_28)] tabular-nums"
-                                                >
-                                                    ฐาน ~{lastPt.forecast}p
-                                                </text>
+                                                {/* Base Tag */}
+                                                <circle cx={fx} cy={fyBase} r="2.8" fill="oklch(52% 0.16 28)" />
 
                                                 {/* Low Tag */}
                                                 {lastPt.forecastLow < lastPt.forecast && (
-                                                    <g>
-                                                        <circle cx={fx} cy={fyLow} r="2.5" fill="oklch(60% 0.015 28)" />
-                                                        <text
-                                                            x={fx + 5}
-                                                            y={fyLow + 3}
-                                                            textAnchor="start"
-                                                            className="font-mono text-[8px] fill-[oklch(60%_0.015_28)] tabular-nums"
-                                                        >
-                                                            ต่ำ ~{lastPt.forecastLow}p
-                                                        </text>
-                                                    </g>
+                                                    <circle cx={fx} cy={fyLow} r="2.2" fill="oklch(60% 0.015 28)" />
                                                 )}
                                             </g>
                                         )
@@ -2585,7 +2495,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             {/* ================================================================= */}
                             {filterMode === 'day' && (
                                 <>
-                                    {/* Benchmark Target Curve (เกณฑ์เป้าหมายสะสมยอดขาย - Sales Benchmark Target) */}
+                                    {/* Benchmark Target Curve */}
                                     {(() => {
                                         const bpts = dayMetrics?.benchmarkPoints || []
                                         if (bpts.length === 0) return null
@@ -2607,7 +2517,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     strokeDasharray="4 4"
                                                     opacity="0.55"
                                                 />
-                                                {/* Subtle Terminal Target Tag at 23:00 */}
+                                                {/* Subtle Terminal Target Tag at 23:00 (inside plot to keep right axis clean) */}
                                                 {lastBpt && !minimalMode && (
                                                     <g>
                                                         <circle
@@ -2617,8 +2527,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                             fill={colorBenchmarkSales}
                                                         />
                                                         <text
-                                                            x={getX(23) + 6}
-                                                            y={getYMoney(targetAmt) + 3}
+                                                            x={getX(23) - 6}
+                                                            y={getYMoney(targetAmt) - 6}
+                                                            textAnchor="end"
                                                             className="font-mono text-[8.5px] font-semibold fill-[oklch(45%_0.015_28)] select-none tabular-nums"
                                                         >
                                                             เป้า ฿{Math.round(targetAmt / 1000)}k
@@ -2781,37 +2692,37 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     </div>
 
                     {/* Operational Helper Footnote */}
-                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] font-mono text-[oklch(42%_0.010_28)]">
-                        <span className="leading-tight"><strong className="text-[oklch(52%_0.16_28)]">INFO //</strong> คลิกที่แท่งชั่วโมงบนกราฟเพื่อเปิด Hourly Drill-Down Inspector (ดูบิล & เมนูยอดนิยม)</span>
+                    <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-[oklch(50%_0.010_28)]">
+                        <span>คลิกที่แท่งชั่วโมงบนกราฟเพื่อดูรายละเอียดบิลและเมนูยอดนิยมในชั่วโมงนั้น</span>
                         {drilldownHour !== null && (
                             <button
                                 type="button"
                                 onClick={() => setDrilldownHour(null)}
-                                className="self-end sm:self-auto shrink-0 px-2 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs cursor-pointer active:scale-95 transition-all"
+                                className="self-end sm:self-auto shrink-0 px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium rounded-lg cursor-pointer transition-colors"
                             >
-                                ปิดการเลือกชั่วโมง [{drilldownHour}:00] ✕
+                                ปิดมุมมอง {drilldownHour}:00 น.
                             </button>
                         )}
                     </div>
 
                     {/* Live Synchronized Tooltip Box */}
                     {hoveredHour !== null && (
-                        <div className="mt-3 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs flex flex-wrap items-center justify-between gap-3 relative">
+                        <div className="mt-3 p-3.5 bg-[oklch(95.5%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-xl text-xs flex flex-wrap items-center justify-between gap-3 relative">
                             <div className="flex items-center gap-2">
-                                <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold">
-                                    {hoveredHour}:00 - {hoveredHour + 1}:00
+                                <span className="px-2 py-0.5 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-semibold tabular-nums">
+                                    {hoveredHour}:00 – {hoveredHour + 1}:00
                                 </span>
-                                <span className="text-[oklch(42%_0.010_28)]">
-                                    {DAYPARTS.find(d => d.hours.includes(hoveredHour))?.label || ''}
+                                <span className="text-[oklch(42%_0.010_28)] font-medium">
+                                    {DAYPARTS.find(d => d.hours.includes(hoveredHour))?.thaiLabel || ''}
                                 </span>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setHoveredHour(null)}
-                                className="px-2 py-0.5 text-[10px] bg-[oklch(90%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs cursor-pointer ml-auto"
+                                className="px-2.5 py-1 text-[11px] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium rounded-lg cursor-pointer ml-auto transition-colors"
                                 title="ปิดการแสดงผลชั่วโมง"
                             >
-                                ปิด ✕
+                                ปิด
                             </button>
                             {filterMode === 'month' ? (
                                 <div className="flex items-center gap-4 flex-wrap">
@@ -2903,36 +2814,36 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         </div>
                     )}
 
-                    {/* Hourly Drill-Down Inspector Drawer (Zero Page Transition & Mobile Enclosure) */}
+                    {/* Hourly Drill-Down Inspector Drawer */}
                     {drilldownHour !== null && drillHourData && (
                         <div
                             ref={inspectorRef}
-                            className="mt-4 p-3.5 sm:p-5 bg-[oklch(94%_0.010_28)] border-2 border-[oklch(18%_0.012_28)] font-mono text-xs space-y-3.5 w-full max-w-full overflow-hidden animate-in fade-in duration-200"
+                            className="mt-4 p-4 sm:p-5 bg-[oklch(95.5%_0.008_28)] border border-[oklch(86%_0.012_28)] rounded-2xl text-xs space-y-4 w-full max-w-full overflow-hidden"
                         >
                             {/* Header */}
-                            <div className="flex items-center justify-between gap-2 pb-3 border-b border-[oklch(85%_0.012_28)]">
-                                <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
-                                    <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-[10px] sm:text-[11px] tracking-wider uppercase shrink-0">
-                                        HOURLY INSPECTOR // {drilldownHour}:00 - {drilldownHour + 1}:00
+                            <div className="flex items-center justify-between gap-2 pb-3 border-b border-[oklch(88%_0.012_28)]">
+                                <div className="flex items-center gap-2.5 flex-wrap min-w-0 flex-1">
+                                    <span className="px-2.5 py-1 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-semibold text-xs tabular-nums shrink-0">
+                                        {drilldownHour}:00 – {drilldownHour + 1}:00 น.
                                     </span>
-                                    <span className="font-bold text-xs sm:text-sm text-[oklch(18%_0.012_28)] truncate">
-                                        {DAYPARTS.find(d => d.hours.includes(drilldownHour))?.label || ''}
+                                    <span className="font-semibold text-sm text-[oklch(18%_0.012_28)] truncate">
+                                        {DAYPARTS.find(d => d.hours.includes(drilldownHour))?.thaiLabel || ''}
                                     </span>
-                                    <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                                    <span className="text-[10px] sm:text-xs text-[oklch(42%_0.010_28)] break-words">
+                                    <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">·</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] break-words">
                                         {drillHourData.isFuture
-                                            ? 'ช่วงเวลาคาดการณ์ล่วงหน้า (FORECAST INTERVAL)'
+                                            ? 'ช่วงเวลาคาดการณ์ล่วงหน้า'
                                             : (drillHourData.sale > 0
-                                                ? (filterMode === 'month' ? 'ยอดขายสะสมทั้งเดือน (MONTHLY TOTAL)' : 'บันทึกยอดขายจริงแล้ว (RECORDED)')
+                                                ? (filterMode === 'month' ? 'ยอดขายสะสมทั้งเดือน' : 'ยอดขายที่บันทึกแล้ว')
                                                 : 'ไม่มีรายการคำสั่งซื้อ')}
                                     </span>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setDrilldownHour(null)}
-                                    className="shrink-0 px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(18%_0.012_28)] font-bold text-xs rounded-xs shadow-xs transition-colors cursor-pointer active:scale-95"
+                                    className="shrink-0 px-3 py-1.5 bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] font-medium text-xs rounded-xl transition-colors cursor-pointer"
                                 >
-                                    ปิด [✕]
+                                    ปิดมุมมองนี้
                                 </button>
                             </div>
 
@@ -3066,22 +2977,19 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             {/* ========================================================================= */}
             {((filterMode === 'day' && activeSubTab === 'dayparts') ||
               (filterMode === 'month' && monthViewMode === 'dayparts')) && (
-                <div className="p-4 md:p-6 bg-[oklch(94%_0.010_28)] space-y-6">
+                <div className="p-4 md:p-6 bg-[oklch(95.5%_0.008_28)] space-y-6">
                     {/* Header */}
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
-                                DAYPART ANALYTICS // 04
-                            </span>
-                            <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)]">
+                        <div className="space-y-0.5">
+                            <h4 className="font-semibold text-sm md:text-base text-[oklch(18%_0.012_28)]">
                                 {filterMode === 'month'
-                                    ? `สัดส่วนรายได้และประสิทธิภาพแยก 4 ช่วงเวลาประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}`
-                                    : `สถิติและประสิทธิภาพแยก 4 ช่วงเวลาของวัน (${dayOfWeekThai} ${targetDateObj.toLocaleDateString('th-TH', { dateStyle: 'medium' })})`}
+                                    ? `สัดส่วนรายได้และประสิทธิภาพ 4 ช่วงเวลา · เดือน ${selectedMonth || todayBangkok.slice(0, 7)}`
+                                    : `สถิติ 4 ช่วงเวลาของวัน (${dayOfWeekThai} ${targetDateObj.toLocaleDateString('th-TH', { dateStyle: 'medium' })})`}
                             </h4>
+                            <span className="text-xs text-[oklch(50%_0.010_28)]">
+                                อัตราเร่งยอดขายรายชั่วโมง (฿ / ชั่วโมง)
+                            </span>
                         </div>
-                        <span className="text-xs font-mono text-[oklch(42%_0.010_28)]">
-                            อัตราเร่งยอดขายรายชั่วโมง (฿ / Operational Hour)
-                        </span>
                     </div>
 
                     {/* 4 Rich Daypart Dossier Cards */}
@@ -3095,41 +3003,41 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             return (
                                 <div
                                     key={dp.id}
-                                    className={`p-4 bg-[oklch(97%_0.008_28)] border transition-all space-y-3 ${
+                                    className={`p-4 bg-[oklch(97%_0.008_28)] rounded-2xl border transition-colors space-y-3 ${
                                         isGoalHit
-                                            ? 'border-[oklch(50%_0.15_142)] bg-[oklch(50%_0.15_142)]/5 ring-1 ring-[oklch(50%_0.15_142)]/30'
+                                            ? 'border-[oklch(45%_0.08_140)] bg-[oklch(95%_0.02_140)]'
                                             : isActive
-                                            ? 'border-[oklch(52%_0.16_28)] shadow-sm ring-1 ring-[oklch(52%_0.16_28)]/20'
-                                            : 'border-[oklch(85%_0.012_28)]'
+                                            ? 'border-[oklch(52%_0.16_28)] shadow-2xs'
+                                            : 'border-[oklch(88%_0.012_28)]'
                                     }`}
                                 >
                                     {/* Card Header */}
-                                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
+                                    <div className="flex items-center justify-between border-b border-[oklch(88%_0.012_28)] pb-2.5">
                                         <div>
                                             <div className="flex items-center gap-1.5">
-                                                <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">{dp.label}</span>
+                                                <span className="font-semibold text-xs text-[oklch(18%_0.012_28)]">{dp.label}</span>
                                                 {isActive && (
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-ping" />
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]" />
                                                 )}
                                             </div>
-                                            <div className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                                            <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)]">
                                                 {dp.thaiLabel} ({dp.rangeText})
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             {isGoalHit && (
-                                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[oklch(50%_0.15_142)] text-white">
-                                                    [GOAL HIT +{dp.goalDeltaPct}%]
+                                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] tabular-nums">
+                                                    +{dp.goalDeltaPct}%
                                                 </span>
                                             )}
-                                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 ${
+                                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                                                 isActive
-                                                    ? 'bg-[oklch(52%_0.16_28)] text-white'
+                                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                                                     : isPassed
-                                                    ? 'bg-[oklch(88%_0.012_28)] text-[oklch(35%_0.010_28)]'
-                                                    : 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                                    ? 'bg-[oklch(91%_0.010_28)] text-[oklch(42%_0.010_28)]'
+                                                    : 'bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-[oklch(50%_0.010_28)]'
                                             }`}>
-                                                {isActive ? 'NOW ACTIVE' : isPassed ? 'PASSED' : 'UPCOMING'}
+                                                {isActive ? 'กำลังดำเนินการ' : isPassed ? 'จบช่วง' : 'ถัดไป'}
                                             </span>
                                         </div>
                                     </div>
@@ -3137,42 +3045,42 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     {/* Primary Figures */}
                                     <div className="space-y-1">
                                         <div className="flex items-baseline justify-between">
-                                            <span className={`font-mono text-xl font-bold ${
-                                                isGoalHit ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'
+                                            <span className={`font-mono text-xl font-bold tabular-nums ${
+                                                isGoalHit ? 'text-[oklch(38%_0.08_140)]' : 'text-[oklch(18%_0.012_28)]'
                                             }`}>
                                                 ฿{dp.sales.toLocaleString()}
                                             </span>
                                             <div className="flex items-center gap-1.5">
                                                 {filterMode === 'day' && dp.dpTargetSales > 0 && (
-                                                    <span className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                                                    <span className="text-[10.5px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
                                                         (เป้า ฿{dp.dpTargetSales >= 1000 ? `${Math.round(dp.dpTargetSales / 1000)}k` : dp.dpTargetSales})
                                                     </span>
                                                 )}
-                                                <span className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)]">
+                                                <span className="text-xs font-mono font-semibold text-[oklch(52%_0.16_28)] tabular-nums">
                                                     {dp.percent}%
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between text-xs font-mono text-[oklch(42%_0.010_28)]">
+                                        <div className="flex items-center justify-between text-xs font-mono text-[oklch(48%_0.010_28)] tabular-nums">
                                             <span>
-                                                ลูกค้า: <strong className="text-[oklch(18%_0.012_28)]">{dp.pax}</strong> ท่าน
+                                                ลูกค้า <strong className="text-[oklch(18%_0.012_28)]">{dp.pax}</strong> ท่าน
                                                 {filterMode === 'day' && (
-                                                    <span className="text-[10px] ml-1 text-[oklch(55%_0.010_28)]">(สถิติ ~{dp.baselinePax})</span>
+                                                    <span className="text-[10.5px] ml-1 text-[oklch(55%_0.010_28)]">(สถิติ ~{dp.baselinePax})</span>
                                                 )}
                                             </span>
-                                            <span>เฉลี่ย: ฿{dp.spendPerHead}/หัว</span>
+                                            <span>฿{dp.spendPerHead}/หัว</span>
                                         </div>
                                     </div>
 
                                     {/* Operational Velocity & Guidance */}
-                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)] space-y-2">
-                                        <div className="flex items-center justify-between text-[11px] font-mono">
-                                            <span className="text-[oklch(42%_0.010_28)]">อัตราเร่ง:</span>
-                                            <span className="font-bold text-[oklch(45%_0.08_140)]">
+                                    <div className="pt-2.5 border-t border-[oklch(88%_0.012_28)] space-y-1.5">
+                                        <div className="flex items-center justify-between text-[11px] font-mono tabular-nums">
+                                            <span className="text-[oklch(50%_0.010_28)]">อัตราเร่ง:</span>
+                                            <span className="font-semibold text-[oklch(45%_0.08_140)]">
                                                 ฿{dp.hourlyVelocity.toLocaleString()} / ชม.
                                             </span>
                                         </div>
-                                        <p className="text-[11px] text-[oklch(42%_0.010_28)] font-sans leading-tight">
+                                        <p className="text-[11px] text-[oklch(48%_0.010_28)] font-sans leading-relaxed">
                                             {dp.desc}
                                         </p>
                                     </div>
@@ -3182,13 +3090,13 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     </div>
 
                     {/* Hourly Daypart Performance Matrix Table */}
-                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-hidden">
-                        <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between flex-wrap gap-2">
-                            <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
-                                HOURLY PERFORMANCE MATRIX // {filterMode === 'month' ? `แจกแจงรายชั่วโมงสะสมประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}` : 'แจกแจงรายชั่วโมง 11:00 - 23:00'}
+                    <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl overflow-hidden">
+                        <div className="p-3.5 px-4 bg-[oklch(95.5%_0.008_28)] border-b border-[oklch(88%_0.012_28)] flex items-center justify-between flex-wrap gap-2">
+                            <span className="font-semibold text-xs text-[oklch(18%_0.012_28)]">
+                                {filterMode === 'month' ? `ตารางแจกแจงรายชั่วโมงสะสมประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}` : 'ตารางแจกแจงรายชั่วโมง 11:00 – 23:00 น.'}
                             </span>
-                            <span className="font-mono text-[11px] text-[oklch(42%_0.010_28)]">
-                                {filterMode === 'month' ? `${monthMetrics?.activeDaysCount || 0} วันทำการ · 13 กรอบเวลาปฏิบัติการ` : '13 กรอบเวลาปฏิบัติการ'}
+                            <span className="font-mono text-[11px] text-[oklch(50%_0.010_28)]">
+                                {filterMode === 'month' ? `${monthMetrics?.activeDaysCount || 0} วันทำการ · 13 ช่วงเวลา` : '13 ช่วงเวลา'}
                             </span>
                         </div>
 
@@ -3365,36 +3273,38 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             {/* 5. VIEW 3: ON-DEMAND AI STRATEGY & AD INTENT (When activeSubTab === 'ad_briefing') */}
             {/* ========================================================================= */}
             {filterMode === 'day' && activeSubTab === 'ad_briefing' && (
-                <div className="p-4 md:p-6 bg-[oklch(94%_0.010_28)] space-y-6">
+                <div className="p-4 md:p-6 bg-[oklch(95.5%_0.008_28)] space-y-6">
                     {/* Header Banner with Explicit AI Generation Button */}
-                    <div className="p-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[oklch(85%_0.012_28)] pb-3">
+                    <div className="p-4 md:p-5 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-2xl space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[oklch(88%_0.012_28)] pb-3">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
-                                    <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)]">
-                                        EXECUTIVE AI STRATEGY BRIEFING // วิเคราะห์และวางแผนกลยุทธ์กะนี้
+                                    <h4 className="font-semibold text-sm md:text-base text-[oklch(18%_0.012_28)]">
+                                        วิเคราะห์กลยุทธ์กะนี้ด้วย AI
                                     </h4>
                                 </div>
-                                <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-0.5">
-                                    สังเคราะห์ด้วย Gemini AI (สร้างเฉพาะตอนที่กดเท่านั้น ไม่ทำงานอัตโนมัติ)
+                                <p className="text-xs text-[oklch(50%_0.010_28)] mt-0.5">
+                                    สังเคราะห์ด้วย Gemini AI เฉพาะตอนที่กดปุ่มเท่านั้น
                                 </p>
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap">
                                 <button
+                                    type="button"
                                     onClick={generateAiBriefing}
                                     disabled={aiLoading}
-                                    className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold transition-all disabled:opacity-50"
+                                    className="px-4 py-2 rounded-xl bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-medium text-xs transition-colors disabled:opacity-50 cursor-pointer"
                                 >
-                                    {aiLoading ? 'กำลังประมวลผลข้อมูลกะ…' : (aiBriefing ? 'วิเคราะห์ใหม่ [RE-GENERATE]' : 'สร้างบทวิเคราะห์ AI [GENERATE]')}
+                                    {aiLoading ? 'กำลังประมวลผลข้อมูลกะ…' : (aiBriefing ? 'วิเคราะห์ใหม่' : 'สร้างบทวิเคราะห์ AI')}
                                 </button>
                                 {aiBriefing && (
                                     <button
+                                        type="button"
                                         onClick={() => setAiBriefing(null)}
-                                        className="px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]"
+                                        className="px-3 py-2 rounded-xl bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer transition-colors"
                                     >
-                                        ล้าง [CLEAR]
+                                        ล้าง
                                     </button>
                                 )}
                             </div>
@@ -3405,55 +3315,56 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 {renderBriefingContent(aiBriefing)}
                                 <div className="flex justify-end">
                                     <button
+                                        type="button"
                                         onClick={copyBriefingToClipboard}
-                                        className="px-3 py-1.5 font-mono text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]"
+                                        className="px-3 py-1.5 rounded-xl font-medium text-xs text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] cursor-pointer transition-colors"
                                     >
-                                        {copiedBriefing ? '[คัดลอกลง Clipboard แล้ว]' : 'คัดลอกบทวิเคราะห์ [COPY]'}
+                                        {copiedBriefing ? 'คัดลอกเรียบร้อยแล้ว' : 'คัดลอกบทวิเคราะห์'}
                                     </button>
                                 </div>
                             </div>
                         ) : (
                             <div className="py-8 text-center space-y-2">
-                                <p className="text-xs font-mono text-[oklch(42%_0.010_28)]">
-                                    ยังไม่มีบทวิเคราะห์ที่สร้างไว้ — กดปุ่ม &quot;สร้างบทวิเคราะห์ AI [GENERATE]&quot; เพื่อเริ่มการสังเคราะห์ข้อมูลความเร็วยอดขายและสัญญาณ Ad Leads
+                                <p className="text-xs text-[oklch(50%_0.010_28)]">
+                                    ยังไม่มีบทวิเคราะห์ที่สร้างไว้ กดปุ่ม &ldquo;สร้างบทวิเคราะห์ AI&rdquo; เพื่อเริ่มสรุปข้อมูลความเร็วยอดขายและสัญญาณลูกค้าออนไลน์
                                 </p>
                             </div>
                         )}
                     </div>
 
                     {/* Ad & Search Intent Leads Funnel */}
-                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 space-y-3">
-                        <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
-                            <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
-                                AD & CUSTOMER SEARCH INTENT // สัญญาณความสนใจจากแคมเปญออนไลน์ ({adEvents.length} เหตุการณ์)
+                    <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl p-4 md:p-5 space-y-3">
+                        <div className="flex items-center justify-between border-b border-[oklch(88%_0.012_28)] pb-2.5 flex-wrap gap-2">
+                            <span className="font-semibold text-xs text-[oklch(18%_0.012_28)]">
+                                สัญญาณความสนใจจากลูกค้าออนไลน์ ({adEvents.length} เหตุการณ์)
                             </span>
-                            <span className="font-mono text-xs font-bold text-[oklch(45%_0.08_140)]">
-                                {dayMetrics?.adHighIntent} High-Intent Leads
+                            <span className="font-mono text-xs font-semibold text-[oklch(45%_0.08_140)] tabular-nums">
+                                {dayMetrics?.adHighIntent} สัญญาณตั้งใจสูง
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
-                            <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
-                                <span className="text-[10px] text-[oklch(42%_0.010_28)] block">ขอเส้นทาง (MAPS)</span>
-                                <span className="text-base font-bold text-[oklch(18%_0.012_28)]">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                            <div className="p-3 rounded-xl bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)]">
+                                <span className="text-[11px] text-[oklch(50%_0.010_28)] block">ขอเส้นทาง (Maps)</span>
+                                <span className="font-mono text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     {adEvents.filter(e => ['click_directions', 'find_location', 'directions'].includes(e.event_name)).length}
                                 </span>
                             </div>
-                            <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
-                                <span className="text-[10px] text-[oklch(42%_0.010_28)] block">โทร / LINE</span>
-                                <span className="text-base font-bold text-[oklch(18%_0.012_28)]">
+                            <div className="p-3 rounded-xl bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)]">
+                                <span className="text-[11px] text-[oklch(50%_0.010_28)] block">โทร / LINE</span>
+                                <span className="font-mono text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     {adEvents.filter(e => ['click_phone', 'contact', 'call', 'click_line', 'generate_lead', 'line'].includes(e.event_name)).length}
                                 </span>
                             </div>
-                            <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
-                                <span className="text-[10px] text-[oklch(42%_0.010_28)] block">จองโต๊ะ / สั่งกลับ</span>
-                                <span className="text-base font-bold text-[oklch(45%_0.08_140)]">
+                            <div className="p-3 rounded-xl bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)]">
+                                <span className="text-[11px] text-[oklch(50%_0.010_28)] block">จองโต๊ะ / สั่งกลับ</span>
+                                <span className="font-mono text-lg font-bold text-[oklch(45%_0.08_140)] tabular-nums">
                                     {adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(e.event_name)).length}
                                 </span>
                             </div>
-                            <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
-                                <span className="text-[10px] text-[oklch(42%_0.010_28)] block">สำรวจเมนู / บรรยากาศ</span>
-                                <span className="text-base font-bold text-[oklch(52%_0.16_28)]">
+                            <div className="p-3 rounded-xl bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)]">
+                                <span className="text-[11px] text-[oklch(50%_0.010_28)] block">สำรวจเมนู / บรรยากาศ</span>
+                                <span className="font-mono text-lg font-bold text-[oklch(52%_0.16_28)] tabular-nums">
                                     {adEvents.filter(e => ['view_menu', 'explore_menu', 'view_vibe', 'view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open'].includes(e.event_name)).length}
                                 </span>
                             </div>
@@ -3468,38 +3379,33 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             {filterMode === 'month' && monthViewMode === 'ranking' && (
                 <div className="p-4 md:p-6 bg-[oklch(97%_0.008_28)] space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
-                                RANKING // VELOCITY
-                            </span>
-                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                                การจัดอันดับวันที่มีอัตราเร่งยอดขายสูงสุดประจำเดือน (High Pacing Days)
-                            </h4>
-                        </div>
+                        <h4 className="font-semibold text-sm text-[oklch(18%_0.012_28)]">
+                            จัดอันดับวันยอดขายเด่นประจำเดือน
+                        </h4>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Top Fastest Days */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 space-y-2">
-                            <div className="text-xs font-mono font-bold text-[oklch(45%_0.08_140)]">
-                                ▲ TOP 5 FASTEST ACCELERATION DAYS (วันยอดพุ่งเร็วที่สุด)
+                        <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)] rounded-2xl p-4 space-y-2.5">
+                            <div className="text-xs font-semibold text-[oklch(45%_0.08_140)]">
+                                5 อันดับวันที่ยอดขายพุ่งสูงสุด
                             </div>
                             <div className="space-y-1.5">
                                 {monthMetrics?.topDays.map((d, idx) => (
                                     <div
                                         key={d.date}
-                                        className="p-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs"
+                                        className="p-2.5 px-3 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-xl flex items-center justify-between font-mono text-xs tabular-nums"
                                     >
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-[oklch(18%_0.012_28)]">#{idx + 1}</span>
                                             <span>{d.date}</span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)]">
                                                 ({d.isWeekend ? 'วันหยุด' : 'วันธรรมดา'})
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="font-bold text-[oklch(18%_0.012_28)]">฿{d.sales.toLocaleString()}</span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
+                                            <span className="font-semibold text-[oklch(18%_0.012_28)]">฿{d.sales.toLocaleString()}</span>
+                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
                                         </div>
                                     </div>
                                 ))}
@@ -3507,26 +3413,26 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         </div>
 
                         {/* Sluggish Days for Optimization */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 space-y-2">
-                            <div className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)]">
-                                ▼ SLOW PACING DAYS (วันที่ควรเพิ่มโปรโมชั่นกระตุ้น)
+                        <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)] rounded-2xl p-4 space-y-2.5">
+                            <div className="text-xs font-semibold text-[oklch(52%_0.16_28)]">
+                                วันที่ควรเพิ่มกิจกรรมกระตุ้นยอดขาย
                             </div>
                             <div className="space-y-1.5">
                                 {monthMetrics?.slowDays.map((d, idx) => (
                                     <div
                                         key={d.date}
-                                        className="p-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs"
+                                        className="p-2.5 px-3 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-xl flex items-center justify-between font-mono text-xs tabular-nums"
                                     >
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-[oklch(18%_0.012_28)]">#{idx + 1}</span>
                                             <span>{d.date}</span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)]">
                                                 ({d.isWeekend ? 'วันหยุด' : 'วันธรรมดา'})
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="font-bold text-[oklch(52%_0.16_28)]">฿{d.sales.toLocaleString()}</span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
+                                            <span className="font-semibold text-[oklch(52%_0.16_28)]">฿{d.sales.toLocaleString()}</span>
+                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
                                         </div>
                                     </div>
                                 ))}
@@ -3538,39 +3444,49 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
             {/* Quick Summary 4 Daypart Mini Cards when on chart view */}
             {filterMode === 'day' && activeSubTab === 'chart' && (
-                <div className="p-4 md:p-6 bg-[oklch(94%_0.010_28)] space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
-                                DAYPART SUMMARY
-                            </span>
-                            <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">
-                                สรุป 4 ช่วงเวลาประจำวัน (กดแท็บ &quot;4 ช่วงเวลา [DAYPARTS]&quot; ด้านบนเพื่อดูการวิเคราะห์เชิงลึก)
-                            </span>
-                        </div>
+                <div className="p-4 md:p-5 bg-[oklch(95.5%_0.008_28)] space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-semibold text-xs text-[oklch(18%_0.012_28)]">
+                            สรุป 4 ช่วงเวลาประจำวัน
+                        </span>
+                        <span className="text-[11px] text-[oklch(50%_0.010_28)]">
+                            คลิกที่การ์ดเพื่อดูรายละเอียดรายชั่วโมง
+                        </span>
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 font-mono text-xs">
-                        {dayMetrics?.daypartBreakdown.map((dp) => (
-                            <div
-                                key={dp.id}
-                                onClick={() => setActiveSubTab('dayparts')}
-                                className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] cursor-pointer transition-all space-y-1"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-[11px] text-[oklch(18%_0.012_28)]">{dp.label}</span>
-                                    <span className="text-[9px] px-1 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
-                                        {dp.status.toUpperCase()}
-                                    </span>
-                                </div>
-                                <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                                    ฿{dp.sales.toLocaleString()}
-                                </div>
-                                <div className="text-[10px] text-[oklch(42%_0.010_28)] flex justify-between">
-                                    <span>จริง: {dp.pax} ท่าน</span>
-                                    <span>สถิติ: ~{dp.baselinePax}</span>
-                                </div>
-                            </div>
-                        ))}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                        {dayMetrics?.daypartBreakdown.map((dp) => {
+                            const statusLabel = dp.status === 'active'
+                                ? 'กำลังขาย'
+                                : dp.status === 'passed'
+                                    ? 'จบช่วง'
+                                    : 'ถัดไป'
+                            return (
+                                <button
+                                    key={dp.id}
+                                    type="button"
+                                    onClick={() => setActiveSubTab('dayparts')}
+                                    className="text-left p-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] hover:border-[oklch(52%_0.16_28)]/60 rounded-xl cursor-pointer transition-colors space-y-1.5"
+                                >
+                                    <div className="flex items-center justify-between gap-1.5">
+                                        <span className="font-semibold text-xs text-[oklch(18%_0.012_28)] truncate">{dp.thaiLabel}</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                            dp.status === 'active'
+                                                ? 'bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)]'
+                                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(50%_0.010_28)]'
+                                        }`}>
+                                            {statusLabel}
+                                        </span>
+                                    </div>
+                                    <div className="font-mono font-bold text-base text-[oklch(18%_0.012_28)] tabular-nums">
+                                        ฿{dp.sales.toLocaleString()}
+                                    </div>
+                                    <div className="text-[11px] font-mono text-[oklch(50%_0.010_28)] flex justify-between tabular-nums">
+                                        <span>จริง {dp.pax} ท่าน</span>
+                                        <span>สถิติ ~{dp.baselinePax}</span>
+                                    </div>
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
             )}

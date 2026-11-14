@@ -611,19 +611,19 @@ export default function AdminLayout() {
                         <button
                             type="button"
                             onClick={toggleCollapse}
-                            className="flex items-center gap-1.5 px-2 py-1 rounded-xs border border-[var(--ram-rule)] bg-[var(--ram-paper)] hover:bg-[oklch(94%_0.010_28)] text-[var(--ram-ink)] transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--ram-rule)] bg-[var(--ram-paper)] hover:bg-[oklch(94%_0.010_28)] text-[var(--ram-ink)] transition-colors cursor-pointer"
                             title="ซ่อน/เปิดแถบเมนู (Ctrl+B)"
                         >
                             {isCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
-                            <span className="text-[10px] font-bold uppercase">
-                                {isCollapsed ? 'EXPAND MENU' : 'COLLAPSE'}
+                            <span className="text-[11px] font-medium">
+                                {isCollapsed ? 'เปิดเมนู' : 'ย่อเมนู'}
                             </span>
                         </button>
 
                         <div className="flex items-center gap-1.5 text-[var(--ram-ink-muted)]">
-                            <span className="font-bold text-[var(--ram-ink)]">ONHAUS</span>
+                            <span className="font-semibold text-[var(--ram-ink)]">ONHAUS</span>
                             <span>/</span>
-                            <span className="text-[var(--ram-accent)] font-bold">{currentSectionLabel.toUpperCase()}</span>
+                            <span className="text-[var(--ram-accent)] font-semibold">{currentSectionLabel}</span>
                         </div>
                     </div>
 
@@ -631,22 +631,23 @@ export default function AdminLayout() {
                         {pendingCount > 0 && (
                             <Link 
                                 to="/admin" 
-                                className="flex items-center gap-1 bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 rounded-xs font-mono text-[10px] font-bold animate-pulse"
+                                className="flex items-center gap-1.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-2.5 py-0.5 rounded-full font-mono text-[11px] font-medium tabular-nums"
                             >
-                                <span>INBOX</span>
-                                <span className="bg-black/20 px-1 rounded-xs">{pendingCount}</span>
+                                <span>รอตรวจ</span>
+                                <span className="bg-black/20 px-1.5 rounded-full">{pendingCount}</span>
                             </Link>
                         )}
                         <a
                             href="/pos"
                             target="_blank"
                             rel="noreferrer"
-                            className="px-2 py-0.5 text-[var(--ram-ink)] hover:bg-[oklch(92%_0.010_28)] rounded-xs border border-[var(--ram-rule)] font-mono text-[10px] font-bold"
+                            className="px-2.5 py-1 text-[var(--ram-ink)] hover:bg-[oklch(92%_0.010_28)] rounded-lg border border-[var(--ram-rule)] font-mono text-[11px] font-medium inline-flex items-center gap-1 transition-colors"
                             title="Open POS Terminal in new tab"
                         >
-                            POS TERMINAL ↗
+                            <span>POS Terminal</span>
+                            <ArrowUpRight size={12} />
                         </a>
-                        <span className="px-1.5 py-0.5 bg-[var(--ram-paper-2)] border border-[var(--ram-rule)] text-[var(--ram-ink)] font-mono text-[9px] font-bold rounded-xs">
+                        <span className="px-2 py-0.5 bg-[var(--ram-paper-2)] border border-[var(--ram-rule)] text-[var(--ram-ink)] font-mono text-[10px] font-medium rounded-lg">
                             {userRoleDisplay}
                         </span>
                     </div>

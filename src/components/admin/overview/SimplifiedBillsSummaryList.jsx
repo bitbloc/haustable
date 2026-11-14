@@ -93,24 +93,24 @@ export default function SimplifiedBillsSummaryList({
     }, [filteredBookings, page, pageSize])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-xs p-4 sm:p-5 font-sans space-y-4 shadow-2xs">
-            {/* Header Strip - "The Hero Table" */}
-            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-3 border-b border-[oklch(85%_0.012_28)]">
+        <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl p-4 sm:p-5 font-sans space-y-4 shadow-2xs">
+            {/* Header Strip */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-3 border-b border-[oklch(88%_0.012_28)]">
                 <div>
-                    <div className="font-mono text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
-                        {isToday ? 'TODAY // สรุปบิลประจำวัน' : `${selectedDate} // สรุปบิลย้อนหลัง`}
+                    <div className="text-xs text-[oklch(50%_0.010_28)]">
+                        {isToday ? 'สรุปบิลประจำวัน' : `สรุปบิลย้อนหลัง · ${selectedDate}`}
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] mt-0.5 tracking-tight">
+                    <h3 className="text-lg sm:text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5 tracking-tight">
                         {isToday ? 'LIST สรุปบิลประจำวัน' : `LIST สรุปบิลวันที่ ${formatThaiDateOnly(selectedDate)}`}
                     </h3>
-                    <div className="font-mono text-xs text-[oklch(55%_0.010_28)] mt-1">
-                        <span className="font-bold text-[oklch(18%_0.012_28)] text-sm">฿{metrics.totalRevenue.toLocaleString()}</span> · {metrics.totalCount} orders ({metrics.settledCount} ชำระแล้ว)
+                    <div className="font-mono text-xs text-[oklch(50%_0.010_28)] mt-1 tabular-nums">
+                        <span className="font-semibold text-[oklch(18%_0.012_28)] text-sm">฿{metrics.totalRevenue.toLocaleString()}</span> · {metrics.totalCount} ออเดอร์ ({metrics.settledCount} ชำระแล้ว)
                     </div>
                 </div>
 
                 {/* Filter Tabs & Pro Mode Link */}
                 <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-xs">
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-xs bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(88%_0.012_28)]">
                         {[
                             { id: 'all', label: 'ทั้งหมด', count: metrics.totalCount },
                             { id: 'settled', label: 'ชำระแล้ว', count: metrics.settledCount },
@@ -124,14 +124,14 @@ export default function SimplifiedBillsSummaryList({
                                     setStatusFilter(tab.id)
                                     setPage(1)
                                 }}
-                                className={`px-2.5 py-1 rounded-xs font-medium transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                                className={`px-2.5 py-1 rounded-lg font-medium transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                                     statusFilter === tab.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-xs'
-                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                        : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                 }`}
                             >
                                 <span>{tab.label}</span>
-                                <span className="ml-1 font-mono text-[10px] opacity-80 tabular-nums">({tab.count})</span>
+                                <span className="ml-1 font-mono text-[10.5px] opacity-80 tabular-nums">({tab.count})</span>
                             </button>
                         ))}
                     </div>
@@ -140,9 +140,9 @@ export default function SimplifiedBillsSummaryList({
                         <button
                             type="button"
                             onClick={onOpenProMode}
-                            className="text-[11px] font-mono text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:underline cursor-pointer whitespace-nowrap ml-1 sm:ml-2"
+                            className="text-xs font-medium text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] px-2.5 py-1.5 rounded-xl border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] cursor-pointer whitespace-nowrap transition-colors"
                         >
-                            PRO MODE ➔
+                            โหมดวิเคราะห์เชิงลึก &rarr;
                         </button>
                     )}
                 </div>
@@ -150,17 +150,17 @@ export default function SimplifiedBillsSummaryList({
 
             {/* Content Area */}
             {loading ? (
-                <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)] animate-pulse">
+                <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)]">
                     กำลังโหลดรายการบิล...
                 </div>
             ) : filteredBookings.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs">
+                <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)] border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)] rounded-xl">
                     ไม่พบรายการบิลในหมวดหมู่นี้
                 </div>
             ) : (
                 <>
                     {/* MOBILE CARD VIEW (< 640px) */}
-                    <div className="sm:hidden divide-y divide-[oklch(88%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(97%_0.008_28)]">
+                    <div className="sm:hidden divide-y divide-[oklch(88%_0.012_28)] border border-[oklch(88%_0.012_28)] rounded-xl overflow-hidden bg-[oklch(97%_0.008_28)]">
                         {paginatedBookings.map((b) => {
                             const timeStr = formatThaiTimeOnly(b.booking_time || b.created_at)
                             const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')
@@ -192,8 +192,8 @@ export default function SimplifiedBillsSummaryList({
                                         <div className="flex items-center gap-2">
                                             <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)]">{tableName}</span>
                                             {transfer.isMergedSource && (
-                                                <span className="text-[9px] px-1 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] rounded-xs font-mono font-bold">
-                                                    ➔ โต๊ะ {transfer.mergedToTable}
+                                                <span className="text-[9px] px-1.5 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] rounded-md font-mono font-semibold">
+                                                    &rarr; โต๊ะ {transfer.mergedToTable}
                                                 </span>
                                             )}
                                             {transfer.isMergedTarget && (
@@ -331,8 +331,8 @@ export default function SimplifiedBillsSummaryList({
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="font-mono">{tableName}</span>
                                                         {transfer.isMergedSource && (
-                                                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-xs bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-bold">
-                                                                ➔ โต๊ะ {transfer.mergedToTable}
+                                                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-semibold">
+                                                                &rarr; โต๊ะ {transfer.mergedToTable}
                                                             </span>
                                                         )}
                                                         {transfer.isMergedTarget && (
@@ -400,8 +400,8 @@ export default function SimplifiedBillsSummaryList({
                                                 <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         {transfer.isMergedSource ? (
-                                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-mono">
-                                                                รวมบิล ➔ โต๊ะ {transfer.mergedToTable}
+                                                            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-mono">
+                                                                รวมบิล &rarr; โต๊ะ {transfer.mergedToTable}
                                                             </span>
                                                         ) : isPaid ? (
                                                             <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(82%_0.08_140)]">
@@ -494,9 +494,9 @@ export default function SimplifiedBillsSummaryList({
                             <button
                                 type="button"
                                 onClick={() => setInspectingBill(null)}
-                                className="text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1 cursor-pointer"
+                                className="text-xs font-medium text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-lg bg-[oklch(94%_0.010_28)] cursor-pointer transition-colors"
                             >
-                                [ปิด ✕]
+                                ปิด
                             </button>
                         </div>
 
