@@ -3467,14 +3467,23 @@ export default function POSDashboard() {
                 if (currentBookingId) refreshActiveBookingItems(currentBookingId);
             };
 
+            // Reason picked in the quantity window for an item that was already sent
+            const removal = delta < 0 && options?.removalReason
+                ? {
+                    reason: options.removalReason,
+                    removedBy: activeStaff?.display_name || activeShiftRef.current?.staffName || null,
+                    note: options.removalNote || null
+                }
+                : null;
+
             if (nextQty === 0) {
-                const deleted = await deleteOrderItem(cleanDbId, currentBookingId);
+                const deleted = await deleteOrderItem(cleanDbId, currentBookingId, removal);
                 if (!deleted) {
                     restoreAfterFailedEdit(`ลบ "${targetItem.name || 'รายการ'}" ไม่สำเร็จ: เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง`);
                     return;
                 }
             } else if (options?.autoPrint) {
-                const saved = await updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                const saved = await updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId, removal);
                 if (!saved) {
                     restoreAfterFailedEdit(`แก้จำนวน "${targetItem.name || 'รายการ'}" ไม่สำเร็จ: เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองอีกครั้ง`);
                     return;
@@ -3599,7 +3608,7 @@ export default function POSDashboard() {
         } else if (nextQty === 0) {
             toast.info(`ลบรายการ "${targetItem.name || 'เมนู'}" ออกแล้ว`);
         }
-    }, [deleteOrderItem, updateOrderItemDbQty, activeBooking, attachedMemberCrm, selectedTable, createWalkIn, createWalkInPickup, submitOrderItems]);
+    }, [deleteOrderItem, updateOrderItemDbQty, activeBooking, activeStaff, attachedMemberCrm, selectedTable, createWalkIn, createWalkInPickup, submitOrderItems]);
 
     const handleUpdateItemNote = useCallback((itemId, note) => {
         setCurrentOrder(prev => ({

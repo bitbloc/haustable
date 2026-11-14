@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { logOrderItemRemoval, cancelOrderItemRemoval } from '../utils/orderItemRemoval';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue, checkRealConnectivity } from '../utils/offlineHelper';
@@ -1078,7 +1079,16 @@ export function usePOSOrder() {
     // Returns true only when the item is really gone. Deleting a saved item is never queued
     // offline, so when the database cannot be reached it returns false and leaves the bill as is;
     // the caller tells staff and restores the row instead of pretending it was deleted.
-    const deleteOrderItem = async (orderItemId, bookingId = null) => {
+    // removal = { reason: 'not_made' | 'made_wasted', removedBy, note } for an item that was
+    // already sent. It is logged first; if the bill change then fails the log is cancelled.
+    const recordRemoval = async (cleanId, newQuantity, removal) => {
+        if (!removal?.reason) return null;
+        const res = await logOrderItemRemoval({ orderItemId: cleanId, newQuantity, ...removal });
+        if (!res.ok && !res.rpcMissing) console.warn('[removal] reason was not saved', res.error);
+        return res.removalId;
+    };
+
+    const deleteOrderItem = async (orderItemId, bookingId = null, removal = null) => {
         if (!orderItemId) return true;
         try {
             const cleanId = String(orderItemId).replace(/^db_/, '');
@@ -1088,6 +1098,7 @@ export function usePOSOrder() {
                     console.warn('[deleteOrderItem] Offline: saved item was not deleted', cleanId);
                     return false;
                 }
+                const removalId = await recordRemoval(cleanId, 0, removal);
                 const { data: deletedRows, error } = await supabase
                     .from('order_items')
                     .delete()
@@ -1095,6 +1106,7 @@ export function usePOSOrder() {
                     .select('id');
                 if (error) {
                     console.warn("Supabase deleteOrderItem error:", error);
+                    await cancelOrderItemRemoval(removalId);
                     return false;
                 }
                 if (!deletedRows || deletedRows.length === 0) {
@@ -1106,6 +1118,7 @@ export function usePOSOrder() {
                         .maybeSingle();
                     if (stillThere) {
                         console.warn('[deleteOrderItem] Delete affected 0 rows; item still exists', cleanId);
+                        await cancelOrderItemRemoval(removalId);
                         return false;
                     }
                 }
@@ -1146,7 +1159,7 @@ export function usePOSOrder() {
     };
 
     // Same contract as deleteOrderItem: true only when the new quantity is saved.
-    const updateOrderItemDbQty = async (orderItemId, newQty, bookingId = null) => {
+    const updateOrderItemDbQty = async (orderItemId, newQty, bookingId = null, removal = null) => {
         if (!orderItemId || newQty <= 0) return true;
         try {
             const cleanId = String(orderItemId).replace(/^db_/, '');
@@ -1156,6 +1169,7 @@ export function usePOSOrder() {
                     console.warn('[updateOrderItemDbQty] Offline: quantity was not saved', cleanId);
                     return false;
                 }
+                const removalId = await recordRemoval(cleanId, newQty, removal);
                 const { data: updatedRows, error } = await supabase
                     .from('order_items')
                     .update({ quantity: newQty })
@@ -1163,6 +1177,7 @@ export function usePOSOrder() {
                     .select('id');
                 if (error || !updatedRows || updatedRows.length === 0) {
                     console.warn("Supabase updateOrderItemDbQty error:", error || 'no row updated');
+                    await cancelOrderItemRemoval(removalId);
                     return false;
                 }
 

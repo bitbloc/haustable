@@ -1,4 +1,5 @@
 import React from 'react';
+import { REMOVAL_REASONS } from '../utils/orderItemRemoval';
 import { createPortal } from 'react-dom';
 import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight, Coffee, Sparkles, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         setQtyAdjustModalData({
             item,
             initialQty,
-            targetQty
+            targetQty,
+            removalReason: null
         });
     }, []);
     const [defaultVatEnabled, setDefaultVatEnabled] = React.useState(() => {
@@ -3045,8 +3047,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 <div className="fixed inset-0 bg-black/65 z-[9999] flex items-center justify-center p-4 select-none font-sans">
                     <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
                         {(() => {
-                            const { item: modalItem, initialQty, targetQty } = qtyAdjustModalData;
+                            const { item: modalItem, initialQty, targetQty, removalReason } = qtyAdjustModalData;
                             const delta = targetQty - initialQty;
+                            // An item already sent to the kitchen / bar: ask whether it was made,
+                            // so made-and-thrown-away dishes count as waste, not as a stock gap.
+                            const needsRemovalReason = delta < 0 && Boolean(modalItem.db_id);
                             const isAdding = delta > 0;
                             const isVoidingAll = targetQty === 0;
                             const isReducing = delta < 0 && targetQty > 0;
@@ -3157,6 +3162,37 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             )}
                                         </div>
 
+                                        {needsRemovalReason && (
+                                            <div>
+                                                <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1.5">
+                                                    ส่งเข้าครัว / บาร์แล้ว รายการที่เอาออก
+                                                </span>
+                                                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="เหตุผลที่เอาออก">
+                                                    {REMOVAL_REASONS.map(r => {
+                                                        const selected = removalReason === r.key;
+                                                        return (
+                                                            <button
+                                                                key={r.key}
+                                                                type="button"
+                                                                role="radio"
+                                                                aria-checked={selected}
+                                                                disabled={isConfirmingQtyPrint}
+                                                                onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, removalReason: r.key } : null)}
+                                                                className={`min-h-[52px] px-3 py-2 rounded-xs border text-left cursor-pointer touch-manipulation transition-colors duration-150 ${
+                                                                    selected
+                                                                        ? 'bg-[oklch(18%_0.012_28)] border-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                                                        : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                                }`}
+                                                            >
+                                                                <span className="block text-sm font-bold leading-snug">{r.label}</span>
+                                                                <span className={`block text-[11px] leading-snug mt-0.5 ${selected ? 'text-[oklch(85%_0.012_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>{r.hint}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Print Action Preview Banner */}
                                         <div className={`p-3 rounded-xs border font-mono text-xs flex items-center justify-between ${
                                             delta === 0
@@ -3192,16 +3228,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={isConfirmingQtyPrint || delta === 0}
+                                            disabled={isConfirmingQtyPrint || delta === 0 || (needsRemovalReason && !removalReason)}
                                             onClick={async () => {
                                                 if (delta === 0 || isConfirmingQtyPrint) return;
+                                                if (needsRemovalReason && !removalReason) return;
                                                 setIsConfirmingQtyPrint(true);
                                                 try {
                                                     await onUpdateQuantity(modalItem.id, delta, {
                                                         autoPrint: true,
                                                         itemSnapshot: modalItem,
                                                         prevQty: initialQty,
-                                                        nextQty: targetQty
+                                                        nextQty: targetQty,
+                                                        removalReason: needsRemovalReason ? removalReason : null
                                                     });
                                                     setQtyAdjustModalData(null);
                                                 } finally {
