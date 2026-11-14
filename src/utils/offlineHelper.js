@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { resolveMenuItemId } from './menuHelper';
 import { extractCarryOverTags } from './splitPaymentHelper';
+import { addLocallyPrintedIds, markItemsPrinted } from './printClaim';
 
 const OFFLINE_QUEUE_KEY = 'pos_offline_queue';
 const CACHE_MENU_ITEMS = 'pos_cache_menu_items';
@@ -408,8 +409,16 @@ export async function syncOfflineQueue(isManual = false) {
                     };
                 });
 
-                const { error } = await supabase.from('order_items').insert(itemsToInsert);
+                // Their kitchen/bar slips were printed at the moment the staff sent the order offline.
+                // The rows only now receive real database ids, so register those ids as printed
+                // BEFORE any realtime listener or safety heartbeat can treat them as new and reprint.
+                const { data: syncedRows, error } = await supabase.from('order_items').insert(itemsToInsert).select('id');
                 if (error) throw error;
+                const syncedIds = (syncedRows || []).map(r => r.id).filter(Boolean);
+                if (syncedIds.length > 0) {
+                    addLocallyPrintedIds(bookingId, syncedIds);
+                    await markItemsPrinted(syncedIds);
+                }
             } 
             
             else if (action.type === 'complete_checkout') {
@@ -796,6 +805,18 @@ if (typeof window !== 'undefined') {
         if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
             setNetworkStatus(false, 'NAVIGATOR_OFFLINE');
+            return;
+        }
+        // Self-heal: the offline flag can be set by a failed request or a server hiccup while the
+        // browser never reports "offline", so no 'online' event ever arrives to clear it. Re-check
+        // the real connection every tick while flagged offline, even with an empty queue;
+        // otherwise the POS stays stuck in offline mode and edits silently stay on this device.
+        if (!isOnline()) {
+            const ok = await checkRealConnectivity();
+            if (ok) {
+                syncOfflineQueue();
+                window.dispatchEvent(new Event('pos-online-restored'));
+            }
             return;
         }
         const queue = getOfflineQueue();

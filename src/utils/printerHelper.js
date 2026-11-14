@@ -1004,7 +1004,15 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const queueNo = getShortBookingId(booking);
     
     // Order Created/Placed timestamp (when the customer/staff submitted the order)
-    const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString();
+    // Kitchen / bar slips show when THIS round was ordered (latest item on the slip), not when the
+    // bill was opened, so add-on orders on a long-seated table are not all stamped with the same time.
+    const latestItemTs = isKitchenTab
+        ? itemsToRender.reduce((max, it) => {
+            const ts = it?.created_at ? new Date(it.created_at).getTime() : NaN;
+            return Number.isFinite(ts) && ts > max ? ts : max;
+        }, 0)
+        : 0;
+    const orderPlacedAtRaw = (latestItemTs > 0 ? new Date(latestItemTs).toISOString() : null) || booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString();
     const orderPlacedDate = new Date(orderPlacedAtRaw);
     const orderPlacedStr = orderPlacedDate.toLocaleString('th-TH', { 
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' 
@@ -1257,22 +1265,38 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     // Items List
     if (isKitchenTab) {
         const renderKitchenGroup = (groupItems) => {
-            groupItems.forEach((item) => {
-                const qtyColWidth = 3;
-                const qtyStr = padEndPrinter(`${item.quantity}x`, qtyColWidth);
+            groupItems.forEach((item, itemIndex) => {
+                // Quantity column grows with the number so '10x' never touches the item name
+                const qtyText = `${item.quantity}x`;
+                const qtyColWidth = Math.max(3, qtyText.length + 1);
+                const qtyStr = padEndPrinter(qtyText, qtyColWidth);
                 const rawName = item.custom_name || item.menu_items?.name || item.name || 'Item';
                 const cleanName = cleanKitchenItemName(rawName).toUpperCase();
                 
                 // Kitchen & Bar Item: BIG Double-Width & Double-Height (size(1, 1)) for maximum readability
-                const maxDoubleCols = is80mm ? Math.max(21, Math.floor(maxCols / 2)) : Math.max(12, Math.floor(maxCols / 2));
+                // The budget is measured in weighted cells (Thai glyphs count as 7/6), and the 80mm head
+                // holds 24, so 22 leaves room for the centering margin plus one spare cell.
+                const maxDoubleCols = is80mm ? 22 : Math.max(12, Math.floor(maxCols / 2));
                 const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
-                const nameLines = wrapTextByWords(cleanName, nameColWidth, false);
+                // Double-size Thai glyphs print wider than Latin ones, so the wrap budget is weighted
+                // (see KITCHEN_THAI_CELL_WEIGHT). Counting every cell as 1 let Thai-heavy lines overrun
+                // the printhead, and the printer dropped the last character onto its own line.
+                const wrapOpts = { thaiCellWeight: KITCHEN_THAI_CELL_WEIGHT };
+                const qtyIndent = ' '.repeat(qtyColWidth);
+                // Set menus ('SET XL : dish A - dish B - dish C') print one dish per line
+                const { head, components } = splitKitchenSetName(cleanName);
+                const nameLines = wrapTextByWords(head, nameColWidth, false, wrapOpts);
                 if (nameLines.length === 0) nameLines.push('');
                 
                 const kitchenItemLines = [`${qtyStr}${nameLines[0]}`];
                 for (let i = 1; i < nameLines.length; i++) {
-                    kitchenItemLines.push(`${' '.repeat(qtyColWidth)}${nameLines[i]}`);
+                    kitchenItemLines.push(`${qtyIndent}${nameLines[i]}`);
                 }
+                components.forEach(component => {
+                    wrapTextByWords(component, Math.max(1, nameColWidth - 2), false, wrapOpts).forEach((l, lineIndex) => {
+                        kitchenItemLines.push(`${qtyIndent}${lineIndex === 0 ? '- ' : '  '}${l}`);
+                    });
+                });
                 
                 encoder.bold(true).size(1, 1);
                 kitchenItemLines.forEach(l => encoder.line(l));
@@ -1281,14 +1305,15 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     const optionsList = extractCleanKitchenOptions(item, optionMap);
 
                     optionsList.forEach(opt => {
-                        const optLine = `- ${opt}`;
-                        wrapTextByWords(optLine, maxDoubleCols, false).forEach(l => {
-                            encoder.line(l);
+                        // Hanging indent: wrapped lines align under the option text, not under the dash
+                        wrapTextByWords(opt, maxDoubleCols - 2, false, wrapOpts).forEach((l, lineIndex) => {
+                            encoder.line(`${lineIndex === 0 ? '- ' : '  '}${l}`);
                         });
                     });
                 }
                 encoder.size(0, 0).bold(false);
-                encoder.line(divider);
+                // The slip footer opens with its own divider, so the last item does not need one
+                if (itemIndex < groupItems.length - 1) encoder.line(divider);
             });
         };
 
@@ -1707,6 +1732,39 @@ export function cleanKitchenItemName(rawName) {
     return name;
 }
 
+// Double-width Thai glyphs are wider than double-width Latin glyphs on the kitchen printer: on an
+// 80mm slip a 22-cell line of mostly Latin text fits, while a 22-cell line of mostly Thai text
+// overruns by one character. Measured from printed slips the ratio is between 1.14 and 1.2,
+// which matches a 14-dot Thai glyph next to a 12-dot Latin glyph (7/6).
+export const KITCHEN_THAI_CELL_WEIGHT = 7 / 6;
+
+// Printed width in Latin-cell units, counting each Thai base character as `thaiWeight` cells
+export function getWeightedPrinterWidth(str, thaiWeight = 1) {
+    let units = 0;
+    for (const cluster of splitPrinterGraphemes(str)) {
+        const code = cluster.codePointAt(0);
+        units += (code >= 0x0E00 && code <= 0x0E7F) ? thaiWeight : 1;
+    }
+    return Math.round(units * 1000) / 1000;
+}
+
+// Split a set-menu name into its title and the dishes it contains, so a kitchen slip can list one
+// dish per line: 'SET XL : ต้มจิ๋ว - คั่วกลิ้ง - ข้าวสวย' -> head 'SET XL', components [3 dishes].
+// Only a dash with spaces on both sides separates dishes, so '4-6 ท่าน' stays intact.
+export function splitKitchenSetName(name) {
+    const text = String(name ?? '').trim();
+    const splitDishes = (value) => value.split(/\s+[-–—]\s+/).map(part => part.trim()).filter(Boolean);
+
+    const colonMatch = text.match(/^(.+?)\s*:\s+(.+)$/);
+    if (colonMatch) {
+        const dishes = splitDishes(colonMatch[2]);
+        if (dishes.length >= 2) return { head: colonMatch[1].trim(), components: dishes };
+    }
+    const parts = splitDishes(text);
+    if (parts.length >= 3) return { head: parts[0], components: parts.slice(1) };
+    return { head: text, components: [] };
+}
+
 // Clean and strip redundant headers or bilingual English duplicates for kitchen/bar options
 export function formatKitchenOptionText(rawText) {
     if (!rawText) return '';
@@ -1724,7 +1782,10 @@ export function formatKitchenOptionText(rawText) {
     // 3. Strip redundant English parenthesized labels for hot/cold/frappe:
     text = text.replace(/\s*\(\s*(?:COLD|HOT|ICED|FRAPPE|BLENDED)\s*\)/gi, '');
 
-    // 4. Normalize multiple spaces
+    // 4. One label for notes on every slip: 'Note:' -> 'หมายเหตุ:'
+    text = text.replace(/^note\s*[:=]\s*/i, 'หมายเหตุ: ');
+
+    // 5. Normalize multiple spaces
     text = text.replace(/\s+/g, ' ').trim();
 
     return text;
@@ -1825,9 +1886,23 @@ export function extractCleanKitchenOptions(item, optionMap = {}) {
 }
 
 // Word/phrase-aware text wrapping using actual visual character cell width
-export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
+export function wrapTextByWords(str, maxColWidth, useByteLength = true, opts = {}) {
     if (!str) return [];
     const width = Math.max(1, Number(maxColWidth) || 1);
+    // opts.thaiCellWeight: measure Thai cells wider than Latin cells (double-size kitchen lines)
+    const thaiCellWeight = Number(opts?.thaiCellWeight) > 0 ? Number(opts.thaiCellWeight) : 0;
+    const measure = (text) => thaiCellWeight
+        ? getWeightedPrinterWidth(text, thaiCellWeight)
+        : getPrinterCellWidth(text, useByteLength);
+    const sliceToWidth = (text) => {
+        if (!thaiCellWeight) return sliceThai(text, width);
+        let result = '';
+        for (const cluster of splitPrinterGraphemes(text)) {
+            if (result && measure(result + cluster) > width) break;
+            result += cluster;
+        }
+        return result;
+    };
     const paragraphs = String(str).replace(/\r/g, '').split('\n');
     const output = [];
 
@@ -1836,7 +1911,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
             output.push('');
             return;
         }
-        if (getPrinterCellWidth(paragraph, useByteLength) <= width) {
+        if (measure(paragraph) <= width) {
             output.push(paragraph);
             return;
         }
@@ -1880,8 +1955,19 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
                 words[words.length - 1] += ')';
             } else if (t === 'ไม่' && i + 1 < rawTokens.length && rawTokens[i+1].trim() !== '') {
                 // Glue Thai negative prefix 'ไม่' to the next word (e.g. 'ไม่หวาน', 'ไม่เผ็ด') to prevent awkward mid-word breaks
-                words.push('ไม่' + rawTokens[i+1]);
+                let negated = 'ไม่' + rawTokens[i+1];
                 i++;
+                // 'ไม่ใส่ผักชี' / 'ไม่เอาถั่ว': keep the object on the same line as the negation. A line ending
+                // in 'ไม่ใส่' with 'ผักชี' on the next line reads as two separate instructions.
+                if ((negated === 'ไม่ใส่' || negated === 'ไม่เอา') && i + 1 < rawTokens.length && rawTokens[i+1].trim() !== '') {
+                    negated += rawTokens[i+1];
+                    i++;
+                }
+                words.push(negated);
+            } else if (/^\d+$/.test(t) && /^[-–]$/.test(rawTokens[i+1] || '') && /^\d+$/.test(rawTokens[i+2] || '')) {
+                // Keep number ranges like '4-6' on one line
+                words.push(t + rawTokens[i+1] + rawTokens[i+2]);
+                i += 2;
             } else if (t === 'ไข่' && i + 1 < rawTokens.length && rawTokens[i+1].trim() !== '') {
                 // Glue 'ไข่' with food terms ('ไข่ดาว', 'ไข่เจียว', 'ไข่ออนเซ็น', 'ไข่ต้ม', 'ไข่ลวก', 'ไข่เค็ม', 'ไข่ข้น', 'ไข่ตุ๋น')
                 words.push('ไข่' + rawTokens[i+1]);
@@ -1910,7 +1996,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
         const flushLongWord = (word) => {
             let remaining = word;
             while (remaining.length > 0) {
-                const chunk = sliceThai(remaining, width);
+                const chunk = sliceToWidth(remaining);
                 if (!chunk) break;
                 output.push(chunk);
                 remaining = remaining.slice(chunk.length);
@@ -1934,7 +2020,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
                     parenPhrase += words[j];
                     j++;
                 }
-                if (getPrinterCellWidth(currentLine + ' ' + parenPhrase, useByteLength) > width) {
+                if (measure(currentLine + ' ' + parenPhrase) > width) {
                     output.push(currentLine.trimEnd());
                     currentLine = leadingSpace + word;
                     continue;
@@ -1943,7 +2029,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
 
             if (!currentLine) {
                 currentLine = leadingSpace;
-                if (getPrinterCellWidth(currentLine + word, useByteLength) <= width) {
+                if (measure(currentLine + word) <= width) {
                     currentLine += word;
                 } else {
                     flushLongWord(currentLine + word);
@@ -1953,7 +2039,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
             }
 
             const candidate = currentLine + word;
-            if (getPrinterCellWidth(candidate, useByteLength) <= width) {
+            if (measure(candidate) <= width) {
                 currentLine = candidate;
                 continue;
             }
@@ -1962,7 +2048,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
 
             output.push(currentLine.trimEnd());
             currentLine = leadingSpace;
-            if (getPrinterCellWidth(currentLine + word, useByteLength) <= width) {
+            if (measure(currentLine + word) <= width) {
                 currentLine += word;
             } else {
                 flushLongWord(currentLine + word);
@@ -3046,88 +3132,101 @@ export async function openCashDrawer() {
 }
 
 /**
- * Auto print slips (kitchen/bar/other) for incoming QR code orders.
+ * Sends raw ESC/POS bytes to the configured printer transport.
  */
-export async function autoPrintQROrder(booking, optionMap = {}) {
-    if (!booking) return false;
+async function sendBytesToPrinter(printerType, config, bytes) {
+    if (printerType === 'sunmi') return printToSunmiBuiltIn(bytes);
+    if (printerType === 'rawbt') return printToRawBTWebSocket(bytes);
+    if (printerType === 'bluetooth') return printToBluetoothDirect(config.bluetooth_device_name || '', bytes);
+    throw new Error(`Unsupported printer type: ${printerType}`);
+}
+
+/**
+ * Prints the kitchen slip and the bar slip as two separate tickets and reports the outcome
+ * PER STATION. A failure on one station never hides that the other one already came out of
+ * the printer, so callers can retry only what is actually missing instead of reprinting both.
+ * @returns {{ printedAny: boolean, printedItems: Array, failedItems: Array, error: Error|null }}
+ */
+export async function printKitchenStations(booking, optionMap = {}, { printerType = 'sunmi', paperSize = '80mm', config = {}, paymentMethod = 'qr' } = {}) {
+    const outcome = { printedAny: false, printedItems: [], failedItems: [], error: null };
+    const orderItems = booking?.order_items || [];
+    if (orderItems.length === 0) return outcome;
+
+    if (printerType !== 'sunmi' && printerType !== 'rawbt' && printerType !== 'bluetooth') {
+        outcome.failedItems = [...orderItems];
+        return outcome;
+    }
+
+    let encodedAnyStation = false;
+    for (const station of ['kitchen', 'bar']) {
+        const stationItems = selectItemsForTab(orderItems, station, config);
+        let bytes = null;
+        try {
+            bytes = encodeReceiptData(booking, station, paymentMethod, optionMap, paperSize, config, printerType);
+        } catch (encodeErr) {
+            outcome.error = encodeErr;
+            outcome.failedItems.push(...stationItems);
+            continue;
+        }
+        if (!bytes) continue;
+        encodedAnyStation = true;
+        try {
+            await sendBytesToPrinter(printerType, config, bytes);
+            outcome.printedAny = true;
+            outcome.printedItems.push(...stationItems);
+        } catch (sendErr) {
+            console.error(`[Print] ${station} slip failed:`, sendErr);
+            outcome.error = sendErr;
+            outcome.failedItems.push(...stationItems);
+        }
+    }
+
+    if (!encodedAnyStation && outcome.failedItems.length === 0) {
+        // Fallback in case there are uncategorized items
+        try {
+            const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, paperSize, config, printerType);
+            if (allBytes) {
+                await sendBytesToPrinter(printerType, config, allBytes);
+                outcome.printedAny = true;
+                outcome.printedItems.push(...orderItems);
+            }
+        } catch (allErr) {
+            console.error('[Print] kitchen_all slip failed:', allErr);
+            outcome.error = allErr;
+            outcome.failedItems.push(...orderItems);
+        }
+    }
+
+    return outcome;
+}
+
+/**
+ * Auto print slips (kitchen/bar) for incoming orders, with a per-station outcome.
+ */
+export async function autoPrintQROrderDetailed(booking, optionMap = {}) {
+    const empty = { printedAny: false, printedItems: [], failedItems: [], error: null };
+    if (!booking) return empty;
     try {
         const config = getPrinterConfig() || {};
-        const printerType = config.printer_type || 'sunmi';
-        let activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
-
-        const orderItems = booking.order_items || [];
-        if (orderItems.length === 0) return false;
-
-        const paymentMethod = booking.payment_method || 'qr';
-
-        if (printerType === 'sunmi') {
-            let printed = false;
-            // Always split kitchen and bar for SUNMI so they come out as 2 distinct slips
-            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-            if (kitchenBytes) {
-                await printToSunmiBuiltIn(kitchenBytes);
-                printed = true;
-            }
-            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-            if (barBytes) {
-                await printToSunmiBuiltIn(barBytes);
-                printed = true;
-            }
-            if (!kitchenBytes && !barBytes) {
-                // Fallback in case there are uncategorized items
-                const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                if (allBytes) {
-                    await printToSunmiBuiltIn(allBytes);
-                    printed = true;
-                }
-            }
-            return printed;
-        } else if (printerType === 'rawbt') {
-            let printedAny = false;
-            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-            if (kitchenBytes) {
-                await printToRawBTWebSocket(kitchenBytes);
-                printedAny = true;
-            }
-            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-            if (barBytes) {
-                await printToRawBTWebSocket(barBytes);
-                printedAny = true;
-            }
-            if (!printedAny) {
-                const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                if (allBytes) {
-                    await printToRawBTWebSocket(allBytes);
-                    printedAny = true;
-                }
-            }
-            return printedAny;
-        } else if (printerType === 'bluetooth') {
-            const btDeviceName = config.bluetooth_device_name;
-            let printedAny = false;
-            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-            if (kitchenBytes) {
-                await printToBluetoothDirect(btDeviceName, kitchenBytes);
-                printedAny = true;
-            }
-            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-            if (barBytes) {
-                await printToBluetoothDirect(btDeviceName, barBytes);
-                printedAny = true;
-            }
-            if (!printedAny) {
-                const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                if (allBytes) {
-                    await printToBluetoothDirect(btDeviceName, allBytes);
-                    printedAny = true;
-                }
-            }
-            return printedAny;
-        }
+        return await printKitchenStations(booking, optionMap, {
+            printerType: config.printer_type || 'sunmi',
+            paperSize: config.kitchen_paper_size || config.paper_width || '80mm',
+            config,
+            paymentMethod: booking.payment_method || 'qr'
+        });
     } catch (err) {
         console.error("Auto print QR order failed:", err);
-        return false;
+        return { ...empty, failedItems: [...(booking.order_items || [])], error: err };
     }
+}
+
+/**
+ * Auto print slips (kitchen/bar/other) for incoming QR code orders.
+ * Returns true only when every slip came out.
+ */
+export async function autoPrintQROrder(booking, optionMap = {}) {
+    const outcome = await autoPrintQROrderDetailed(booking, optionMap);
+    return outcome.printedAny && outcome.failedItems.length === 0;
 }
 
 /**
@@ -3255,7 +3354,7 @@ export async function resolveBillingQrCode(booking, config = {}, customAmount = 
     }
 }
 
-export async function silentPrintSlip(booking, slipType = 'receipt', optionMap = {}) {
+export async function silentPrintSlip(booking, slipType = 'receipt', optionMap = {}, result = null) {
     if (!booking) return false;
     try {
         if (Object.keys(optionMap).length === 0) {
@@ -3292,99 +3391,34 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
         const paymentMethod = String(rawMethod).toLowerCase();
         let printed = false;
 
-        if (printerType === 'sunmi') {
-            if (slipType === 'kitchen') {
-                // Split kitchen and bar for SUNMI
-                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                if (kitchenBytes) {
-                    await printToSunmiBuiltIn(kitchenBytes);
-                    printed = true;
-                }
-                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                if (barBytes) {
-                    await printToSunmiBuiltIn(barBytes);
-                    printed = true;
-                }
-                if (!kitchenBytes && !barBytes) {
-                    const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                    if (allBytes) {
-                        await printToSunmiBuiltIn(allBytes);
-                        printed = true;
-                    }
-                }
-            } else {
-                const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                if (rawBytes) {
-                    const qrToPrint = (slipType === 'billing') ? await resolveBillingQrCode(booking, config) : null;
-                    const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
-                    const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
-                    await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
-                    printed = true;
-                }
+        if (slipType === 'kitchen') {
+            // Kitchen + bar come out as two separate slips. If one station fails after the other
+            // already printed, hand back ONLY the missing items so the fallback never reprints both.
+            const outcome = await printKitchenStations(booking, optionMap, { printerType, paperSize: activePaperSize, config, paymentMethod });
+            if (outcome.failedItems.length > 0) {
+                if (result && outcome.printedAny) result.remainingItems = outcome.failedItems;
+                return false;
             }
-            return printed;
-        } else if (printerType === 'rawbt') {
-            if (slipType === 'kitchen') {
-                let printedAny = false;
-                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                if (kitchenBytes) {
-                    await printToRawBTWebSocket(kitchenBytes);
-                    printedAny = true;
-                }
-                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                if (barBytes) {
-                    await printToRawBTWebSocket(barBytes);
-                    printedAny = true;
-                }
-                if (!printedAny) {
-                    const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                    if (allBytes) {
-                        await printToRawBTWebSocket(allBytes);
-                        printedAny = true;
-                    }
-                }
-                printed = printedAny;
-            } else {
-                const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                if (rawBytes) {
-                    await printToRawBTWebSocket(rawBytes);
-                    printed = true;
-                }
-            }
-            return printed;
-        } else if (printerType === 'bluetooth') {
-            if (slipType === 'kitchen') {
-                let printedAny = false;
-                const btDeviceName = config.bluetooth_device_name || '';
-                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                if (kitchenBytes) {
-                    await printToBluetoothDirect(btDeviceName, kitchenBytes);
-                    printedAny = true;
-                }
-                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                if (barBytes) {
-                    await printToBluetoothDirect(btDeviceName, barBytes);
-                    printedAny = true;
-                }
-                if (!printedAny) {
-                    const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                    if (allBytes) {
-                        await printToBluetoothDirect(btDeviceName, allBytes);
-                        printedAny = true;
-                    }
-                }
-                printed = printedAny;
-            } else {
-                const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                if (rawBytes) {
-                    await printToBluetoothDirect(config.bluetooth_device_name || '', rawBytes);
-                    printed = true;
-                }
-            }
-            return printed;
+            return outcome.printedAny;
         }
-        
-        return false;
+
+        const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, printerType);
+        if (!rawBytes) return false;
+
+        if (printerType === 'sunmi') {
+            const qrToPrint = (slipType === 'billing') ? await resolveBillingQrCode(booking, config) : null;
+            const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
+            const logoToPrint = (slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
+            await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
+            printed = true;
+        } else if (printerType === 'rawbt') {
+            await printToRawBTWebSocket(rawBytes);
+            printed = true;
+        } else if (printerType === 'bluetooth') {
+            await printToBluetoothDirect(config.bluetooth_device_name || '', rawBytes);
+            printed = true;
+        }
+        return printed;
     } catch (err) {
         console.error("Silent print failed:", err);
         return false;

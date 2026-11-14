@@ -1,12 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
-import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue } from '../utils/offlineHelper';
+import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue, checkRealConnectivity } from '../utils/offlineHelper';
 import { recordShiftTransaction } from '../utils/shiftHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { isAdvanceUnseatedReservation } from '../utils/availabilityUtils';
 import { extractCarryOverTags } from '../utils/splitPaymentHelper';
+import { addLocallyPrintedIds, markItemsPrinted } from '../utils/printClaim';
 
 /**
  * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
@@ -569,14 +570,11 @@ export function usePOSOrder() {
 
             // Immediately track inserted items in localStorage so realtime listeners don't double print
             if (enrichedInserted && enrichedInserted.length > 0 && bookingId && typeof window !== 'undefined') {
-                try {
-                    const storageKey = `qr_printed_items_${bookingId}`;
-                    const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                    const combined = Array.from(new Set([...printed, ...enrichedInserted.map(r => r.id).filter(Boolean)]));
-                    localStorage.setItem(storageKey, JSON.stringify(combined));
-                } catch (e) {
-                    console.warn('[submitOrderItems] Could not update local print cache:', e);
-                }
+                const insertedIds = enrichedInserted.map(r => r.id).filter(Boolean);
+                addLocallyPrintedIds(bookingId, insertedIds);
+                // This terminal prints these items itself. Flag them in the database right away so
+                // no other POS device (or its safety heartbeat) auto-prints the same slips again.
+                await markItemsPrinted(insertedIds);
             }
 
             if (isOnline() && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
@@ -1064,17 +1062,53 @@ export function usePOSOrder() {
         }
     };
 
+    // The offline flag can be left over from a brief network drop while the device is online
+    // again. Before an edit to an item that already exists in the database is treated as
+    // "offline", re-check the real connection once.
+    const confirmOnlineForWrite = async () => {
+        if (isOnline()) return true;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+        try {
+            return await checkRealConnectivity();
+        } catch (e) {
+            return false;
+        }
+    };
+
+    // Returns true only when the item is really gone. Deleting a saved item is never queued
+    // offline, so when the database cannot be reached it returns false and leaves the bill as is;
+    // the caller tells staff and restores the row instead of pretending it was deleted.
     const deleteOrderItem = async (orderItemId, bookingId = null) => {
         if (!orderItemId) return true;
         try {
             const cleanId = String(orderItemId).replace(/^db_/, '');
             const isLocal = typeof cleanId === 'string' && cleanId.startsWith('local_');
-            if (isOnline() && !isLocal) {
-                const { error } = await supabase
+            if (!isLocal) {
+                if (!(await confirmOnlineForWrite())) {
+                    console.warn('[deleteOrderItem] Offline: saved item was not deleted', cleanId);
+                    return false;
+                }
+                const { data: deletedRows, error } = await supabase
                     .from('order_items')
                     .delete()
-                    .eq('id', cleanId);
-                if (error) console.warn("Supabase deleteOrderItem error:", error);
+                    .eq('id', cleanId)
+                    .select('id');
+                if (error) {
+                    console.warn("Supabase deleteOrderItem error:", error);
+                    return false;
+                }
+                if (!deletedRows || deletedRows.length === 0) {
+                    // 0 rows: already deleted (fine) or silently blocked (not fine). Check which.
+                    const { data: stillThere } = await supabase
+                        .from('order_items')
+                        .select('id')
+                        .eq('id', cleanId)
+                        .maybeSingle();
+                    if (stillThere) {
+                        console.warn('[deleteOrderItem] Delete affected 0 rows; item still exists', cleanId);
+                        return false;
+                    }
+                }
 
                 if (bookingId && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
                     const { data: allItems } = await supabase
@@ -1111,17 +1145,26 @@ export function usePOSOrder() {
         }
     };
 
+    // Same contract as deleteOrderItem: true only when the new quantity is saved.
     const updateOrderItemDbQty = async (orderItemId, newQty, bookingId = null) => {
         if (!orderItemId || newQty <= 0) return true;
         try {
             const cleanId = String(orderItemId).replace(/^db_/, '');
             const isLocal = typeof cleanId === 'string' && cleanId.startsWith('local_');
-            if (isOnline() && !isLocal) {
-                const { error } = await supabase
+            if (!isLocal) {
+                if (!(await confirmOnlineForWrite())) {
+                    console.warn('[updateOrderItemDbQty] Offline: quantity was not saved', cleanId);
+                    return false;
+                }
+                const { data: updatedRows, error } = await supabase
                     .from('order_items')
                     .update({ quantity: newQty })
-                    .eq('id', cleanId);
-                if (error) console.warn("Supabase updateOrderItemDbQty error:", error);
+                    .eq('id', cleanId)
+                    .select('id');
+                if (error || !updatedRows || updatedRows.length === 0) {
+                    console.warn("Supabase updateOrderItemDbQty error:", error || 'no row updated');
+                    return false;
+                }
 
                 if (bookingId && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
                     const { data: allItems } = await supabase

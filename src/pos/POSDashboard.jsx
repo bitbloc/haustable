@@ -29,7 +29,8 @@ import {
 } from '../utils/staffAuthHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
+import { filterLocallyUnprinted, addLocallyPrintedIds, carryOverLocallyPrinted, pruneLocalPrintTracker, isDbPrinted, claimItemsForPrint, markItemsPrinted, releasePrintClaim } from '../utils/printClaim';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
 import { getBookingHoldMinutes, isHoldExpired, isAdvanceUnseatedReservation, isPayAtStoreOrder, isCallConfirmOrder, refundBookingLoyaltyIfNeeded, formatPosDateTime } from '../utils/availabilityUtils';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
@@ -1054,15 +1055,22 @@ export default function POSDashboard() {
                 fullBooking.status = 'seated';
             }
 
-            // Get already printed items for this booking
-            const storageKey = `qr_printed_items_${bookingId}`;
-            let printedItems = [];
-            try {
-                printedItems = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            } catch (e) {}
+            // Items the database already knows were printed (by ANY device) never print again.
+            // Sync them into this device's tracker so the safety heartbeat stops re-checking them.
+            const dbPrintedIds = fullBooking.order_items.filter(isDbPrinted).map(i => i.id);
+            if (dbPrintedIds.length > 0) addLocallyPrintedIds(bookingId, dbPrintedIds);
 
-            // Find new items that haven't been printed yet
-            const unprintedItems = fullBooking.order_items.filter(item => item.id && !printedItems.includes(item.id));
+            // Find new items that haven't been printed yet (not in the DB flag, not in the local tracker)
+            const candidateItems = filterLocallyUnprinted(bookingId, fullBooking.order_items.filter(item => !isDbPrinted(item)));
+
+            // Atomically claim them: when two devices race, only the winner prints.
+            let unprintedItems = candidateItems;
+            if (candidateItems.length > 0) {
+                const { claimedIds, authoritative } = await claimItemsForPrint(candidateItems.map(i => i.id));
+                if (authoritative) {
+                    unprintedItems = candidateItems.filter(item => claimedIds.some(id => String(id) === String(item.id)));
+                }
+            }
 
             if (unprintedItems.length > 0) {
                 // Construct a temporary booking object that ONLY contains the unprinted items for the printer
@@ -1092,13 +1100,19 @@ export default function POSDashboard() {
                     }
                 }), { id: printKey, duration: 6000 });
 
-                const printSuccess = await autoPrintQROrder(partialBooking);
-                if (printSuccess) {
-                    // Update tracker ONLY after printing succeeded
-                    const newPrintedItems = Array.from(new Set([...printedItems, ...unprintedItems.map(i => i.id).filter(Boolean)]));
-                    localStorage.setItem(storageKey, JSON.stringify(newPrintedItems));
-                } else {
-                    console.warn(`[AutoPrint] Printing returned false for booking ${bookingId}. Retaining unprinted items for safety heartbeat retry.`);
+                const outcome = await autoPrintQROrderDetailed(partialBooking);
+                // Record each station that actually came out of the printer, even if the other one
+                // failed, so a retry only prints the missing slip instead of both.
+                const printedIds = outcome.printedItems.map(i => i.id).filter(Boolean);
+                const failedIds = outcome.failedItems.map(i => i.id).filter(Boolean);
+                if (printedIds.length > 0) {
+                    addLocallyPrintedIds(bookingId, printedIds);
+                    markItemsPrinted(printedIds);
+                }
+                if (failedIds.length > 0 || !outcome.printedAny) {
+                    const toRelease = failedIds.length > 0 ? failedIds : unprintedItems.map(i => i.id);
+                    releasePrintClaim(toRelease);
+                    console.warn(`[AutoPrint] ${toRelease.length} item(s) of booking ${bookingId} did not print. Retaining them for safety heartbeat retry.`);
                 }
             }
         } catch (err) {
@@ -1321,7 +1335,7 @@ export default function POSDashboard() {
                 .select(`
                     id, table_id, booking_type, order_type, status, source, staff_remark, slip_verified,
                     tables_layout (table_name),
-                    order_items (id, destination)
+                    order_items (*)
                 `)
                 .in('status', ['seated', 'pending'])
                 .or(`booking_time.gte.${startOfToday},created_at.gte.${startOfToday}`)
@@ -1341,15 +1355,13 @@ export default function POSDashboard() {
                 // Only auto-print on-site Table QR orders (or already-seated dine-in bookings with QR additions)
                 if (!isTableQr) continue;
 
-                // Check unprinted items for this booking
-                const storageKey = `qr_printed_items_${b.id}`;
-                let printedItems = [];
-                try {
-                    printedItems = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                } catch (e) {}
-
+                // Check unprinted items for this booking. The database flag (shared by every device)
+                // wins over the local tracker, so a second terminal or a freshly installed APK
+                // never reprints slips another device already printed.
                 const items = b.order_items || [];
-                const unprinted = items.filter(item => item.id && !printedItems.includes(item.id));
+                const dbPrintedIds = items.filter(isDbPrinted).map(i => i.id);
+                if (dbPrintedIds.length > 0) addLocallyPrintedIds(b.id, dbPrintedIds);
+                const unprinted = filterLocallyUnprinted(b.id, items.filter(item => !isDbPrinted(item)));
 
                 if (unprinted.length > 0) {
                     const isWaitingGpsApproval = b.status === 'pending' && remarkLower.includes('gps_unverified');
@@ -1479,6 +1491,9 @@ export default function POSDashboard() {
 
         // Init online printer & slip config sync (pulls online master config & listens for realtime updates)
         const cleanupPrinterSync = initPrinterConfigSync();
+
+        // Drop print trackers of bills older than 3 days so localStorage never fills up
+        pruneLocalPrintTracker();
 
         // 1. Initial pending & unprinted orders safety heartbeat
         const isHeartbeatRunningRef = { current: false };
@@ -2631,12 +2646,7 @@ export default function POSDashboard() {
 
             // Track newly inserted items in QR tracker immediately so realtime listener doesn't double print
             if (newlyInsertedRows.length > 0 && bookingId) {
-                const storageKey = `qr_printed_items_${bookingId}`;
-                try {
-                    const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                    const combined = Array.from(new Set([...printed, ...newlyInsertedRows.map(r => r.id).filter(Boolean)]));
-                    localStorage.setItem(storageKey, JSON.stringify(combined));
-                } catch (e) {}
+                addLocallyPrintedIds(bookingId, newlyInsertedRows.map(r => r.id).filter(Boolean));
             }
 
             // 3. Reload the booking to get updated order_items and references
@@ -2812,9 +2822,15 @@ export default function POSDashboard() {
     const openSlipOrSilentPrint = useCallback(async (booking, slipType) => {
         if (!booking) return;
         try {
-            const silentSuccess = await silentPrintSlip(booking, slipType);
+            const printResult = {};
+            const silentSuccess = await silentPrintSlip(booking, slipType, {}, printResult);
             if (!silentSuccess) {
-                setActiveSlipBooking(booking);
+                // If one station (kitchen or bar) already printed, the manual fallback only gets the
+                // items that are still missing, so the slip that came out is not printed twice.
+                const fallbackBooking = printResult.remainingItems?.length > 0
+                    ? { ...booking, order_items: printResult.remainingItems }
+                    : booking;
+                setActiveSlipBooking(fallbackBooking);
                 setActiveSlipType(slipType);
             }
         } catch (err) {
@@ -3437,14 +3453,32 @@ export default function POSDashboard() {
                 delete qtyDebounceTimersRef.current[cleanDbId];
             }
 
+            // If the database did not accept the change, put the bill back the way the database
+            // has it and tell staff. Never print a void / change slip for a change that did not happen.
+            const restoreAfterFailedEdit = (message) => {
+                toast.error(message, { duration: 6000 });
+                if (currentBookingId) refreshActiveBookingItems(currentBookingId);
+            };
+
             if (nextQty === 0) {
-                await deleteOrderItem(cleanDbId, currentBookingId);
+                const deleted = await deleteOrderItem(cleanDbId, currentBookingId);
+                if (!deleted) {
+                    restoreAfterFailedEdit(`ลบ "${targetItem.name || 'รายการ'}" ไม่สำเร็จ: เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง`);
+                    return;
+                }
             } else if (options?.autoPrint) {
-                await updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                const saved = await updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                if (!saved) {
+                    restoreAfterFailedEdit(`แก้จำนวน "${targetItem.name || 'รายการ'}" ไม่สำเร็จ: เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองอีกครั้ง`);
+                    return;
+                }
             } else {
-                qtyDebounceTimersRef.current[cleanDbId] = setTimeout(() => {
-                    updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                qtyDebounceTimersRef.current[cleanDbId] = setTimeout(async () => {
                     delete qtyDebounceTimersRef.current[cleanDbId];
+                    const saved = await updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                    if (!saved) {
+                        restoreAfterFailedEdit(`แก้จำนวน "${targetItem.name || 'รายการ'}" ไม่สำเร็จ: เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองอีกครั้ง`);
+                    }
                 }, 300);
             }
         } else if (options?.autoPrint && nextQty > 0) {
@@ -3471,12 +3505,7 @@ export default function POSDashboard() {
                     const insertedRows = (typeof result === 'object' && result?.insertedItems) ? result.insertedItems : [];
                     if (insertedRows.length > 0) {
                         const newDbRow = insertedRows[0];
-                        const storageKey = `qr_printed_items_${currentBookingId}`;
-                        try {
-                            const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                            const combined = Array.from(new Set([...printed, ...insertedRows.map(r => r.id).filter(Boolean)]));
-                            localStorage.setItem(storageKey, JSON.stringify(combined));
-                        } catch (e) {}
+                        addLocallyPrintedIds(currentBookingId, insertedRows.map(r => r.id).filter(Boolean));
 
                         setCurrentOrder(prev => ({
                             ...prev,
@@ -4578,6 +4607,10 @@ export default function POSDashboard() {
                 
             if (itemsErr) throw itemsErr;
 
+            // The moved items keep their ids. Carry their "already printed" record over to the target
+            // bill, otherwise the safety heartbeat sees them as new on that bill and reprints them all.
+            carryOverLocallyPrinted(activeBooking.id, targetBooking.id);
+
             // 2. Mark source booking as void with clean remark & clear total_amount
             const { error: voidErr } = await supabase
                 .from('bookings')
@@ -5007,22 +5040,47 @@ export default function POSDashboard() {
                         
                         const finalBooking = updatedBooking || activeBooking;
                         
-                        const storageKey = `qr_printed_items_${activeBooking.id}`;
-                        let printed = [];
-                        try {
-                            printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                        } catch (e) {}
+                        // Hold the same per-booking lock the realtime listener and safety heartbeat use,
+                        // so neither of them prints this order while the accept flow is still printing it.
+                        const acceptedBookingId = activeBooking.id;
+                        const alreadyPrinting = processingQrPrintRef.current.has(acceptedBookingId);
+                        processingQrPrintRef.current.add(acceptedBookingId);
                         
                         const allItems = finalBooking.order_items || [];
-                        const unprinted = allItems.filter(i => i.id && !printed.includes(i.id));
+                        const acceptDbPrintedIds = allItems.filter(isDbPrinted).map(i => i.id);
+                        if (acceptDbPrintedIds.length > 0) addLocallyPrintedIds(acceptedBookingId, acceptDbPrintedIds);
+                        let unprinted = alreadyPrinting
+                            ? []
+                            : filterLocallyUnprinted(acceptedBookingId, allItems.filter(i => !isDbPrinted(i)));
                         
-                        if (unprinted.length > 0) {
-                            const printSuccess = await autoPrintQROrder({ ...finalBooking, order_items: unprinted });
-                            if (printSuccess) {
-                                const newPrinted = Array.from(new Set([...printed, ...unprinted.map(i => i.id).filter(Boolean)]));
-                                localStorage.setItem(storageKey, JSON.stringify(newPrinted));
-                            } else {
-                                openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
+                        try {
+                            if (unprinted.length > 0) {
+                                // Atomic claim: if another device is already printing these items, skip them here.
+                                const { claimedIds, authoritative } = await claimItemsForPrint(unprinted.map(i => i.id));
+                                if (authoritative) {
+                                    unprinted = unprinted.filter(i => claimedIds.some(id => String(id) === String(i.id)));
+                                }
+                            }
+
+                            if (unprinted.length > 0) {
+                                const outcome = await autoPrintQROrderDetailed({ ...finalBooking, order_items: unprinted });
+                                const printedIds = outcome.printedItems.map(i => i.id).filter(Boolean);
+                                if (printedIds.length > 0) {
+                                    addLocallyPrintedIds(acceptedBookingId, printedIds);
+                                    markItemsPrinted(printedIds);
+                                }
+                                // Only the station that did not come out goes to the manual fallback
+                                const missingItems = outcome.printedAny ? outcome.failedItems : unprinted;
+                                if (missingItems.length > 0) {
+                                    releasePrintClaim(missingItems.map(i => i.id).filter(Boolean));
+                                    openSlipOrSilentPrint({ ...finalBooking, order_items: missingItems }, 'kitchen');
+                                }
+                            }
+                        } finally {
+                            if (!alreadyPrinting) {
+                                setTimeout(() => {
+                                    processingQrPrintRef.current.delete(acceptedBookingId);
+                                }, 1500);
                             }
                         }
                         

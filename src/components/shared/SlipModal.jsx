@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, getBookingPaymentMethod, cleanKitchenItemName, extractCleanKitchenOptions, applyDefaultSunmiMaxCols } from '../../utils/printerHelper'
 import { formatOrderItemOptions } from '../../utils/menuHelper'
 import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
+import { addLocallyPrintedIds, markItemsPrinted } from '../../utils/printClaim'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -176,6 +177,22 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
     const hasAutoPrintedRef = useRef(false);
 
+    // After a kitchen / bar slip is printed from this modal (auto or by the Print button), record its
+    // items as printed (this device + database). Without this the POS safety heartbeat still sees
+    // them as unprinted and prints the same slip again a few seconds later.
+    const recordKitchenSlipPrinted = () => {
+        const isKitchenSlip = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
+        if (!isKitchenSlip || !booking?.id) return;
+        // The 'kitchen' tab prints both the kitchen slip and the bar slip, i.e. every item
+        const printedTab = activeTab === 'kitchen' ? 'kitchen_all' : activeTab;
+        const ids = selectItemsForTab(booking.order_items || [], printedTab, printerConfig)
+            .map(item => item?.id)
+            .filter(Boolean);
+        if (ids.length === 0) return;
+        addLocallyPrintedIds(booking.id, ids);
+        markItemsPrinted(ids);
+    };
+
     // Keep dynamic PromptPay QR code in sync whenever activeTab is billing or booking total updates
     useEffect(() => {
         if (activeTab === 'billing' && booking) {
@@ -320,6 +337,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                         }
                     }
+                    recordKitchenSlipPrinted();
                     onClose();
                 } catch (err) {
                     console.error("SUNMI Auto print failed:", err);
@@ -360,6 +378,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             await printToRawBTWebSocket(rawBytes);
                         }
                     }
+                    recordKitchenSlipPrinted();
                     onClose();
                 } catch (err) {
                     console.error("RawBT Auto print failed:", err);
@@ -401,6 +420,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             await printToBluetoothDirect(btDeviceName, rawBytes);
                         }
                     }
+                    recordKitchenSlipPrinted();
                     onClose();
                 } catch (err) {
                     console.error("Bluetooth Auto print failed:", err);
@@ -1096,6 +1116,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                     }
                 }
+                recordKitchenSlipPrinted();
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("SUNMI print failed, falling back to standard dialog:", err);
@@ -1133,6 +1154,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                     }
                 }
+                recordKitchenSlipPrinted();
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("RawBT print failed, falling back to standard dialog:", err);
@@ -1170,6 +1192,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                     }
                 }
+                recordKitchenSlipPrinted();
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("Direct bluetooth print failed, falling back to standard dialog:", err);
