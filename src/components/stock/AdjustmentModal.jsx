@@ -4,10 +4,21 @@ import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
 import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
 import { usagePerStockUnit } from '../../utils/recipeGraph';
+import { STOCK_REASONS } from '../../utils/stockLedger';
+
+// Why stock leaves outside of sales. Waste and staff meals get their own column
+// in the daily reconciliation; everything else is "other out".
+const WITHDRAW_REASONS = [
+    { key: STOCK_REASONS.WASTE, label: 'ของเสีย / ทิ้ง' },
+    { key: STOCK_REASONS.STAFF_MEAL, label: 'พนักงานกิน' },
+    { key: STOCK_REASONS.ADJUST, label: 'อื่น ๆ' }
+];
 
 export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, onEdit }) {
     const [amount, setAmount] = useState(''); // Main input (usually integer)
     const [mode, setMode] = useState('in'); // 'in', 'out', 'set' (Check/Count)
+    const [outReason, setOutReason] = useState(null); // required for 'out'
+    const [outNote, setOutNote] = useState('');
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [unitOptions, setUnitOptions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -72,6 +83,8 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             
             // Default mode to 'in'
             setMode('in');
+            setOutReason(null);
+            setOutNote('');
         }
     }, [item]);
 
@@ -173,9 +186,20 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 }
                 const actualChange = mainVal * selectedUnit.factor;
                 const finalChange = mode === 'in' ? actualChange : -actualChange;
-                
+                const reason = mode === 'out' ? WITHDRAW_REASONS.find(r => r.key === outReason) : null;
+                if (mode === 'out' && !reason) {
+                    toast.error('เลือกเหตุผลการเบิกออกก่อน');
+                    setLoading(false);
+                    savingRef.current = false;
+                    return;
+                }
+                const extra = outNote.trim() ? ` · ${outNote.trim()}` : '';
+
                 await onUpdate(item.id, finalChange, mode, {
-                    note: `ปรับปรุงรายการ: ${mode === 'in' ? 'รับเข้า' : 'เบิกออก'} ${mainVal} ${selectedUnit.label}`
+                    reason: reason?.key,
+                    note: mode === 'in'
+                        ? `ปรับปรุงรายการ: รับเข้า ${mainVal} ${selectedUnit.label}`
+                        : `เบิกออก (${reason.label}) ${mainVal} ${selectedUnit.label}${extra}`
                 });
             }
             
@@ -400,14 +424,43 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                             </div>
                         </div>
                     )}
+
+                    {mode === 'out' && (
+                        <div className="mt-4">
+                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">เหตุผล</label>
+                            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="เหตุผลการเบิกออก">
+                                {WITHDRAW_REASONS.map(r => (
+                                    <button
+                                        key={r.key}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={outReason === r.key}
+                                        onClick={() => setOutReason(r.key)}
+                                        className={`py-2 px-2 rounded-lg border text-xs font-bold leading-snug transition-all text-center ${outReason === r.key ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white shadow-sm' : 'border-[var(--color-hallmark-rule)] text-gray-600 hover:bg-gray-50'}`}
+                                    >
+                                        {r.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <input
+                                type="text"
+                                value={outNote}
+                                onChange={(e) => setOutNote(e.target.value)}
+                                placeholder={outReason === STOCK_REASONS.WASTE ? 'เช่น เสีย หมดอายุ ทำหก' : 'โน้ต (ไม่บังคับ)'}
+                                maxLength={120}
+                                className="mt-2 w-full h-9 bg-gray-50/80 border border-[var(--color-hallmark-rule)] rounded-lg px-3 text-xs text-[#1A1A1A] outline-none focus:border-[#1A1A1A] transition-all"
+                            />
+                            <p className="text-[10px] text-gray-400 leading-relaxed mt-1.5">ของที่ใช้ทำเมนูที่ขาย ระบบคิดจากสูตรให้แล้ว ใช้เบิกออกเฉพาะของเสีย ของที่พนักงานกิน หรือเหตุอื่น</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
                 <div className="p-3 border-t border-[var(--color-hallmark-rule)]/50 bg-gray-50/50 safe-area-inset-bottom">
                     <button 
                         onClick={handleSave}
-                        disabled={loading || (mode !== 'set' && (!amount || parseFloat(amount) <= 0))}
-                        className={`w-full py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-white font-bold text-sm shadow-md transition-all active:scale-98 ${
+                        disabled={loading || (mode !== 'set' && (!amount || parseFloat(amount) <= 0)) || (mode === 'out' && !outReason)}
+                        className={`w-full py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-white font-bold text-sm shadow-md transition-all active:scale-98 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed ${
                             loading ? 'bg-gray-400 cursor-not-allowed shadow-none' : 
                             mode === 'in' ? 'bg-green-600 hover:bg-green-700' : 
                             mode === 'out' ? 'bg-red-600 hover:bg-red-700' :

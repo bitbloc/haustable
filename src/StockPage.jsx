@@ -189,7 +189,7 @@ export default function StockPage() {
                     itemId,
                     mode: type === 'set' ? 'set' : 'delta',
                     quantity: roundedChange,
-                    reason: type === 'set' ? STOCK_REASONS.COUNT_ADJUST : (type === 'in' ? STOCK_REASONS.PURCHASE : STOCK_REASONS.ADJUST),
+                    reason: type === 'set' ? STOCK_REASONS.COUNT_ADJUST : (type === 'in' ? STOCK_REASONS.PURCHASE : (meta.reason || STOCK_REASONS.ADJUST)),
                     performedBy,
                     note: diagNote
                 });
@@ -229,6 +229,7 @@ export default function StockPage() {
                              unit: targetItem?.unit,
                              quantity_change: roundedChange,
                              type,
+                             stock_reason: meta.reason || null,
                              note: diagNote
                          }
                      });
