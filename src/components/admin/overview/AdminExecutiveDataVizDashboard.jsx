@@ -114,16 +114,22 @@ export default function AdminExecutiveDataVizDashboard({
 
     // 2. Active Shift and Drawer Cash Analysis
     const shiftSummary = useMemo(() => {
-        const active = shifts.find(s => s.status === 'open') || (shifts.length > 0 ? shifts[shifts.length - 1] : null)
+        // Same drawer arithmetic as the shift report slip and the other overview cards:
+        // the day's first opening float + cash sales + money in - money out, read from the
+        // real shift columns (opening_float / total_in / total_out). No invented defaults.
+        const sorted = [...(shifts || [])].sort((a, b) => new Date(a.opened_at || 0) - new Date(b.opened_at || 0))
+        const active = sorted.find(s => s.status === 'open') || (sorted.length > 0 ? sorted[sorted.length - 1] : null)
         const hasShift = Boolean(active)
         const isOpen = active?.status === 'open'
-        const startingCash = Number(active?.starting_cash || 2500)
-        const cashIn = Number(active?.cash_in || 0)
-        const cashOut = Number(active?.cash_out || 0)
-        const cashSales = Number(paymentBreakdown?.cash || 0)
+        const startingCash = Number(sorted[0]?.opening_float || 0)
+        const cashIn = sorted.reduce((sum, s) => sum + Number(s.total_in || 0), 0)
+        const cashOut = sorted.reduce((sum, s) => sum + Number(s.total_out || 0), 0)
+        const cashSales = Number(paymentBreakdown?.cash || 0) || sorted.reduce((sum, s) => sum + Number(s.cash_sales || 0), 0)
         const expectedCash = startingCash + cashSales + cashIn - cashOut
         const staffName = active?.staff_name || 'พนักงานหน้าร้าน'
-        const openedTime = active?.opened_at ? formatThaiTimeOnly(active.opened_at) : '10:30'
+        // Operations card describes the current/last shift; the drawer card is anchored to the day's first float
+        const openedTime = active?.opened_at ? formatThaiTimeOnly(active.opened_at) : null
+        const floatOpenedTime = sorted[0]?.opened_at ? formatThaiTimeOnly(sorted[0].opened_at) : null
 
         return {
             hasShift,
@@ -132,6 +138,7 @@ export default function AdminExecutiveDataVizDashboard({
             expectedCash,
             staffName,
             openedTime,
+            floatOpenedTime,
             shiftCount: shifts.length
         }
     }, [shifts, paymentBreakdown])
@@ -316,7 +323,7 @@ export default function AdminExecutiveDataVizDashboard({
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[oklch(45%_0.010_28)]">เปิดรอบการขาย:</span>
-                                <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{shiftSummary.openedTime} น.</span>
+                                <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{shiftSummary.openedTime ? `${shiftSummary.openedTime} น.` : '—'}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[oklch(45%_0.010_28)]">โต๊ะเปิดขณะนี้:</span>
@@ -590,7 +597,7 @@ export default function AdminExecutiveDataVizDashboard({
 
                             <div className="flex items-center justify-between text-[10px] font-mono opacity-85 pt-1 border-t border-white/15">
                                 <span>ทอนเปิด ฿{shiftSummary.startingCash.toLocaleString()}</span>
-                                <span>{shiftSummary.openedTime} น.</span>
+                                <span>{shiftSummary.floatOpenedTime ? `${shiftSummary.floatOpenedTime} น.` : 'ยังไม่เปิดกะ'}</span>
                             </div>
                         </div>
                     </div>

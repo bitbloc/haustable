@@ -2481,13 +2481,40 @@ export function encodeShiftReportData(reportData, paperSize = '80mm', printerTyp
 }
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
+//
+// Column alignment vs. the hardware line buffer:
+// the printhead draws Thai vowels/tone marks at zero width, but the firmware still counts them as
+// bytes and wraps a line once margin + columns + marks pass the buffer. Squeezing the padding of
+// only the lines that overflow moves their amount column left by a different distance on every
+// row (the more marks in the label, the further left), which is what made the columns zigzag.
+// Instead the whole slip is laid out once, measured, and re-laid out with ONE margin/width that
+// fits its mark-heaviest line, so every row shares the same right edge.
 export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm', printerType = 'sunmi') {
-    paperSize = '80mm';
+    const hardwareCols = 48; // shift reports always print on the 80mm cashier printer
+    const minCols = 30;
+    let cols = resolveMaxCols('80mm', reportData?.maxCols, 'cashier', reportData);
+    let margin = Math.floor(Math.max(0, hardwareCols - cols) / 2);
 
+    let result = buildShiftClosureReport(reportData, cols, margin, hardwareCols);
+    for (let pass = 0; pass < 3 && result.overflow > 0; pass++) {
+        // Give up the centring margin first, then columns, so the slip stays as wide as it can.
+        const fromMargin = Math.min(margin, result.overflow);
+        const nextCols = Math.max(minCols, cols - (result.overflow - fromMargin));
+        if (fromMargin === 0 && nextCols === cols) break;
+        margin -= fromMargin;
+        cols = nextCols;
+        result = buildShiftClosureReport(reportData, cols, margin, hardwareCols);
+    }
+    return result.bytes;
+}
+
+function buildShiftClosureReport(reportData, maxCols, offset, hardwareCols) {
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = resolveMaxCols(paperSize, reportData?.maxCols, 'cashier', reportData);
+    // Bytes by which the widest Thai line overshoots the hardware line buffer in this layout
+    let overflow = 0;
+    const safeMaxBytes = Math.max(24, hardwareCols - 2);
     const reportItemColWidth = Math.max(19, maxCols - 17);
     const colOpts = { visualGraphemes: true };
     const truncateColOpts = { visualGraphemes: true, truncate: true };
@@ -2510,10 +2537,6 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         return this;
     };
 
-    const is80mm = String(paperSize ?? '').toLowerCase().includes('80');
-    const hardwareCols = is80mm ? 48 : 32;
-    const paddingCols = Math.max(0, hardwareCols - maxCols);
-    const offset = Math.floor(paddingCols / 2);
     const globalLeftMargin = ' '.repeat(offset);
 
     const originalLine = encoder.line.bind(encoder);
@@ -2545,14 +2568,19 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                return fitThaiLineToHardwareBuffer(globalLeftMargin + processedLine, hardwareCols);
+                const fullLine = globalLeftMargin + processedLine;
+                if (/[฀-๿]/.test(fullLine)) {
+                    overflow = Math.max(overflow, getPrinterCellWidth(fullLine, true) - safeMaxBytes);
+                }
+                // Last-resort guard only: the caller re-lays the slip out until nothing overflows
+                return fitThaiLineToHardwareBuffer(fullLine, hardwareCols);
             }
         });
 
         originalLine(processedLines.join('\n'));
         return this;
     };
-    
+
     let selectedDividerStyle = null;
     try {
         const stored = localStorage.getItem('onhaus_printer_config');
@@ -2842,7 +2870,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
            .feed(2)
            .cut();
 
-    return encoder.encode();
+    return { bytes: encoder.encode(), overflow };
 }
 
 // Connect and write raw bytes via Web Bluetooth directly
