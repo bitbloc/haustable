@@ -11,7 +11,7 @@ import { subscribePOSBroadcast, sendTrackingBroadcast, sendPOSBroadcast } from '
 import { RefreshCw } from 'lucide-react'
 
 // Core Components
-import AdminOverviewDigestCard from './components/admin/overview/AdminOverviewDigestCard'
+import AdminExecutiveDataVizDashboard from './components/admin/overview/AdminExecutiveDataVizDashboard'
 import IntradayVelocityDaypartCockpit from './components/admin/financial/IntradayVelocityDaypartCockpit'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
 import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerTab'
@@ -907,47 +907,21 @@ export default function AdminDashboard() {
                                 <span className={`w-1.5 h-1.5 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-40'}`} />
                                 PRO ANALYTICS
                             </span>
-                            <span className="font-sans font-medium text-[11.5px] mt-0.5">วิเคราะห์เชิงลึก</span>
+                            <span className="font-sans font-medium text-[11.5px] mt-0.5">ภาพรวม &amp; เชิงลึก</span>
                         </div>
 
                         {/* Desktop: Single-Line Tabular Layout */}
                         <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
                             <span className={`w-2 h-2 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
-                            <span className="font-mono tracking-wide">PRO ANALYTICS // <span className="font-sans font-medium">วิเคราะห์เชิงลึก</span></span>
+                            <span className="font-mono tracking-wide">PRO ANALYTICS // <span className="font-sans font-medium">ภาพรวม &amp; วิเคราะห์เชิงลึก</span></span>
                         </div>
                     </button>
-                </div>
-
-                {/* UNIFIED DATA VISUALIZATION & KPI DIGEST (Achromatic Ledger · Simple Motion Bar Chart) */}
-                <div className="mb-6">
-                    <AdminOverviewDigestCard
-                        bookings={dailyBookings}
-                        revenueToday={revenueToday}
-                        yesterdayRevenue={yesterdayRevenue}
-                        completedOrdersCount={completedOrdersCount}
-                        activeUnpaidRevenue={activeUnpaidRevenue}
-                        activeUnpaidCount={activeUnpaidCount}
-                        totalTables={derivedFloorOccupancy.totalTables}
-                        occupiedTables={derivedFloorOccupancy.occupiedTables}
-                        totalGuests={derivedFloorOccupancy.totalGuests}
-                        dineInCount={dineInCount}
-                        pickupCount={pickupCount}
-                        paymentBreakdown={paymentBreakdown}
-                        adTelemetry={adTelemetry}
-                        shifts={shifts}
-                        selectedDate={selectedDate}
-                        loading={loading}
-                        onOpenShiftsTab={() => {
-                            handleSetOverviewMode('pro')
-                            setActiveTab('shifts')
-                        }}
-                    />
                 </div>
 
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
                 {overviewMode === 'simplified' ? (
                     <div className="space-y-6 mb-6">
-                        {/* 1. Simplified Live Floor (Hero KPIs hidden to eliminate duplication with Digest Card) */}
+                        {/* 1. Simplified Live Floor (Direct Floor Awareness with Zero Graph Clutter) */}
                         <SimplifiedLiveOverview 
                             tables={tables}
                             bookings={dailyBookings}
@@ -957,7 +931,7 @@ export default function AdminDashboard() {
                             shifts={shifts}
                             selectedDate={selectedDate}
                             loading={loading}
-                            hideHeroKpis={true}
+                            hideHeroKpis={false}
                             onRefresh={() => fetchData(true, selectedDate)}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                             onViewSlip={setViewSlipUrl}
@@ -974,7 +948,30 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <div className="space-y-6 mb-6">
-                        {/* 0. Omni-Date Online & Advance Orders Hub */}
+                        {/* 0. Modern Bento Executive Data Visualization Dashboard (Modeled after design-taste-frontend) */}
+                        <AdminExecutiveDataVizDashboard
+                            bookings={dailyBookings}
+                            revenueToday={revenueToday}
+                            yesterdayRevenue={yesterdayRevenue}
+                            completedOrdersCount={completedOrdersCount}
+                            activeUnpaidRevenue={activeUnpaidRevenue}
+                            activeUnpaidCount={activeUnpaidCount}
+                            totalTables={derivedFloorOccupancy.totalTables}
+                            occupiedTables={derivedFloorOccupancy.occupiedTables}
+                            totalGuests={derivedFloorOccupancy.totalGuests}
+                            dineInCount={dineInCount}
+                            pickupCount={pickupCount}
+                            paymentBreakdown={paymentBreakdown}
+                            adTelemetry={adTelemetry}
+                            shifts={shifts}
+                            selectedDate={selectedDate}
+                            loading={loading}
+                            onOpenShiftLedger={() => setActiveTab('shifts')}
+                            onSwitchToLiveNow={() => handleSetOverviewMode('simplified')}
+                            onOpenDailySlip={() => setShowDailySummaryModal(true)}
+                        />
+
+                        {/* 1. Omni-Date Online & Advance Orders Hub */}
                         <OnlineAdvanceOrdersHub 
                             bookings={omniOnlineBookings}
                             onViewSlip={setViewSlipUrl}
