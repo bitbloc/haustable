@@ -6,6 +6,7 @@ import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { calculateRealUnitCost } from '../../utils/costUtils';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
+import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
@@ -132,6 +133,12 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                  delete payload.current_quantity;
                  const { error: err } = await supabase.from('stock_items').update(payload).eq('id', item.id);
                  error = err;
+                 // Recipes store quantities in the usage unit: keep them meaning the same amount.
+                 if (!err && item.usage_unit && payload.usage_unit && item.usage_unit !== payload.usage_unit) {
+                     const res = await convertRecipesForUnitChange(item.id, item.usage_unit, payload.usage_unit);
+                     const note = describeUnitChange(res, item.usage_unit, payload.usage_unit);
+                     if (note) (res.failed || res.manual ? toast.warning : toast.info)(note, { duration: 8000 });
+                 }
             } else {
                  // Create item with current_quantity: 0 first
                  const initialQty = payload.current_quantity || 0;

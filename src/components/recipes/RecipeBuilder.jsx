@@ -14,6 +14,10 @@ import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 import { logStaffActivity } from '../../utils/auditLogger';
 import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES } from '../../utils/recipeGraph';
+import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
+import { unitFix } from '../../utils/recipeUnits';
+import { saveRecipeVersion } from '../../utils/recipeVersions';
+import RecipeHistoryModal from './RecipeHistoryModal';
 
 // ── 1. Mini Modal for Quick Stock Item Edit ──
 function EditStockModal({ item, onClose, onSave }) {
@@ -704,6 +708,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
 // ── 7. Main RecipeBuilder Component ──
 export default function RecipeBuilder({ parentId, parentType = 'menu', initialPrice = 0, onClose }) {
     const [ingredients, setIngredients] = useState([]);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [availableItems, setAvailableItems] = useState([]);
     const [parentItem, setParentItem] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -946,6 +951,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     const { error: legacyErr } = await supabase.from('stock_items').update(legacyFields).eq('id', parentId);
                     if (legacyErr) throw legacyErr;
                 }
+                // Menus that use this base wrote their amount in its old unit (ml -> g etc.)
+                if (isPrep && parentItem?.usage_unit && parentItem.usage_unit !== portionForm.yieldUnit) {
+                    const res = await convertRecipesForUnitChange(parentId, parentItem.usage_unit, portionForm.yieldUnit);
+                    const note = describeUnitChange(res, parentItem.usage_unit, portionForm.yieldUnit);
+                    if (note) (res.failed || res.manual ? toast.warning : toast.info)(note, { duration: 8000 });
+                    // Saving again must not convert a second time
+                    if (!res.failed) setParentItem(prev => (prev ? { ...prev, usage_unit: portionForm.yieldUnit } : prev));
+                }
             }
 
             logStaffActivity('sop', 'recipe_save', {
@@ -959,6 +972,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     price: currentPrice
                 }
             });
+
+            // History: one snapshot per save that changed something (never blocks the save)
+            await saveRecipeVersion({ parentType, parentId, ingredients, totalCost });
 
             toast.success('บันทึกสูตรเรียบร้อย');
             onClose();
@@ -985,19 +1001,31 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         try {
             // Same model as the stock item form: the item is counted in its purchase unit.
             newFormData = { ...newFormData, unit: newFormData.pack_unit };
+            const before = availableItems.find(i => i.id === id);
             const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
             if (error) throw error;
-            
+            const oldUsage = before?.usage_unit;
+            const newUsage = newFormData.usage_unit;
+            const unitChanged = oldUsage && newUsage && oldUsage !== newUsage;
+            if (unitChanged) {
+                const res = await convertRecipesForUnitChange(id, oldUsage, newUsage);
+                const note = describeUnitChange(res, oldUsage, newUsage);
+                if (note) (res.failed || res.manual ? toast.warning : toast.info)(note, { duration: 8000 });
+            }
+                        
             toast.success('อัปเดตข้อมูลวัตถุดิบแล้ว');
             setEditingStockItem(null);
 
             setAvailableItems(prev => prev.map(item => item.id === id ? { ...item, ...newFormData } : item));
             setIngredients(prev => prev.map(p => {
                 if (p.ingredientId === id) {
-                    return { 
-                        ...p, 
+                    // This open recipe too: same amount in the new unit, so saving it keeps it right.
+                    const fix = unitChanged ? unitFix(p.quantity, oldUsage, newUsage) : null;
+                    return {
+                        ...p,
+                        ...(fix?.kind === 'convert' ? { quantity: fix.quantity } : {}),
                         ingredient: { ...p.ingredient, ...newFormData },
-                        unit: newFormData.usage_unit 
+                        unit: newFormData.usage_unit  
                     };
                 }
                 return p;
@@ -1227,7 +1255,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                     {/* Quick Tools & Total Cost readout */}
                     <div className="flex items-center gap-2 font-mono text-xs flex-shrink-0">
-                        <button 
+                        <button
+                            onClick={() => setIsHistoryOpen(true)}
+                            className="flex items-center gap-1 border border-[oklch(85%_0.012_28)] bg-white px-2.5 py-1.5 font-bold hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                            title="ประวัติการแก้สูตร"
+                        >
+                            <span className="font-sans">ประวัติ</span>
+                        </button>
+
+                        <button
                             onClick={() => setIsImportOpen(true)}
                             className="hidden sm:flex items-center gap-1 border border-[oklch(85%_0.012_28)] bg-white px-2.5 py-1.5 font-bold uppercase hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
                             title="นำเข้าส่วนผสมจากสูตรอื่น"
@@ -1573,6 +1609,28 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     )}
                 </div>
             </aside>
+        {isHistoryOpen && (
+                <RecipeHistoryModal
+                    parentType={parentType}
+                    parentId={parentId}
+                    onClose={() => setIsHistoryOpen(false)}
+                    onRestore={(version) => {
+                        const byId = new Map(availableItems.map(i => [i.id, i]));
+                        const restored = [];
+                        let lost = 0;
+                        (version.rows || []).forEach((r, i) => {
+                            const item = byId.get(r.ingredient_id);
+                            if (!item) { lost += 1; return; }
+                            restored.push({ id: `restore-${version.id}-${i}`, ingredientId: item.id, ingredient: item, quantity: r.quantity, unit: r.unit || item.usage_unit || 'unit' });
+                        });
+                        setIngredients(restored);
+                        setIsHistoryOpen(false);
+                        toast.info(lost
+                            ? `โหลดเวอร์ชันเก่าแล้ว (${lost} รายการไม่มีในคลังแล้ว ถูกข้าม) กดบันทึกเพื่อใช้`
+                            : 'โหลดเวอร์ชันเก่าแล้ว กดบันทึกเพื่อใช้');
+                    }}
+                />
+            )}
         </div>
     );
 }
