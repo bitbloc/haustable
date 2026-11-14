@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import ChoiceIngredientsModal from './ChoiceIngredientsModal'
+import { summarizeChoiceIngredients } from '../../utils/optionIngredients'
 
 // --- Reusable Rams Confirmation Dialog ---
 function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', isDanger = false, onConfirm, onCancel }) {
@@ -43,6 +45,10 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
 export default function OptionGroupList() {
     const [groups, setGroups] = useState([])
     const [linkedCounts, setLinkedCounts] = useState({})
+    // choice_id -> option_choice_ingredients rows (null = table not installed)
+    const [choiceIngredients, setChoiceIngredients] = useState(null)
+    const [ingredientItems, setIngredientItems] = useState(new Map())
+    const [ingredientTarget, setIngredientTarget] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingGroup, setEditingGroup] = useState(null)
@@ -102,14 +108,17 @@ export default function OptionGroupList() {
     const fetchGroups = async (showLoadingState = false) => {
         if (showLoadingState) setLoading(true)
         try {
-            const [groupRes, linkRes] = await Promise.all([
+            const [groupRes, linkRes, ingRes] = await Promise.all([
                 supabase
                     .from('option_groups')
                     .select(`*, option_choices (*)`)
                     .order('created_at', { ascending: false }),
                 supabase
                     .from('menu_item_options')
-                    .select('option_group_id')
+                    .select('option_group_id'),
+                supabase
+                    .from('option_choice_ingredients')
+                    .select('id, choice_id, menu_item_id, stock_item_id, quantity, stock_items (id, name, unit, usage_unit)')
             ])
 
             if (groupRes.error) throw groupRes.error
@@ -121,6 +130,19 @@ export default function OptionGroupList() {
                 })
             }
             setLinkedCounts(counts)
+
+            if (ingRes.error) {
+                setChoiceIngredients(null)
+            } else {
+                const byChoice = {}
+                const items = new Map()
+                ;(ingRes.data || []).forEach(row => {
+                    ;(byChoice[row.choice_id] ||= []).push(row)
+                    if (row.stock_items) items.set(row.stock_item_id, row.stock_items)
+                })
+                setChoiceIngredients(byChoice)
+                setIngredientItems(items)
+            }
             setGroups(groupRes.data || [])
         } catch (error) {
             console.error('Fetch option groups error:', error)
@@ -443,17 +465,21 @@ export default function OptionGroupList() {
                                             className="border-t border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4"
                                         >
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                                                {choicesList.map(c => (
+                                                {choicesList.map(c => {
+                                                    const ingRows = choiceIngredients?.[c.id] || []
+                                                    const ingSummary = summarizeChoiceIngredients(ingRows, ingredientItems)
+                                                    return (
                                                     <div 
                                                         key={c.id} 
-                                                        className={`p-2.5 rounded-xs border text-xs flex justify-between items-center transition-colors duration-150 ${
+                                                        className={`rounded-xs border text-xs transition-colors duration-150 ${
                                                             c.is_available === false 
                                                                 ? 'bg-[oklch(94%_0.008_28)] border-[oklch(88%_0.010_28)] text-[oklch(55%_0.010_28)] opacity-70' 
                                                                 : 'bg-[oklch(98%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
                                                         }`}
                                                     >
+                                                        <div className="p-2.5 flex justify-between items-center">
                                                         <div className="flex items-center gap-2 min-w-0">
-                                                            <span className="font-bold truncate">{c.name}</span>
+                                                            <span className="font-bold truncate leading-normal">{c.name}</span>
                                                             {c.is_available === false && (
                                                                 <span className="font-mono text-[9px] text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded-xs">
                                                                     หมด
@@ -463,8 +489,22 @@ export default function OptionGroupList() {
                                                         <span className="font-mono font-bold text-[oklch(52%_0.16_28)] shrink-0 ml-2 tabular-nums">
                                                             {c.price_modifier > 0 ? `+฿${c.price_modifier}` : 'ฟรี'}
                                                         </span>
+                                                        </div>
+                                                        {choiceIngredients && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setIngredientTarget({ choice: c, group })}
+                                                                className="w-full border-t border-[oklch(88%_0.010_28)] px-2.5 py-2 flex items-baseline justify-between gap-2 text-left hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                                            >
+                                                                <span className={`min-w-0 truncate leading-normal ${ingSummary ? 'text-[oklch(42%_0.010_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                                                    {ingSummary || 'ไม่ตัดสต๊อกเพิ่ม'}
+                                                                </span>
+                                                                <span className="font-mono text-[10px] uppercase tracking-wider text-[oklch(42%_0.010_28)] shrink-0">วัตถุดิบ</span>
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                ))}
+                                                    )
+                                                })}
                                                 {choicesList.length === 0 && (
                                                     <p className="text-xs font-mono text-[oklch(55%_0.010_28)] italic col-span-full py-2">
                                                         ยังไม่มีตัวเลือกย่อยในกลุ่มนี้
@@ -717,6 +757,15 @@ export default function OptionGroupList() {
             )}
 
             {/* Reusable Confirm Dialog */}
+            {ingredientTarget && (
+                <ChoiceIngredientsModal
+                    choice={ingredientTarget.choice}
+                    group={ingredientTarget.group}
+                    onClose={() => setIngredientTarget(null)}
+                    onSaved={() => fetchGroups()}
+                />
+            )}
+
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}
