@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    getItemType, isStockedItem, usagePerPortion, hasPortionYield, usageToStockQty,
+    getItemType, isStockedItem, usagePerPortion, hasPortionYield, usageToStockQty, usagePerStockUnit,
     buildLiveCostResolver, getRecipeIssues
 } from '../recipeGraph';
 import { calculateRecipeCost } from '../costUtils';
@@ -37,8 +37,23 @@ describe('item type helpers', () => {
     it('reads the yield of one portion', () => {
         expect(usagePerPortion(jasmineBase)).toBe(920);
         expect(usagePerPortion(jasmineDrink)).toBe(1);
+        // a drink recipe saved with an old conversion factor is still one serving
+        expect(usagePerPortion({ item_type: 'recipe', pack_size: 1, conversion_factor: 440 })).toBe(1);
         expect(hasPortionYield({ item_type: 'prep', portion_yield_qty: null })).toBe(false);
         expect(hasPortionYield(tea)).toBe(true);
+    });
+
+    it('knows how much one counted unit holds (live item shapes)', () => {
+        const soda = { item_type: 'raw', unit: 'ขวด', pack_size: 325, pack_unit: 'ml', usage_unit: 'ml', conversion_factor: 1 };
+        const coke = { item_type: 'raw', unit: 'ขวด', pack_size: 12, pack_unit: 'bottle', usage_unit: 'bottle', conversion_factor: 1 };
+        const aro = { item_type: 'raw', unit: 'แกลอน', pack_size: 6, pack_unit: 'l', usage_unit: 'ml', conversion_factor: 1000 };
+        const pork = { item_type: 'raw', unit: 'kg', pack_size: 1, pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000 };
+        expect(usagePerStockUnit(soda)).toBe(325);
+        expect(usagePerStockUnit(coke)).toBe(1);
+        expect(usagePerStockUnit(aro)).toBe(6000);
+        expect(usagePerStockUnit(pork)).toBe(1000);
+        expect(usageToStockQty(soda, 150)).toBeCloseTo(150 / 325);
+        expect(usagePerStockUnit(jasmineBase)).toBe(920);
     });
 
     it('converts recipe quantities to counted stock', () => {
@@ -115,6 +130,13 @@ describe('getRecipeIssues', () => {
             { ingredient_id: 'y', unit: 'ml', ingredient: { name: 'เบส-ชาดำ', item_type: 'prep', portion_yield_qty: null, usage_unit: 'g' } }
         ]);
         expect(issues.map(i => i.code)).toEqual(['no_cost', 'ingredient_no_yield', 'unit_mismatch']);
+    });
+
+    it('flags a per-glass recipe used inside a prep', () => {
+        const codes = getRecipeIssues({ item_type: 'prep', portion_yield_qty: 400 }, [
+            { ingredient_id: 'd', unit: 'g', ingredient: { name: 'Soft Drink - ชาไทย', item_type: 'recipe', usage_unit: 'unit' } }
+        ]).map(i => i.code);
+        expect(codes).toContain('recipe_inside');
     });
 
     it('is quiet for a healthy recipe and treats the generic "unit" row label as fine', () => {

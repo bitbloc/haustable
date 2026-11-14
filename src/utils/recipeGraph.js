@@ -44,6 +44,8 @@ export const isStockedItem = (item) => {
 /** usage_unit produced by one making of a made item (one portion / one glass). */
 export const usagePerPortion = (item) => {
     if (!item) return 1;
+    // One unit of a per-glass / per-dish recipe is one serving.
+    if (getItemType(item) === ITEM_TYPES.RECIPE) return 1;
     if (getItemType(item) === ITEM_TYPES.PREP && num(item.portion_yield_qty) > 0) return num(item.portion_yield_qty);
     const perPortion = num(item.pack_size, 1) * num(item.conversion_factor, 1);
     return perPortion > 0 ? perPortion : 1;
@@ -53,9 +55,29 @@ export const usagePerPortion = (item) => {
 export const hasPortionYield = (item) =>
     getItemType(item) !== ITEM_TYPES.PREP || num(item?.portion_yield_qty) > 0;
 
-/** Recipe quantity (usage_unit) -> how much comes off the counted stock (pack_unit). */
-export const usageToStockQty = (item, usageQty) => {
+const MEASURE_UNITS = new Set(['ml', 'l', 'g', 'kg', 'mg', 'oz', 'oz_fl', 'lb', 'gallon', 'ขีด', 'cup', 'tbsp', 'tsp', 'shot']);
+
+/**
+ * usage_unit in one counted unit of stock (same rule as SQL stock_usage_per_count_unit).
+ * Pack is a weight/volume and the item is counted in something else (bottle, gallon)
+ *   -> one counted unit is the whole pack: soda bottle = 325 ml.
+ * Otherwise (pack is a count of pieces, or counted in the pack unit)
+ *   -> conversion_factor: coke case of 12 counted per bottle = 1; pork in kg = 1000 g.
+ */
+export const usagePerStockUnit = (item) => {
     const factor = num(item?.conversion_factor, 1) || 1;
+    const packUnit = String(item?.pack_unit || '').toLowerCase();
+    const unit = String(item?.unit || '').toLowerCase();
+    const packSize = num(item?.pack_size, 0);
+    if (getItemType(item) === ITEM_TYPES.RAW && MEASURE_UNITS.has(packUnit) && unit !== packUnit && packSize > 0) {
+        return packSize * factor;
+    }
+    return factor;
+};
+
+/** Recipe quantity (usage_unit) -> how much comes off the counted stock. */
+export const usageToStockQty = (item, usageQty) => {
+    const factor = usagePerStockUnit(item);
     const usable = Math.min(Math.max(num(item?.yield_percent, 100), 1), 100) / 100;
     return num(usageQty) / factor / usable;
 };
@@ -152,6 +174,9 @@ export const getRecipeIssues = (item, rows = [], itemsById = new Map()) => {
         if (!ing) continue;
         if (getItemType(ing) === ITEM_TYPES.RAW && num(ing.cost_price) <= 0) {
             issues.push({ code: 'no_cost', message: `${ing.name}: ยังไม่มีราคาทุน` });
+        }
+        if (type !== ITEM_TYPES.RAW && getItemType(ing) === ITEM_TYPES.RECIPE) {
+            issues.push({ code: 'recipe_inside', message: `${ing.name}: เป็นสูตรต่อแก้ว/จาน ใช้เป็นส่วนผสมไม่ได้` });
         }
         if (getItemType(ing) === ITEM_TYPES.PREP && !hasPortionYield(ing)) {
             issues.push({ code: 'ingredient_no_yield', message: `${ing.name}: ยังไม่ได้ระบุปริมาณต่อ portion` });

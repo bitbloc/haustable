@@ -65,3 +65,37 @@ export const postStockMovement = async ({
     }
     return { ok: true, data, error: null, rpcMissing: false };
 };
+
+/**
+ * Record a single-item count as a "spot" (mid-day) count session, so the daily
+ * reconciliation sees it. Falls back via rpcMissing when the count-session
+ * migration is not applied yet; the caller then uses postStockMovement.
+ * Returns the same shape as postStockMovement.
+ */
+export const recordSpotCount = async ({ itemId, countedQty, performedBy = 'Staff', note = null }) => {
+    const qty = Number(Number(countedQty).toFixed(4));
+    if (!itemId || !Number.isFinite(qty) || qty < 0) {
+        return { ok: false, data: null, error: new Error('recordSpotCount: invalid arguments'), rpcMissing: false };
+    }
+    const { data, error } = await supabase.rpc('submit_stock_count', {
+        p_kind: 'spot',
+        p_lines: [{ stock_item_id: itemId, counted_qty: qty, note }],
+        p_performed_by: performedBy,
+        p_note: note,
+        p_blind: false,
+        p_shop_day: null
+    });
+    if (error) return { ok: false, data: null, error, rpcMissing: isRpcMissing(error) };
+    const line = data?.lines?.[0] || {};
+    return {
+        ok: true,
+        error: null,
+        rpcMissing: false,
+        data: {
+            session_id: data?.session_id,
+            old_quantity: line.system_qty,
+            new_quantity: line.counted_qty,
+            quantity_change: line.diff
+        }
+    };
+};

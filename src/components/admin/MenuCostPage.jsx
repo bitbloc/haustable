@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchAndSortMenu } from '../../utils/menuHelper';
 import { calculateRecipeCost } from '../../utils/costUtils';
 import { buildLiveCostResolver } from '../../utils/recipeGraph';
+import RecipeReadinessPanel from './RecipeReadinessPanel';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 
@@ -395,6 +396,12 @@ export default function MenuCostPage({ isEmbedded = false }) {
             </div>
 
             <div className={`${isEmbedded ? '' : 'max-w-7xl mx-auto p-4'} space-y-5 pb-20`}>
+
+                <RecipeReadinessPanel
+                    menuItems={menuItems}
+                    onOpenRecipe={handleOpenRecipe}
+                    onLinked={() => loadData(false)}
+                />
 
                 {/* 4 Strategic F&B KPI Cards (Dieter Rams Tabular Structure) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

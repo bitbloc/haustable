@@ -830,7 +830,16 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                         </button>
 
-                        <button 
+                        <a
+                            href="/manuals/recipe_entry_guide.html"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-sans font-bold leading-5 hover:bg-[oklch(90%_0.012_28)] transition-colors whitespace-nowrap"
+                        >
+                            คู่มือการลงสูตร
+                        </a>
+
+                        <button
                             onClick={() => setIsCreateOpen(true)}
                             className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-black transition-colors shadow-xs cursor-pointer"
                         >

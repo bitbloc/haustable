@@ -2031,19 +2031,23 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         >
                             <defs>
                                 <style>{`
-                                    /* High-Performance Dieter Rams SVG Engine (Zero continuous transform repaints on iPad/WebKit) */
-                                    @media (hover: hover) and (pointer: fine) and (min-width: 1025px) {
-                                        @keyframes forecastStreamline {
-                                            from { stroke-dashoffset: 24; }
-                                            to { stroke-dashoffset: 0; }
-                                        }
-                                        .forecast-stream-line {
-                                            animation: forecastStreamline 2.5s linear infinite;
-                                        }
+                                    /* High-Performance Dieter Rams SVG Engine (Simple, restrained one-shot entrance & transition motion) */
+                                    @keyframes ramsSimpleFadeIn {
+                                        from { opacity: 0; }
+                                        to { opacity: 0.9; }
+                                    }
+                                    .forecast-stream-line {
+                                        animation: ramsSimpleFadeIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+                                    }
+                                    .rams-bar-motion {
+                                        transition: height 280ms cubic-bezier(0.22, 1, 0.36, 1), y 280ms cubic-bezier(0.22, 1, 0.36, 1), fill 140ms ease-out;
                                     }
                                     @media (pointer: coarse), (max-width: 1024px), (prefers-reduced-motion: reduce) {
                                         .forecast-stream-line {
                                             animation: none !important;
+                                        }
+                                        .rams-bar-motion {
+                                            transition: fill 140ms ease-out !important;
                                         }
                                     }
                                 `}</style>
@@ -2246,10 +2250,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 y={padYTop + plotHeight - barH}
                                                 width={16}
                                                 height={barH}
+                                                rx={2}
                                                 fill={isMonthGoalExceeded
                                                     ? (isHovered ? 'oklch(44% 0.17 142)' : 'oklch(50% 0.15 142)')
                                                     : (isHovered ? colorAccent : 'oklch(85% 0.012 28)')}
-                                                className="transition-colors duration-150 cursor-pointer"
+                                                className="rams-bar-motion cursor-pointer"
                                                 onMouseEnter={() => {
                                                     if (!minimalMode && !isTouchDevice && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
                                                         setHoveredHour(pt.hour)
@@ -2339,8 +2344,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop + plotHeight - actualBarH}
                                                     width={14}
                                                     height={actualBarH}
+                                                    rx={2}
                                                     fill={barFill}
-                                                    className="transition-colors duration-150 pointer-events-none"
+                                                    className="rams-bar-motion pointer-events-none"
                                                 />
                                             )}
 

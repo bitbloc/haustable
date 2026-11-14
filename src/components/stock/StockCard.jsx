@@ -1,19 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { Package, AlertTriangle, FileText, Minus, Plus, Loader2, Check } from 'lucide-react';
+import React from 'react';
+import { Package, AlertTriangle, FileText } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ 
     item, 
     onClick, 
     onRecipe, 
-    quickCountMode = false, 
-    onUpdate = null, 
     searchActive = false, 
     categories = [] 
 }) {
-    const [saving, setSaving] = useState(false);
-    const [success, setSuccess] = useState(false);
-    const lockRef = useRef(false); // Debounce lock to prevent concurrent saves
 
     // Status Logic
     const qty = Number(item.current_quantity) || 0;
@@ -24,27 +19,23 @@ export default function StockCard({
     const isCritical = (minThreshold > 0 && qty <= minThreshold + EPSILON) || (qty <= EPSILON);
     const isWarning = !isCritical && reorderPoint > 0 && qty <= reorderPoint + EPSILON;
     
-    // Choose styling based on status and saving state
+    // Styling by stock status
     let bgClass = 'bg-white border-[var(--color-hallmark-rule)] shadow-sm';
-    if (success) {
-        bgClass = 'bg-green-50/50 border-green-300 shadow-sm';
-    } else if (saving) {
-        bgClass = 'bg-blue-50/50 border-blue-300 shadow-sm';
-    } else if (isCritical) {
+    if (isCritical) {
         bgClass = 'bg-red-50/40 border-red-200 shadow-sm';
     } else if (isWarning) {
         bgClass = 'bg-orange-50/40 border-orange-200 shadow-sm';
     }
 
-    const textClass = isCritical && !saving && !success
+    const textClass = isCritical
         ? 'text-red-700'
-        : isWarning && !saving && !success
+        : isWarning
             ? 'text-orange-700'
             : 'text-[var(--color-hallmark-ink)]';
 
-    const labelClass = isCritical && !saving && !success
+    const labelClass = isCritical
         ? 'text-red-500'
-        : isWarning && !saving && !success
+        : isWarning
             ? 'text-orange-500'
             : 'text-gray-400';
 
@@ -56,51 +47,15 @@ export default function StockCard({
         item.conversion_factor
     );
 
-    const successTimerRef = useRef(null);
 
-    React.useEffect(() => {
-        return () => {
-            if (successTimerRef.current) clearTimeout(successTimerRef.current);
-        };
-    }, []);
-
-    const triggerUpdate = async (newQty) => {
-        if (!onUpdate || lockRef.current) return; // Skip if already saving
-        lockRef.current = true;
-        setSaving(true);
-        setSuccess(false);
-        try {
-            await onUpdate(item.id, Number(newQty.toFixed(4)), 'set', {
-                note: `ตรวจนับด่วน: ${Math.floor(newQty)} ${item.unit || 'ชิ้น'} (เต็ม) ${newQty % 1 > 0 ? `+ เปิดแล้ว ${Math.round((newQty % 1) * 100)}%` : ''}`
-            });
-            setSuccess(true);
-            if (successTimerRef.current) clearTimeout(successTimerRef.current);
-            successTimerRef.current = setTimeout(() => setSuccess(false), 1500);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setSaving(false);
-            lockRef.current = false;
-        }
-    };
-
-    const unitLower = (item.unit || '').toLowerCase();
-    const isLiquidOrSplit = item.category === 'sauce' || item.category === 'spirits' || 
-                           unitLower.includes('bottle') || unitLower.includes('l') || unitLower.includes('ขวด') ||
-                           unitLower.includes('bag') || unitLower.includes('ถุง') || unitLower.includes('kg') || unitLower.includes('g') ||
-                           item.usage_unit;
 
     const cat = categories?.find(c => c.id === item.category);
     const categoryLabel = cat ? `${cat.icon} ${cat.label}` : '';
 
     return (
         <div 
-            onClick={() => {
-                if (!quickCountMode) onClick(item);
-            }}
-            className={`sc-card ${quickCountMode ? 'sc-card--non-interactive' : ''} ${
-                success ? 'sc-card--success' : 
-                saving ? 'sc-card--saving' : 
+            onClick={() => onClick(item)}
+            className={`sc-card ${
                 isCritical ? 'sc-card--critical' : 
                 isWarning ? 'sc-card--warning' : ''
             }`}
@@ -113,7 +68,7 @@ export default function StockCard({
             )}
 
             {/* Recipe trigger */}
-            {!searchActive && !quickCountMode && (
+            {!searchActive && (
                 <div 
                     onClick={(e) => {
                         e.stopPropagation();
@@ -128,13 +83,9 @@ export default function StockCard({
                 </div>
             )}
 
-            {/* Status Indicator Icon / Saving Spinner / Success Check */}
+            {/* Status Indicator Icon */}
             <div className={`sc-status-icon ${isCritical ? 'sc-status-icon--critical' : 'sc-status-icon--warning'}`}>
-                {saving ? (
-                    <Loader2 className="animate-spin" />
-                ) : success ? (
-                    <Check />
-                ) : (isCritical || isWarning) && (
+                {(isCritical || isWarning) && (
                     <AlertTriangle />
                 )}
             </div>
@@ -165,7 +116,6 @@ export default function StockCard({
                 
                 {/* Quantity Display */}
                 <div className="sc-qty">
-                    {!quickCountMode ? (
                         <div className="sc-breakdown">
                             {/* Main Summary */}
                             <div className="sc-qty__header">
@@ -200,68 +150,11 @@ export default function StockCard({
                                 )}
                             </div>
                         </div>
-                    ) : (
-                        /* Inline Adjuster Mode */
-                        <div className="sp-adjuster" onClick={e => e.stopPropagation()}>
-                            <div className="sp-adjuster__header">ยังไม่เปิด ({item.unit})</div>
-                            
-                            {/* Counter */}
-                            <div className="sp-adjuster__counter">
-                                <button 
-                                    type="button"
-                                    onClick={() => triggerUpdate(Math.max(0, fullUnits - 1) + (percent / 100))}
-                                    className="sp-adjuster__btn"
-                                >
-                                    <Minus className="w-3 h-3" />
-                                </button>
-                                
-                                <input 
-                                    type="number"
-                                    value={fullUnits}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value) || 0;
-                                        triggerUpdate(Math.max(0, val) + (percent / 100));
-                                    }}
-                                    className="sp-adjuster__input"
-                                />
-
-                                <button 
-                                    type="button"
-                                    onClick={() => triggerUpdate((fullUnits + 1) + (percent / 100))}
-                                    className="sp-adjuster__btn"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                </button>
-                            </div>
-
-                            {/* Percentage buttons for opened liquid/remainder */}
-                            {isLiquidOrSplit && (
-                                <>
-                                    <div className="sp-adjuster__percent-label">เปิดแล้ว (เศษ)</div>
-                                    <div className="sp-adjuster__percent-grid">
-                                        {[0, 25, 50, 75].map((p) => {
-                                            const isActive = percent === p;
-                                            return (
-                                                <button
-                                                    key={p}
-                                                    type="button"
-                                                    onClick={() => triggerUpdate(fullUnits + (p / 100))}
-                                                    className={`sp-adjuster__percent-btn ${isActive ? 'sp-adjuster__percent-btn--active' : ''}`}
-                                                >
-                                                    {p === 0 ? '0%' : `${p}%`}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
                 </div>
             </div>
             
             {/* Visual Bar for Proportional Layout */}
-            {!quickCountMode && item.par_level > 0 && (
+            {item.par_level > 0 && (
                 <div className="sc-par-bar">
                     <div 
                         className={`sc-par-fill ${isCritical ? 'sc-par-fill--critical' : isWarning ? 'sc-par-fill--warning' : ''}`}

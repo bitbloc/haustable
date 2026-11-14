@@ -46,6 +46,7 @@ const MemberCard = lazy(() => import('./pages/MemberCard'))
 const StaffDashboard = lazy(() => import('./StaffDashboard'))
 const StaffLiveOrders = lazy(() => import('./StaffLiveOrders'))
 const StockPage = lazy(() => import('./StockPage'))
+const StockCountPage = lazy(() => import('./components/stock/StockCountPage'))
 const MenuCostPage = lazy(() => import('./components/admin/MenuCostPage'))
 const RecipeLabPage = lazy(() => import('./components/admin/RecipeLabPage'))
 const SOPEditorPage = lazy(() => import('./components/admin/SOPEditorPage'))
@@ -223,6 +224,7 @@ function App() {
                   <Route path="costing" element={<AdminMenu defaultTab="costing" />} />
                   <Route path="lab" element={<AdminMenu defaultTab="lab" />} />
                   <Route path="sop" element={<AdminMenu defaultTab="sop" />} />
+                  <Route path="stock-recon" element={<AdminMenu defaultTab="stock" />} />
                   <Route path="marketing" element={<AdminMarketingPage defaultTab="members" />} />
                   <Route path="ads" element={<AdminMarketingPage defaultTab="ads_landing" />} />
                   <Route path="link-analytics" element={<AdminMarketingPage defaultTab="ads_landing" />} />
@@ -249,6 +251,7 @@ function App() {
                   <Route path="/staff/history" element={<StaffLiveOrders />} />
                   <Route path="/staff/checkin" element={<StaffLiveOrders />} />
                   <Route path="/staff/stock" element={<StockPage />} />
+                  <Route path="/staff/stock/count" element={<StockCountPage />} />
                   <Route path="/staff/sop" element={<BarSOPPage />} />
                 </Route>
               </Route>

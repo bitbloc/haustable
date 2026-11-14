@@ -983,6 +983,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     const handleUpdateStock = async (id, newFormData) => {
         try {
+            // Same model as the stock item form: the item is counted in its purchase unit.
+            newFormData = { ...newFormData, unit: newFormData.pack_unit };
             const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
             if (error) throw error;
             

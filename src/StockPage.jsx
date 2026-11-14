@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { formatStockDisplay } from './utils/stockUtils';
 import { logStaffActivity } from './utils/auditLogger';
-import { postStockMovement, STOCK_REASONS } from './utils/stockLedger';
+import { postStockMovement, recordSpotCount, STOCK_REASONS } from './utils/stockLedger';
 
 // Per-glass recipes and templates live in stock_items for costing but are never counted.
 // Only hidden once the database marks them explicitly, so nothing disappears before that.
@@ -48,7 +48,6 @@ export default function StockPage() {
     const [showCategoryManager, setShowCategoryManager] = useState(false); // Added
     const [showItemForm, setShowItemForm] = useState(false); // Added
     const [editingItem, setEditingItem] = useState(null); // Added
-    const [quickCountMode, setQuickCountMode] = useState(false); // Added
     
     // Recipe Builder State
     const [isRecipeOpen, setIsRecipeOpen] = useState(false);
@@ -180,14 +179,21 @@ export default function StockPage() {
             // Ledger RPC: locks the row, applies the change and records the real
             // difference + balance in one transaction. The branches below are only the
             // fallback for a database that does not have the RPC yet.
-            const ledger = await postStockMovement({
-                itemId,
-                mode: type === 'set' ? 'set' : 'delta',
-                quantity: roundedChange,
-                reason: type === 'set' ? STOCK_REASONS.COUNT_ADJUST : (type === 'in' ? STOCK_REASONS.PURCHASE : STOCK_REASONS.ADJUST),
-                performedBy,
-                note: diagNote
-            });
+            // A count of one item is recorded as a mid-day count session so the daily
+            // reconciliation sees it; receipts and withdrawals go straight to the ledger.
+            let ledger = type === 'set'
+                ? await recordSpotCount({ itemId, countedQty: roundedChange, performedBy, note: diagNote })
+                : { ok: false, rpcMissing: true };
+            if (!ledger.ok && ledger.rpcMissing) {
+                ledger = await postStockMovement({
+                    itemId,
+                    mode: type === 'set' ? 'set' : 'delta',
+                    quantity: roundedChange,
+                    reason: type === 'set' ? STOCK_REASONS.COUNT_ADJUST : (type === 'in' ? STOCK_REASONS.PURCHASE : STOCK_REASONS.ADJUST),
+                    performedBy,
+                    note: diagNote
+                });
+            }
             if (!ledger.ok && !ledger.rpcMissing) throw ledger.error;
 
             if (ledger.ok) {
@@ -873,14 +879,14 @@ export default function StockPage() {
                             </button>
                         </div>
                         
-                        {/* Quick Count Mode Toggle */}
+                        {/* Counting happens in count sessions (opening / spot / closing) */}
                         <button 
-                            onClick={() => setQuickCountMode(!quickCountMode)}
-                            className={`sp-controls__quick-count ${quickCountMode ? 'sp-controls__quick-count--active' : ''}`}
-                            title="โหมดตรวจนับสต็อกด่วน (Quick Count Mode)"
+                            onClick={() => navigate('/staff/stock/count')}
+                            className="sp-controls__quick-count"
+                            title="นับสต๊อกเป็นรอบ: เปิดร้าน / ระหว่างวัน / ปิดร้าน"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
-                            <span>ตรวจนับด่วน</span>
+                            <span>นับสต๊อก</span>
                         </button>
                     </div>
 
@@ -940,8 +946,6 @@ export default function StockPage() {
                                     item={item} 
                                     onClick={(i) => setSelectedItem(i)} 
                                     onRecipe={handleOpenRecipe}
-                                    quickCountMode={quickCountMode}
-                                    onUpdate={handleAdjustment}
                                     searchActive={searchQuery.trim() !== ''}
                                     categories={categories}
                                  />
@@ -955,8 +959,6 @@ export default function StockPage() {
                                     item={item}
                                     onClick={(i) => setSelectedItem(i)}
                                     onRecipe={handleOpenRecipe}
-                                    quickCountMode={quickCountMode}
-                                    onUpdate={handleAdjustment}
                                     searchActive={searchQuery.trim() !== ''}
                                     categories={categories}
                                 />

@@ -5,7 +5,7 @@ vi.mock('../../lib/supabaseClient', () => ({
     supabase: { rpc: (...args) => rpcMock(...args) }
 }));
 
-import { postStockMovement, STOCK_REASONS } from '../stockLedger';
+import { postStockMovement, recordSpotCount, STOCK_REASONS } from '../stockLedger';
 
 describe('postStockMovement', () => {
     beforeEach(() => rpcMock.mockReset());
@@ -68,5 +68,30 @@ describe('postStockMovement', () => {
         const res = await postStockMovement({ itemId: 'x', mode: 'delta', quantity: 1, reason: 'nonsense' });
         expect(res.ok).toBe(false);
         expect(res.rpcMissing).toBe(false);
+    });
+});
+
+describe('recordSpotCount', () => {
+    beforeEach(() => rpcMock.mockReset());
+
+    it('sends a one-line spot count session and maps the result', async () => {
+        rpcMock.mockResolvedValue({ data: { session_id: 's1', lines: [{ system_qty: 12, counted_qty: 9.5, diff: -2.5 }] }, error: null });
+        const res = await recordSpotCount({ itemId: 'i1', countedQty: 9.5, performedBy: 'ก้อง', note: 'นับสต็อกได้' });
+        expect(rpcMock.mock.calls[0][0]).toBe('submit_stock_count');
+        expect(rpcMock.mock.calls[0][1]).toMatchObject({ p_kind: 'spot', p_lines: [{ stock_item_id: 'i1', counted_qty: 9.5, note: 'นับสต็อกได้' }], p_performed_by: 'ก้อง' });
+        expect(res).toMatchObject({ ok: true, data: { old_quantity: 12, new_quantity: 9.5, quantity_change: -2.5, session_id: 's1' } });
+    });
+
+    it('reports a missing count-session RPC so the caller can fall back', async () => {
+        rpcMock.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'Could not find the function public.submit_stock_count' } });
+        const res = await recordSpotCount({ itemId: 'i1', countedQty: 1 });
+        expect(res.ok).toBe(false);
+        expect(res.rpcMissing).toBe(true);
+    });
+
+    it('rejects a negative count without calling the database', async () => {
+        const res = await recordSpotCount({ itemId: 'i1', countedQty: -1 });
+        expect(res.ok).toBe(false);
+        expect(rpcMock).not.toHaveBeenCalled();
     });
 });

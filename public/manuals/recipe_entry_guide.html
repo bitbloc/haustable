@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือการลงสูตร - IN THE HAUS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Manual · theme: Thai Modern OKLCH */
+        :root {
+            --color-paper: oklch(97% 0.008 28);
+            --color-paper-2: oklch(94% 0.010 28);
+            --color-rule: oklch(85% 0.012 28);
+            --color-neutral: oklch(55% 0.010 28);
+            --color-muted: oklch(42% 0.010 28);
+            --color-ink: oklch(18% 0.012 28);
+            --color-accent: oklch(52% 0.16 28);
+            --color-accent-2: oklch(45% 0.08 140);
+            --color-surface: oklch(99% 0.004 28);
+            --font-body: 'IBM Plex Sans Thai', sans-serif;
+            --font-mono: 'Space Mono', 'IBM Plex Sans Thai', monospace;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --color-paper: oklch(17% 0.010 28);
+                --color-paper-2: oklch(22% 0.012 28);
+                --color-rule: oklch(32% 0.012 28);
+                --color-neutral: oklch(68% 0.010 28);
+                --color-muted: oklch(78% 0.010 28);
+                --color-ink: oklch(94% 0.008 28);
+                --color-accent: oklch(70% 0.14 28);
+                --color-accent-2: oklch(72% 0.08 140);
+                --color-surface: oklch(20% 0.010 28);
+            }
+        }
+        :root[data-theme="dark"] {
+            --color-paper: oklch(17% 0.010 28);
+            --color-paper-2: oklch(22% 0.012 28);
+            --color-rule: oklch(32% 0.012 28);
+            --color-neutral: oklch(68% 0.010 28);
+            --color-muted: oklch(78% 0.010 28);
+            --color-ink: oklch(94% 0.008 28);
+            --color-accent: oklch(70% 0.14 28);
+            --color-accent-2: oklch(72% 0.08 140);
+            --color-surface: oklch(20% 0.010 28);
+        }
+
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--color-paper);
+            color: var(--color-ink);
+            font-family: var(--font-body);
+            font-size: 16px;
+            line-height: 1.75;
+            -webkit-font-smoothing: antialiased;
+        }
+        .page { max-width: 880px; margin: 0 auto; padding: 32px 16px 96px; }
+        .label {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-accent);
+        }
+        h1 { font-size: 32px; line-height: 1.4; margin: 8px 0 8px; font-weight: 700; }
+        h2 {
+            font-size: 22px; line-height: 1.5; font-weight: 700;
+            margin: 56px 0 16px; padding-top: 24px;
+            border-top: 1px solid var(--color-rule);
+        }
+        h2 .num { font-family: var(--font-mono); color: var(--color-neutral); font-weight: 400; margin-right: 8px; }
+        h3 { font-size: 17px; line-height: 1.6; font-weight: 700; margin: 32px 0 8px; }
+        p { margin: 0 0 16px; }
+        .lead { font-size: 17px; color: var(--color-muted); max-width: 64ch; }
+        ol, ul { margin: 0 0 16px; padding-left: 24px; }
+        li { margin-bottom: 8px; }
+        strong { font-weight: 700; }
+        code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+
+        .toc {
+            border: 1px solid var(--color-rule);
+            background: var(--color-surface);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            margin-top: 32px;
+        }
+        .toc a {
+            display: flex; gap: 12px; align-items: baseline;
+            padding: 12px 16px; color: var(--color-ink); text-decoration: none;
+            border-bottom: 1px solid var(--color-rule);
+        }
+        .toc a:hover { background: var(--color-paper-2); }
+        .toc .num { font-family: var(--font-mono); font-size: 12px; color: var(--color-neutral); }
+
+        .types {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            border: 1px solid var(--color-rule); background: var(--color-surface);
+        }
+        .types > div { padding: 16px; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); }
+        .types h4 { margin: 0 0 4px; font-size: 16px; }
+        .types p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--color-muted); }
+        .types .ex { margin-top: 8px; font-size: 13px; color: var(--color-neutral); }
+
+        .table-wrap { overflow-x: auto; border: 1px solid var(--color-rule); background: var(--color-surface); margin: 0 0 16px; }
+        table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.7; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-rule); vertical-align: top; }
+        th { font-weight: 700; background: var(--color-paper-2); white-space: nowrap; }
+        td.mono, th.mono { white-space: nowrap; }
+        tr:last-child td { border-bottom: 0; }
+        .table-wrap.wide table { min-width: 640px; }
+        td { word-break: keep-all; line-break: strict; }
+
+        .note {
+            border-left: 2px solid var(--color-accent);
+            padding: 8px 0 8px 16px; margin: 16px 0 24px;
+            color: var(--color-muted); font-size: 15px;
+        }
+        .note strong { color: var(--color-ink); }
+
+        .steps { counter-reset: s; list-style: none; padding: 0; }
+        .steps > li {
+            counter-increment: s; position: relative;
+            padding: 0 0 0 48px; margin-bottom: 16px;
+        }
+        .steps > li::before {
+            content: counter(s, decimal-leading-zero);
+            position: absolute; left: 0; top: 2px;
+            font-family: var(--font-mono); font-size: 13px; color: var(--color-neutral);
+        }
+
+        .check { list-style: none; padding: 0; border: 1px solid var(--color-rule); background: var(--color-surface); }
+        .check li { margin: 0; padding: 10px 16px 10px 44px; border-bottom: 1px solid var(--color-rule); position: relative; }
+        .check li:last-child { border-bottom: 0; }
+        .check li::before {
+            content: ""; position: absolute; left: 16px; top: 16px;
+            width: 14px; height: 14px; border: 1px solid var(--color-neutral);
+        }
+        .check .why { display: block; font-size: 13px; color: var(--color-neutral); }
+
+        .meta { font-family: var(--font-mono); font-size: 12px; color: var(--color-neutral); margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--color-rule); }
+
+        @media print {
+            body { background: #fff; }
+            .page { padding: 0; }
+            h2 { break-before: auto; }
+            .table-wrap, .check, .types { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <span class="label">Stock · Recipe Entry Guide</span>
+    <h1>คู่มือการลงสูตร</h1>
+    <p class="lead">ลงสูตรให้ระบบคำนวณได้ว่าขายแต่ละจานใช้วัตถุดิบอะไรเท่าไหร่ เพื่อเทียบกับยอดที่นับจริงทุกวัน และใช้ตัดสต๊อกอัตโนมัติในอนาคต</p>
+
+    <nav class="toc" aria-label="สารบัญ">
+        <a href="#types"><span class="num">01</span><span>ของ 3 ชนิดในระบบ</span></a>
+        <a href="#order"><span class="num">02</span><span>ลำดับการลง</span></a>
+        <a href="#raw"><span class="num">03</span><span>ตั้งค่าวัตถุดิบ</span></a>
+        <a href="#prep"><span class="num">04</span><span>ของเตรียม</span></a>
+        <a href="#recipe"><span class="num">05</span><span>สูตรต่อแก้ว / จาน</span></a>
+        <a href="#menu"><span class="num">06</span><span>ผูกสูตรกับเมนูขาย</span></a>
+        <a href="#check"><span class="num">07</span><span>ตรวจว่าลงถูก</span></a>
+        <a href="#mistakes"><span class="num">08</span><span>ข้อผิดพลาดที่พบบ่อย</span></a>
+        <a href="#onsite"><span class="num">09</span><span>รายการที่ต้องตรวจหน้างาน</span></a>
+    </nav>
+
+    <h2 id="types"><span class="num">01</span>ของ 3 ชนิดในระบบ</h2>
+    <div class="types">
+        <div>
+            <h4>วัตถุดิบ</h4>
+            <p>ของที่ซื้อมาและนับบนชั้น</p>
+            <p class="ex">โซดา, หมูสามชั้น, ใบชา, แก้ว 16 oz</p>
+        </div>
+        <div>
+            <h4>ของเตรียม</h4>
+            <p>ทำเองจากสูตร ทำครั้งละ 1 portion แล้วได้ปริมาณหนึ่ง</p>
+            <p class="ex">เบส-ชาไทย, นมมิกซ์, ซอสหมูหวาน</p>
+        </div>
+        <div>
+            <h4>สูตรต่อแก้ว / จาน</h4>
+            <p>สิ่งที่ใช้ทำ 1 ที่ ไม่เก็บเป็นสต๊อก</p>
+            <p class="ex">Soft Drink - ชาไทย, Cocktail-มายา</p>
+        </div>
+    </div>
+    <p style="margin-top:16px"><strong>เมนูขาย</strong> (ในเมนูหน้าร้าน) ไม่ใช่ทั้ง 3 ชนิดนี้ เมนูขายจะชี้ไปที่สูตรต่อแก้ว/จาน หรือใส่วัตถุดิบ/ของเตรียมตรง ๆ</p>
+    <p><strong>1 portion</strong> คือการทำของเตรียม 1 รอบ ไม่ว่ารอบนั้นจะได้มากหรือน้อย ส่วน <strong>1 ที่</strong> คือ 1 แก้วหรือ 1 จานที่ขาย</p>
+
+    <h2 id="order"><span class="num">02</span>ลำดับการลง</h2>
+    <p>ลงจากล่างขึ้นบน เพราะชั้นบนอ้างถึงชั้นล่าง</p>
+    <ol class="steps">
+        <li><strong>วัตถุดิบ</strong> ตั้งหน่วยและราคาให้ถูกก่อน ถ้าหน่วยผิด ทุกสูตรที่ใช้จะผิดตาม</li>
+        <li><strong>ของเตรียม</strong> ใส่ส่วนผสมของ 1 portion และชั่งหรือตวงว่าได้เท่าไหร่</li>
+        <li><strong>สูตรต่อแก้ว / จาน</strong> ใส่ทุกอย่างที่ใช้ทำ 1 ที่ รวมแก้ว ฝา หลอด กล่อง</li>
+        <li><strong>ผูกกับเมนูขาย</strong> ที่หน้า Food Costing เริ่มจากเมนูที่ขายดีที่สุด</li>
+    </ol>
+    <p class="note"><strong>เป้าหมาย:</strong> ยอดขาย 30 วันมีสูตรเกิน 80% ตัวเลขนี้ดูได้ที่แผง "ความพร้อมตัดสต๊อกจากยอดขาย" บนหน้า Food Costing</p>
+
+    <h2 id="raw"><span class="num">03</span>ตั้งค่าวัตถุดิบ</h2>
+    <p>แก้ได้ 2 ที่: หน้าคลังสต๊อก (กดที่รายการ แล้วแก้ไข) หรือกด <span class="mono">[EDIT STOCK]</span> ที่แถววัตถุดิบใน Recipe Builder ทั้งสองที่ใช้กติกาเดียวกัน</p>
+
+    <h3>4 ช่องที่ต้องถูก</h3>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ช่อง</th><th>ใส่อะไร</th></tr></thead>
+            <tbody>
+                <tr><td><strong>หน่วยซื้อ</strong></td><td>หน่วยที่คุณ <strong>นับบนชั้น</strong> เช่น ขวด ถุง กล่อง kg ระบบนับสต๊อกเป็นหน่วยนี้</td></tr>
+                <tr><td><strong>ปริมาณ (Size)</strong></td><td>ซื้อครั้งละกี่หน่วยข้างบน ปกติคือ 1 ถ้าซื้อยกลังให้ใส่จำนวนในลัง</td></tr>
+                <tr><td><strong>ราคาซื้อต่อแพ็ค</strong></td><td>ราคาที่จ่ายสำหรับปริมาณข้างบน</td></tr>
+                <tr><td><strong>หน่วยที่ใช้จริง</strong> + <strong>ตัวแปลงหน่วย</strong></td><td>หน่วยที่ใช้ตวงในสูตร (g, ml, ชิ้น) และ 1 หน่วยซื้อมีกี่หน่วยใช้</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>ตัวอย่าง</h3>
+    <div class="table-wrap wide">
+        <table>
+            <thead><tr><th>วัตถุดิบ</th><th>หน่วยซื้อ</th><th class="mono">Size</th><th>ราคา</th><th>หน่วยใช้</th><th class="mono">ตัวแปลง</th></tr></thead>
+            <tbody>
+                <tr><td>โซดา (ซื้อทีละขวด)</td><td>ขวด (Bottle)</td><td class="mono">1</td><td>ราคา 1 ขวด</td><td>ml</td><td class="mono">325</td></tr>
+                <tr><td>โค้ก (ซื้อยกลัง 12)</td><td>ขวด (Bottle)</td><td class="mono">12</td><td>ราคาทั้งลัง</td><td>ขวด (Bottle)</td><td class="mono">1</td></tr>
+                <tr><td>หมูสามชั้น</td><td>kg</td><td class="mono">1</td><td>ราคา 1 kg</td><td>g</td><td class="mono">1000</td></tr>
+                <tr><td>ชาไทยถุงทอง</td><td>ถุง (Bag)</td><td class="mono">1</td><td>ราคา 1 ถุง</td><td>g</td><td class="mono">400</td></tr>
+                <tr><td>น้ำแกลอน Aro 6 ลิตร</td><td>หน่วย/ชิ้น (Unit)</td><td class="mono">1</td><td>ราคา 1 แกลอน</td><td>ml</td><td class="mono">6000</td></tr>
+                <tr><td>แก้ว 16 oz (แพ็ค 50 ใบ)</td><td>แพ็ค (Pack)</td><td class="mono">1</td><td>ราคา 1 แพ็ค</td><td>แก้ว (Glass)</td><td class="mono">50</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="note"><strong>ห้ามเลือก "แกลลอน (Gallon)" สำหรับแกลอนไทย</strong> หน่วยนี้คือแกลลอนอเมริกัน 3.785 ลิตร ระบบจะเติมตัวแปลงเป็น 3785 ให้อัตโนมัติ ให้เลือก "หน่วย/ชิ้น" แล้วพิมพ์ปริมาณจริงเอง</p>
+    <p class="note"><strong>ตัวแปลงต้องไม่ใช่ 1</strong> ถ้าหน่วยซื้อเป็นขวด/ถุง แต่ตวงเป็น ml หรือ g เพราะหมายความว่า 1 ขวดมีแค่ 1 ml</p>
+    <p class="note"><strong>Yield %</strong> ใช้กับของที่ตัดแต่งแล้วเสียไปบางส่วน เช่น เนื้อที่เล็มมันออก 20% ให้ใส่ 80 ของที่ใช้ได้หมดให้ใส่ 100</p>
+    <p class="note"><strong>หลังแก้หน่วยซื้อ ให้นับยอดคงเหลือใหม่</strong> ตัวเลขเดิมนับด้วยหน่วยเก่า</p>
+
+    <h2 id="prep"><span class="num">04</span>ของเตรียม</h2>
+    <p>Recipe Lab → แท็บ "ของเตรียม" → เปิดรายการ หรือกด "สร้างใหม่" แล้วเลือก "ของเตรียม"</p>
+    <ol class="steps">
+        <li>ใส่ส่วนผสมของ <strong>1 portion</strong> ตามที่ทำจริงในครัว เป็นหน่วยใช้ (g, ml)</li>
+        <li><strong>ชั่งหรือตวงของที่ได้จริง 1 รอบ</strong> แล้วกรอกในช่อง "1 portion ได้" พร้อมหน่วย ตัวเลขนี้สำคัญที่สุด ทุกเมนูที่ใช้ของเตรียมนี้คำนวณจากมัน</li>
+        <li>เลือกการตัดสต๊อก:
+            <ul>
+                <li><strong>ผลิตเก็บไว้</strong> สำหรับของที่ทำครั้งละมากและเก็บข้ามวัน เช่น เบสชา ซอส ไซรัป เมื่อทำเสร็จต้องกด "ผลิต" ที่การ์ด</li>
+                <li><strong>ตัดทะลุ</strong> สำหรับของที่ทำสดต่อจาน หรือทำแล้วใช้หมดในกะ ไม่ต้องกดผลิต</li>
+            </ul>
+        </li>
+        <li>บันทึก ระบบจะแสดงต้นทุนต่อ portion และต้นทุนต่อ g หรือ ml</li>
+    </ol>
+    <h3>ปุ่ม "ผลิต"</h3>
+    <p>กดทุกครั้งที่ทำของเตรียมแบบ "ผลิตเก็บไว้" เสร็จ ใส่จำนวน portion ที่ทำ และถ้าได้ไม่ตรงสูตรให้กรอก "ได้จริง" ระบบจะตัดวัตถุดิบตามสูตรและเพิ่มสต๊อกของเตรียมให้</p>
+    <p class="note"><strong>ถ้าลืมกดผลิต</strong> สต๊อกของเตรียมในระบบจะติดลบ ซึ่งเป็นสัญญาณให้รู้ว่าลืม ไม่ทำให้การขายติดขัด</p>
+
+    <h2 id="recipe"><span class="num">05</span>สูตรต่อแก้ว / จาน</h2>
+    <p>ส่วนใหญ่มีอยู่แล้วจาก Bar SOP (แท็บ "สูตรต่อแก้ว/จาน" ใน Recipe Lab) ให้ตรวจและเติมให้ครบ</p>
+    <ul>
+        <li>ใส่ <strong>ทุกอย่าง</strong> ที่หยิบใช้ใน 1 ที่: วัตถุดิบ ของเตรียม แก้ว ฝา หลอด แผ่นรองแก้ว ถุง</li>
+        <li>ปริมาณเป็นหน่วยใช้ของวัตถุดิบนั้น เช่น เบส-ชาไทย 200 ml ไม่ใช่ "0.2 portion"</li>
+        <li>สูตรต่อแก้วใส่ได้เฉพาะวัตถุดิบกับของเตรียม <strong>ห้ามใส่สูตรต่อแก้วตัวอื่นซ้อน</strong></li>
+        <li>เมนูร้อน/เย็นที่สูตรต่างกันเยอะ ให้ทำสูตรหลักก่อน (ส่วนใหญ่คือเย็น) ส่วนต่างของร้อนจะลงผ่านตัวเลือกเมนูภายหลัง</li>
+    </ul>
+
+    <h2 id="menu"><span class="num">06</span>ผูกสูตรกับเมนูขาย</h2>
+    <p>หน้า Food Costing → แผง "ความพร้อมตัดสต๊อกจากยอดขาย" เมนูเรียงจากขายดีที่สุด</p>
+    <ul>
+        <li><strong>ปุ่ม "ผูก ..."</strong> ขึ้นเมื่อมีสูตรต่อแก้วที่ชื่อตรงกัน กดแล้วเมนูนั้นใช้สูตรนั้น 1 ที่ต่อการขาย 1 ที่ ตรวจชื่อก่อนกด</li>
+        <li><strong>ปุ่ม "สร้างสูตร"</strong> เปิด Recipe Builder ของเมนูนั้น สำหรับอาหาร ใส่วัตถุดิบและของเตรียมของ 1 จานได้เลย ไม่ต้องสร้างสูตรต่อจานแยก</li>
+        <li>เมนูที่มี 2 ตัวเลือก เช่น Cocktail กับ Mocktail ให้ผูกตัวที่ขายบ่อยกว่าก่อน</li>
+        <li>เมนูเซตและเมนูที่มีตัวเลือกเพิ่มวัตถุดิบ (เพิ่มช็อต นม Oat ไข่ดาว เครื่องดื่มในเซต) จะลงผ่านหน้าตัวเลือกเมนู ซึ่งยังไม่เปิดใช้ ตอนนี้ผูกส่วนหลักไว้ก่อน</li>
+    </ul>
+    <p class="note"><strong>ข้าวสวย น้ำเปล่า น้ำแข็ง</strong> ขายมากที่สุดและสูตรง่ายที่สุด ลงก่อนจะขยับตัวเลขความพร้อมได้เร็ว</p>
+
+    <h2 id="check"><span class="num">07</span>ตรวจว่าลงถูก</h2>
+    <ol class="steps">
+        <li><strong>Recipe Lab → แท็บ "ต้องแก้"</strong> แสดงสูตรที่ยังขาดอะไรพร้อมเหตุผล เช่น วัตถุดิบยังไม่มีราคา ของเตรียมยังไม่มีปริมาณต่อ portion หน่วยในสูตรไม่ตรง</li>
+        <li><strong>ต้นทุนต่อแก้ว/จาน</strong> ควรสมเหตุสมผล ถ้าเครื่องดื่มต้นทุนหลักร้อยบาท แปลว่ามีหน่วยหรือปริมาณผิด</li>
+        <li><strong>แผงความพร้อม</strong> บนหน้า Food Costing ตัวเลข % ต้องขยับขึ้นหลังผูกเมนู</li>
+        <li>ระบบบันทึกยอดที่ควรใช้จากการขายไว้แล้ว (ยังไม่ตัดสต๊อกจริง) เมื่อลงสูตรครบจะเทียบกับยอดนับปิดร้าน ถ้าตัวไหนต่างกันมาก แปลว่าสูตรหรือหน่วยของตัวนั้นผิด</li>
+    </ol>
+
+    <h2 id="mistakes"><span class="num">08</span>ข้อผิดพลาดที่พบบ่อย</h2>
+    <div class="table-wrap wide">
+        <table>
+            <thead><tr><th>อาการ</th><th>สาเหตุ</th><th>แก้</th></tr></thead>
+            <tbody>
+                <tr><td>ต้นทุนแก้วละหลายร้อยหรือหลายล้านบาท</td><td>ของเตรียมไม่มีปริมาณต่อ portion หรือตัวแปลงหน่วยเป็น 1</td><td>กรอก "1 portion ได้" / แก้ตัวแปลง</td></tr>
+                <tr><td>ยอดที่ควรใช้เป็นหลายพันขวด</td><td>ซื้อเป็นขวดแต่ตวงเป็น ml โดยตัวแปลงเป็น 1</td><td>ใส่ ml ต่อขวดในตัวแปลง</td></tr>
+                <tr><td>ใช้หน่วย "unit" ในสูตรทั้งที่ตวงเป็น ml</td><td>เพิ่มวัตถุดิบก่อนตั้งหน่วยใช้</td><td>ตั้งหน่วยใช้ของวัตถุดิบ แล้วเปิดสูตรแก้ปริมาณใหม่</td></tr>
+                <tr><td>ของเตรียมใช้สูตรเครื่องดื่มเป็นส่วนผสม</td><td>เลือกผิดตัวในคลังวัตถุดิบ</td><td>ลบออก แล้วใส่วัตถุดิบจริง (เช่น ใบชา)</td></tr>
+                <tr><td>วัตถุดิบชื่อซ้ำ 2 รายการ</td><td>สร้างใหม่โดยไม่ค้นก่อน</td><td>ค้นหาก่อนสร้างทุกครั้ง ใช้ตัวที่มีราคาและยอดคงเหลือ</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 id="onsite"><span class="num">09</span>รายการที่ต้องตรวจหน้างาน</h2>
+    <p>ระบบเดาค่าเหล่านี้ไม่ได้ ต้องดูของจริง สถานะ ณ 14 พ.ย. 2569</p>
+
+    <h3>ก่อนเริ่ม</h3>
+    <ul class="check">
+        <li>นับยอดคงเหลือใหม่ทุกรายการ<span class="why">ตัวเลขปัจจุบันเป็นค่าจำลอง</span></li>
+        <li>ใส่ราคาทุนของวัตถุดิบที่ใช้ในสูตร<span class="why">วัตถุดิบที่อยู่ในสูตรแล้วมีราคา 41 จาก 62 รายการ ราคาจาก makro.pro ใส่ได้ ถ้าร้านซื้อที่อื่นให้ใช้ราคาที่ซื้อจริง</span></li>
+    </ul>
+
+    <h3>ขวดและกล่องที่ต้องใส่ปริมาณต่อหน่วย (ml)</h3>
+    <ul class="check">
+        <li>Tanqueray London Dry Gin, Sone Wiski Alt</li>
+        <li>ไซรัปราสเบอร์รี่, ยูซุ, ผงมัทฉะ, โกโก้<span class="why">ยูซุ ผงมัทฉะ และโกโก้ ร้านลงเอง</span></li>
+        <li>น้ำมะนาว มะนีมะนาว, น้ำส้มแท้ 100% แมนดาริน Chabaa, น้ำหมากเม่า100%, น้ำมังคุด</li>
+        <li>น้ำมะพร้าวน้ำหอม(มาลี)</li>
+        <li>เปิดสูตรที่ใช้ของในรายการนี้ และแก้หน่วยในสูตรเป็น ml<span class="why">บางสูตรใส่ไว้เป็น "unit" เช่น น้ำมะนาว 15, น้ำส้ม 160</span></li>
+        <li>ตรวจของที่ตั้งราคาและขนาดจาก Makro แล้ว ว่าตรงกับที่ร้านซื้อจริง<span class="why">นมสด M-Milk 2 ล. ฿98, นมข้นจืด นกเหยี่ยว 1 ล. ฿58, ชเวปส์โทนิค 330 มล. แพ็ค 6 ฿86, น้ำแดง เฮลซ์บลูบอย 710 มล. ฿67, ไซรัป Monin ขิง/บ๊วย/ลิ้นจี่ 700 มล. ฿450, ชาตรามือ เอ็กซ์ตร้าโกลด์ 400 ก. ฿109, มะนาวเหลือง 4 ลูก ฿79, น้ำมะพร้าวอีฟ 350 มล. ลัง 24 ฿500, ไทม์ 100 ก. ฿85, โรสแมรี่ 100 ก. ฿79, Jameson 70 ซล. ฿1,049, ชาตรามือ ใบชาแดงอัสสัม 250 ก. ฿110 (ชานม), ชาตรามือ เอ็กซ์ตร้าโกลด์ 400 ก. ฿109 (ชามะลิ), แครนเบอร์รีแช่แข็ง 1 กก. ฿179, น้ำสับปะรดมาลี 1 ล. x3 ฿235</span></li>
+        <li>ของที่ซื้อเป็นน้ำหนักแต่สูตรตวงเป็น ml ระบบแปลงไว้ประมาณ ถ้าตวงจริงได้ต่างให้แก้ตัวแปลง<span class="why">นมข้นหวานมะลิ 2 กก. ≈ 1,540 ml, ไข่ขาวเอโร่ 2 กก. ≈ 1,940 ml, น้ำผึ้งเอโร่ 1 กก. ≈ 704 ml</span></li>
+    </ul>
+
+    <h3>ของสดและของแห้งที่ต้องยืนยันน้ำหนักต่อหน่วยนับ</h3>
+    <ul class="check">
+        <li>กระดูกหมูต้มจิ๋ว (ถุงใหญ่), กุ้งขาวไซส์ใหญ่/กล่อง, เนื้อเสือร้องไห้สไลด์ (แพ็ค), ปลาซาบะ/แพ็ค, ปลาสำลี/แพ็ค, หมูซูวี/ก้อน, พาร์เมซานชีส/ก้อน<span class="why">ตอนนี้ระบบถือว่า 1 แพ็ค/กล่อง/ก้อน = 1 kg</span></li>
+        <li>ซอสพริกโรซ่า/ซอง, ซอสมะเขือเทศโรซ่า/ซอง<span class="why">ตอนนี้ถือว่า 1 ซอง = 1 kg</span></li>
+        <li>เนื้อหางว่าว (ทาทากิ)<span class="why">ตั้งเป็นนับเป็น kg ซื้อครั้งละ 5.9 kg ราคา ฿2,861 ตรวจว่าถูก</span></li>
+        <li>ดอกไม้สด<span class="why">นับเป็นกล่อง แต่สูตรใช้ "1 หน่วย" ต่อแก้ว ต้องใส่ว่า 1 กล่องมีกี่ชิ้น</span></li>
+        <li>ใบไทม์, โรสแมรี่: แก้ปริมาณในสูตรเป็นกรัม<span class="why">ตั้งเป็นกล่อง 100 g แล้ว สูตรเดิมใส่ไว้ 1 ต่อแก้ว ตอนนี้ระบบอ่านเป็น 1 g</span></li>
+    </ul>
+
+    <h3>ของที่ตั้งเป็น kg แต่น่าจะเป็นขวด แกลอน หรือแพ็ค</h3>
+    <ul class="check">
+        <li>โชยุ/แกลอน, ซอสฝาเขียว/แกลอน, ไวน์แดง, แอปเปิ้ลไซเดอร์/ขวด, หน่อไม้ดอง/ขวด, ครีมเปรี้ยว, มัสตาร์ด</li>
+        <li>บรรจุภัณฑ์: ชามไม่มีฝา 850 มล, ตะเกียบไม้, ถุงแกงร้อน 5*8 และ 7*11, ถุงแก้วใสใส่ช้อนส้อม, ถุงซิปใส่ซอส, ชุดช้อนส้อมพลาสติก, ถ้วยน้ำจิ้มฝาพับ, ถ้วยพร้อมฝา 450 มล, ถุงหูหิ้วใส, หนังยาง, แผ่นดูดซับ<span class="why">ใส่ว่า 1 แพ็คมีกี่ชิ้น</span></li>
+        <li>เส้นสปาเก็ตตี้ลวก/แพ็ค, เซอลาลี/แพ็ค, หน่อไม้ต้ม/แพ็ค, ไส้กรองน้ำ simplus</li>
+    </ul>
+
+    <h3>ของเตรียม</h3>
+    <ul class="check">
+        <li>ใส่ปริมาณต่อ portion: เบส-ชามะลิ, เบส-โกโก้, นมมิกซ์, ข้าวคั่ว Cordial</li>
+        <li>ยืนยันปริมาณต่อ portion: เบส-ชาไทย และ เบส-ชาดำ<span class="why">ตอนนี้ตั้งเป็น 400 g ซึ่งน่าจะผิด สูตรใช้น้ำ 920 ml</span></li>
+        <li>เบส-ชาดำ: ลบ "Soft Drink - ชาไทย" ออกจากส่วนผสม และใส่ใบชาจริง</li>
+    </ul>
+
+    <h3>ชื่อซ้ำที่ต้องเลือกเก็บตัวเดียว</h3>
+    <ul class="check">
+        <li>พริกป่นเกาหลี, ดอกเกลือ, ข้าวคั่ว, งาขาว, น้ำปลา, ซุปกระดูกหมู, ซุปโครงไก่</li>
+    </ul>
+
+    <p class="meta">ปรับปรุง 14 พ.ย. 2569 · ระบบตอนนี้บันทึกยอดที่ควรใช้จากการขายแบบ shadow ยังไม่ตัดสต๊อกจริง</p>
+</main>
+</body>
+</html>

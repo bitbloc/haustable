@@ -11,11 +11,9 @@ import { subscribePOSBroadcast, sendTrackingBroadcast, sendPOSBroadcast } from '
 import { RefreshCw } from 'lucide-react'
 
 // Core Components
-import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
+import AdminOverviewDigestCard from './components/admin/overview/AdminOverviewDigestCard'
 import IntradayVelocityDaypartCockpit from './components/admin/financial/IntradayVelocityDaypartCockpit'
-import FloorTurnoverGauge from './components/admin/overview/FloorTurnoverGauge'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
-import DailyShiftsCashFlowWidget from './components/admin/overview/DailyShiftsCashFlowWidget'
 import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerTab'
 import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
 import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
@@ -314,23 +312,23 @@ export default function AdminDashboard() {
         const tableChannel = supabase
             .channel(channelId)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-                console.log('⚡ [Admin Realtime] Bookings change detected:', payload?.eventType)
+                console.log('[Admin Realtime] Bookings change detected:', payload?.eventType)
                 debouncedFetchData()
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, (payload) => {
-                console.log('⚡ [Admin Realtime] Order items change detected:', payload?.eventType)
+                console.log('[Admin Realtime] Order items change detected:', payload?.eventType)
                 debouncedFetchData()
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, (payload) => {
-                console.log('⚡ [Admin Realtime] Table layout change detected:', payload?.eventType)
+                console.log('[Admin Realtime] Table layout change detected:', payload?.eventType)
                 debouncedFetchData()
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
-                console.log('⚡ [Admin Realtime] App settings change detected:', payload?.eventType)
+                console.log('[Admin Realtime] App settings change detected:', payload?.eventType)
                 debouncedFetchData()
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, (payload) => {
-                console.log('⚡ [Admin Realtime] Shift change detected:', payload?.eventType)
+                console.log('[Admin Realtime] Shift change detected:', payload?.eventType)
                 debouncedFetchData()
             })
             .subscribe((status, err) => {
@@ -345,7 +343,7 @@ export default function AdminDashboard() {
 
         // 2. Direct POS Realtime Notifications Broadcast Channel (cross-device < 50ms & local BroadcastChannel deduplicated)
         const unsubscribePosBroadcast = subscribePOSBroadcast(({ event }) => {
-            console.log('⚡ [Admin Realtime] POS broadcast received:', event);
+            console.log('[Admin Realtime] POS broadcast received:', event);
             debouncedFetchData();
         });
 
@@ -560,6 +558,38 @@ export default function AdminDashboard() {
             paymentBreakdown: { cash, qr, credit }
         }
     }, [dailyBookings])
+
+    // 5. Derived Floor Occupancy (Always accurate in both LIVE NOW and PRO ANALYTICS)
+    const derivedFloorOccupancy = useMemo(() => {
+        const totalT = tables.length || floorOccupancy.totalTables || 12
+        const isToday = selectedDate === getThaiDate()
+        if (!isToday) {
+            const historicalGuests = dailyBookings.reduce((sum, b) => {
+                if (['cancelled', 'void'].includes(b.status)) return sum
+                if (isInternalBlockBooking(b)) return sum
+                return sum + Number(b.guest_count || b.pax || 2)
+            }, 0)
+            const uniqueTables = new Set(
+                dailyBookings
+                    .filter(b => !['cancelled', 'void'].includes(b.status) && b.table_id)
+                    .map(b => b.table_id)
+            )
+            return {
+                totalTables: totalT,
+                occupiedTables: uniqueTables.size,
+                totalGuests: historicalGuests
+            }
+        }
+
+        const seatedBookings = dailyBookings.filter(b => b.status === 'seated' && !isInternalBlockBooking(b))
+        const occupiedTableSet = new Set(seatedBookings.map(b => b.table_id).filter(Boolean))
+        const activeGuests = seatedBookings.reduce((sum, b) => sum + Number(b.guest_count || b.pax || 2), 0)
+        return {
+            totalTables: totalT,
+            occupiedTables: occupiedTableSet.size || floorOccupancy.occupiedTables || 0,
+            totalGuests: activeGuests || floorOccupancy.totalGuests || 0
+        }
+    }, [tables.length, floorOccupancy, dailyBookings, selectedDate])
 
     // --- Sound Alert Logic (noti1.mp3 High-Gain Engine) ---
     const [soundMuted, setSoundMuted] = useState(false)
@@ -798,7 +828,7 @@ export default function AdminDashboard() {
                                     !isToday
                                         ? 'bg-[oklch(55%_0.010_28)]'
                                         : isShiftOpen 
-                                            ? 'bg-[oklch(45%_0.08_140)] animate-pulse' 
+                                            ? 'bg-[oklch(45%_0.08_140)]' 
                                             : 'bg-[oklch(55%_0.010_28)]'
                                 }`} />
                                 <span className="font-mono font-bold tracking-wider text-[11px] uppercase">
@@ -888,10 +918,36 @@ export default function AdminDashboard() {
                     </button>
                 </div>
 
+                {/* UNIFIED DATA VISUALIZATION & KPI DIGEST (Achromatic Ledger · Simple Motion Bar Chart) */}
+                <div className="mb-6">
+                    <AdminOverviewDigestCard
+                        bookings={dailyBookings}
+                        revenueToday={revenueToday}
+                        yesterdayRevenue={yesterdayRevenue}
+                        completedOrdersCount={completedOrdersCount}
+                        activeUnpaidRevenue={activeUnpaidRevenue}
+                        activeUnpaidCount={activeUnpaidCount}
+                        totalTables={derivedFloorOccupancy.totalTables}
+                        occupiedTables={derivedFloorOccupancy.occupiedTables}
+                        totalGuests={derivedFloorOccupancy.totalGuests}
+                        dineInCount={dineInCount}
+                        pickupCount={pickupCount}
+                        paymentBreakdown={paymentBreakdown}
+                        adTelemetry={adTelemetry}
+                        shifts={shifts}
+                        selectedDate={selectedDate}
+                        loading={loading}
+                        onOpenShiftsTab={() => {
+                            handleSetOverviewMode('pro')
+                            setActiveTab('shifts')
+                        }}
+                    />
+                </div>
+
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
                 {overviewMode === 'simplified' ? (
                     <div className="space-y-6 mb-6">
-                        {/* 1. Simplified Live Floor (Driven by parent bookings & tables) */}
+                        {/* 1. Simplified Live Floor (Hero KPIs hidden to eliminate duplication with Digest Card) */}
                         <SimplifiedLiveOverview 
                             tables={tables}
                             bookings={dailyBookings}
@@ -901,104 +957,24 @@ export default function AdminDashboard() {
                             shifts={shifts}
                             selectedDate={selectedDate}
                             loading={loading}
+                            hideHeroKpis={true}
                             onRefresh={() => fetchData(true, selectedDate)}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                             onViewSlip={setViewSlipUrl}
                             onUpdateStatus={updateStatus}
                         />
 
-                        {/* 1.4 AD & TRAFFIC RADAR (4-Cell Neo-Brutalist Cluster) */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-xs overflow-hidden shadow-2xs">
-                            <div className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                    <span className={`w-2 h-2 rounded-full ${adTelemetry && adTelemetry.totalEvents > 0 ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                        AD RADAR // ทราฟฟิกโฆษณา & แคมเปญ ({selectedDate})
-                                    </span>
-                                </div>
-                                <a 
-                                    href="/admin/marketing?tab=ads_landing" 
-                                    className="font-mono text-[11px] font-bold text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1"
-                                >
-                                    <span>วิเคราะห์ Ads เชิงลึก</span>
-                                    <span>➔</span>
-                                </a>
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] font-mono">
-                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block font-semibold">เปิดชมเว็บ (/link)</span>
-                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                        {loading ? '...' : (adTelemetry.visits || 0)}
-                                    </div>
-                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Ad Impressions / Clicks</span>
-                                </div>
-                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
-                                    <span className="text-[10px] text-[oklch(45%_0.08_140)] uppercase block font-semibold">ขอทาง GPS (Maps)</span>
-                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(45%_0.08_140)] tabular-nums">
-                                        {loading ? '...' : (adTelemetry.maps || 0)}
-                                    </div>
-                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">High Intent Store Visit</span>
-                                </div>
-                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
-                                    <span className="text-[10px] text-[oklch(52%_0.16_28)] uppercase block font-semibold">โทรสอบถาม / LINE</span>
-                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(52%_0.16_28)] tabular-nums">
-                                        {loading ? '...' : (adTelemetry.contacts || 0)}
-                                    </div>
-                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Direct Inquiries</span>
-                                </div>
-                                <div className="p-3 bg-[oklch(98%_0.006_28)]">
-                                    <span className="text-[10px] text-[oklch(18%_0.012_28)] uppercase block font-semibold">จองโต๊ะ / สั่งรับ</span>
-                                    <div className="mt-1 text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                        {loading ? '...' : (adTelemetry.orders || 0)}
-                                    </div>
-                                    <span className="text-[9.5px] text-[oklch(55%_0.010_28)] mt-0.5 block">Attributed Orders</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 1.5 Backoffice Simplified Daily Bills Summary List */}
+                        {/* 2. Backoffice Simplified Daily Bills Summary List */}
                         <SimplifiedBillsSummaryList 
                             bookings={dailyBookings}
                             selectedDate={selectedDate}
                             loading={loading}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                         />
-
-                        {/* 1.6 SYSTEM STATUS FOOTER (Dieter Rams Monospace Hardware Diagnostics) */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-3 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-xs text-[oklch(55%_0.010_28)] shadow-2xs">
-                            <span className="font-bold text-[oklch(18%_0.012_28)] tracking-wider">SYSTEM STATUS</span>
-                            <div className="flex items-center gap-4 text-[11px] flex-wrap">
-                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]"></span> POS ONLINE</span>
-                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]"></span> PRINTER READY</span>
-                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]"></span> LINEMAN SYNC</span>
-                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]"></span> DATABASE LIVE</span>
-                            </div>
-                        </div>
-
-                        {/* 1.8 Hallmark Stark Callout to Pro Analytics Mode */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 sm:p-5 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs shadow-2xs">
-                            <div>
-                                <span className="font-bold text-[oklch(18%_0.012_28)] text-sm block">
-                                    ต้องการดูข้อมูลสถิติเชิงลึก หรือการจัดการกะเงินสด?
-                                </span>
-                                <span className="text-[11px] text-[oklch(55%_0.010_28)] mt-0.5 block">
-                                    มีชาร์ตความเร็วยอดขาย Intraday Velocity, เมนูวิเคราะห์ BCG Matrix, P&L Waterfall, และสมุดกะเงินสด
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => handleSetOverviewMode('pro')}
-                                className="px-4 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-xs whitespace-nowrap cursor-pointer transition-colors self-start sm:self-auto flex items-center gap-1.5 shadow-2xs"
-                            >
-                                <span>เปิดโหมด PRO ANALYTICS</span>
-                                <span>➔</span>
-                            </button>
-                        </div>
                     </div>
                 ) : (
                     <div className="space-y-6 mb-6">
-                        {/* 0. Omni-Date Online & Advance Orders Hub (Any date online bookings & pickups) */}
+                        {/* 0. Omni-Date Online & Advance Orders Hub */}
                         <OnlineAdvanceOrdersHub 
                             bookings={omniOnlineBookings}
                             onViewSlip={setViewSlipUrl}
@@ -1008,25 +984,7 @@ export default function AdminDashboard() {
                             loading={loading}
                         />
 
-                        {/* 1. Live Pulse KPI Strip & Payment Breakdown */}
-                        <LivePulseMetrics 
-                            revenueToday={revenueToday}
-                            completedOrdersCount={completedOrdersCount}
-                            activeUnpaidRevenue={activeUnpaidRevenue}
-                            activeUnpaidCount={activeUnpaidCount}
-                            totalTables={floorOccupancy.totalTables}
-                            occupiedTables={floorOccupancy.occupiedTables}
-                            totalGuests={floorOccupancy.totalGuests}
-                            pendingInboxCount={pendingBookings.length}
-                            dineInCount={dineInCount}
-                            pickupCount={pickupCount}
-                            paymentBreakdown={paymentBreakdown}
-                            adTelemetry={adTelemetry}
-                            selectedDate={selectedDate}
-                            loading={loading}
-                        />
-
-                        {/* 1.2 Handcrafted Data Visual: Unified Intraday Velocity & Daypart Cockpit */}
+                        {/* 1. Deep Predictive Analytics: Intraday Velocity & Daypart Cockpit */}
                         <IntradayVelocityDaypartCockpit
                             bookings={dailyBookings}
                             selectedDate={selectedDate}
@@ -1035,41 +993,19 @@ export default function AdminDashboard() {
                             filterMode="day"
                         />
 
-                        {/* 1.5 Executive Daily Shifts & Cash In/Out Summary */}
-                        <DailyShiftsCashFlowWidget
-                            shifts={shifts}
-                            loading={loading}
-                            selectedDate={selectedDate}
-                            onSelectShiftTab={setActiveTab}
-                            onRefreshShifts={() => fetchData(false, selectedDate)}
-                        />
-
                         {/* 2. Owner Direct Broadcast to POS Screen */}
                         <OwnerPosBroadcastBar />
 
-                        {/* 2.5 Handcrafted Data Visual: Table Turn Dwell Time & Service Mix Flow */}
-                        <FloorTurnoverGauge
-                            bookings={dailyBookings}
-                            totalTables={floorOccupancy.totalTables}
-                            occupiedTables={floorOccupancy.occupiedTables}
-                        />
-
-                        {/* 3. Interactive Live Floor & 1-Tap Table Block */}
-                        <LiveFloorQuickStatus 
-                            onOccupancyChange={handleOccupancyChange}
-                            externalTables={tables}
-                            externalBookings={bookings}
-                        />
-
-                        {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}
-                        <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] pt-4 font-mono text-xs no-scrollbar">
+                        {/* 3. Segmented Filter Tabs (Tabular Brutalist Division) */}
+                        <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] pt-2 font-mono text-xs no-scrollbar">
                             {[
                                 { key: 'bills', code: '01', label: 'ALL BILLS', count: dailyBookings.length },
                                 { key: 'shifts', code: '02', label: 'SHIFTS (กะเงินสด)', count: shifts.length },
                                 { key: 'inbox', code: '03', label: 'INBOX', count: pendingBookings.length },
                                 { key: 'schedule', code: '04', label: 'SCHEDULE', count: scheduleBookings.length },
                                 { key: 'dine_in', code: '05', label: 'DINE-IN', count: dineInCount },
-                                { key: 'pickup', code: '06', label: 'PICKUP', count: pickupCount }
+                                { key: 'pickup', code: '06', label: 'PICKUP', count: pickupCount },
+                                { key: 'floor', code: '07', label: 'FLOOR CONTROL', count: derivedFloorOccupancy.occupiedTables }
                             ].map((tab) => {
                                 const isActive = activeTab === tab.key
                                 return (
@@ -1096,7 +1032,7 @@ export default function AdminDashboard() {
                             })}
                         </div>
 
-                        {/* 5. Tab Content: Master Bills Hub / Inbox / Schedule */}
+                        {/* 4. Tab Content: Master Bills Hub / Shifts / Inbox / Schedule / Floor Control */}
                         <div>
                             {getTabContent()}
                         </div>

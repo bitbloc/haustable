@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, ShoppingBag } from 'lucide-react'
+import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, ShoppingBag, ClipboardCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
@@ -11,6 +11,7 @@ import MenuItemList from './components/MenuItemList'
 import MenuCostPage from '../components/admin/MenuCostPage'
 import RecipeLabPage from '../components/admin/RecipeLabPage'
 import SOPEditorPage from '../components/admin/SOPEditorPage'
+import StockReconciliationPage from '../components/admin/StockReconciliationPage'
 
 export default function AdminMenuPage({ defaultTab = 'items' }) {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -92,6 +93,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
         { id: 'costing', label: 'Food Costing', icon: Calculator },
         { id: 'lab', label: 'Recipe Lab', icon: FlaskConical },
         { id: 'sop', label: 'Kitchen & Bar SOP', icon: BookOpen },
+        { id: 'stock', label: 'Stock Recon', icon: ClipboardCheck },
     ]
 
     return (
@@ -182,6 +184,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         {activeTab === 'costing' && <MenuCostPage isEmbedded={true} />}
                         {activeTab === 'lab' && <RecipeLabPage isEmbedded={true} />}
                         {activeTab === 'sop' && <SOPEditorPage isEmbedded={true} />}
+                        {activeTab === 'stock' && <StockReconciliationPage />}
                     </motion.div>
                 </AnimatePresence>
             </div>

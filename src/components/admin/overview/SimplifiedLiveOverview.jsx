@@ -88,7 +88,7 @@ function LiveDurationBadge({ startTime }) {
  * - lg: ใหญ่ (Large/spacious 2-3 cols, high legibility typography)
  * - xl: Extra (Extra Large 1-2 cols, TV/Dashboard high-visibility typography)
  */
-const SIZE_CONFIGS = {
+export const SIZE_CONFIGS = {
     sm: {
         id: 'sm',
         label: 'เล็ก',
@@ -677,6 +677,8 @@ export default function SimplifiedLiveOverview({
     shifts = [], 
     selectedDate = getThaiDate(),
     loading = false, 
+    hideHeroKpis = false,
+    hideOnlineHub = false,
     onRefresh,
     onOpenProMode,
     onViewSlip,
@@ -1280,75 +1282,76 @@ export default function SimplifiedLiveOverview({
                 </div>
             )}
 
-            {/* 1. Hero Pulse: 3-Second Executive Awareness Strip (Equal Weight Blocks) */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 sm:p-5 rounded-xs shadow-2xs">
-                {/* 3 Primary KPIs: Balanced visual weight */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]">
-                    {/* KPI 1: LIVE NOW / FLOOR STATUS / DATE SUMMARY */}
-                    <div className="pt-2 first:pt-0 sm:pt-0 sm:px-4 first:pl-0">
-                        <div className="flex items-center justify-between">
-                            <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                {!isToday ? 'DATE SUMMARY' : isShiftOpen ? 'LIVE NOW' : 'FLOOR STATUS'}
-                            </span>
-                            <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[oklch(55%_0.010_28)]' : isShiftOpen ? 'bg-[oklch(18%_0.012_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+            {/* 1. Hero Pulse or Compact Floor Control Bar */}
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 sm:p-4 rounded-xs shadow-2xs">
+                {!hideHeroKpis && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] mb-4 pb-3 border-b border-[oklch(88%_0.012_28)]">
+                        {/* KPI 1: LIVE NOW / FLOOR STATUS / DATE SUMMARY */}
+                        <div className="pt-2 first:pt-0 sm:pt-0 sm:px-4 first:pl-0">
+                            <div className="flex items-center justify-between">
+                                <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
+                                    {!isToday ? 'DATE SUMMARY' : isShiftOpen ? 'LIVE NOW' : 'FLOOR STATUS'}
+                                </span>
+                                <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[oklch(55%_0.010_28)]' : isShiftOpen ? 'bg-[oklch(18%_0.012_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                            </div>
+                            <div className="mt-1 flex items-baseline gap-2">
+                                <h2 className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                    {!isToday ? liveBookings.length : (isShiftOpen ? counts.occupied : 0)}
+                                </h2>
+                                <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
+                                    {!isToday 
+                                        ? `บันทึกประวัติย้อนหลัง · ${liveBookings.length} ออเดอร์`
+                                        : isShiftOpen 
+                                            ? `${counts.occupied === 1 ? '1 order' : `${counts.occupied} orders`} · ${counts.occupancyPct}% occupied`
+                                            : 'กะปิดอยู่ · ยังไม่เปิดรอบขาย'
+                                    }
+                                </span>
+                            </div>
                         </div>
-                        <div className="mt-1 flex items-baseline gap-2">
-                            <h2 className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                {!isToday ? liveBookings.length : (isShiftOpen ? counts.occupied : 0)}
-                            </h2>
-                            <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
-                                {!isToday 
-                                    ? `บันทึกประวัติย้อนหลัง · ${liveBookings.length} ออเดอร์`
-                                    : isShiftOpen 
-                                        ? `${counts.occupied === 1 ? '1 order' : `${counts.occupied} orders`} · ${counts.occupancyPct}% occupied`
-                                        : 'กะปิดอยู่ · ยังไม่เปิดรอบขาย'
-                                }
-                            </span>
-                        </div>
-                    </div>
 
-                    {/* KPI 2: PEOPLE IN STORE / GUESTS ON DATE */}
-                    <div className="pt-3 sm:pt-0 sm:px-4">
-                        <div className="flex items-center justify-between">
-                            <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                {!isToday ? 'GUESTS ON DATE' : 'PEOPLE IN STORE'}
-                            </span>
-                        </div>
-                        <div className="mt-1 flex items-baseline gap-2">
-                            <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                {!isToday ? totalGuestsOnDate : (isShiftOpen ? counts.totalGuests : 0)}
+                        {/* KPI 2: PEOPLE IN STORE / GUESTS ON DATE */}
+                        <div className="pt-3 sm:pt-0 sm:px-4">
+                            <div className="flex items-center justify-between">
+                                <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
+                                    {!isToday ? 'GUESTS ON DATE' : 'PEOPLE IN STORE'}
+                                </span>
                             </div>
-                            <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
-                                {!isToday 
-                                    ? `pax รวมตลอดวัน (${formatThaiDateOnly(selectedDate)})`
-                                    : isShiftOpen 
-                                        ? `pax ในร้าน (${counts.occupied}/${counts.total} โต๊ะ)`
-                                        : '0 pax (หน้าร้านปิดรอบขาย)'
-                                }
-                            </span>
+                            <div className="mt-1 flex items-baseline gap-2">
+                                <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                    {!isToday ? totalGuestsOnDate : (isShiftOpen ? counts.totalGuests : 0)}
+                                </div>
+                                <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
+                                    {!isToday 
+                                        ? `pax รวมตลอดวัน (${formatThaiDateOnly(selectedDate)})`
+                                        : isShiftOpen 
+                                            ? `pax ในร้าน (${counts.occupied}/${counts.total} โต๊ะ)`
+                                            : '0 pax (หน้าร้านปิดรอบขาย)'
+                                    }
+                                </span>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* KPI 3: SALES TODAY / DAILY REVENUE */}
-                    <div className="pt-3 sm:pt-0 sm:px-4">
-                        <div className="flex items-center justify-between">
-                            <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                {!isToday ? 'DAILY REVENUE' : 'SALES TODAY'}
-                            </span>
-                        </div>
-                        <div className="mt-1">
-                            <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                ฿{revenueToday.toLocaleString()}
+                        {/* KPI 3: SALES TODAY / DAILY REVENUE */}
+                        <div className="pt-3 sm:pt-0 sm:px-4">
+                            <div className="flex items-center justify-between">
+                                <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
+                                    {!isToday ? 'DAILY REVENUE' : 'SALES TODAY'}
+                                </span>
                             </div>
-                            <div className="font-mono text-[11px] font-medium text-[oklch(55%_0.010_28)] mt-0.5">
-                                {trendText}
+                            <div className="mt-1">
+                                <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                    ฿{revenueToday.toLocaleString()}
+                                </div>
+                                <div className="font-mono text-[11px] font-medium text-[oklch(55%_0.010_28)] mt-0.5">
+                                    {trendText}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Sub-bar: Size Scaler, View Density Switcher & Fullscreen (Restrained and Aligned) */}
-                <div className="mt-4 pt-3 border-t border-[oklch(88%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
                     <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)] flex-wrap">
                         <span className="font-bold text-[oklch(18%_0.012_28)] uppercase">{!isToday ? 'FLOOR SNAPSHOT' : 'CURRENT ACTIVITY'}</span>
                         <span>//</span>
@@ -1479,33 +1482,35 @@ export default function SimplifiedLiveOverview({
             </div>
 
             {/* 1.5 Omni-Date Online & Advance Orders Hub (Any date online bookings & pickups) */}
-            <OnlineAdvanceOrdersHub 
-                bookings={onlineOrdersFeed}
-                onViewSlip={onViewSlip}
-                onInspectBill={(order) => {
-                    const orderItems = order.order_items || []
-                    const startTime = order.booking_time || order.created_at
-                    const billTotal = orderItems.length > 0 
-                        ? orderItems.reduce((sum, it) => sum + (Number(it.price_at_time || it.menu_items?.price || 0) * Number(it.quantity || 1)), 0)
-                        : Number(order.total_amount || 0)
-                    const roundsInfo = groupOrderItemsIntoRounds(orderItems, startTime)
-                    setInspectingTable({
-                        table: order.tables_layout || { table_name: order.booking_type === 'pickup' ? 'PICKUP' : 'ONLINE' },
-                        state: { status: order.status },
-                        booking: order,
-                        orderItems,
-                        orderRoundsInfo: roundsInfo,
-                        billTotal,
-                        startTime,
-                        transfer: { isTransferred: false },
-                        hasCallStaff: false,
-                        hasCallBill: false
-                    })
-                }}
-                onUpdateStatus={onUpdateStatus}
-                onOpenProMode={onOpenProMode}
-                loading={isDataLoading}
-            />
+            {!hideOnlineHub && (
+                <OnlineAdvanceOrdersHub 
+                    bookings={onlineOrdersFeed}
+                    onViewSlip={onViewSlip}
+                    onInspectBill={(order) => {
+                        const orderItems = order.order_items || []
+                        const startTime = order.booking_time || order.created_at
+                        const billTotal = orderItems.length > 0 
+                            ? orderItems.reduce((sum, it) => sum + (Number(it.price_at_time || it.menu_items?.price || 0) * Number(it.quantity || 1)), 0)
+                            : Number(order.total_amount || 0)
+                        const roundsInfo = groupOrderItemsIntoRounds(orderItems, startTime)
+                        setInspectingTable({
+                            table: order.tables_layout || { table_name: order.booking_type === 'pickup' ? 'PICKUP' : 'ONLINE' },
+                            state: { status: order.status },
+                            booking: order,
+                            orderItems,
+                            orderRoundsInfo: roundsInfo,
+                            billTotal,
+                            startTime,
+                            transfer: { isTransferred: false },
+                            hasCallStaff: false,
+                            hasCallBill: false
+                        })
+                    }}
+                    onUpdateStatus={onUpdateStatus}
+                    onOpenProMode={onOpenProMode}
+                    loading={isDataLoading}
+                />
+            )}
 
             {/* 2. Rapid Filter Chips (4px/8px scale, Thai font-sans, monospace counts) */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-sans">

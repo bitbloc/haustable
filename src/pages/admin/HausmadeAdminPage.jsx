@@ -360,7 +360,7 @@ export default function HausmadeAdminPage() {
                 </div>
 
                 {/* Header Actions & Tab Switcher (Tabular Brutalist Cell Grid) */}
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap max-w-full">
                     <a
                         href="/hausmade"
                         target="_blank"
@@ -371,7 +371,7 @@ export default function HausmadeAdminPage() {
                         [ SHOP ↗ ]
                     </a>
 
-                    <div className="inline-flex items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden divide-x divide-[oklch(85%_0.012_28)]">
+                    <div className="inline-flex max-w-full items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs overflow-x-auto no-scrollbar divide-x divide-[oklch(85%_0.012_28)]">
                         <button
                             onClick={() => setActiveTab('orders')}
                             className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${

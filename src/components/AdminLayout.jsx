@@ -602,7 +602,7 @@ export default function AdminLayout() {
             </aside>
 
             {/* Main Content Area */}
-            <main className={`flex-1 transition-[margin] duration-200 ease-in-out p-4 md:p-6 lg:p-8 bg-canvas min-h-screen flex flex-col justify-between ml-0 ${
+            <main className={`flex-1 min-w-0 transition-[margin] duration-200 ease-in-out p-4 md:p-6 lg:p-8 bg-canvas min-h-screen flex flex-col justify-between ml-0 ${
                 isCollapsed ? 'lg:ml-[68px]' : 'lg:ml-64'
             }`}>
                 {/* Desktop Subtle Utility Strip */}

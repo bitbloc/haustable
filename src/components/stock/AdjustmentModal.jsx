@@ -3,6 +3,7 @@ import { X, Minus, Plus, Save, Package, Settings, Calculator } from 'lucide-reac
 import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
 import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
+import { usagePerStockUnit } from '../../utils/recipeGraph';
 
 export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, onEdit }) {
     const [amount, setAmount] = useState(''); // Main input (usually integer)
@@ -48,7 +49,8 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 options.push({
                     key: 'usage',
                     label: item.usage_unit,
-                    factor: 1 / (Number(item.conversion_factor) || 1)
+                    // Same rule as recipe deduction: a soda bottle holds 325 ml, not 1 ml
+                    factor: 1 / (usagePerStockUnit(item) || 1)
                 });
             }
 

@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, IS_POS_READONLY_PREVIEW } from '../lib/supabaseClient';
+
+// Local-dev read-only preview (npm run dev:pos-preview): enter the POS without a PIN or an open
+// shift. Writes are blocked in supabaseClient. IS_POS_READONLY_PREVIEW is always false in builds.
+const PREVIEW_SHIFT = IS_POS_READONLY_PREVIEW
+    ? { id: 'preview_readonly', staffName: 'PREVIEW', status: 'open', openedAt: new Date().toISOString(), openingFloat: 0, transactions: [], adjustments: [] }
+    : null;
 import POSLayout from './POSLayout';
 import POSTableGrid, { getReservationDiffMins, formatReservationCountdown } from './POSTableGrid';
 import POSMenuGrid from './POSMenuGrid';
@@ -257,7 +263,7 @@ export default function POSDashboard() {
     };
 
     // Shift Management States
-    const [activeShift, setActiveShift] = useState(getCurrentShift());
+    const [activeShift, setActiveShift] = useState(() => getCurrentShift() || PREVIEW_SHIFT);
     const [realtimeShiftSummary, setRealtimeShiftSummary] = useState(null);
     const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
     const [openShiftForm, setOpenShiftForm] = useState({ staffName: '', openingFloat: '1000' });
@@ -276,6 +282,7 @@ export default function POSDashboard() {
     // isPinVerified: Persisted when pos_active_staff exists & pos_is_locked !== 'true'
     // Requires PIN re-entry ONLY when screen is locked or shift is closed/new shift started
     const [isPinVerified, setIsPinVerified] = useState(() => {
+        if (IS_POS_READONLY_PREVIEW) return true;
         const savedStaff = localStorage.getItem('pos_active_staff');
         const isLocked = localStorage.getItem('pos_is_locked') === 'true';
         return !!savedStaff && !isLocked;
@@ -5284,8 +5291,12 @@ export default function POSDashboard() {
 
     return (
         <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none pos-container">
-            
-            <POSLayout 
+            {IS_POS_READONLY_PREVIEW && (
+                <div className="shrink-0 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[11px] font-bold uppercase tracking-wider text-center py-1">
+                    Read-only preview · ไม่บันทึกอะไรลงฐานข้อมูล
+                </div>
+            )}
+            <POSLayout
                 activeView={view} 
                 onlinePendingCount={onlinePendingCount}
                 onViewChange={stableOnViewChange}
