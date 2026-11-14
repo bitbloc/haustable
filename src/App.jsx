@@ -48,6 +48,7 @@ const StaffLiveOrders = lazy(() => import('./StaffLiveOrders'))
 const StockPage = lazy(() => import('./StockPage'))
 const StockCountPage = lazy(() => import('./components/stock/StockCountPage'))
 const StockLabelsPage = lazy(() => import('./components/stock/StockLabelsPage'))
+const StockReceivePage = lazy(() => import('./components/stock/StockReceivePage'))
 const MenuCostPage = lazy(() => import('./components/admin/MenuCostPage'))
 const RecipeLabPage = lazy(() => import('./components/admin/RecipeLabPage'))
 const SOPEditorPage = lazy(() => import('./components/admin/SOPEditorPage'))
@@ -254,6 +255,7 @@ function App() {
                   <Route path="/staff/stock" element={<StockPage />} />
                   <Route path="/staff/stock/count" element={<StockCountPage />} />
                   <Route path="/staff/stock/labels" element={<StockLabelsPage />} />
+                  <Route path="/staff/stock/receive" element={<StockReceivePage />} />
                   <Route path="/staff/sop" element={<BarSOPPage />} />
                 </Route>
               </Route>

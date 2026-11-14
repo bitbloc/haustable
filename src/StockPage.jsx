@@ -907,6 +907,13 @@ export default function StockPage() {
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
                             <span>นับสต๊อก</span>
                         </button>
+                        <button
+                            onClick={() => navigate('/staff/stock/receive')}
+                            className="sp-controls__quick-count"
+                            title="รับของเข้าตามบิล: เพิ่มสต๊อก อัปเดตราคาทุน และบันทึกค่าใช้จ่ายในครั้งเดียว"
+                        >
+                            <span>รับของ</span>
+                        </button>
                     </div>
 
                     {/* Sort Controls */}

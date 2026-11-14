@@ -11,6 +11,7 @@ import {
 import { buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, normalizeBarcode } from '../../utils/stockBarcode';
 import ScanStrip from './ScanStrip';
 import BarcodeLinkSheet from './BarcodeLinkSheet';
+import { linkBarcodeToItem } from '../../utils/stockBarcodeLink';
 
 const DRAFT_KEY = (kind, day) => `stock_count_draft_v1:${day}:${kind}`;
 
@@ -210,33 +211,17 @@ export default function StockCountPage() {
         if (!unknownCode || linking) return;
         setLinking(true);
         const performedBy = user?.user_metadata?.full_name || user?.email || 'Staff';
-        try {
-            if (!item.barcode && perScan === 1) {
-                const { data, error } = await supabase.from('stock_items')
-                    .update({ barcode: unknownCode }).eq('id', item.id).is('barcode', null).select('id');
-                if (error) throw error;
-                if (!data?.length) throw new Error('item already has a barcode');
-                setItems(prev => prev.map(i => i.id === item.id ? { ...i, barcode: unknownCode } : i));
-            } else {
-                const row = { barcode: unknownCode, stock_item_id: item.id, units_per_scan: perScan, created_by: performedBy };
-                const { error } = await supabase.from('stock_item_barcodes').insert(row);
-                if (error) throw error;
-                setExtraBarcodes(prev => [...prev, row]);
-            }
-            toast.success(`ผูกบาร์โค้ดกับ ${item.name} แล้ว`);
-            setUnknownCode(null);
-            countScan(item.id, perScan);
-        } catch (err) {
-            console.error(err);
-            const text = `${err?.code || ''} ${err?.message || ''}`;
-            toast.error(/23505|duplicate|already/i.test(text)
-                ? 'บาร์โค้ดนี้ผูกกับรายการอื่นแล้ว'
-                : /42P01|PGRST205|stock_item_barcodes/i.test(text)
-                    ? 'รายการนี้มีบาร์โค้ดแล้ว ต้องติดตั้ง migration บาร์โค้ดเพิ่มเติมก่อนผูกโค้ดที่สอง'
-                    : 'ผูกบาร์โค้ดไม่สำเร็จ: ' + (err?.message || ''));
-        } finally {
-            setLinking(false);
+        const res = await linkBarcodeToItem({ item, code: unknownCode, perScan, performedBy });
+        setLinking(false);
+        if (!res.ok) {
+            toast.error(res.message);
+            return;
         }
+        if (res.kind === 'main') setItems(prev => prev.map(i => i.id === item.id ? { ...i, barcode: unknownCode } : i));
+        else setExtraBarcodes(prev => [...prev, res.row]);
+        toast.success(`ผูกบาร์โค้ดกับ ${item.name} แล้ว`);
+        setUnknownCode(null);
+        countScan(item.id, perScan);
     };
 
     useEffect(() => { writeDraft(kind, shopDay, counts); }, [kind, shopDay, counts]);
