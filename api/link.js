@@ -172,6 +172,12 @@ function itemDescHtml(item) {
     return `<div class="item-desc${th ? '' : ' l-en'}${en ? '' : ' l-th'}">${tt(th, en)}</div>`
 }
 
+// Guest caption: no emoji, at most ~50 characters
+function captionText(text) {
+    const t = String(text || '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '').replace(/\s+/g, ' ').trim()
+    return t.length > 50 ? t.slice(0, 48) + '…' : t
+}
+
 // Join phrases with a separator, each phrase kept on one line (Thai has no spaces to break on)
 function phrasesHtml(text, splitter, joiner) {
     return String(text || '').split(splitter).map(t => t.trim()).filter(Boolean)
@@ -484,8 +490,8 @@ function generateStandaloneLandingHtml(data) {
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { overflow-x: clip; }
-        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--color-paper-3); }
-        body { font-family: var(--font-body); font-size: var(--text-md); background: var(--color-paper-3); color: var(--color-ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--color-paper-2); }
+        body { font-family: var(--font-body); font-size: var(--text-md); background: var(--color-paper-2); color: var(--color-ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
         a { color: inherit; text-decoration: none; }
         button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
         img { display: block; max-width: 100%; height: auto; }
@@ -503,6 +509,7 @@ function generateStandaloneLandingHtml(data) {
         /* One continuous sheet: blocks are divided by hairlines only, no ground gaps between them */
         html { scroll-behavior: smooth; }
         .container { background: var(--color-paper); }
+        @media (min-width: 561px) { .container { border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); } }
         .masthead, .facts, .tags-wrap, footer, :where(#sec-menu, #sec-vibe, #sec-connect) > * { background-color: var(--color-paper); }
         .facts, .quick-grid, .tags-wrap, footer { border-top: 1px solid var(--color-rule); }
         .row-link.slip { border-top: 1px solid var(--color-rule); }
@@ -643,7 +650,16 @@ function generateStandaloneLandingHtml(data) {
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
         .section-header.sub { padding: var(--space-4) var(--space-4) var(--space-2); background: var(--color-paper-2); }
-        .section-title { font-size: var(--text-xl); font-weight: 700; line-height: 1.35; }
+        .section-title { font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+        /* Category index for the full menu: sticks under the section strip, scrolls sideways */
+        .cat-index { position: sticky; top: 49px; z-index: calc(var(--z-sticky) - 1); display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; padding: var(--space-2) var(--space-4); background: var(--color-paper); border-bottom: 1px solid var(--color-rule); }
+        .cat-index::-webkit-scrollbar { display: none; }
+        .cat-chip { flex-shrink: 0; min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--color-rule); border-radius: var(--radius); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+        .cat-chip:hover { border-color: var(--color-ink); }
+        .cat-chip[aria-current="true"] { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+        .cat-chip:active { transform: scale(0.96); }
+        #full-menu-content .section-header.sub { scroll-margin-top: 104px; }
+        .section-header.sub .section-title { font-size: var(--text-xl); }
         .section-meta { font-size: var(--text-xs); color: var(--color-neutral); white-space: nowrap; }
 
         /* Signature dishes */
@@ -655,6 +671,8 @@ function generateStandaloneLandingHtml(data) {
         .sig-body { padding: var(--space-3); display: flex; flex-direction: column; flex: 1; gap: var(--space-1); }
         .sig-name { font-size: var(--text-sm); font-weight: 600; line-height: 1.45; }
         .sig-price { font-size: var(--text-sm); color: var(--color-muted); }
+        .sig-card:first-child .sig-body { padding-left: var(--space-4); }
+        .sig-card:last-child .sig-body { padding-right: var(--space-4); }
         .sig-body .heat { margin-top: auto; padding-top: var(--space-1); }
 
         /* Menu rows */
@@ -681,7 +699,7 @@ function generateStandaloneLandingHtml(data) {
         /* Opening hours: large figures + live state, readable at a glance */
         .hours-fact { gap: var(--space-1); padding-top: var(--space-4); padding-bottom: var(--space-4); }
         .hours-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-        .hours-main { font-size: var(--text-2xl); font-weight: 600; line-height: 1.3; }
+        .hours-main { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
         .hours-note { font-size: var(--text-md); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
         .hours-state { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
         .hours-state::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); }
@@ -693,7 +711,7 @@ function generateStandaloneLandingHtml(data) {
         .gallery-item { aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: zoom-in; background: var(--color-paper-2); border-bottom: 1px solid var(--color-rule); }
         .gallery-item:nth-child(2n) { border-left: 1px solid var(--color-rule); }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
-        .gallery-caption { position: absolute; inset: auto 0 0 0; padding: var(--space-6) var(--space-2) var(--space-2); background: linear-gradient(to top, var(--color-scrim), var(--color-scrim-soft)); color: var(--color-paper); font-size: var(--text-xs); line-height: 1.45; pointer-events: none; }
+        .gallery-caption { position: absolute; inset: auto 0 0 0; padding: var(--space-2) var(--space-3); background: oklch(14% 0.010 28 / 0.78); color: var(--color-paper); font-size: var(--text-xs); line-height: 1.45; pointer-events: none; }
         .gallery-caption .caption-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
         /* Tags + footer (Ft4 dense colophon) */
@@ -707,8 +725,8 @@ function generateStandaloneLandingHtml(data) {
 
         /* C4 sticky bar: full-width tabular cells */
         .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); background: var(--color-paper); border-top: 1px solid var(--color-ink); padding-bottom: env(safe-area-inset-bottom); }
-        .sticky-inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr); }
-        .sticky-btn { min-height: var(--bar-h); padding: var(--space-2) var(--space-1); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: var(--text-md); font-weight: 600; line-height: 1.25; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .sticky-inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 0.7fr) minmax(0, 0.9fr); }
+        .sticky-btn { min-height: var(--bar-h); padding: var(--space-2) var(--space-3); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: var(--text-md); font-weight: 600; line-height: 1.25; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .sticky-btn + .sticky-btn { border-left: 1px solid var(--color-rule); }
         .sticky-btn:hover { background: var(--color-paper-2); }
         .sticky-btn.map { background: var(--color-ink); color: var(--color-paper); }
@@ -726,7 +744,27 @@ function generateStandaloneLandingHtml(data) {
         .booklet-nav { display: flex; align-items: center; gap: var(--space-4); color: var(--color-paper); font-size: var(--text-sm); }
         .booklet-nav button { min-height: 40px; padding: var(--space-2) var(--space-3); color: var(--color-paper); font-weight: 600; border: 1px solid var(--color-muted); border-radius: var(--radius); }
 
-        @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; scroll-behavior: auto !important; } }
+        /* Press feedback: everything tappable answers the thumb */
+        .row-link, .sig-card, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-btn { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
+        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-btn:active { transform: scale(0.985); }
+        .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out); }
+        .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); }
+        .row-link:hover .arrow { transform: translateX(3px); }
+        .row-link .arrow { transition: transform var(--dur) var(--ease-out); }
+
+        /* Modals fade in, the picture settles */
+        .modal.open { animation: modal-in 220ms var(--ease-out); }
+        .modal.open .modal-content { animation: modal-pic 320ms var(--ease-out); }
+        @keyframes modal-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modal-pic { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+
+        /* Reveal on scroll: added by script only to things below the first screen, so nothing is hidden without JS and the first paint is untouched */
+        .reveal { opacity: 0; transform: translateY(16px); }
+        .reveal.in { opacity: 1; transform: none; transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); transition-delay: var(--d, 0ms); }
+        #full-menu-content.opening { animation: menu-open 360ms var(--ease-out); }
+        @keyframes menu-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+        @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; animation-duration: 0ms !important; scroll-behavior: auto !important; } .reveal { opacity: 1; transform: none; } }
     </style>
 
     <!-- Google Tag Manager (GTM-NPVTXNM9) with Zero-Loss Queue & High Performance -->
@@ -878,7 +916,7 @@ function generateStandaloneLandingHtml(data) {
                     <span class="fact-label">${tt('เวลาเปิด-ปิด · ทุกวัน', 'Opening hours · daily')}</span>
                     <span class="hours-state" id="hours-state" hidden></span>
                 </div>
-                <span class="hours-main num nb">${tt(hoursMain, hoursMainEn)}</span>
+                <span class="hours-main nb">${tt(hoursMain, hoursMainEn)}</span>
                 ${hoursNote ? `<span class="hours-note nb">${tt(hoursNote, hoursNoteEn)}</span>` : ''}
             </div>
             <div class="fact full">
@@ -1000,7 +1038,7 @@ function generateStandaloneLandingHtml(data) {
                 ${diningCheckins.map((chk, i) => `
                 <div class="gallery-item" onclick="openLightbox('${optImg(chk.image_url, 900)}')">
                     <img src="${optImg(chk.image_url, 300, 75)}" alt="${escapeHtml(chk.text || 'รูปจากลูกค้า')}" loading="lazy" decoding="async" width="200" height="200">
-                    ${chk.text ? `<div class="gallery-caption"><span class="caption-text">${escapeHtml(chk.text.length > 50 ? chk.text.slice(0, 48) + '…' : chk.text)}</span></div>` : ''}
+                    ${captionText(chk.text) ? `<div class="gallery-caption"><span class="caption-text">${escapeHtml(captionText(chk.text))}</span></div>` : ''}
                 </div>`).join('')}
             </div>` : ''}
         </div>
@@ -1175,6 +1213,26 @@ function generateStandaloneLandingHtml(data) {
             SECTIONS.forEach(function(s) { const el = document.getElementById('sec-' + s); if (el) io.observe(el); });
         })();
 
+        // ─── REVEAL ON SCROLL ───
+        (function() {
+            if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const io = new IntersectionObserver(function(entries) {
+                entries.forEach(function(en) {
+                    if (!en.isIntersecting) return;
+                    en.target.classList.add('in');
+                    io.unobserve(en.target);
+                });
+            }, { rootMargin: '0px 0px -8% 0px' });
+            const fold = window.innerHeight;
+            document.querySelectorAll('.section-header, .sig-card, #sec-menu > div > .item-row, .gallery-item, .row-link, .facts .fact, .full-menu-btn, .tags-wrap, footer').forEach(function(el) {
+                if (el.getBoundingClientRect().top < fold) return;
+                const sibs = Array.prototype.indexOf.call(el.parentNode.children, el);
+                el.style.setProperty('--d', (sibs % 4) * 70 + 'ms');
+                el.classList.add('reveal');
+                io.observe(el);
+            });
+        })();
+
         // ─── LANGUAGE ───
         function TT(th, en) { return '<span class="l-th">' + th + '</span><span class="l-en">' + en + '</span>'; }
         function toggleLang() {
@@ -1328,6 +1386,13 @@ function generateStandaloneLandingHtml(data) {
             window.scrollTo({ top: top, behavior: smooth ? 'smooth' : 'auto' });
         }
 
+        function jumpToCategory(btn) {
+            const target = document.getElementById(btn.dataset.cat);
+            if (!target) return;
+            const offset = document.querySelector('.tab-bar').offsetHeight + document.querySelector('.cat-index').offsetHeight;
+            window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - offset + 1, behavior: 'smooth' });
+        }
+
         function toggleFullMenu() {
             const content = document.getElementById('full-menu-content');
             const btn = document.getElementById('btn-full-menu');
@@ -1336,10 +1401,13 @@ function generateStandaloneLandingHtml(data) {
                     try {
                         const raw = JSON.parse(document.getElementById('full-menu-data').textContent);
                         let html = '';
-                        raw.categories.forEach(cat => {
+                        let index = '';
+                        raw.categories.forEach((cat, ci) => {
                             const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
                             if (cItems.length === 0) return;
-                            html += '<div class="section-header sub"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items') + '</span></div><div>';
+                            const shortTh = String(cat.name || '').replace(/\s*\(.*\)\s*/, '').trim() || cat.name;
+                            index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh)) + '</button>';
+                            html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items') + '</span></div><div>';
                             cItems.forEach(item => {
                                 const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
@@ -1349,10 +1417,26 @@ function generateStandaloneLandingHtml(data) {
                             });
                             html += '</div>';
                         });
-                        content.innerHTML = html;
+                        content.innerHTML = (index ? '<nav class="cat-index" aria-label="หมวดเมนู">' + index + '</nav>' : '') + html;
+                        // Highlight the category being read and keep its chip in view
+                        if ('IntersectionObserver' in window) {
+                            const nav = content.querySelector('.cat-index');
+                            const catIo = new IntersectionObserver(function(entries) {
+                                entries.forEach(function(en) {
+                                    if (!en.isIntersecting || !nav) return;
+                                    nav.querySelectorAll('.cat-chip').forEach(function(c) {
+                                        const on = c.dataset.cat === en.target.id;
+                                        c.setAttribute('aria-current', on ? 'true' : 'false');
+                                        if (on) nav.scrollTo({ left: c.offsetLeft - 16, behavior: 'smooth' });
+                                    });
+                                });
+                            }, { rootMargin: '-110px 0px -70% 0px' });
+                            content.querySelectorAll('.section-header.sub[id]').forEach(function(h) { catIo.observe(h); });
+                        }
                     } catch(e) {}
                 }
                 content.style.display = 'block';
+                content.classList.remove('opening'); void content.offsetWidth; content.classList.add('opening');
                 document.getElementById('full-menu-label').innerHTML = TT('ปิดเมนูทั้งหมด', 'Close the full menu');
                 document.getElementById('full-menu-arrow').textContent = '↑';
                 document.getElementById('btn-full-menu').classList.add('open');
