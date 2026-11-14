@@ -570,6 +570,12 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 if (stockErr) throw stockErr;
                 stockItemId = newStock.id;
                 recipe.source_stock_item_id = stockItemId;
+
+                // SOPs filed under "Based" are real prep kept on the shelf; every other SOP is a
+                // per-glass recipe. (Ignored by a database that has no item_type column yet.)
+                if (/^base(d)?$/i.test((cat?.label || '').trim())) {
+                    await supabase.from('stock_items').update({ item_type: 'prep', prep_mode: 'stocked' }).eq('id', stockItemId);
+                }
             } else {
                 // Update existing base recipe in stock_items
                 const { error: stockErr } = await supabase
@@ -587,11 +593,14 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             for (const ing of (recipe.ingredients || [])) {
                 let ingId = ing.id;
                 if (!ingId) {
-                    // Check if stock item with this name already exists
+                    // Reuse an existing stock item with the same name. Compared without regard to
+                    // case or surrounding spaces, so a retyped name does not spawn a duplicate.
+                    const cleanName = String(ing.name || '').trim();
+                    const namePattern = cleanName.replace(/[\\%_]/g, ch => '\\' + ch);
                     const { data: existingStock } = await supabase
                         .from('stock_items')
                         .select('id')
-                        .eq('name', ing.name)
+                        .ilike('name', namePattern)
                         .limit(1);
                     if (existingStock && existingStock.length > 0) {
                         ingId = existingStock[0].id;
@@ -600,7 +609,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                         const { data: newIng, error: ingErr } = await supabase
                             .from('stock_items')
                             .insert({
-                                name: ing.name,
+                                name: cleanName,
                                 is_base_recipe: false,
                                 category: 'restock',
                                 cost_price: 0,

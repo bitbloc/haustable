@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { calculateRealUnitCost } from '../../utils/costUtils';
+import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
@@ -144,15 +145,34 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                  
                  // If successful and initialQty > 0, write audit transaction to sync
                  if (!err && newItem && initialQty > 0) {
-                     const { error: txError } = await supabase
-                         .from('stock_transactions')
-                         .insert({
-                             stock_item_id: newItem.id,
-                             transaction_type: 'audit',
-                             quantity_change: initialQty,
-                             performed_by: 'System (Initial Stock)',
-                             note: 'จำนวนสต็อกเริ่มต้นเมื่อสร้างสินค้าวัตถุดิบ'
-                         });
+                     const initNote = 'จำนวนสต็อกเริ่มต้นเมื่อสร้างสินค้าวัตถุดิบ';
+                     const ledger = await postStockMovement({
+                         itemId: newItem.id,
+                         mode: 'set',
+                         quantity: initialQty,
+                         reason: STOCK_REASONS.OPENING,
+                         performedBy: 'System (Initial Stock)',
+                         note: initNote
+                     });
+                     let txError = ledger.ok ? null : ledger.error;
+                     if (!ledger.ok && ledger.rpcMissing) {
+                         // Database without the ledger RPC: the old trigger ignores 'audit'
+                         // rows, so write the quantity itself and keep the row as history.
+                         const { error: qtyErr } = await supabase
+                             .from('stock_items')
+                             .update({ current_quantity: initialQty })
+                             .eq('id', newItem.id);
+                         const { error: histErr } = await supabase
+                             .from('stock_transactions')
+                             .insert({
+                                 stock_item_id: newItem.id,
+                                 transaction_type: 'set',
+                                 quantity_change: 0,
+                                 performed_by: 'System (Initial Stock)',
+                                 note: `${initNote} | 0 → ${initialQty}`
+                             });
+                         txError = qtyErr || histErr;
+                     }
                      if (txError) {
                          console.error("Initial transaction insert failed:", txError);
                          toast.error('สร้างวัตถุดิบสำเร็จ แต่บันทึกสต็อกเริ่มต้นลงประวัติล้มเหลว');

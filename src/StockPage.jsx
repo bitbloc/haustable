@@ -3,6 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { formatStockDisplay } from './utils/stockUtils';
 import { logStaffActivity } from './utils/auditLogger';
+import { postStockMovement, STOCK_REASONS } from './utils/stockLedger';
+
+// Per-glass recipes and templates live in stock_items for costing but are never counted.
+// Only hidden once the database marks them explicitly, so nothing disappears before that.
+const isShelfItem = (item) => item?.item_type !== 'recipe';
 import { 
     Package, 
     Scan, 
@@ -119,7 +124,7 @@ export default function StockPage() {
                 .order('name', { ascending: true });
             
             if (error) throw error;
-            setItems(data || []);
+            setItems((data || []).filter(isShelfItem));
         } catch (err) {
             console.error(err);
             toast.error('Failed to load stock');
@@ -135,6 +140,7 @@ export default function StockPage() {
             .channel(channelId)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, (payload) => {
                 if (payload.eventType === 'INSERT') {
+                    if (!isShelfItem(payload.new)) return;
                     setItems(currentItems => {
                         if (currentItems.some(i => i.id === payload.new.id)) return currentItems;
                         return [...currentItems, payload.new].sort((a, b) => a.name.localeCompare(b.name, 'th'));
@@ -142,10 +148,10 @@ export default function StockPage() {
                 } else if (payload.eventType === 'UPDATE') {
                     // Skip if this item has a pending adjustment in flight
                     if (pendingAdjustIds.current.has(payload.new.id)) return;
-                    setItems(currentItems => 
-                        currentItems.map(item => 
-                            item.id === payload.new.id ? { ...item, ...payload.new } : item
-                        )
+                    setItems(currentItems =>
+                        currentItems
+                            .map(item => item.id === payload.new.id ? { ...item, ...payload.new } : item)
+                            .filter(isShelfItem)
                     );
                 } else if (payload.eventType === 'DELETE') {
                     setItems(currentItems => currentItems.filter(item => item.id !== payload.old.id));
@@ -170,14 +176,59 @@ export default function StockPage() {
         try {
             const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
             const diagNote = (meta.note || 'Adjustment');
-            
-            if (type === 'set') {
-                 // ── Absolute Update (Audit/Count) ──
-                 // FIX: Bypass trigger entirely to prevent double-count.
-                 // 1. Direct UPDATE on stock_items (no trigger involvement)
-                 // 2. Audit log with quantity_change=0 (trigger adds 0 = safe)
 
-                 // Get old quantity for audit note
+            // Ledger RPC: locks the row, applies the change and records the real
+            // difference + balance in one transaction. The branches below are only the
+            // fallback for a database that does not have the RPC yet.
+            const ledger = await postStockMovement({
+                itemId,
+                mode: type === 'set' ? 'set' : 'delta',
+                quantity: roundedChange,
+                reason: type === 'set' ? STOCK_REASONS.COUNT_ADJUST : (type === 'in' ? STOCK_REASONS.PURCHASE : STOCK_REASONS.ADJUST),
+                performedBy,
+                note: diagNote
+            });
+            if (!ledger.ok && !ledger.rpcMissing) throw ledger.error;
+
+            if (ledger.ok) {
+                 const targetItem = items.find(i => i.id === itemId);
+                 const oldQty = Number(ledger.data?.old_quantity ?? targetItem?.current_quantity ?? 0);
+                 const newQty = Number(ledger.data?.new_quantity ?? roundedChange);
+                 const diff = Number(ledger.data?.quantity_change ?? (newQty - oldQty));
+                 if (type === 'set') {
+                     logStaffActivity('stock', 'stock_audit', {
+                         staffName: performedBy,
+                         amount: Math.abs(diff),
+                         reason: `ตรวจนับสต็อก: ${targetItem?.name || 'วัตถุดิบ'} (${oldQty} → ${newQty} ${targetItem?.unit || ''}) | โน้ต: ${diagNote}`,
+                         metadata: {
+                             module: 'stock',
+                             item_id: itemId,
+                             item_name: targetItem?.name,
+                             unit: targetItem?.unit,
+                             old_quantity: oldQty,
+                             new_quantity: newQty,
+                             diff,
+                             note: diagNote
+                         }
+                     });
+                 } else {
+                     logStaffActivity('stock', type === 'in' || roundedChange > 0 ? 'stock_in' : 'stock_out', {
+                         staffName: performedBy,
+                         amount: Math.abs(roundedChange),
+                         reason: `${type === 'in' ? 'รับเข้าสต็อก' : 'เบิกใช้/ตัดสต็อก'}: ${targetItem?.name || 'วัตถุดิบ'} (${roundedChange >= 0 ? '+' : ''}${roundedChange} ${targetItem?.unit || ''}) | โน้ต: ${diagNote}`,
+                         metadata: {
+                             module: 'stock',
+                             item_id: itemId,
+                             item_name: targetItem?.name,
+                             unit: targetItem?.unit,
+                             quantity_change: roundedChange,
+                             type,
+                             note: diagNote
+                         }
+                     });
+                 }
+            } else if (type === 'set') {
+                 // ── Fallback: Absolute Update (Audit/Count) without the ledger RPC ──
                  const oldItem = items.find(i => i.id === itemId);
                  const oldQty = oldItem?.current_quantity || 0;
                  const diff = roundedChange - oldQty;

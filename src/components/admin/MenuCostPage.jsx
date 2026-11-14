@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchAndSortMenu } from '../../utils/menuHelper';
 import { calculateRecipeCost } from '../../utils/costUtils';
+import { buildLiveCostResolver } from '../../utils/recipeGraph';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 
@@ -59,6 +60,16 @@ export default function MenuCostPage({ isEmbedded = false }) {
                 console.error('Error fetching recipe ingredients:', recipeErr);
             }
 
+            // Made items (prep, per-glass recipes) are costed from their own ingredients at
+            // today's prices instead of the cost saved when their recipe was last edited.
+            const [{ data: allStock }, { data: nestedRows }] = await Promise.all([
+                supabase.from('stock_items').select('*'),
+                supabase.from('recipe_ingredients')
+                    .select('parent_stock_item_id, ingredient_id, quantity')
+                    .not('parent_stock_item_id', 'is', null)
+            ]);
+            const liveCost = buildLiveCostResolver(allStock || [], nestedRows || []);
+
             // 4. Map Recipe to Menu ID
             const recipesByMenu = {};
             if (recipeLinks) {
@@ -84,7 +95,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                 const ingredients = recipesByMenu[String(item.id)] || [];
                 const breakdown = calculateRecipeCost(
                     ingredients,
-                    (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient,
+                    (id) => liveCost.getItem(id) || ingredients.find(i => i.ingredient_id === id)?.ingredient,
                     { qFactorPercent: item.q_factor_percent || 0 }
                 );
 

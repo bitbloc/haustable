@@ -1,7 +1,10 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { calculateRecipeCost } from '../../utils/costUtils';
+import {
+    getItemType, isMadeItem, isStockedItem, hasPortionYield, usagePerPortion,
+    buildLiveCostResolver, getRecipeIssues, ITEM_TYPES, PREP_MODES
+} from '../../utils/recipeGraph';
 import { 
     ArrowLeft, RefreshCw, Plus, Search, Trash2, Check, X, 
     Pencil, ChevronDown, ChevronRight, Layers, AlertCircle, Link as LinkIcon
@@ -14,8 +17,9 @@ import { logStaffActivity } from '../../utils/auditLogger';
 const FOLDER_STORAGE_KEY = 'recipe_lab_custom_folders_v1';
 
 // ── In-App Modal: Create New Formula (Dieter Rams Clean Modal) ──
-function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) {
+function CreateFormulaModal({ onClose, onCreate, initialFolder, initialType, folders = [] }) {
     const [name, setName] = useState('');
+    const [itemType, setItemType] = useState(initialType === ITEM_TYPES.RECIPE ? ITEM_TYPES.RECIPE : ITEM_TYPES.PREP);
     const [selectedFolder, setSelectedFolder] = useState(
         initialFolder && initialFolder !== 'all' && initialFolder !== 'uncategorized' 
             ? initialFolder 
@@ -33,7 +37,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
             toast.error('กรุณาระบุชื่อสูตร');
             return;
         }
-        onCreate(name.trim(), selectedFolder);
+        onCreate(name.trim(), selectedFolder, itemType);
     };
 
     return (
@@ -45,7 +49,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                             FORMULA CREATION
                         </span>
                         <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)]">
-                            สร้างสูตรกลางใหม่ (New Base Formula)
+                            สร้างสูตรใหม่
                         </h3>
                     </div>
                     <button 
@@ -58,8 +62,35 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
+                        <span className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            ชนิด
+                        </span>
+                        <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                            {[
+                                [ITEM_TYPES.PREP, 'ของเตรียม', 'ทำเป็น portion เช่น ซอส เบสชา'],
+                                [ITEM_TYPES.RECIPE, 'สูตรต่อแก้ว/จาน', 'ไม่เก็บสต๊อก']
+                            ].map(([value, label, hint]) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => setItemType(value)}
+                                    aria-pressed={itemType === value}
+                                    className={`p-2.5 text-left cursor-pointer transition-colors ${
+                                        itemType === value
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                            : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                    }`}
+                                >
+                                    <span className="block font-sans font-bold text-sm leading-6">{label}</span>
+                                    <span className="block font-sans text-[11px] leading-5 opacity-80">{hint}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
                         <label className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                            ชื่อสูตรกลาง (FORMULA NAME) *
+                            ชื่อ *
                         </label>
                         <input
                             ref={inputRef}
@@ -186,6 +217,145 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
     );
 }
 
+// ── In-App Modal: Produce a stocked prep ──
+function ProduceModal({ item, onClose, onDone }) {
+    const [portions, setPortions] = useState('1');
+    const [actualYield, setActualYield] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const portionsNum = parseFloat(portions);
+    const validPortions = Number.isFinite(portionsNum) && portionsNum > 0;
+    const perPortion = usagePerPortion(item);
+    const expected = validPortions ? perPortion * portionsNum : 0;
+    const actualNum = actualYield === '' ? null : parseFloat(actualYield);
+    const validActual = actualNum === null || (Number.isFinite(actualNum) && actualNum >= 0);
+    const added = validPortions ? (actualNum !== null && validActual ? actualNum / perPortion : portionsNum) : 0;
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validPortions || !validActual || saving) return;
+        setSaving(true);
+        try {
+            const { data: userData } = await supabase.auth.getUser();
+            const performedBy = userData?.user?.user_metadata?.full_name || userData?.user?.email || 'Staff';
+            const { data, error } = await supabase.rpc('produce_prep', {
+                p_item_id: item.id,
+                p_portions: portionsNum,
+                p_actual_yield: actualNum,
+                p_performed_by: performedBy,
+                p_note: null
+            });
+            if (error) throw error;
+
+            logStaffActivity('stock', 'prep_production', {
+                staffName: performedBy,
+                amount: portionsNum,
+                reason: `ผลิตของเตรียม: ${item.name} ${portionsNum} portion`,
+                metadata: {
+                    module: 'stock',
+                    item_id: item.id,
+                    item_name: item.name,
+                    portions: portionsNum,
+                    actual_yield: actualNum,
+                    production_id: data?.production_id,
+                    ingredients: data?.ingredients
+                }
+            });
+            toast.success(`บันทึกการผลิต ${item.name} แล้ว`);
+            onDone();
+        } catch (err) {
+            console.error(err);
+            const missing = err?.code === 'PGRST202' || /could not find the function/i.test(err?.message || '');
+            toast.error(missing
+                ? 'ฐานข้อมูลยังไม่มีฟังก์ชันผลิตของเตรียม กรุณาติดตั้ง migration ก่อน'
+                : 'บันทึกการผลิตไม่สำเร็จ: ' + (err?.message || 'ไม่ทราบสาเหตุ'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 font-sans backdrop-blur-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md shadow-2xl rounded-xs">
+                <div className="p-4 border-b border-[oklch(85%_0.012_28)]">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                        PRODUCTION
+                    </span>
+                    <h3 className="text-base font-bold font-sans leading-7 text-[oklch(18%_0.012_28)] break-words">
+                        ผลิต {item.name}
+                    </h3>
+                    <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
+                        1 portion ได้ {perPortion.toLocaleString()} {item.usage_unit}
+                    </p>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    <div className="grid grid-cols-2 divide-x divide-[oklch(85%_0.012_28)] border-b border-[oklch(85%_0.012_28)]">
+                        <div className="p-4 space-y-1.5">
+                            <label htmlFor="produce-portions" className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">
+                                ทำกี่ portion
+                            </label>
+                            <input
+                                id="produce-portions"
+                                type="number"
+                                min="0"
+                                step="any"
+                                inputMode="decimal"
+                                autoFocus
+                                value={portions}
+                                onChange={e => setPortions(e.target.value)}
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-base text-right outline-none focus:border-black"
+                            />
+                        </div>
+                        <div className="p-4 space-y-1.5">
+                            <label htmlFor="produce-actual" className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">
+                                ได้จริง ({item.usage_unit})
+                            </label>
+                            <input
+                                id="produce-actual"
+                                type="number"
+                                min="0"
+                                step="any"
+                                inputMode="decimal"
+                                value={actualYield}
+                                onChange={e => setActualYield(e.target.value)}
+                                placeholder={expected ? String(Number(expected.toFixed(2))) : ''}
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-base text-right outline-none focus:border-black"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="p-4 space-y-1 font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
+                        <p>ตัดวัตถุดิบตามสูตร {validPortions ? portionsNum : 0} portion</p>
+                        <p>
+                            เพิ่มสต๊อก {item.name}{' '}
+                            <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">+{Number(added.toFixed(4))} portion</span>
+                        </p>
+                        <p className="text-[oklch(55%_0.010_28)]">เว้นช่อง "ได้จริง" ไว้ถ้าได้ตามสูตร</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 font-mono text-xs">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="py-3 bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-sans font-bold hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer border-r border-[oklch(85%_0.012_28)]"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={!validPortions || !validActual || saving}
+                            className="py-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-sans font-bold hover:bg-black disabled:opacity-40 transition-colors cursor-pointer"
+                        >
+                            {saving ? 'กำลังบันทึก...' : 'บันทึกการผลิต'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 // ── Inline Folder Creator ──
 function InlineFolderInput({ onSave, onCancel }) {
     const [name, setName] = useState('');
@@ -248,6 +418,10 @@ export default function RecipeLabPage({ isEmbedded = false }) {
     // Modals State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState(null);
+    const [producingItem, setProducingItem] = useState(null);
+
+    // 'all' | 'prep' | 'recipe' | 'issues'
+    const [typeFilter, setTypeFilter] = useState('all');
 
     // Search and Folder State
     const [searchQuery, setSearchQuery] = useState('');
@@ -272,14 +446,16 @@ export default function RecipeLabPage({ isEmbedded = false }) {
     const loadData = async () => {
         setLoading(true);
         try {
-            // 1. Fetch Base Recipes (stock_items where is_base_recipe is true)
-            const { data: stockItems, error } = await supabase
+            // 1. Fetch every stock item: made items are listed, the rest are needed to cost them
+            const { data: allStock, error } = await supabase
                 .from('stock_items')
                 .select('*')
-                .eq('is_base_recipe', true)
                 .order('name');
-            
+
             if (error) throw error;
+
+            const stockItems = (allStock || []).filter(isMadeItem);
+            const stockById = new Map((allStock || []).map(i => [i.id, i]));
 
             if (!stockItems || stockItems.length === 0) {
                 setLabItems([]);
@@ -301,6 +477,9 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                     )
                 `)
                 .in('parent_stock_item_id', stockIds);
+
+            // Costs follow today's ingredient prices all the way down, not the value saved at last edit
+            const liveCost = buildLiveCostResolver(allStock || [], recipeLinks || []);
 
             // 3. Fetch Usages (Where this base recipe is used by menu items or other recipes)
             const { data: usages } = await supabase
@@ -326,13 +505,14 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
             // Map and enrich each recipe item
             const enriched = stockItems.map(item => {
-                const ingredients = recipeLinks?.filter(l => l.parent_stock_item_id === item.id) || [];
-                
-                const { totalCost } = calculateRecipeCost(
-                    ingredients, 
-                    (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient, 
-                    { qFactorPercent: item.q_factor_percent || 0 }
-                );
+                const ingredients = (recipeLinks?.filter(l => l.parent_stock_item_id === item.id) || [])
+                    .map(l => ({ ...l, ingredient: stockById.get(l.ingredient_id) || l.ingredient }));
+
+                const totalCost = liveCost.portionCost(item.id);
+                const issues = getRecipeIssues(item, ingredients, stockById);
+                if (liveCost.hasLoop(item.id)) {
+                    issues.unshift({ code: 'loop', message: 'สูตรอ้างถึงตัวเองเป็นวงวน' });
+                }
 
                 // Calculate dependent menus
                 const itemUsages = (usages || []).filter(u => u.ingredient_id === item.id);
@@ -347,6 +527,9 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                     ...item,
                     materialCost: totalCost,
                     cost: totalCost,
+                    itemType: getItemType(item),
+                    unitCost: liveCost.unitCost(item.id),
+                    issues,
                     ingredientCount: ingredients.length,
                     usedInCount: uniqueUsedInNames.length,
                     usedInNames: uniqueUsedInNames
@@ -420,23 +603,34 @@ export default function RecipeLabPage({ isEmbedded = false }) {
         toast.success(`สร้างโฟลเดอร์ "[${trimmed}]" แล้ว`);
     };
 
-    const handleCreateFormula = async (name, targetCategory) => {
+    const handleCreateFormula = async (name, targetCategory, itemType = ITEM_TYPES.PREP) => {
         try {
-            const initialCategory = (targetCategory && targetCategory !== 'all' && targetCategory !== 'uncategorized') 
-                ? `folder:${targetCategory}` 
+            const initialCategory = (targetCategory && targetCategory !== 'all' && targetCategory !== 'uncategorized')
+                ? `folder:${targetCategory}`
                 : 'restock';
-            
-            const { data, error } = await supabase.from('stock_items').insert({
+
+            const isPrep = itemType === ITEM_TYPES.PREP;
+            const baseFields = {
                 name,
                 is_base_recipe: true,
                 category: initialCategory,
                 cost_price: 0,
                 pack_size: 1,
                 pack_unit: 'unit',
-                usage_unit: 'unit',
-                unit: 'unit',
+                usage_unit: isPrep ? 'g' : 'unit',
+                unit: isPrep ? 'portion' : 'unit',
                 current_quantity: 0
+            };
+            let { data, error } = await supabase.from('stock_items').insert({
+                ...baseFields,
+                item_type: itemType,
+                prep_mode: isPrep ? PREP_MODES.STOCKED : null
             }).select().single();
+
+            // Database without the item_type columns yet
+            if (error && (error.code === 'PGRST204' || /item_type|prep_mode/.test(error.message || ''))) {
+                ({ data, error } = await supabase.from('stock_items').insert(baseFields).select().single());
+            }
 
             if (error) throw error;
             
@@ -553,6 +747,12 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                 if (folderName !== activeCategory) return false;
             }
 
+            if (typeFilter === 'issues') {
+                if (!item.issues?.length) return false;
+            } else if (typeFilter !== 'all' && item.itemType !== typeFilter) {
+                return false;
+            }
+
             // Search query Filter
             if (searchQuery.trim()) {
                 const query = searchQuery.toLowerCase().trim();
@@ -561,7 +761,14 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
             return true;
         });
-    }, [labItems, activeCategory, searchQuery]);
+    }, [labItems, activeCategory, searchQuery, typeFilter]);
+
+    const typeTabs = [
+        ['all', 'ทั้งหมด', labItems.length],
+        [ITEM_TYPES.PREP, 'ของเตรียม', labItems.filter(i => i.itemType === ITEM_TYPES.PREP).length],
+        [ITEM_TYPES.RECIPE, 'สูตรต่อแก้ว/จาน', labItems.filter(i => i.itemType === ITEM_TYPES.RECIPE).length],
+        ['issues', 'ต้องแก้', labItems.filter(i => i.issues?.length).length]
+    ];
 
     return (
         <div className={`font-sans text-[oklch(18%_0.012_28)] ${isEmbedded ? '' : 'min-h-screen bg-[oklch(97%_0.008_28)]'}`}>
@@ -581,14 +788,14 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
-                                    RECIPE LAB · BASE FORMULAS
+                                    RECIPE LAB
                                 </span>
                             </div>
                             <h1 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-0.5">
-                                Recipe Lab (ห้องทดลองสูตรกลาง)
+                                ของเตรียมและสูตร
                             </h1>
                             <p className="text-xs text-[oklch(55%_0.010_28)] font-mono">
-                                จัดการสูตรเบส (Base Recipe) ทบทวนส่วนผสม และคำนวณต้นทุนต่อหน่วยอย่างแม่นยำ
+                                ของเตรียมทำเป็น portion แล้วนับสต๊อกได้ สูตรต่อแก้วหรือจานไม่เก็บสต๊อก
                             </p>
                         </div>
                     </div>
@@ -600,7 +807,7 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[oklch(55%_0.010_28)]" />
                             <input
                                 type="text"
-                                placeholder="ค้นหาสูตรกลาง..."
+                                placeholder="ค้นหาชื่อ..."
                                 className="w-full sm:w-48 lg:w-56 bg-white border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] focus:outline-none focus:border-black transition-colors"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
@@ -628,7 +835,7 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                             className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-black transition-colors shadow-xs cursor-pointer"
                         >
                             <Plus size={14} />
-                            <span>NEW FORMULA</span>
+                            <span className="font-sans">สร้างใหม่</span>
                         </button>
                     </div>
                 </div>
@@ -737,7 +944,7 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                         {/* Quick Stats Box */}
                         <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1.5 text-[11px] text-[oklch(42%_0.010_28)]">
                             <div className="flex justify-between">
-                                <span>สูตรกลางทั้งหมด:</span>
+                                <span>ทั้งหมด:</span>
                                 <span className="font-bold text-[oklch(18%_0.012_28)]">{labItems.length} สูตร</span>
                             </div>
                             <div className="flex justify-between">
@@ -750,7 +957,31 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                     </aside>
 
                     {/* Formulas Workbench Grid */}
-                    <main className="flex-1 w-full min-w-0">
+                    <main className="flex-1 w-full min-w-0 space-y-3.5">
+                        <div className="grid grid-cols-2 sm:flex gap-px border border-[oklch(85%_0.012_28)] bg-[oklch(85%_0.012_28)]" role="tablist" aria-label="กรองตามชนิด">
+                            {typeTabs.map(([value, label, count]) => {
+                                const active = typeFilter === value;
+                                const warn = value === 'issues' && count > 0 && !active;
+                                return (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={active}
+                                        onClick={() => setTypeFilter(value)}
+                                        className={`flex-1 min-w-fit px-3 py-2 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer transition-colors ${
+                                            active
+                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                                : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        }`}
+                                    >
+                                        <span className="font-sans font-bold text-[13px] leading-6">{label}</span>
+                                        <span className={`font-mono text-[11px] font-bold tabular-nums ${warn ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{count}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         {loading ? (
                             <div className="text-center py-20 border border-[oklch(85%_0.012_28)] bg-white font-mono text-xs text-[oklch(55%_0.010_28)] space-y-2">
                                 <RefreshCw size={20} className="animate-spin mx-auto text-[oklch(42%_0.010_28)]" />
@@ -778,6 +1009,9 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                         ? item.category.substring(7)
                                         : 'uncategorized';
                                     const hasUsages = (item.usedInCount || 0) > 0;
+                                    const isPrepItem = item.itemType === ITEM_TYPES.PREP;
+                                    const yieldKnown = hasPortionYield(item);
+                                    const canProduce = isPrepItem && isStockedItem(item) && yieldKnown && item.ingredientCount > 0;
 
                                     return (
                                         <div 
@@ -788,15 +1022,17 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                         >
                                             {/* Cell 1: Metadata Header */}
                                             <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] space-y-2.5 rounded-t-xs">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
-                                                        [BASE FORMULA]
+                                                <div className="flex flex-wrap justify-between items-center gap-1">
+                                                    <span className="font-sans text-[11px] font-bold leading-5 px-1.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] whitespace-nowrap">
+                                                        {isPrepItem
+                                                            ? (isStockedItem(item) ? 'ของเตรียม · เก็บสต๊อก' : 'ของเตรียม · ตัดทะลุ')
+                                                            : 'สูตรต่อแก้ว/จาน'}
                                                     </span>
 
                                                     {/* Usages Badge */}
                                                     {hasUsages ? (
                                                         <span 
-                                                            className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1"
+                                                            className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap"
                                                             title={`ใช้งานใน: ${item.usedInNames.join(', ')}`}
                                                         >
                                                             <LinkIcon size={10} />
@@ -855,29 +1091,44 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                                             </button>
                                                         </div>
                                                     )}
-                                                    <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
-                                                        {item.ingredientCount} วัตถุดิบในสูตร
+                                                    <div className="text-[11px] font-sans leading-5 text-[oklch(55%_0.010_28)] mt-0.5">
+                                                        ส่วนผสม {item.ingredientCount} รายการ
+                                                        {isPrepItem && isStockedItem(item) && (
+                                                            <> · <span className="whitespace-nowrap">คงเหลือ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{Number(Number(item.current_quantity || 0).toFixed(2))}</span> portion</span></>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Cell 2: Cost Calculation Metric */}
                                             <div className="p-3.5 space-y-2">
-                                                <div className="border border-[oklch(90%_0.008_28)] bg-[oklch(98%_0.004_28)] p-2.5 flex justify-between items-center">
-                                                    <div>
-                                                        <span className="font-mono text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] block">
-                                                            COST PER BATCH / UNIT
+                                                <div className="border border-[oklch(90%_0.008_28)] bg-[oklch(98%_0.004_28)] p-2.5 flex flex-wrap justify-between items-center gap-x-2">
+                                                    <div className="min-w-0">
+                                                        <span className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block whitespace-nowrap">
+                                                            {isPrepItem ? 'ต้นทุนต่อ portion' : 'ต้นทุนต่อแก้ว/จาน'}
                                                         </span>
-                                                        <span className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
-                                                            ต้นทุนวัตถุดิบรวม
-                                                        </span>
+                                                        {isPrepItem && yieldKnown && (
+                                                            <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] block">
+                                                                1 portion = {usagePerPortion(item).toLocaleString()} {item.usage_unit} · ฿{item.unitCost.toFixed(4)}/{item.usage_unit}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <span className="font-mono font-bold text-lg text-[oklch(18%_0.012_28)]">
+                                                    <div className="text-right flex-shrink-0 ml-auto">
+                                                        <span className="font-mono font-bold text-lg tabular-nums text-[oklch(18%_0.012_28)]">
                                                             ฿{item.cost?.toFixed(2)}
                                                         </span>
                                                     </div>
                                                 </div>
+
+                                                {item.issues.length > 0 && (
+                                                    <div
+                                                        className="border-l-2 border-[oklch(52%_0.16_28)] pl-2 font-sans text-[11px] leading-5 text-[oklch(42%_0.010_28)]"
+                                                        title={item.issues.map(i => i.message).join('\n')}
+                                                    >
+                                                        <span className="font-bold text-[oklch(52%_0.16_28)]">ต้องแก้ {item.issues.length} จุด</span>
+                                                        <span className="block break-words">{item.issues[0].message}</span>
+                                                    </div>
+                                                )}
 
                                                 {/* Folder Mover Dropdown Button */}
                                                 <div className="relative">
@@ -937,9 +1188,16 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                                     onClick={() => { setRecipeTarget(item); setIsRecipeOpen(true); }}
                                                     className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black transition-colors flex items-center justify-center gap-1 cursor-pointer"
                                                 >
-                                                    <Layers size={13} />
-                                                    <span>EDIT RECIPE (ปรุงสูตร)</span>
+                                                    <span className="font-sans">แก้สูตร</span>
                                                 </button>
+                                                {canProduce && (
+                                                    <button
+                                                        onClick={() => setProducingItem(item)}
+                                                        className="flex-1 py-2 border border-[oklch(18%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                                                    >
+                                                        ผลิต
+                                                    </button>
+                                                )}
                                                 <button 
                                                     onClick={() => setDeletingItem(item)}
                                                     className="px-2.5 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(55%_0.010_28)] hover:text-red-700 hover:border-red-400 transition-colors cursor-pointer"
@@ -963,7 +1221,16 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                     onClose={() => setIsCreateOpen(false)}
                     onCreate={handleCreateFormula}
                     initialFolder={activeCategory}
+                    initialType={typeFilter}
                     folders={allFolders}
+                />
+            )}
+
+            {producingItem && (
+                <ProduceModal
+                    item={producingItem}
+                    onClose={() => setProducingItem(null)}
+                    onDone={() => { setProducingItem(null); loadData(); }}
                 />
             )}
 

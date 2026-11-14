@@ -13,6 +13,7 @@ import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 import { logStaffActivity } from '../../utils/auditLogger';
+import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES } from '../../utils/recipeGraph';
 
 // ── 1. Mini Modal for Quick Stock Item Edit ──
 function EditStockModal({ item, onClose, onSave }) {
@@ -620,12 +621,14 @@ function PromoteModal({ initialName, onClose, onPromote }) {
 function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition };
-    const isBaseRecipe = ingredient?.is_base_recipe === true;
-    
+    const itemType = getItemType(ingredient);
+    const isBaseRecipe = itemType !== ITEM_TYPES.RAW;
+    const missingYield = !hasPortionYield(ingredient);
+
     return (
         <div 
             ref={setNodeRef} style={style} {...attributes}
-            className="flex items-center gap-2.5 p-2.5 border border-[oklch(85%_0.012_28)] bg-white hover:border-black transition-colors rounded-xs font-mono text-xs"
+            className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 p-2.5 border border-[oklch(85%_0.012_28)] bg-white hover:border-black transition-colors rounded-xs font-mono text-xs"
         >
             <div {...listeners} className="cursor-grab text-[oklch(55%_0.010_28)] hover:text-black flex-shrink-0" title="ลากเพื่อเรียงลำดับ">
                 <GripVertical size={16} />
@@ -634,27 +637,34 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
             {/* Visual Layer Marker */}
             <div className={`w-1.5 h-9 flex-shrink-0 ${getLayerColor(index)}`}></div>
 
-            <div className="flex-1 min-w-0 pr-2">
+            <div className="flex-1 min-w-[11rem] pr-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-bold text-sm text-[oklch(18%_0.012_28)] font-sans truncate">
                         {ingredient.name}
                     </span>
                     {isBaseRecipe && (
-                        <span className="text-[9px] font-mono font-bold uppercase px-1 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                            [BASE]
+                        <span className="text-[10px] font-sans font-bold px-1 leading-5 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] whitespace-nowrap">
+                            {itemType === ITEM_TYPES.PREP ? 'ของเตรียม' : 'สูตร'}
                         </span>
                     )}
                 </div>
+                {missingYield && (
+                    <div className="text-[11px] font-sans leading-5 text-[oklch(52%_0.16_28)]">
+                        ยังไม่ได้ระบุปริมาณต่อ portion ต้นทุนบรรทัดนี้ยังไม่ถูก
+                    </div>
+                )}
                 <button 
                     type="button"
                     onClick={() => onEditStock(ingredient)}
                     className="text-[10px] text-[oklch(55%_0.010_28)] hover:text-black hover:underline flex items-center gap-1 transition-colors mt-0.5 cursor-pointer"
                 >
                     <span>฿{unitCost?.toFixed(4) || 0} / {ingredient.usage_unit}</span>
-                    <span className="text-[9px] font-bold">[EDIT STOCK]</span>
+                    <span className="text-[9px] font-bold whitespace-nowrap">[EDIT STOCK]</span>
                 </button>
             </div>
 
+            {/* Quantity, cost and delete stay together; on narrow screens they drop below the name */}
+            <div className="ml-auto flex items-center gap-2.5 flex-shrink-0">
             {/* Quantity Input */}
             <div className="flex items-center gap-1 flex-shrink-0">
                 <input 
@@ -686,6 +696,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
             >
                 <Trash2 size={14} />
             </button>
+            </div>
         </div>
     );
 }
@@ -716,6 +727,17 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const [tempName, setTempName] = useState('');
 
     const [targetFoodCostPct, setTargetFoodCostPct] = useState(30);
+
+    // Recipes of every made item, so nested costs follow today's ingredient prices
+    const [stockRecipeRows, setStockRecipeRows] = useState([]);
+
+    // What one making of this recipe is (only when the parent is a stock item)
+    const [portionForm, setPortionForm] = useState({
+        itemType: ITEM_TYPES.PREP,
+        prepMode: PREP_MODES.STOCKED,
+        yieldQty: '',
+        yieldUnit: 'g'
+    });
 
     const sensors = useSensors(useSensor(PointerSensor));
 
@@ -784,6 +806,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             if (parentType === 'menu' && parentData?.price) {
                 setCurrentPrice(parentData.price);
             }
+            if (parentType === 'stock' && parentData) {
+                const type = getItemType(parentData);
+                setPortionForm({
+                    itemType: type === ITEM_TYPES.RAW ? ITEM_TYPES.PREP : type,
+                    prepMode: parentData.prep_mode || PREP_MODES.STOCKED,
+                    yieldQty: parentData.portion_yield_qty ?? '',
+                    yieldUnit: parentData.usage_unit && parentData.usage_unit !== 'unit' ? parentData.usage_unit : 'g'
+                });
+            }
 
             // 3. Fetch All Stock Items for Picker
             const { data: stocks } = await supabase
@@ -791,6 +822,12 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 .select('*')
                 .order('name');
             setAvailableItems(stocks || []);
+
+            const { data: nestedRows } = await supabase
+                .from('recipe_ingredients')
+                .select('parent_stock_item_id, ingredient_id, quantity')
+                .not('parent_stock_item_id', 'is', null);
+            setStockRecipeRows(nestedRows || []);
 
             // 4. Fetch Target Food Cost % Setting
             const { data: settings } = await supabase.from('store_settings').select('target_food_cost_pct').single();
@@ -808,6 +845,13 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [parentId]);
 
+    // Made items are costed from their own ingredients at today's prices.
+    const liveCost = useMemo(
+        () => buildLiveCostResolver(availableItems, stockRecipeRows),
+        [availableItems, stockRecipeRows]
+    );
+    const resolveItem = (id, fallback) => liveCost.getItem(id) || fallback;
+
     // Recalculate Total Cost
     useEffect(() => {
         const breakdown = calculateRecipeCost(ingredients.map(i => ({
@@ -815,11 +859,16 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             quantity: i.quantity,
             unit: i.unit
         })), (id) => {
-            return availableItems.find(x => x.id === id) || ingredients.find(x => x.ingredientId === id)?.ingredient;
+            return liveCost.getItem(id) || ingredients.find(x => x.ingredientId === id)?.ingredient;
         });
 
         setTotalCost(breakdown.totalCost);
-    }, [ingredients, availableItems]);
+    }, [ingredients, liveCost]);
+
+    const isPrep = parentType === 'stock' && portionForm.itemType === ITEM_TYPES.PREP;
+    const yieldQtyNum = parseFloat(portionForm.yieldQty);
+    const hasYield = Number.isFinite(yieldQtyNum) && yieldQtyNum > 0;
+    const costPerUsageUnit = isPrep && hasYield ? totalCost / yieldQtyNum : null;
 
     const handleAddIngredient = (item) => {
         if (item.id === parentId) {
@@ -840,6 +889,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     };
 
     const handleSave = async () => {
+        if (isPrep && !hasYield) {
+            toast.error('กรุณาระบุปริมาณที่ได้ต่อ 1 portion ก่อนบันทึก');
+            return;
+        }
         setLoading(true);
         try {
             const payloadItems = ingredients.map((ing, idx) => ({
@@ -880,8 +933,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     const payloads = payloadItems.map(p => ({ [queryField]: parentId, ...p }));
                     await supabase.from('recipe_ingredients').insert(payloads);
                 }
-                // Update Base Recipe Material Cost
-                await supabase.from('stock_items').update({ cost_price: totalCost }).eq('id', parentId);
+                // What one making of this recipe is, and what it costs
+                const legacyFields = isPrep
+                    ? { cost_price: totalCost, pack_size: 1, pack_unit: 'unit', unit: 'portion', usage_unit: portionForm.yieldUnit, conversion_factor: yieldQtyNum }
+                    : { cost_price: totalCost };
+                const typedFields = isPrep
+                    ? { ...legacyFields, item_type: ITEM_TYPES.PREP, prep_mode: portionForm.prepMode, portion_yield_qty: yieldQtyNum }
+                    : { ...legacyFields, item_type: ITEM_TYPES.RECIPE };
+                const { error: typedErr } = await supabase.from('stock_items').update(typedFields).eq('id', parentId);
+                if (typedErr) {
+                    // Database without the item_type columns yet: keep cost and yield at least.
+                    const { error: legacyErr } = await supabase.from('stock_items').update(legacyFields).eq('id', parentId);
+                    if (legacyErr) throw legacyErr;
+                }
             }
 
             logStaffActivity('sop', 'recipe_save', {
@@ -946,7 +1010,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         try {
             const payload = {
                 ...formData,
-                unit: formData.usage_unit,
+                unit: formData.pack_unit,
                 current_quantity: 0,
                 min_stock_threshold: 0
             };
@@ -1040,19 +1104,25 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
     };
 
+    // A prep or a per-glass recipe is made from raw ingredients and preps. Only a sold
+    // menu item may point at a per-glass recipe (as "1 glass of this").
+    const pickableItems = useMemo(() => availableItems.filter(i =>
+        i.id !== parentId && (parentType === 'menu' || getItemType(i) !== ITEM_TYPES.RECIPE)
+    ), [availableItems, parentId, parentType]);
+
     // Filter available items by search and type
     const filteredItems = useMemo(() => {
-        return availableItems.filter(i => {
+        return pickableItems.filter(i => {
             const matchesSearch = i.name.toLowerCase().includes(searchTerm.toLowerCase());
             const notAlreadyAdded = !ingredients.some(existing => existing.ingredientId === i.id);
-            const matchesType = itemFilterType === 'all' 
-                ? true 
-                : itemFilterType === 'base' 
-                    ? i.is_base_recipe === true 
-                    : !i.is_base_recipe;
+            const matchesType = itemFilterType === 'all'
+                ? true
+                : itemFilterType === 'base'
+                    ? getItemType(i) !== ITEM_TYPES.RAW
+                    : getItemType(i) === ITEM_TYPES.RAW;
             return matchesSearch && notAlreadyAdded && matchesType;
         });
-    }, [availableItems, searchTerm, ingredients, itemFilterType]);
+    }, [pickableItems, searchTerm, ingredients, itemFilterType]);
 
     return (
         <div className="fixed inset-0 z-[70] bg-[oklch(97%_0.008_28)] flex flex-col md:flex-row font-sans text-[oklch(18%_0.012_28)] animate-in fade-in">
@@ -1107,8 +1177,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             {/* Left Column: Recipe Stack & Layers Workbench */}
             <div className="flex-1 flex flex-col bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] h-full overflow-hidden relative">
                 {/* Workbench Top Bar */}
-                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center z-10 sticky top-0">
-                    <div className="min-w-0 pr-2">
+                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-wrap justify-between items-center gap-2 z-10 sticky top-0">
+                    <div className="min-w-[12rem] flex-1 pr-2">
                         {isEditingName ? (
                             <div className="flex items-center gap-1.5 font-mono">
                                 <input
@@ -1131,7 +1201,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         ) : (
                             <div className="flex items-center gap-2 group/builder-title flex-wrap">
                                 <span className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
-                                    {parentType === 'menu' ? '[MENU RECIPE]' : '[BASE FORMULA]'}
+                                    {parentType === 'menu' ? '[MENU RECIPE]' : (isPrep ? '[PREP]' : '[RECIPE]')}
                                 </span>
                                 <h2 className="text-base font-bold font-sans text-[oklch(18%_0.012_28)] truncate">
                                     {parentItem?.name || 'ตัวปรุงสูตร (Recipe Builder)'}
@@ -1146,8 +1216,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                             </div>
                         )}
                         <p className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
-                            {parentType === 'stock' && parentItem 
-                                ? `เกณฑ์ตวง 1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
+                            {parentType === 'stock'
+                                ? 'ส่วนผสมด้านล่างคือของที่ใช้ทำ 1 portion'
                                 : 'ลากวางเพื่อจัดลำดับชั้นวัตถุดิบ (Layers)'
                             }
                         </p>
@@ -1192,6 +1262,109 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     </div>
                 </div>
 
+                {/* Portion definition (stock-item recipes only) */}
+                {parentType === 'stock' && (
+                    <div className="border-b border-[oklch(85%_0.012_28)] bg-white grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] divide-y lg:divide-y-0 lg:divide-x divide-[oklch(85%_0.012_28)] text-xs">
+                        <div className="p-3 space-y-1.5">
+                            <span className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">ชนิด</span>
+                            <div className="flex border border-[oklch(85%_0.012_28)] w-fit">
+                                {[[ITEM_TYPES.PREP, 'ของเตรียม'], [ITEM_TYPES.RECIPE, 'สูตรต่อแก้ว/จาน']].map(([value, label]) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        onClick={() => setPortionForm(f => ({ ...f, itemType: value }))}
+                                        aria-pressed={portionForm.itemType === value}
+                                        className={`px-3 py-1.5 font-sans font-bold leading-5 whitespace-nowrap cursor-pointer transition-colors ${
+                                            portionForm.itemType === value ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {isPrep ? (
+                            <>
+                                <div className="p-3 flex flex-wrap gap-x-6 gap-y-3">
+                                    <div className="space-y-1.5">
+                                        <label htmlFor="portion-yield" className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">
+                                            1 portion ได้
+                                        </label>
+                                        <div className="flex items-center gap-1.5">
+                                            <input
+                                                id="portion-yield"
+                                                type="number"
+                                                min="0"
+                                                inputMode="decimal"
+                                                value={portionForm.yieldQty}
+                                                onChange={e => setPortionForm(f => ({ ...f, yieldQty: e.target.value }))}
+                                                placeholder="เช่น 2000"
+                                                className={`w-28 p-1.5 border bg-white font-mono font-bold text-sm text-right outline-none focus:border-black ${
+                                                    hasYield ? 'border-[oklch(85%_0.012_28)]' : 'border-[oklch(52%_0.16_28)]'
+                                                }`}
+                                            />
+                                            <select
+                                                aria-label="หน่วยของปริมาณต่อ portion"
+                                                value={portionForm.yieldUnit}
+                                                onChange={e => setPortionForm(f => ({ ...f, yieldUnit: e.target.value }))}
+                                                className="p-1.5 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-xs cursor-pointer"
+                                            >
+                                                {THAI_UNITS.filter(u => u.type !== 'count').map(u => (
+                                                    <option key={u.value} value={u.value}>{u.value}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {!hasYield && (
+                                            <p className="font-sans text-[11px] leading-5 text-[oklch(52%_0.16_28)]">
+                                                ชั่งหรือตวงของที่ทำได้จริง 1 รอบ แล้วกรอกที่นี่
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <span className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">การตัดสต๊อก</span>
+                                        <div className="flex border border-[oklch(85%_0.012_28)] w-fit">
+                                            {[[PREP_MODES.STOCKED, 'ผลิตเก็บไว้'], [PREP_MODES.PASSTHROUGH, 'ตัดทะลุ']].map(([value, label]) => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setPortionForm(f => ({ ...f, prepMode: value }))}
+                                                    aria-pressed={portionForm.prepMode === value}
+                                                    className={`px-3 py-1.5 font-sans font-bold leading-5 whitespace-nowrap cursor-pointer transition-colors ${
+                                                        portionForm.prepMode === value ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                    }`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="font-sans text-[11px] leading-5 text-[oklch(42%_0.010_28)] max-w-xs">
+                                            {portionForm.prepMode === PREP_MODES.STOCKED
+                                                ? 'กดผลิตเมื่อทำเสร็จ ระบบตัดวัตถุดิบและเพิ่มสต๊อกของเตรียม'
+                                                : 'ไม่เก็บสต๊อก ขายแล้วตัดถึงวัตถุดิบทันที'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 lg:text-right space-y-1.5 bg-[oklch(98%_0.004_28)]">
+                                    <span className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">ต้นทุนต่อหน่วย</span>
+                                    <div className="font-mono font-bold text-sm tabular-nums text-[oklch(18%_0.012_28)]">
+                                        {costPerUsageUnit !== null ? `฿${costPerUsageUnit.toFixed(4)}` : '—'}
+                                        <span className="text-[10px] font-normal text-[oklch(55%_0.010_28)]"> / {portionForm.yieldUnit}</span>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="p-3 lg:col-span-2 flex items-center">
+                                <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
+                                    สูตรของ 1 แก้วหรือ 1 จาน ไม่เก็บเป็นสต๊อก ขายแล้วตัดถึงส่วนผสมแต่ละตัว
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Layer Stack Items */}
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 pb-28 md:pb-4">
                     {ingredients.length === 0 ? (
@@ -1212,7 +1385,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                             <SortableContext items={ingredients.map(i => i.id)} strategy={verticalListSortingStrategy}>
                                 {ingredients.map((item, idx) => {
-                                    const unitCost = calculateRealUnitCost(item.ingredient);
+                                    const liveIngredient = resolveItem(item.ingredientId, item.ingredient);
+                                    const unitCost = calculateRealUnitCost(liveIngredient);
                                     return (
                                         <SortableLayer 
                                             key={item.id} 
@@ -1319,7 +1493,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                     : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
                             }`}
                         >
-                            ทั้งหมด ({availableItems.length})
+                            ทั้งหมด ({pickableItems.length})
                         </button>
                         <button 
                             type="button"
@@ -1330,7 +1504,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                     : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
                             }`}
                         >
-                            วัตถุดิบดิบ ({availableItems.filter(i => !i.is_base_recipe).length})
+                            วัตถุดิบ ({pickableItems.filter(i => getItemType(i) === ITEM_TYPES.RAW).length})
                         </button>
                         <button 
                             type="button"
@@ -1341,7 +1515,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                     : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
                             }`}
                         >
-                            สูตรกลาง ({availableItems.filter(i => i.is_base_recipe).length})
+                            {parentType === 'menu' ? 'ของเตรียม/สูตร' : 'ของเตรียม'} ({pickableItems.filter(i => getItemType(i) !== ITEM_TYPES.RAW).length})
                         </button>
                     </div>
                 </div>
@@ -1349,9 +1523,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 {/* Items List */}
                 <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 pb-24 md:pb-4 font-mono text-xs">
                     {filteredItems.map(item => {
-                        const unitCost = calculateRealUnitCost(item);
+                        const unitCost = calculateRealUnitCost(resolveItem(item.id, item));
+                        const paletteType = getItemType(item);
                         return (
-                            <div 
+                            <div
                                 key={item.id}
                                 className="p-2.5 border border-[oklch(85%_0.012_28)] bg-white hover:border-black transition-colors cursor-pointer flex justify-between items-center group rounded-xs select-none"
                                 onClick={() => {
@@ -1364,14 +1539,16 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                         <span className="font-bold text-xs text-[oklch(18%_0.012_28)] font-sans truncate">
                                             {item.name}
                                         </span>
-                                        {item.is_base_recipe && (
-                                            <span className="text-[9px] font-bold uppercase px-1 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                                                [BASE]
+                                        {paletteType !== ITEM_TYPES.RAW && (
+                                            <span className="text-[10px] font-sans font-bold px-1 leading-5 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] whitespace-nowrap">
+                                                {paletteType === ITEM_TYPES.PREP ? 'ของเตรียม' : 'สูตร'}
                                             </span>
                                         )}
                                     </div>
                                     <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
-                                        ฿{unitCost?.toFixed(4) || 0} / {item.usage_unit}
+                                        {hasPortionYield(item)
+                                            ? <>฿{unitCost?.toFixed(4) || 0} / {item.usage_unit}</>
+                                            : <span className="font-sans text-[11px] leading-5 text-[oklch(52%_0.16_28)]">ยังไม่ได้ระบุปริมาณต่อ portion</span>}
                                     </div>
                                 </div>
                                 <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] group-hover:text-black">
