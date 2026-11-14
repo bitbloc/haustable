@@ -43,10 +43,29 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
             }
 
             // 2. Fetch Aggregated Bookings efficiently (user_id and status only)
-            const { data: bookings, error: bookingError } = await supabase
-                .from('bookings')
-                .select('user_id, pickup_contact_phone, status')
-                .in('status', ['completed', 'confirmed', 'seated', 'pending', 'paid']);
+            // Supabase returns at most 1,000 rows per request, so page through the whole result.
+            // A single request silently truncates the history and under-counts visits per member.
+            const PAGE_SIZE = 1000;
+            const MAX_PAGES = 50;
+            let bookings = [];
+            let bookingError = null;
+            for (let page = 0; page < MAX_PAGES; page++) {
+                const { data: pageRows, error: pageError } = await supabase
+                    .from('bookings')
+                    .select('user_id, pickup_contact_phone, status')
+                    .in('status', ['completed', 'confirmed', 'seated', 'pending', 'paid'])
+                    .order('id', { ascending: true })
+                    .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+                if (pageError) {
+                    bookingError = pageError;
+                    break;
+                }
+                bookings = bookings.concat(pageRows || []);
+                if (!pageRows || pageRows.length < PAGE_SIZE) break;
+            }
+            if (bookingError) {
+                console.warn('[POS CRM] Could not load full booking history for visit counts:', bookingError);
+            }
 
             // O(M) Map aggregation
             const bookingMapByUser = new Map();
