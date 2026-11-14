@@ -5,6 +5,7 @@ import { fetchAndSortMenu } from '../../utils/menuHelper';
 import { calculateRecipeCost } from '../../utils/costUtils';
 import { buildLiveCostResolver } from '../../utils/recipeGraph';
 import RecipeReadinessPanel from './RecipeReadinessPanel';
+import RecipeUnitCheckPanel from './RecipeUnitCheckPanel';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 
@@ -401,6 +402,14 @@ export default function MenuCostPage({ isEmbedded = false }) {
                     menuItems={menuItems}
                     onOpenRecipe={handleOpenRecipe}
                     onLinked={() => loadData(false)}
+                />
+
+                <RecipeUnitCheckPanel
+                    onOpenRecipe={(issue) => {
+                        const menu = menuItems.find(m => m.id === issue.parentId);
+                        if (menu) handleOpenRecipe(menu);
+                    }}
+                    onFixed={() => loadData(false)}
                 />
 
                 {/* 4 Strategic F&B KPI Cards (Dieter Rams Tabular Structure) */}
