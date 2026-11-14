@@ -2,13 +2,14 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
+// Only what shop stock carries: retail barcodes (EAN / UPC), CODE 128 on cases, and our
+// own QR labels. Every extra format is one more decoder tried on every frame, which is
+// what makes iPhone (no built-in barcode reader, decoding in JavaScript) slow.
 const FORMATS = [
     Html5QrcodeSupportedFormats.EAN_13,
     Html5QrcodeSupportedFormats.EAN_8,
     Html5QrcodeSupportedFormats.UPC_A,
-    Html5QrcodeSupportedFormats.UPC_E,
     Html5QrcodeSupportedFormats.CODE_128,
-    Html5QrcodeSupportedFormats.CODE_39,
     Html5QrcodeSupportedFormats.QR_CODE
 ];
 
@@ -48,9 +49,18 @@ export default function ScanStrip({ onCode, onClose, status }) {
                 await scanner.start(
                     { facingMode: 'environment' },
                     {
-                        fps: 15,
-                        // Barcodes are wide: a wide, short box decodes faster than a square.
-                        qrbox: (w, h) => ({ width: Math.floor(w * 0.86), height: Math.floor(Math.min(h * 0.6, w * 0.5)) }),
+                        fps: 20,
+                        // Barcodes are wide: a wide, short box means fewer pixels to decode per frame.
+                        qrbox: (w, h) => ({ width: Math.floor(w * 0.86), height: Math.floor(Math.min(h * 0.5, w * 0.36)) }),
+                        // Printed codes are never mirrored: skip the second, flipped decode of every frame.
+                        disableFlip: true,
+                        // Sharper picture so thin bars are read on the first frames (iPhone defaults to a low resolution).
+                        videoConstraints: {
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            advanced: [{ focusMode: 'continuous' }]
+                        },
                         experimentalFeatures: { useBarCodeDetectorIfSupported: true }
                     },
                     (text) => { if (!cancelled) onCodeRef.current?.(text); },
