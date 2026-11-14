@@ -33,17 +33,11 @@ const writeDraft = (kind, day, counts) => {
 const fmt = (n) => Number(Number(n || 0).toFixed(3)).toLocaleString('th-TH', { maximumFractionDigits: 3 });
 
 const loadItems = async () => {
-    let { data, error } = await supabase
+    // select('*') so the screen works before and after newer columns (track_mode) exist
+    const { data, error } = await supabase
         .from('stock_items')
-        .select('id, name, category, unit, current_quantity, item_type, prep_mode, track_mode, pack_size, pack_unit, usage_unit, conversion_factor, capacity_per_unit')
+        .select('*')
         .order('name');
-    if (error && /track_mode|column/i.test(error.message || '')) {
-        // Database without the count-session migration yet
-        ({ data, error } = await supabase
-            .from('stock_items')
-            .select('id, name, category, unit, current_quantity, item_type, prep_mode, pack_size, pack_unit, usage_unit, conversion_factor, capacity_per_unit')
-            .order('name'));
-    }
     if (error) throw error;
     return (data || []).filter(i =>
         (i.item_type ?? 'raw') === 'raw' || (i.item_type === 'prep' && (i.prep_mode ?? 'stocked') === 'stocked'))

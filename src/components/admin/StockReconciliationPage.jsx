@@ -195,7 +195,7 @@ export default function StockReconciliationPage() {
                             <table className="w-full min-w-[960px] border-collapse">
                                 <thead className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
                                     <tr>
-                                        <th className={`${cellHead} text-left sticky left-0 bg-[oklch(94%_0.010_28)]`}>รายการ</th>
+                                        <th className="px-3 py-2 text-left font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)] whitespace-nowrap sticky left-0 bg-[oklch(94%_0.010_28)]">รายการ</th>
                                         <th className={cellHead}>ยอดเปิด</th>
                                         <th className={cellHead}>รับเข้า</th>
                                         <th className={cellHead}>ผลิต</th>
