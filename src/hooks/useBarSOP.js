@@ -119,9 +119,23 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             const { data: sops, error } = await query;
             if (error) throw error;
 
-            // Ingredients come from the linked menu or base recipe
-            const menuIds = [...new Set(sops.map(r => r.source_menu_item_id).filter(Boolean))];
-            const stockIds = [...new Set(sops.filter(r => !r.source_menu_item_id).map(r => r.source_stock_item_id).filter(Boolean))];
+            // Ingredients come from the linked menu or base recipe. A link to an item that no
+            // longer exists counts as no link, so the written lines are shown and kept.
+            const wantMenu = [...new Set(sops.map(r => r.source_menu_item_id).filter(Boolean))];
+            const wantStock = [...new Set(sops.filter(r => !r.source_menu_item_id).map(r => r.source_stock_item_id).filter(Boolean))];
+            const [liveMenus, liveStock] = await Promise.all([
+                wantMenu.length ? supabase.from('menu_items').select('id').in('id', wantMenu) : { data: [] },
+                wantStock.length ? supabase.from('stock_items').select('id').in('id', wantStock) : { data: [] }
+            ]);
+            const menuAlive = new Set((liveMenus.data || []).map(x => String(x.id)));
+            const stockAlive = new Set((liveStock.data || []).map(x => String(x.id)));
+            const liveSops = sops.map(r => ({
+                ...r,
+                source_menu_item_id: r.source_menu_item_id && menuAlive.has(String(r.source_menu_item_id)) ? r.source_menu_item_id : null,
+                source_stock_item_id: !r.source_menu_item_id && r.source_stock_item_id && stockAlive.has(String(r.source_stock_item_id)) ? r.source_stock_item_id : null
+            }));
+            const menuIds = [...menuAlive];
+            const stockIds = [...stockAlive];
             const select = `parent_menu_item_id, parent_stock_item_id, quantity, unit, layer_order,
                         ingredient:stock_items!recipe_ingredients_ingredient_id_fkey ( id, name, usage_unit )`;
             const [menuRows, stockRows] = await Promise.all([
@@ -130,7 +144,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             ]);
             const grouped = groupRecipeRows([...(menuRows.data || []), ...(stockRows.data || [])]);
 
-            const populatedData = sops.map(r => {
+            const populatedData = liveSops.map(r => {
                 const rows = rowsForSop(r, grouped);
                 // Not linked: whatever was written stays as plain text lines (never dropped on save).
                 const currentIngs = rows

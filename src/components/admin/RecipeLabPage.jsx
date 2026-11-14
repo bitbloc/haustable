@@ -11,15 +11,17 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
+import MoveRecipeToMenuModal from './MoveRecipeToMenuModal';
 import { toast } from 'sonner';
 import { logStaffActivity } from '../../utils/auditLogger';
 
 const FOLDER_STORAGE_KEY = 'recipe_lab_custom_folders_v1';
 
 // ── In-App Modal: Create New Formula (Dieter Rams Clean Modal) ──
-function CreateFormulaModal({ onClose, onCreate, initialFolder, initialType, folders = [] }) {
+function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) {
     const [name, setName] = useState('');
-    const [itemType, setItemType] = useState(initialType === ITEM_TYPES.RECIPE ? ITEM_TYPES.RECIPE : ITEM_TYPES.PREP);
+    // New items here are always bases / preps. What a menu uses is its menu recipe (Food & Drink -> เมนู).
+    const itemType = ITEM_TYPES.PREP;
     const [selectedFolder, setSelectedFolder] = useState(
         initialFolder && initialFolder !== 'all' && initialFolder !== 'uncategorized' 
             ? initialFolder 
@@ -49,7 +51,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, initialType, fol
                             FORMULA CREATION
                         </span>
                         <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)]">
-                            สร้างสูตรใหม่
+                            สร้างเบส / ของเตรียม
                         </h3>
                     </div>
                     <button 
@@ -61,32 +63,9 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, initialType, fol
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <span className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                            ชนิด
-                        </span>
-                        <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
-                            {[
-                                [ITEM_TYPES.PREP, 'ของเตรียม', 'ทำเป็น portion เช่น ซอส เบสชา'],
-                                [ITEM_TYPES.RECIPE, 'สูตรต่อแก้ว/จาน', 'ไม่เก็บสต๊อก']
-                            ].map(([value, label, hint]) => (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    onClick={() => setItemType(value)}
-                                    aria-pressed={itemType === value}
-                                    className={`p-2.5 text-left cursor-pointer transition-colors ${
-                                        itemType === value
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                            : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
-                                    }`}
-                                >
-                                    <span className="block font-sans font-bold text-sm leading-6">{label}</span>
-                                    <span className="block font-sans text-[11px] leading-5 opacity-80">{hint}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
+                        เบส / ของเตรียม ทำเป็น portion แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ ส่วนสูตรของเมนูแต่ละจานหรือแก้ว ใส่ที่แท็บ "เมนู"
+                    </p>
 
                     <div>
                         <label className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
@@ -406,7 +385,7 @@ function InlineFolderInput({ onSave, onCancel }) {
 }
 
 // ── Main RecipeLabPage Component ──
-export default function RecipeLabPage({ isEmbedded = false }) {
+export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null }) {
     const navigate = useNavigate();
     const [labItems, setLabItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -439,6 +418,16 @@ export default function RecipeLabPage({ isEmbedded = false }) {
         }
     });
 
+    // Folders saved in the database. null = table not installed yet (old browser-only folders).
+    const [dbFolders, setDbFolders] = useState(null);
+    const [movingItem, setMovingItem] = useState(null);
+    const folderNameById = useMemo(() => new Map((dbFolders || []).map(f => [f.id, f.name])), [dbFolders]);
+    const folderOf = (item) => {
+        if (item.recipe_folder_id && folderNameById.has(item.recipe_folder_id)) return folderNameById.get(item.recipe_folder_id);
+        if (dbFolders === null && item.category && item.category.startsWith('folder:')) return item.category.substring(7);
+        return 'uncategorized';
+    };
+
     // Rename State
     const [editingItemId, setEditingItemId] = useState(null);
     const [editingName, setEditingName] = useState('');
@@ -446,6 +435,9 @@ export default function RecipeLabPage({ isEmbedded = false }) {
     const loadData = async () => {
         setLoading(true);
         try {
+            const folderRes = await supabase.from('recipe_folders').select('id, name, sort_order').order('sort_order').order('name');
+            setDbFolders(folderRes.error ? null : (folderRes.data || []));
+
             // 1. Fetch every stock item: made items are listed, the rest are needed to cost them
             const { data: allStock, error } = await supabase
                 .from('stock_items')
@@ -551,43 +543,46 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
     // Unique folders from database + custom folders
     const allFolders = useMemo(() => {
-        const dbFolders = Array.from(new Set(
-            labItems.map(item => {
-                const cat = item.category;
-                if (cat && cat.startsWith('folder:')) {
-                    return cat.substring(7);
-                }
-                return 'uncategorized';
-            })
-        ));
-
+        const usedFolders = Array.from(new Set(labItems.map(folderOf)));
+        const saved = dbFolders ? dbFolders.map(f => f.name) : customFolders;
         const combined = [
             'all',
-            ...dbFolders.filter(c => c !== 'uncategorized'),
-            ...customFolders.filter(c => !dbFolders.includes(c)),
+            ...saved,
+            ...usedFolders.filter(c => c !== 'uncategorized' && !saved.includes(c)),
             'uncategorized'
         ];
 
         return Array.from(new Set(combined));
-    }, [labItems, customFolders]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [labItems, customFolders, dbFolders]);
 
     const getFolderCount = (folder) => {
         return labItems.filter(item => {
-            const itemCat = item.category;
-            const isFolder = itemCat && itemCat.startsWith('folder:');
-            const folderName = isFolder ? itemCat.substring(7) : 'uncategorized';
-            
+            const folderName = folderOf(item);
+
             if (folder === 'all') return true;
             if (folder === 'uncategorized') return folderName === 'uncategorized';
             return folderName === folder;
         }).length;
     };
 
-    const handleCreateFolder = (folderName) => {
+    const handleCreateFolder = async (folderName) => {
         const trimmed = folderName.trim();
         if (!trimmed) return;
         if (['all', 'uncategorized', 'restock'].includes(trimmed.toLowerCase())) {
             toast.error('ไม่สามารถใช้ชื่อโฟลเดอร์นี้ได้');
+            return;
+        }
+        if (dbFolders !== null) {
+            const { data, error } = await supabase.from('recipe_folders').insert({ name: trimmed, sort_order: dbFolders.length }).select('id, name, sort_order').single();
+            if (error) {
+                toast.error(error.code === '23505' ? 'มีโฟลเดอร์ชื่อนี้แล้ว' : 'สร้างโฟลเดอร์ไม่สำเร็จ: ' + error.message);
+                return;
+            }
+            setDbFolders(prev => [...(prev || []), data]);
+            setActiveCategory(trimmed);
+            setIsCreatingFolder(false);
+            toast.success(`สร้างโฟลเดอร์ "[${trimmed}]" แล้ว`);
             return;
         }
         setCustomFolders(prev => {
@@ -605,15 +600,19 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
     const handleCreateFormula = async (name, targetCategory, itemType = ITEM_TYPES.PREP) => {
         try {
-            const initialCategory = (targetCategory && targetCategory !== 'all' && targetCategory !== 'uncategorized')
-                ? `folder:${targetCategory}`
-                : 'restock';
+            const inFolder = targetCategory && targetCategory !== 'all' && targetCategory !== 'uncategorized';
+            const folderId = inFolder && dbFolders ? (dbFolders.find(f => f.name === targetCategory)?.id || null) : null;
+            // Bases are stock: they go in the "Homemade" stock category, the folder is separate.
+            const initialCategory = dbFolders !== null
+                ? 'Homemade'
+                : (inFolder ? `folder:${targetCategory}` : 'restock');
 
             const isPrep = itemType === ITEM_TYPES.PREP;
             const baseFields = {
                 name,
                 is_base_recipe: true,
                 category: initialCategory,
+                ...(dbFolders !== null ? { recipe_folder_id: folderId } : {}),
                 cost_price: 0,
                 pack_size: 1,
                 pack_unit: 'unit',
@@ -706,13 +705,17 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
     const handleMoveFolder = async (itemId, targetCategory) => {
         try {
-            const dbCategory = (targetCategory === 'restock' || targetCategory === 'uncategorized')
-                ? 'restock'
-                : `folder:${targetCategory}`;
+            const toGeneral = targetCategory === 'restock' || targetCategory === 'uncategorized';
+            let update;
+            if (dbFolders !== null) {
+                update = { recipe_folder_id: toGeneral ? null : (dbFolders.find(f => f.name === targetCategory)?.id || null) };
+            } else {
+                update = { category: toGeneral ? 'restock' : `folder:${targetCategory}` };
+            }
 
             const { error } = await supabase
                 .from('stock_items')
-                .update({ category: dbCategory })
+                .update(update)
                 .eq('id', itemId);
             if (error) throw error;
 
@@ -737,10 +740,8 @@ export default function RecipeLabPage({ isEmbedded = false }) {
     const filteredRecipes = useMemo(() => {
         return labItems.filter(item => {
             // Folder Filter
-            const itemCat = item.category;
-            const isFolder = itemCat && itemCat.startsWith('folder:');
-            const folderName = isFolder ? itemCat.substring(7) : 'uncategorized';
-            
+            const folderName = folderOf(item);
+
             if (activeCategory === 'uncategorized') {
                 if (folderName !== 'uncategorized') return false;
             } else if (activeCategory !== 'all') {
@@ -761,12 +762,15 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
             return true;
         });
-    }, [labItems, activeCategory, searchQuery, typeFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [labItems, activeCategory, searchQuery, typeFilter, dbFolders]);
 
     const typeTabs = [
         ['all', 'ทั้งหมด', labItems.length],
         [ITEM_TYPES.PREP, 'ของเตรียม', labItems.filter(i => i.itemType === ITEM_TYPES.PREP).length],
-        [ITEM_TYPES.RECIPE, 'สูตรต่อแก้ว/จาน', labItems.filter(i => i.itemType === ITEM_TYPES.RECIPE).length],
+        ...(labItems.some(i => i.itemType === ITEM_TYPES.RECIPE)
+            ? [[ITEM_TYPES.RECIPE, 'ต้องย้ายไปเมนู', labItems.filter(i => i.itemType === ITEM_TYPES.RECIPE).length]]
+            : []),
         ['issues', 'ต้องแก้', labItems.filter(i => i.issues?.length).length]
     ];
 
@@ -788,14 +792,14 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
-                                    RECIPE LAB
+                                    BASES &amp; PREP
                                 </span>
                             </div>
                             <h1 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-0.5">
-                                ของเตรียมและสูตร
+                                เบส / ของเตรียม
                             </h1>
                             <p className="text-xs text-[oklch(55%_0.010_28)] font-mono">
-                                ของเตรียมทำเป็น portion แล้วนับสต๊อกได้ สูตรต่อแก้วหรือจานไม่เก็บสต๊อก
+                                ทำเป็น portion แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ สูตรของแต่ละเมนูอยู่ที่แท็บ "เมนู"
                             </p>
                         </div>
                     </div>
@@ -844,7 +848,7 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                             className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-black transition-colors shadow-xs cursor-pointer"
                         >
                             <Plus size={14} />
-                            <span className="font-sans">สร้างใหม่</span>
+                            <span className="font-sans">สร้างเบสใหม่</span>
                         </button>
                     </div>
                 </div>
@@ -890,7 +894,7 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                             {/* Sidebar Header */}
                             <div className="p-3 bg-[oklch(94%_0.010_28)] flex justify-between items-center">
                                 <span className="font-bold text-[11px] uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                    สูตรแยกตามโฟลเดอร์
+                                    โฟลเดอร์
                                 </span>
                                 {!isCreatingFolder && (
                                     <button
@@ -1008,15 +1012,13 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                     onClick={() => setIsCreateOpen(true)}
                                     className="px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black cursor-pointer"
                                 >
-                                    + สร้างสูตรกลางใหม่
+                                    + สร้างเบสใหม่
                                 </button>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                                 {filteredRecipes.map(item => {
-                                    const folderName = item.category && item.category.startsWith('folder:')
-                                        ? item.category.substring(7)
-                                        : 'uncategorized';
+                                    const folderName = folderOf(item);
                                     const hasUsages = (item.usedInCount || 0) > 0;
                                     const isPrepItem = item.itemType === ITEM_TYPES.PREP;
                                     const yieldKnown = hasPortionYield(item);
@@ -1199,6 +1201,24 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                                 >
                                                     <span className="font-sans">แก้สูตร</span>
                                                 </button>
+                                                {onOpenMethod && item.itemType === ITEM_TYPES.PREP && (
+                                                    <button
+                                                        onClick={() => onOpenMethod({ type: 'stock', id: item.id, name: item.name })}
+                                                        title="วิธีทำ (SOP) ของเบสนี้"
+                                                        className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                                                    >
+                                                        วิธีทำ
+                                                    </button>
+                                                )}
+                                                {item.itemType === ITEM_TYPES.RECIPE && (
+                                                    <button
+                                                        onClick={() => setMovingItem(item)}
+                                                        title="ย้ายส่วนผสมไปเป็นสูตรของเมนู แล้วลบสูตรต่อแก้วนี้"
+                                                        className="flex-1 py-2 border border-[oklch(52%_0.16_28)] bg-white text-[oklch(52%_0.16_28)] font-sans font-bold hover:bg-[oklch(97%_0.02_28)] transition-colors cursor-pointer"
+                                                    >
+                                                        ย้ายไปเมนู
+                                                    </button>
+                                                )}
                                                 {canProduce && (
                                                     <button
                                                         onClick={() => setProducingItem(item)}
@@ -1230,8 +1250,15 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                     onClose={() => setIsCreateOpen(false)}
                     onCreate={handleCreateFormula}
                     initialFolder={activeCategory}
-                    initialType={typeFilter}
                     folders={allFolders}
+                />
+            )}
+
+            {movingItem && (
+                <MoveRecipeToMenuModal
+                    item={movingItem}
+                    onClose={() => setMovingItem(null)}
+                    onMoved={() => loadData()}
                 />
             )}
 

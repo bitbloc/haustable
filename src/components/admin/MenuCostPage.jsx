@@ -9,7 +9,7 @@ import RecipeUnitCheckPanel from './RecipeUnitCheckPanel';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 
-export default function MenuCostPage({ isEmbedded = false }) {
+export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }) {
     const navigate = useNavigate();
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -835,6 +835,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
 
                                                 {/* Action Button */}
                                                 <td className="p-3 text-center whitespace-nowrap w-[13%] min-w-[110px]">
+                                                    <div className="flex items-center justify-center gap-1.5">
                                                     <button
                                                         onClick={() => handleOpenRecipe(item)}
                                                         className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
@@ -845,6 +846,16 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                     >
                                                         {item.hasRecipe ? '[ปรุงสูตร]' : '[+ สร้างสูตร]'}
                                                     </button>
+                                                    {onOpenMethod && (
+                                                        <button
+                                                            onClick={() => onOpenMethod({ type: 'menu', id: item.id, name: item.name })}
+                                                            title="วิธีทำ (SOP) ของเมนูนี้"
+                                                            className="px-3 py-1.5 font-mono text-xs border border-[oklch(85%_0.012_28)] bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] transition-colors"
+                                                        >
+                                                            [วิธีทำ]
+                                                        </button>
+                                                    )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -935,6 +946,14 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                     >
                                         {item.hasRecipe ? '[ปรุงสูตร (RECIPE)]' : '[+ ผูกสูตรใหม่]'}
                                     </button>
+                                    {onOpenMethod && (
+                                        <button
+                                            onClick={() => onOpenMethod({ type: 'menu', id: item.id, name: item.name })}
+                                            className="w-full mt-1.5 py-2 font-mono text-xs border border-[oklch(85%_0.012_28)] bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-center transition-colors"
+                                        >
+                                            [วิธีทำ (SOP)]
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                             </div>

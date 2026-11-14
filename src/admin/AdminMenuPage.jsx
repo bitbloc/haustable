@@ -1,17 +1,18 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, ShoppingBag, ClipboardCheck } from 'lucide-react'
+import { LayoutGrid, List, Layers, Calculator, ShoppingBag, ClipboardCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
 import OptionGroupList from './components/OptionGroupList'
 import MenuCategoryList from './components/MenuCategoryList'
 import MenuItemList from './components/MenuItemList'
-import MenuCostPage from '../components/admin/MenuCostPage'
-import RecipeLabPage from '../components/admin/RecipeLabPage'
-import SOPEditorPage from '../components/admin/SOPEditorPage'
+import FoodDrinkPage from '../components/admin/FoodDrinkPage'
 import StockReconciliationPage from '../components/admin/StockReconciliationPage'
+
+// Food Costing, Recipe Lab and Kitchen & Bar SOP are one page now; old links still land on the right part.
+const FOOD_TABS = { food: 'menus', costing: 'menus', lab: 'bases', sop: 'methods' }
 
 export default function AdminMenuPage({ defaultTab = 'items' }) {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -90,9 +91,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
         { id: 'items', label: 'Menu Catalog', icon: LayoutGrid, count: stats.totalItems },
         { id: 'categories', label: 'Categories', icon: List, count: stats.totalCategories },
         { id: 'options', label: 'Modifiers & Options', icon: Layers, count: stats.totalModifiers },
-        { id: 'costing', label: 'Food Costing', icon: Calculator },
-        { id: 'lab', label: 'Recipe Lab', icon: FlaskConical },
-        { id: 'sop', label: 'Kitchen & Bar SOP', icon: BookOpen },
+        { id: 'food', label: 'Food & Drink', icon: Calculator },
         { id: 'stock', label: 'Stock Recon', icon: ClipboardCheck },
     ]
 
@@ -132,7 +131,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                 <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs overflow-x-auto no-scrollbar">
                     {tabs.map(tab => {
                         const Icon = tab.icon
-                        const isActive = activeTab === tab.id
+                        const isActive = activeTab === tab.id || (tab.id === 'food' && Boolean(FOOD_TABS[activeTab]))
                         return (
                             <button
                                 key={tab.id}
@@ -181,9 +180,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         {activeTab === 'items' && <MenuItemList />}
                         {activeTab === 'categories' && <MenuCategoryList />}
                         {activeTab === 'options' && <OptionGroupList />}
-                        {activeTab === 'costing' && <MenuCostPage isEmbedded={true} />}
-                        {activeTab === 'lab' && <RecipeLabPage isEmbedded={true} />}
-                        {activeTab === 'sop' && <SOPEditorPage isEmbedded={true} />}
+                        {FOOD_TABS[activeTab] && <FoodDrinkPage key={activeTab} initialView={FOOD_TABS[activeTab]} />}
                         {activeTab === 'stock' && <StockReconciliationPage />}
                     </motion.div>
                 </AnimatePresence>
