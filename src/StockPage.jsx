@@ -26,6 +26,7 @@ import StockCard from './components/stock/StockCard';
 import StockListItem from './components/stock/StockListItem';
 import AdjustmentModal from './components/stock/AdjustmentModal';
 import BarcodeScanner from './components/stock/BarcodeScanner';
+import { normalizeBarcode, parseShopLabel } from './utils/stockBarcode';
 import TransactionHistory from './components/stock/TransactionHistory'; // Added
 import StockUsageReport from './components/stock/StockUsageReport'; // Added
 import CategoryManager from './components/stock/CategoryManager';
@@ -684,17 +685,34 @@ export default function StockPage() {
         setIsRecipeOpen(true);
     };
 
-    const handleCodeScan = async (code) => {
-        // Find item by barcode ACROSS ALL CATEGORIES
-        // So we need to query DB, or better, if we only loaded one category, we might miss it.
-        // We should query DB for the specific barcode.
-        
+    const handleCodeScan = async (scanned) => {
+        // The scanner hands back { barcode, ...productInfo }; older callers pass the text.
+        const rawCode = typeof scanned === 'object' && scanned !== null ? scanned.barcode : scanned;
+        const code = normalizeBarcode(rawCode);
+        if (!code) return;
+
         try {
-            const { data, error } = await supabase
+            // Main barcode (also the 13-digit form of a 12-digit UPC), then extra codes.
+            let { data } = await supabase
                 .from('stock_items')
                 .select('*')
-                .eq('barcode', code)
-                .single();
+                .in('barcode', [code, '0' + code, String(rawCode).trim()])
+                .limit(1)
+                .maybeSingle();
+            if (!data) {
+                const { data: extra } = await supabase
+                    .from('stock_item_barcodes')
+                    .select('stock_items (*)')
+                    .eq('barcode', code)
+                    .maybeSingle();
+                data = extra?.stock_items || null;
+            }
+            if (!data) {
+                const labelId = parseShopLabel(rawCode);
+                if (labelId) {
+                    ({ data } = await supabase.from('stock_items').select('*').eq('id', labelId).maybeSingle());
+                }
+            }
 
             if (data) {
                 // Determine if we need to switch category tab to show it in background? 
@@ -705,10 +723,10 @@ export default function StockPage() {
                 
                 setSelectedItem(data);
                 setShowScanner(false);
-                toast.success(`Found: ${data.name}`);
+                toast.success(`เจอ: ${data.name}`);
             } else {
-                toast.error('Product not found');
-                if (confirm('Product not found. Add new item?')) {
+                if (confirm(`ไม่พบบาร์โค้ด ${code} ในคลัง
+เพิ่มเป็นวัตถุดิบใหม่ไหม? (ถ้าเป็นของที่มีอยู่แล้ว ให้ผูกบาร์โค้ดในหน้านับสต๊อกแทน)`)) {
                      setEditingItem(null); // Ensure new mode
                      // Pre-fill barcode in new item form
                      // But we need to pass this state.
@@ -721,7 +739,7 @@ export default function StockPage() {
             }
         } catch (err) {
             console.error(err);
-            toast.error('Search error');
+            toast.error('ค้นหาบาร์โค้ดไม่สำเร็จ');
         }
     };
 

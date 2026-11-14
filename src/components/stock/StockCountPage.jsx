@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Count sheet · theme: Thai Modern OKLCH */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
@@ -8,6 +8,9 @@ import { usagePerStockUnit } from '../../utils/recipeGraph';
 import {
     COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines
 } from '../../utils/stockCount';
+import { buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, normalizeBarcode } from '../../utils/stockBarcode';
+import ScanStrip from './ScanStrip';
+import BarcodeLinkSheet from './BarcodeLinkSheet';
 
 const DRAFT_KEY = (kind, day) => `stock_count_draft_v1:${day}:${kind}`;
 
@@ -42,6 +45,31 @@ const loadItems = async () => {
     return (data || []).filter(i =>
         (i.item_type ?? 'raw') === 'raw' || (i.item_type === 'prep' && (i.prep_mode ?? 'stocked') === 'stocked'))
         .filter(i => (i.track_mode ?? 'weekly') !== 'none');
+};
+
+// Extra barcodes (other brands, cases). Empty when the table is not installed yet.
+const loadExtraBarcodes = async () => {
+    const { data, error } = await supabase.from('stock_item_barcodes').select('barcode, stock_item_id, units_per_scan');
+    return error ? [] : (data || []);
+};
+
+const scanFeedback = (ok) => {
+    try { navigator.vibrate?.(ok ? 35 : [60, 60, 60]); } catch { /* not supported (iPhone) */ }
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        scanFeedback.ctx = scanFeedback.ctx || new Ctx();
+        const ctx = scanFeedback.ctx;
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = ok ? 1320 : 330;
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.13);
+    } catch { /* sound is optional */ }
 };
 
 const MEASURE = new Set(['ml', 'g', 'l', 'kg']);
@@ -122,6 +150,14 @@ export default function StockCountPage() {
     const [result, setResult] = useState(null);
     const [user, setUser] = useState(null);
     const [helperFor, setHelperFor] = useState(null);
+    // Scan-to-count
+    const [scanning, setScanning] = useState(false);
+    const [extraBarcodes, setExtraBarcodes] = useState([]);
+    const [lastScanned, setLastScanned] = useState(null); // item id
+    const [scanStatus, setScanStatus] = useState('');
+    const [unknownCode, setUnknownCode] = useState(null);
+    const [linking, setLinking] = useState(false);
+    const gateRef = useRef(createScanGate(1200));
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => setUser(data?.user || null));
@@ -135,7 +171,73 @@ export default function StockCountPage() {
                 toast.error('โหลดรายการสต๊อกไม่สำเร็จ');
             })
             .finally(() => setLoading(false));
+        loadExtraBarcodes().then(setExtraBarcodes);
     }, []);
+
+    const barcodeIndex = useMemo(() => buildBarcodeIndex(items, extraBarcodes), [items, extraBarcodes]);
+    const itemsById = useMemo(() => new Map(items.map(i => [i.id, i])), [items]);
+    const unknownRef = useRef(null);
+    useEffect(() => { unknownRef.current = unknownCode; }, [unknownCode]);
+
+    const countScan = useCallback((itemId, perScan) => {
+        const item = itemsById.get(itemId);
+        setCounts(prev => {
+            const next = addScanToCount(prev[itemId], perScan);
+            setScanStatus(`${item?.name || 'รายการ'} = ${next} ${displayUnit(item?.unit)}`);
+            return { ...prev, [itemId]: next };
+        });
+        setLastScanned(itemId);
+        scanFeedback(true);
+    }, [itemsById]);
+
+    const handleScan = useCallback((text) => {
+        const code = String(text || '').trim();
+        // Run the gate first, even while the link sheet is open, so a bottle that is
+        // still in view after linking is not counted a second time.
+        const fresh = code && gateRef.current.accept(normalizeBarcode(code) || code);
+        if (!fresh || unknownRef.current) return; // waiting for the person to link the last code
+        const hit = resolveScan(barcodeIndex, code, new Set(itemsById.keys()));
+        if (hit.itemId) {
+            countScan(hit.itemId, hit.perScan);
+        } else {
+            scanFeedback(false);
+            setScanStatus(hit.isLabel ? 'ป้ายนี้เป็นของรายการที่ไม่ได้นับ' : `ยังไม่รู้จัก ${hit.code}`);
+            if (!hit.isLabel) setUnknownCode(hit.code);
+        }
+    }, [barcodeIndex, itemsById, countScan]);
+
+    const linkBarcode = async (item, perScan) => {
+        if (!unknownCode || linking) return;
+        setLinking(true);
+        const performedBy = user?.user_metadata?.full_name || user?.email || 'Staff';
+        try {
+            if (!item.barcode && perScan === 1) {
+                const { data, error } = await supabase.from('stock_items')
+                    .update({ barcode: unknownCode }).eq('id', item.id).is('barcode', null).select('id');
+                if (error) throw error;
+                if (!data?.length) throw new Error('item already has a barcode');
+                setItems(prev => prev.map(i => i.id === item.id ? { ...i, barcode: unknownCode } : i));
+            } else {
+                const row = { barcode: unknownCode, stock_item_id: item.id, units_per_scan: perScan, created_by: performedBy };
+                const { error } = await supabase.from('stock_item_barcodes').insert(row);
+                if (error) throw error;
+                setExtraBarcodes(prev => [...prev, row]);
+            }
+            toast.success(`ผูกบาร์โค้ดกับ ${item.name} แล้ว`);
+            setUnknownCode(null);
+            countScan(item.id, perScan);
+        } catch (err) {
+            console.error(err);
+            const text = `${err?.code || ''} ${err?.message || ''}`;
+            toast.error(/23505|duplicate|already/i.test(text)
+                ? 'บาร์โค้ดนี้ผูกกับรายการอื่นแล้ว'
+                : /42P01|PGRST205|stock_item_barcodes/i.test(text)
+                    ? 'รายการนี้มีบาร์โค้ดแล้ว ต้องติดตั้ง migration บาร์โค้ดเพิ่มเติมก่อนผูกโค้ดที่สอง'
+                    : 'ผูกบาร์โค้ดไม่สำเร็จ: ' + (err?.message || ''));
+        } finally {
+            setLinking(false);
+        }
+    };
 
     useEffect(() => { writeDraft(kind, shopDay, counts); }, [kind, shopDay, counts]);
 
@@ -304,26 +406,64 @@ export default function StockCountPage() {
                                         ทั้งหมด <span className="font-mono text-[11px]">{items.length}</span>
                                     </button>
                                 </div>
+                                <button type="button" onClick={() => navigate('/staff/stock/labels')}
+                                    className="font-sans font-bold text-[13px] leading-5 text-[oklch(42%_0.010_28)] underline underline-offset-2 hover:text-[oklch(18%_0.012_28)] cursor-pointer">
+                                    ป้าย QR
+                                </button>
                                 <label className="flex items-center gap-2 font-sans text-[13px] leading-5 text-[oklch(42%_0.010_28)] cursor-pointer select-none ml-auto">
                                     <input type="checkbox" checked={showSystem} onChange={e => setShowSystem(e.target.checked)}
                                         className="w-4 h-4 accent-[oklch(18%_0.012_28)]" />
                                     แสดงยอดในระบบ
                                 </label>
                             </div>
-                            <input
-                                type="search"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="ค้นหาชื่อ..."
-                                aria-label="ค้นหาชื่อวัตถุดิบ"
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-sans text-[14px] outline-none focus:border-black"
-                            />
+                            <div className="grid grid-cols-[1fr_auto] border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                                <input
+                                    type="search"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="ค้นหาชื่อ..."
+                                    aria-label="ค้นหาชื่อวัตถุดิบ"
+                                    className="w-full min-w-0 p-2 bg-white font-sans text-[14px] outline-none focus:bg-[oklch(98%_0.004_28)]"
+                                />
+                                <button type="button" onClick={() => { scanFeedback.ctx?.resume?.(); setScanning(s => !s); gateRef.current.reset(); }}
+                                    aria-pressed={scanning}
+                                    className={`px-4 font-sans font-bold text-[14px] cursor-pointer ${scanning ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white hover:bg-[oklch(94%_0.010_28)]'}`}>
+                                    {scanning ? 'กำลังสแกน' : 'สแกน'}
+                                </button>
+                            </div>
                             {kind === 'closing' && !showSystem && (
                                 <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
                                     นับปิดร้านแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
                                 </p>
                             )}
                         </div>
+
+                        {scanning && (
+                            <div>
+                                <ScanStrip onCode={handleScan} onClose={() => setScanning(false)} status={scanStatus} />
+                                {lastScanned && itemsById.get(lastScanned) && (() => {
+                                    const it = itemsById.get(lastScanned);
+                                    const raw = counts[it.id] ?? '';
+                                    return (
+                                        <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
+                                            <div className="min-w-0">
+                                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block">ล่าสุด</span>
+                                                <span className="font-sans font-bold text-[15px] leading-6 break-words">{it.name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <button type="button" aria-label={`ลด ${it.name} 1`}
+                                                    onClick={() => setCounts(prev => ({ ...prev, [it.id]: String(Math.max(0, (parseCount(prev[it.id]) ?? 0) - 1)) }))}
+                                                    className="w-10 h-10 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-[18px] cursor-pointer">−</button>
+                                                <input type="text" inputMode="decimal" value={raw} aria-label={`จำนวน ${it.name}`}
+                                                    onChange={e => setCounts(prev => ({ ...prev, [it.id]: e.target.value }))}
+                                                    className="w-20 h-10 p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-[16px] text-right outline-none focus:border-black" />
+                                                <span className="w-12 font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] break-words">{displayUnit(it.unit)}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
 
                         {loading ? (
                             <p className="p-6 font-sans text-[14px] text-[oklch(55%_0.010_28)]">กำลังโหลด...</p>
@@ -389,6 +529,16 @@ export default function StockCountPage() {
                     </>
                 )}
             </main>
+
+            {unknownCode && (
+                <BarcodeLinkSheet
+                    code={unknownCode}
+                    items={items}
+                    saving={linking}
+                    onLink={linkBarcode}
+                    onSkip={() => setUnknownCode(null)}
+                />
+            )}
 
             {!result && (
                 <footer className="fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)]">
