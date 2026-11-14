@@ -8,19 +8,6 @@ import { postStockMovement, recordSpotCount, STOCK_REASONS } from './utils/stock
 // Per-glass recipes and templates live in stock_items for costing but are never counted.
 // Only hidden once the database marks them explicitly, so nothing disappears before that.
 const isShelfItem = (item) => item?.item_type !== 'recipe';
-import { 
-    Package, 
-    Scan, 
-    Search, 
-    ArrowLeft, 
-    History,
-    RefreshCw,
-    Settings,
-    Plus,
-    Bell,
-    BellOff,
-    Send
-} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
 import StockListItem from './components/stock/StockListItem';
@@ -73,8 +60,8 @@ export default function StockPage() {
          const { data, error } = await supabase.from('stock_categories').select('*').order('sort_order');
          
          const defaultTabs = [
-             { id: 'restock', label: 'ต้องสั่งซื้อ (Restock)', icon: '⚠️' },
-             { id: 'all', label: 'สินค้าทั้งหมด (All)', icon: '📦' }
+             { id: 'restock', label: 'ต้องสั่งซื้อ' },
+             { id: 'all', label: 'ทั้งหมด' }
          ];
 
          if (data && data.length > 0) {
@@ -781,9 +768,8 @@ export default function StockPage() {
                         onClick={() => navigate('/staff')}
                         className="sp-header__back"
                         title="ย้อนกลับ"
-                        aria-label="ย้อนกลับ"
                     >
-                        <ArrowLeft />
+                        กลับ
                     </button>
                     
                     <div className="sp-header__logo-wrap">
@@ -793,7 +779,7 @@ export default function StockPage() {
                             className="sp-header__logo"
                         />
                         <p className="sp-header__user">
-                            {currentUser?.user_metadata?.full_name || 'Staff Member'}
+                            {currentUser?.user_metadata?.full_name || 'พนักงาน'}
                         </p>
                     </div>
                     
@@ -804,51 +790,45 @@ export default function StockPage() {
                             disabled={loading}
                             className="sp-header__btn sp-header__btn--line"
                             title="ส่งสรุปเข้า LINE"
-                            aria-label="ส่งสรุปเข้า LINE"
                          >
-                            <Send />
+                            ส่ง LINE
                          </button>
 
                         {/* Report Button */}
                          <button 
                             onClick={() => setShowReport(true)}
                             className="sp-header__btn"
-                            title="รายงานการใช้"
-                            aria-label="รายงานการใช้"
+                            title="สรุปการเบิกออก 7 / 30 วัน"
                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                            สรุปเบิก
                         </button>
                          <button 
                             onClick={() => setShowHistory(true)}
                             className="sp-header__btn"
                             title="ประวัติรายการ"
-                            aria-label="ประวัติรายการ"
                          >
-                            <History />
+                            ประวัติ
                         </button>
                          <button 
                             onClick={() => setShowCategoryManager(true)}
                             className="sp-header__btn"
                             title="จัดการหมวดหมู่"
-                            aria-label="จัดการหมวดหมู่"
                          >
-                            <Settings />
+                            หมวดหมู่
                         </button>
                         <button 
                             onClick={() => { setEditingItem(null); setShowItemForm(true); }}
                             className="sp-header__btn sp-header__btn--accent"
                             title="เพิ่มวัตถุดิบ"
-                            aria-label="เพิ่มวัตถุดิบ"
                          >
-                            <Plus />
+                            เพิ่มวัตถุดิบ
                         </button>
                          <button 
                             onClick={fetchItems} 
                             className="sp-header__btn"
                             title="โหลดข้อมูลใหม่"
-                            aria-label="โหลดข้อมูลใหม่"
                          >
-                            <RefreshCw className={loading ? 'animate-spin' : ''} />
+                            {loading ? 'กำลังโหลด' : 'โหลดใหม่'}
                         </button>
                     </div>
                 </div>
@@ -856,7 +836,6 @@ export default function StockPage() {
                 {/* Search & Scan Bar */}
                 <div className="sp-search-bar">
                     <div className="sp-search-bar__input-wrap">
-                        <Search className="sp-search-bar__icon" />
                         <input 
                             type="text"
                             placeholder="ค้นหาวัตถุดิบ (ชื่อ/บาร์โค้ด)..."
@@ -869,9 +848,8 @@ export default function StockPage() {
                         onClick={() => setShowScanner(true)}
                         className="sp-search-bar__scan"
                         title="สแกนบาร์โค้ด"
-                        aria-label="สแกนบาร์โค้ด"
                     >
-                        <Scan />
+                        สแกน
                     </button>
                 </div>
 
@@ -884,17 +862,15 @@ export default function StockPage() {
                                 onClick={() => setViewMode('grid')}
                                 className={`sp-controls__toggle-btn ${viewMode === 'grid' ? 'sp-controls__toggle-btn--active' : ''}`}
                                 title="มุมมองการ์ด"
-                                aria-label="มุมมองการ์ด"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                                การ์ด
                             </button>
                             <button 
                                 onClick={() => setViewMode('list')}
                                 className={`sp-controls__toggle-btn ${viewMode === 'list' ? 'sp-controls__toggle-btn--active' : ''}`}
                                 title="มุมมองรายการ"
-                                aria-label="มุมมองรายการ"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                                รายการ
                             </button>
                         </div>
                         
@@ -904,7 +880,6 @@ export default function StockPage() {
                             className="sp-controls__quick-count"
                             title="นับสต๊อกเป็นรอบ: เปิดร้าน / ระหว่างวัน / ปิดร้าน"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
                             <span>นับสต๊อก</span>
                         </button>
                         <button
@@ -921,15 +896,11 @@ export default function StockPage() {
                         <button 
                             onClick={() => setSortMode('name')}
                             className={`sp-controls__sort-btn ${sortMode === 'name' ? 'sp-controls__sort-btn--active' : ''}`}
-                        >
-                            A-Z
-                        </button>
+                        >ชื่อ ก–ฮ</button>
                         <button 
                             onClick={() => setSortMode('low_stock')}
                             className={`sp-controls__sort-btn sp-controls__sort-btn--low ${sortMode === 'low_stock' ? 'sp-controls__sort-btn--low-active' : ''}`}
-                        >
-                            LOW STOCK
-                        </button>
+                        >ใกล้หมดก่อน</button>
                     </div>
                 </div>
 
@@ -943,7 +914,6 @@ export default function StockPage() {
                                 onClick={() => setActiveCategory(cat.id)}
                                 className={`sp-tab ${isActive ? 'sp-tab--active' : ''}`}
                             >
-                                <span className="sp-tab__icon" aria-hidden="true">{cat.icon}</span>
                                 <span>{cat.label}</span>
                             </button>
                         );
@@ -955,12 +925,10 @@ export default function StockPage() {
             <main className="sp-content">
                 {loading && items.length === 0 ? (
                     <div className="sp-loading">
-                        <Package className="sp-loading__icon" />
-                        <span className="sp-loading__title">กำลังโหลดระบบสต็อก...</span>
+                        <span className="sp-loading__title">กำลังโหลดสต๊อก...</span>
                     </div>
                 ) : filteredItems.length === 0 ? (
                     <div className="sp-empty">
-                        <Package className="sp-empty__icon" />
                         <span className="sp-empty__title">ไม่พบสินค้าในหมวดหมู่: {activeCategory}</span>
                     </div>
                 ) : (

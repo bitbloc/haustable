@@ -1,5 +1,4 @@
 import React from 'react';
-import { Package, AlertTriangle, FileText } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockListItem({ 
@@ -65,8 +64,8 @@ export default function StockListItem({
                     {item.image_url ? (
                         <img src={item.image_url} alt="" className="sli-image" loading="lazy" />
                     ) : (
-                        <div className="sli-image-placeholder">
-                            <Package className="w-5 h-5" />
+                        <div className="sli-image-placeholder" aria-hidden="true">
+                            ยังไม่มีรูป
                         </div>
                     )}
                     {/* Status Alert Badge */}
@@ -88,7 +87,7 @@ export default function StockListItem({
                                 }}
                                 className="sli-recipe"
                             >
-                                <FileText className="w-3 h-3" />
+                                สูตร
                             </button>
                         )}
                         

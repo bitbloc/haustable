@@ -1,5 +1,4 @@
 import React from 'react';
-import { Package, AlertTriangle, FileText } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ 
@@ -77,18 +76,17 @@ export default function StockCard({
                     className="absolute top-2 left-2 z-10"
                 >
                     <div className={`sc-recipe ${item.is_base_recipe ? 'sc-recipe--active' : ''}`}>
-                        <FileText />
                         <span>สูตร</span>
                     </div>
                 </div>
             )}
 
-            {/* Status Indicator Icon */}
-            <div className={`sc-status-icon ${isCritical ? 'sc-status-icon--critical' : 'sc-status-icon--warning'}`}>
-                {(isCritical || isWarning) && (
-                    <AlertTriangle />
-                )}
-            </div>
+            {/* Status: text tag, no icon */}
+            {(isCritical || isWarning) && (
+                <span className={`sc-status-tag ${isCritical ? 'sc-status-tag--critical' : 'sc-status-tag--warning'}`}>
+                    {isCritical ? 'หมด' : 'ใกล้หมด'}
+                </span>
+            )}
 
             {/* Image Area */}
             <div className="sc-image-wrap">
@@ -100,8 +98,8 @@ export default function StockCard({
                         loading="lazy"
                     />
                 ) : (
-                    <span className="sc-image-placeholder">
-                        <Package />
+                    <span className="sc-image-placeholder" aria-hidden="true">
+                        ยังไม่มีรูป
                     </span>
                 )}
             </div>

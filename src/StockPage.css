@@ -1,32 +1,32 @@
 /* Hallmark · macrostructure: Workbench · redesign: staff stock management
- * theme: custom · vibe: "industrial precision, Braun-instrument, mono slab"
- * paper: oklch(96% 0.006 90) · accent: oklch(88% 0.18 100)
- * display: Space Mono · body: IBM Plex Sans Thai · axes: light / mono / chromatic-other (yellow-green ~100°)
+ * theme: Thai Modern OKLCH (anchor hue 28, terracotta clay)
+ * labels: Space Mono with IBM Plex Sans Thai fallback · body: IBM Plex Sans Thai
  * pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
 /* ── Scoped Tokens ── */
 .stock-page {
-  --sp-paper:         oklch(96% 0.006 90);
-  --sp-paper-2:       oklch(93% 0.008 90);
-  --sp-paper-3:       oklch(89% 0.008 90);
-  --sp-ink:           oklch(18% 0.008 90);
-  --sp-ink-2:         oklch(50% 0.006 90);
-  --sp-ink-3:         oklch(65% 0.005 90);
-  --sp-rule:          oklch(82% 0.006 90);
-  --sp-rule-2:        oklch(87% 0.005 90);
-  --sp-accent:        oklch(88% 0.18 100);
-  --sp-accent-ink:    oklch(18% 0.008 90);
-  --sp-focus:         oklch(85% 0.20 100);
-  --sp-alert:         oklch(62% 0.22 25);
-  --sp-alert-tint:    oklch(95% 0.03 25);
-  --sp-warning:       oklch(72% 0.15 60);
-  --sp-warning-tint:  oklch(96% 0.03 60);
-  --sp-ok:            oklch(64% 0.22 140);
-  --sp-ok-tint:       oklch(94% 0.03 140);
+  --sp-paper:         oklch(97% 0.008 28);
+  --sp-paper-2:       oklch(94% 0.010 28);
+  --sp-paper-3:       oklch(90% 0.010 28);
+  --sp-ink:           oklch(18% 0.012 28);
+  --sp-ink-2:         oklch(42% 0.010 28);
+  --sp-ink-3:         oklch(55% 0.010 28);
+  --sp-rule:          oklch(85% 0.012 28);
+  --sp-rule-2:        oklch(90% 0.008 28);
+  --sp-accent:        oklch(52% 0.16 28);
+  --sp-accent-ink:    oklch(97% 0.008 28);
+  --sp-focus:         oklch(60% 0.15 28);
+  --sp-alert:         oklch(52% 0.16 28);
+  --sp-alert-tint:    oklch(95% 0.025 28);
+  --sp-warning:       oklch(55% 0.11 60);
+  --sp-warning-tint:  oklch(96% 0.025 60);
+  --sp-ok:            oklch(45% 0.08 140);
+  --sp-ok-tint:       oklch(95% 0.02 140);
 
-  --sp-font-display: 'Space Mono', ui-monospace, monospace;
-  --sp-font-body:    'IBM Plex Sans Thai', 'Inter', ui-sans-serif, sans-serif;
+  /* Space Mono has no Thai glyphs: Thai labels fall through to IBM Plex Sans Thai */
+  --sp-font-display: 'Space Mono', 'IBM Plex Sans Thai', ui-monospace, monospace;
+  --sp-font-body:    'IBM Plex Sans Thai', ui-sans-serif, sans-serif;
 
   --sp-text-xs:   0.6875rem;
   --sp-text-sm:   0.8125rem;
@@ -517,12 +517,12 @@
 }
 
 .sc-card--critical {
-  background: var(--sp-alert-tint);
-  border-color: var(--sp-alert);
+  background: var(--sp-paper);
+  border-color: oklch(75% 0.08 28);
 }
 
 .sc-card--warning {
-  background: var(--sp-warning-tint);
+  background: var(--sp-paper);
   border-color: var(--sp-warning);
 }
 
@@ -780,11 +780,11 @@
 }
 
 .sli-item--critical {
-  background: var(--sp-alert-tint);
+  box-shadow: inset 2px 0 0 var(--sp-alert);
 }
 
 .sli-item--warning {
-  background: var(--sp-warning-tint);
+  box-shadow: inset 2px 0 0 var(--sp-warning);
 }
 
 
@@ -955,4 +955,120 @@
   .sli-right {
     margin-left: unset;
   }
+}
+
+/* ── Text actions (no icons) ── */
+.sp-header__back,
+.sp-header__btn,
+.sp-search-bar__scan {
+  width: auto;
+  min-width: 36px;
+  padding: 0 var(--sp-space-sm);
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-sm);
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.sp-header__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.sp-header__btn--line { color: var(--sp-ink-2); }
+.sp-header__btn--line:hover { background: var(--sp-paper-3); }
+.sp-search-bar__input { padding-left: var(--sp-space-sm); }
+.sp-search-bar__scan { color: var(--sp-ink); }
+.sp-controls { flex-wrap: wrap; gap: var(--sp-space-xs); }
+.sp-controls__left { flex-wrap: wrap; }
+.sp-controls__toggle-btn,
+.sp-controls__sort-btn,
+.sp-tab {
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-sm);
+  line-height: 1.5;
+  text-transform: none;
+}
+.sp-controls__quick-count {
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-sm);
+  height: 32px;
+}
+.sp-empty__title, .sp-loading__title {
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-sm);
+  text-transform: none;
+  letter-spacing: 0;
+}
+@media (max-width: 640px) {
+  .sp-header { padding: var(--sp-space-xs) var(--sp-space-md); }
+  .sp-header__top { flex-wrap: wrap; }
+  /* Phones: header scrolls away so cards get the screen; actions sit on one scrolling row */
+  .sp-header { position: static; }
+  .sp-header__actions { width: 100%; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .sp-header__actions::-webkit-scrollbar { display: none; }
+  .sp-header__btn { flex-shrink: 0; }
+  .sp-content { padding: var(--sp-space-sm) var(--sp-space-md) var(--sp-space-2xl); }
+}
+
+/* Status tag on cards (replaces the warning icon) */
+.sc-status-tag {
+  position: absolute;
+  top: var(--sp-space-xs);
+  right: var(--sp-space-xs);
+  padding: 0 var(--sp-space-2xs);
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-xs);
+  font-weight: 700;
+  line-height: 1.6;
+  border: 1px solid currentColor;
+  border-radius: var(--sp-radius);
+  background: var(--sp-paper);
+}
+.sc-status-tag--critical { color: var(--sp-alert); }
+.sc-status-tag--warning { color: var(--sp-warning); }
+.sc-image-placeholder,
+.sli-image-placeholder {
+  font-family: var(--sp-font-body);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: center;
+  opacity: 1;
+  color: var(--sp-ink-3);
+}
+.sli-recipe {
+  width: auto;
+  padding: 0 var(--sp-space-2xs);
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-xs);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* Thai copy on cards: body face, ≥ 11px, line-height 1.6 so marks above/below are not clipped */
+.sc-title,
+.sc-qty__label,
+.sc-breakdown__item,
+.sc-recipe,
+.sc-image-placeholder,
+.sli-name,
+.sli-badge {
+  font-family: var(--sp-font-body);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.sc-title { font-size: var(--sp-text-sm); line-height: 1.6; }
+.sc-title--critical,
+.sc-title--warning { color: var(--sp-ink); }
+.sc-qty__label,
+.sc-breakdown__item,
+.sc-recipe,
+.sc-image-placeholder { font-size: var(--sp-text-xs); line-height: 1.6; }
+.sli-badge-status,
+.sli-subtitle {
+  font-family: var(--sp-font-body);
+  font-size: var(--sp-text-xs);
+  line-height: 1.6;
+  text-transform: none;
+  letter-spacing: 0;
 }

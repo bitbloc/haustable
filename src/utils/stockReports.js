@@ -189,3 +189,44 @@ export const rankByCounter = (dayResults = [], closingBy = new Map(), thresholds
         .map(e => ({ ...e, shortValue: Math.round(e.shortValue * 100) / 100 }))
         .sort((a, b) => a.shortValue - b.shortValue || b.abnormal - a.abnormal);
 };
+
+/** Columns of the withdrawal summary, in display order. */
+export const WITHDRAW_BUCKETS = Object.freeze(['waste', 'staff_meal', 'production_out', 'other']);
+
+/**
+ * Stock taken out over a period, per item, split by reason.
+ * Count corrections (count_adjust / set) are not usage: they are variance and live in Stock Recon.
+ * tx: stock_transactions rows with stock_items(name, unit) joined.
+ * Returns [{ stock_item_id, name, unit, waste, staff_meal, production_out, other, total, count }], biggest total first.
+ */
+export const summarizeWithdrawals = (tx = []) => {
+    const byItem = new Map();
+    for (const t of tx) {
+        const change = Number(t.quantity_change) || 0;
+        if (change >= 0) continue;
+        if (t.reason === 'count_adjust' || t.transaction_type === 'set') continue;
+        const id = t.stock_item_id || t.stock_items?.name;
+        if (!id) continue;
+        const e = byItem.get(id) || {
+            stock_item_id: t.stock_item_id || null, name: t.stock_items?.name || 'ไม่ทราบชื่อ', unit: t.stock_items?.unit || '',
+            waste: 0, staff_meal: 0, production_out: 0, other: 0, total: 0, count: 0
+        };
+        const bucket = WITHDRAW_BUCKETS.includes(t.reason) ? t.reason : 'other';
+        e[bucket] += -change;
+        e.total += -change;
+        e.count += 1;
+        byItem.set(id, e);
+    }
+    const r = (n) => Math.round(n * 10000) / 10000;
+    return [...byItem.values()]
+        .map(e => ({ ...e, waste: r(e.waste), staff_meal: r(e.staff_meal), production_out: r(e.production_out), other: r(e.other), total: r(e.total) }))
+        .sort((a, b) => b.total - a.total || String(a.name).localeCompare(String(b.name), 'th'));
+};
+
+/** Ledger filter used by the movement history list. */
+export const TX_FILTERS = Object.freeze({
+    all: () => true,
+    in: (t) => Number(t.quantity_change) > 0 && t.reason !== 'count_adjust' && t.transaction_type !== 'set',
+    out: (t) => Number(t.quantity_change) < 0 && t.reason !== 'count_adjust' && t.transaction_type !== 'set',
+    count: (t) => t.reason === 'count_adjust' || t.transaction_type === 'set'
+});

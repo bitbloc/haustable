@@ -101,3 +101,34 @@ describe('rankByCounter', () => {
         ]);
     });
 });
+
+describe('summarizeWithdrawals', () => {
+    it('splits withdrawals by reason and skips count corrections and stock in', async () => {
+        const { summarizeWithdrawals } = await import('../stockReports');
+        const rows = summarizeWithdrawals([
+            { stock_item_id: 'a', quantity_change: -2, reason: 'waste', stock_items: { name: 'นม', unit: 'ขวด' } },
+            { stock_item_id: 'a', quantity_change: -1, reason: 'staff_meal', stock_items: { name: 'นม', unit: 'ขวด' } },
+            { stock_item_id: 'a', quantity_change: -0.5, reason: null, transaction_type: 'out', stock_items: { name: 'นม', unit: 'ขวด' } },
+            { stock_item_id: 'a', quantity_change: -3, reason: 'count_adjust', stock_items: { name: 'นม', unit: 'ขวด' } },
+            { stock_item_id: 'a', quantity_change: 5, reason: 'purchase', stock_items: { name: 'นม', unit: 'ขวด' } },
+            { stock_item_id: 'b', quantity_change: -10, reason: 'production_out', stock_items: { name: 'ชา', unit: 'g' } }
+        ]);
+        expect(rows.map(r => r.stock_item_id)).toEqual(['b', 'a']);
+        expect(rows[1]).toMatchObject({ waste: 2, staff_meal: 1, other: 0.5, production_out: 0, total: 3.5, count: 3 });
+        expect(rows[0]).toMatchObject({ production_out: 10, total: 10 });
+    });
+
+    it('filters ledger rows for the history list', async () => {
+        const { TX_FILTERS } = await import('../stockReports');
+        const tx = [
+            { quantity_change: 4, reason: 'purchase' },
+            { quantity_change: -1, reason: 'waste' },
+            { quantity_change: -2, reason: 'count_adjust' },
+            { quantity_change: 3, transaction_type: 'set' }
+        ];
+        expect(tx.filter(TX_FILTERS.in)).toHaveLength(1);
+        expect(tx.filter(TX_FILTERS.out)).toHaveLength(1);
+        expect(tx.filter(TX_FILTERS.count)).toHaveLength(2);
+        expect(tx.filter(TX_FILTERS.all)).toHaveLength(4);
+    });
+});
