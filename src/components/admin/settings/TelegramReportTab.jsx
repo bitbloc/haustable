@@ -9,6 +9,7 @@ const EVENT_TOGGLES = [
     { key: 'telegram_notify_bill', label: 'เช็คบิล', desc: 'ยอดชำระ ส่วนลด และช่องทางจ่าย' },
     { key: 'telegram_notify_online', label: 'ออเดอร์ออนไลน์', desc: 'จองโต๊ะ, รับที่ร้าน, HAUSMADE' },
     { key: 'telegram_notify_shift', label: 'ปิดรอบเงินสด', desc: 'ยอดรอบและส่วนต่างเงินสด' },
+    { key: 'telegram_notify_stock', label: 'นับปิดร้าน (สต๊อก)', desc: 'รายการผิดปกติ มูลค่าที่ขาด และของที่ต้องสั่ง' },
     { key: 'telegram_daily_summary', label: 'สรุปรายวัน', desc: 'ส่งอัตโนมัติวันละครั้งตามเวลาที่ตั้ง' }
 ];
 
@@ -155,6 +156,9 @@ export default function TelegramReportTab({ settings, handleSave }) {
                     </button>
                     <button type="button" onClick={() => invoke('daily_summary_now', 'ส่งสรุปแล้ว')} disabled={!!busy || !chatId} className={btnGhost}>
                         {busy === 'daily_summary_now' ? 'กำลังส่ง…' : 'ส่งสรุปถึงตอนนี้'}
+                    </button>
+                    <button type="button" onClick={() => invoke('stock_summary_now', 'ส่งสรุปสต๊อกแล้ว')} disabled={!!busy || !chatId} className={btnGhost}>
+                        {busy === 'stock_summary_now' ? 'กำลังส่ง…' : 'ส่งสรุปนับปิดร้าน'}
                     </button>
                 </div>
 

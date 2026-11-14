@@ -7,6 +7,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { buildStockClosingMessage } from './stockClosing.ts'
 
 const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || ''
 const HOOK_SECRET = Deno.env.get('TELEGRAM_HOOK_SECRET') || ''
@@ -528,6 +529,60 @@ async function onDailyTick(s: Settings) {
   return 'sent'
 }
 
+// ---------- stock closing count ----------
+
+// Shop day (05:00 to 05:00 Bangkok) that contains `d`.
+const shopDayOf = (d: Date) => {
+  const b = new Date(toBkk(d).getTime() - 5 * 60 * 60 * 1000)
+  return `${b.getUTCFullYear()}-${pad(b.getUTCMonth() + 1)}-${pad(b.getUTCDate())}`
+}
+
+async function sendStockClosing(s: Settings, day: string, sessionId?: string) {
+  const { data: sessions } = await supabase.from('stock_count_sessions')
+    .select('id, performed_by, created_at, line_count')
+    .eq('shop_day', day).eq('kind', 'closing').order('created_at')
+  const list = sessions || []
+  const idx = sessionId ? list.findIndex((x: any) => x.id === sessionId) : list.length - 1
+  const session = idx >= 0 ? list[idx] : null
+  if (!session) return 'no_closing_count'
+
+  const { data: rows, error } = await supabase.rpc('stock_daily_reconciliation', { p_day: day })
+  if (error) throw error
+  const { data: items } = await supabase.from('stock_items')
+    .select('name, unit, current_quantity, reorder_point, min_stock_threshold, item_type, prep_mode, track_mode')
+  const reorder = (items || []).filter((i: any) =>
+    (i.track_mode ?? 'weekly') !== 'none' &&
+    (i.item_type === 'raw' || (i.item_type === 'prep' && (i.prep_mode ?? 'stocked') === 'stocked')))
+
+  const text = buildStockClosingMessage({
+    day,
+    session,
+    round: idx + 1,
+    timeLabel: fmtTime(session.created_at),
+    rows: rows || [],
+    reorder,
+  })
+  await sendTelegram(s.telegram_chat_id, text)
+  return 'sent'
+}
+
+async function onStockClosing(s: Settings, p: any) {
+  if (!flag(s, 'telegram_notify_stock')) return 'skipped'
+  const day = String(p.shop_day || shopDayOf(new Date()))
+  return await sendStockClosing(s, day, p.session_id ? String(p.session_id) : undefined)
+}
+
+// Admin "send now": latest closing count of the given (or current) shop day.
+async function onStockSummaryNow(s: Settings, p: any) {
+  const day = String(p.shop_day || shopDayOf(new Date()))
+  const result = await sendStockClosing(s, day)
+  if (result === 'no_closing_count') {
+    await sendTelegram(s.telegram_chat_id, block(`<b>นับปิดร้าน · ${day}</b>`, 'ยังไม่มีการนับปิดร้านในวันนี้'))
+    return 'sent'
+  }
+  return result
+}
+
 async function onDailySummaryNow(s: Settings) {
   const start = latestScheduledEnd(s.telegram_daily_summary_time)
   await sendTelegram(s.telegram_chat_id, await buildDailySummary(start, new Date(), `ยอดถึง ${fmtTime(new Date().toISOString())}`))
@@ -563,8 +618,8 @@ async function isAdminCaller(req: Request) {
   return ['admin', 'owner'].includes(String(profile?.role || ''))
 }
 
-const HOOK_EVENTS = new Set(['table_opened', 'items_added', 'bill_paid', 'online_order', 'shift_closed', 'daily_tick'])
-const ADMIN_EVENTS = new Set(['test', 'daily_summary_now', 'discover_chats'])
+const HOOK_EVENTS = new Set(['table_opened', 'items_added', 'bill_paid', 'online_order', 'shift_closed', 'daily_tick', 'stock_closing'])
+const ADMIN_EVENTS = new Set(['test', 'daily_summary_now', 'stock_summary_now', 'discover_chats'])
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -600,6 +655,8 @@ serve(async (req) => {
       case 'shift_closed': result = await onShiftClosed(s, payload); break
       case 'daily_tick': result = await onDailyTick(s); break
       case 'daily_summary_now': result = await onDailySummaryNow(s); break
+      case 'stock_closing': result = await onStockClosing(s, payload); break
+      case 'stock_summary_now': result = await onStockSummaryNow(s, payload); break
       case 'test':
         await sendTelegram(s.telegram_chat_id, block('<b>เชื่อมต่อแล้ว</b>', dot('In The Haus', fmtDateTime(new Date().toISOString()))))
         result = 'sent'
