@@ -7,7 +7,7 @@ import {
     DEFAULT_THRESHOLDS, THRESHOLD_KEYS, thresholdsFromSettings
 } from '../../utils/stockCount';
 import { exportElementImage, downloadDataUrl, copyDataUrlImage } from '../../utils/reportImageExport';
-import { rankVariance, summarizeRanking, shopDayRange } from '../../utils/stockReports';
+import { rankVariance, summarizeRanking, shopDayRange, rankByCounter } from '../../utils/stockReports';
 import StockCardPanel from './StockCardPanel';
 
 const num = (v, digits = 2) => {
@@ -76,11 +76,26 @@ export default function StockReconciliationPage() {
         let cancelled = false;
         const days = shopDayRange(day, view);
         setRanking(r => ({ ...r, loading: true, error: null }));
-        Promise.all(days.map(d => supabase.rpc('stock_daily_reconciliation', { p_day: d })
-            .then(({ data, error }) => { if (error) throw error; return { day: d, rows: data || [] }; })))
-            .then(results => {
+        Promise.all([
+            Promise.all(days.map(d => supabase.rpc('stock_daily_reconciliation', { p_day: d })
+                .then(({ data, error }) => { if (error) throw error; return { day: d, rows: data || [] }; }))),
+            supabase.from('stock_count_sessions').select('shop_day, performed_by')
+                .eq('kind', 'closing').gte('shop_day', days[0]).lte('shop_day', days[days.length - 1])
+        ])
+            .then(([results, sess]) => {
                 if (cancelled) return;
-                setRanking({ loading: false, rows: rankVariance(results, thresholds), days: results.filter(r => r.rows.some(x => x.closing_qty !== null)).length, error: null });
+                const closingBy = new Map();
+                for (const x of sess.data || []) {
+                    if (!closingBy.has(x.shop_day)) closingBy.set(x.shop_day, []);
+                    closingBy.get(x.shop_day).push(x.performed_by);
+                }
+                setRanking({
+                    loading: false,
+                    rows: rankVariance(results, thresholds),
+                    counters: rankByCounter(results, closingBy, thresholds),
+                    days: results.filter(r => r.rows.some(x => x.closing_qty !== null)).length,
+                    error: null
+                });
             })
             .catch(err => { if (!cancelled) setRanking({ loading: false, rows: [], days: 0, error: err }); });
         return () => { cancelled = true; };
@@ -255,6 +270,35 @@ export default function StockReconciliationPage() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+                    {ranking.counters?.length > 0 && (
+                        <div className="border-t border-[oklch(85%_0.012_28)]">
+                            <h3 className="px-3 pt-3 pb-1 font-sans font-bold text-[13px] leading-5">ตามผู้นับปิดร้าน</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[480px] border-collapse">
+                                    <thead className="bg-[oklch(94%_0.010_28)] border-y border-[oklch(85%_0.012_28)]">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)]">ผู้นับ</th>
+                                            <th className={cellHead}>วันที่นับ</th>
+                                            <th className={cellHead}>รายการที่นับ</th>
+                                            <th className={cellHead}>ผิดปกติ</th>
+                                            <th className={cellHead}>ขาดรวม</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                                        {ranking.counters.map(c => (
+                                            <tr key={c.name}>
+                                                <td className="px-3 py-2 font-sans font-bold text-[13px] leading-5 break-words">{c.name}</td>
+                                                <td className={cell}>{c.days}</td>
+                                                <td className={cell}>{c.items}</td>
+                                                <td className={`${cell} ${c.abnormal ? 'text-[oklch(52%_0.16_28)] font-bold' : ''}`}>{c.abnormal}</td>
+                                                <td className={`${cell} font-bold ${c.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{baht(c.shortValue)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                     <p className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)]">

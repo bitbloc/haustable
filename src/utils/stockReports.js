@@ -123,3 +123,69 @@ export const buildStockCard = (tx = [], salesDaily = [], wasteRows = [], shopDay
             netLedger: Math.round(g.ledger.reduce((s, r) => s + r.change, 0) * 10000) / 10000
         }));
 };
+
+/**
+ * What to count in a mid-day spot check (3-5 items, not everything):
+ *   1. items that came up short or abnormal at recent closing counts, biggest loss first
+ *   2. then the most valuable stock on hand that nobody counted recently
+ * ranked:      rankVariance(...) rows
+ * items:       stock items on the count list
+ * lastCounted: Map item id -> ISO time of its last count
+ * unitCostOf:  item -> baht per counted unit
+ * Returns [{ item, why }].
+ */
+export const suggestSpotCount = ({ ranked = [], items = [], lastCounted = new Map(), unitCostOf = () => 0, now = new Date(), limit = 5, freshHours = 72 }) => {
+    const byId = new Map(items.map(i => [i.id, i]));
+    const picked = [];
+    const seen = new Set();
+    const recent = (id) => {
+        const t = lastCounted.get(id);
+        return t && (now.getTime() - new Date(t).getTime()) < freshHours * 3600 * 1000;
+    };
+
+    for (const r of ranked) {
+        if (picked.length >= limit) break;
+        const item = byId.get(r.stock_item_id);
+        if (!item || seen.has(item.id)) continue;
+        if (!(r.abnormalDays > 0 || r.shortValue < 0)) continue;
+        seen.add(item.id);
+        picked.push({ item, why: r.shortValue < 0 ? `ขาดสะสม ฿${Math.round(Math.abs(r.shortValue)).toLocaleString('en-US')}` : `ผิดปกติ ${r.abnormalDays} วัน` });
+    }
+
+    const byValue = items
+        .filter(i => !seen.has(i.id) && !recent(i.id))
+        .map(i => ({ i, value: (Number(i.current_quantity) || 0) * (Number(unitCostOf(i)) || 0) }))
+        .filter(x => x.value > 0)
+        .sort((a, b) => b.value - a.value);
+    for (const { i, value } of byValue) {
+        if (picked.length >= limit) break;
+        seen.add(i.id);
+        picked.push({ item: i, why: `มูลค่าในระบบ ฿${Math.round(value).toLocaleString('en-US')} ยังไม่ได้นับ ${freshHours / 24} วัน` });
+    }
+    return picked;
+};
+
+/**
+ * Variance per person who did the closing count, over several days.
+ * dayResults: [{ day, rows }] (stock_daily_reconciliation)
+ * closingBy:  Map day -> [names] of the closing count sessions that day
+ * Returns rows sorted by money short: { name, days, items, abnormal, shortValue }.
+ */
+export const rankByCounter = (dayResults = [], closingBy = new Map(), thresholds = DEFAULT_THRESHOLDS) => {
+    const acc = new Map();
+    for (const { day, rows } of dayResults) {
+        const counted = (rows || []).filter(r => r.closing_qty !== null && r.closing_qty !== undefined && r.variance !== null && r.variance !== undefined);
+        if (!counted.length) continue;
+        const names = [...new Set((closingBy.get(day) || []).filter(Boolean))];
+        const name = names.length ? names.join(', ') : 'ไม่ระบุ';
+        const e = acc.get(name) || { name, days: 0, items: 0, abnormal: 0, shortValue: 0 };
+        e.days += 1;
+        e.items += counted.length;
+        e.abnormal += counted.filter(r => isAbnormal(r, thresholds)).length;
+        e.shortValue += counted.reduce((s, r) => s + Math.min(0, Number(r.variance_value) || 0), 0);
+        acc.set(name, e);
+    }
+    return [...acc.values()]
+        .map(e => ({ ...e, shortValue: Math.round(e.shortValue * 100) / 100 }))
+        .sort((a, b) => a.shortValue - b.shortValue || b.abnormal - a.abnormal);
+};

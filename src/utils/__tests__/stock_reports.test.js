@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rankVariance, summarizeRanking, shopDayRange, buildStockCard, reasonLabel } from '../stockReports';
+import { rankVariance, summarizeRanking, shopDayRange, buildStockCard, reasonLabel, suggestSpotCount, rankByCounter } from '../stockReports';
 import { shopDayOf } from '../stockCount';
 
 const row = (id, name, variance, value, extra = {}) => ({
@@ -60,5 +60,44 @@ describe('buildStockCard', () => {
         expect(reasonLabel({ reason: 'staff_meal' })).toBe('พนักงานกิน');
         expect(reasonLabel({ reason: 'adjust', quantity_change: 1 })).toBe('ปรับเพิ่ม');
         expect(reasonLabel({ reason: 'adjust', quantity_change: -2 })).toBe('เบิกอื่น');
+    });
+});
+
+describe('suggestSpotCount', () => {
+    const items = [
+        { id: 'pork', current_quantity: 2, cost: 150 },
+        { id: 'whisky', current_quantity: 3, cost: 900 },
+        { id: 'milk', current_quantity: 10, cost: 50 },
+        { id: 'salt', current_quantity: 5, cost: 10 },
+        { id: 'gin', current_quantity: 1, cost: 1200 }
+    ];
+    const unitCostOf = (i) => i.cost;
+    const now = new Date('2026-11-15T12:00:00Z');
+
+    it('puts recent losses first, then valuable stock not counted lately', () => {
+        const ranked = [
+            { stock_item_id: 'pork', shortValue: -540, abnormalDays: 2 },
+            { stock_item_id: 'milk', shortValue: 0, abnormalDays: 0 }
+        ];
+        const lastCounted = new Map([['whisky', '2026-11-15T08:00:00Z'], ['gin', '2026-11-10T08:00:00Z']]);
+        const res = suggestSpotCount({ ranked, items, lastCounted, unitCostOf, now, limit: 3 });
+        expect(res.map(r => r.item.id)).toEqual(['pork', 'gin', 'milk']);
+        expect(res[0].why).toBe('ขาดสะสม ฿540');
+        expect(res[1].why).toBe('มูลค่าในระบบ ฿1,200 ยังไม่ได้นับ 3 วัน');
+    });
+});
+
+describe('rankByCounter', () => {
+    it('adds up each closing counter\'s days', () => {
+        const days = [
+            { day: '2026-11-12', rows: [row('pork', 'หมู', -2, -360), row('milk', 'นม', 0.1, 5)] },
+            { day: '2026-11-13', rows: [row('pork', 'หมู', -1, -180)] },
+            { day: '2026-11-14', rows: [row('pork', 'หมู', 0.2, 36, { closing_qty: null })] }
+        ];
+        const by = new Map([['2026-11-12', ['ก้อง']], ['2026-11-13', ['ปุ้ย', 'ปุ้ย']]]);
+        expect(rankByCounter(days, by)).toEqual([
+            { name: 'ก้อง', days: 1, items: 2, abnormal: 1, shortValue: -360 },
+            { name: 'ปุ้ย', days: 1, items: 1, abnormal: 1, shortValue: -180 }
+        ]);
     });
 });

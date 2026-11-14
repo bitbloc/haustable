@@ -10,6 +10,8 @@ import {
 } from '../../utils/stockCount';
 import { buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, normalizeBarcode } from '../../utils/stockBarcode';
 import ScanStrip from './ScanStrip';
+import { rankVariance, shopDayRange, suggestSpotCount } from '../../utils/stockReports';
+import { countUnitCost } from '../../utils/stockReceiving';
 import BarcodeLinkSheet from './BarcodeLinkSheet';
 import { linkBarcodeToItem } from '../../utils/stockBarcodeLink';
 
@@ -143,7 +145,8 @@ export default function StockCountPage() {
     const [kind, setKind] = useState(() => defaultCountKind(new Date()));
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [scope, setScope] = useState('daily'); // 'daily' | 'all'
+    const [scope, setScope] = useState('daily'); // 'daily' | 'all' | 'suggested'
+    const [spotData, setSpotData] = useState(null); // { ranked, lastCounted } for mid-day suggestions
     const [search, setSearch] = useState('');
     const [counts, setCounts] = useState(() => readDraft(defaultCountKind(new Date()), shopDayOf(new Date())));
     const [showSystem, setShowSystem] = useState(() => !COUNT_KINDS[defaultCountKind(new Date())].blindByDefault);
@@ -194,6 +197,36 @@ export default function StockCountPage() {
         })();
         return () => { cancelled = true; };
     }, [kind, shopDay]);
+
+    // Mid-day count: suggest the few items most worth checking now
+    useEffect(() => {
+        if (kind !== 'spot' || spotData) return;
+        let cancelled = false;
+        (async () => {
+            const days = shopDayRange(addDays(shopDay, -1), 7);
+            const since = new Date(`${days[0]}T05:00:00+07:00`).toISOString();
+            const [recon, counted] = await Promise.all([
+                Promise.all(days.map(d => supabase.rpc('stock_daily_reconciliation', { p_day: d })
+                    .then(({ data }) => ({ day: d, rows: data || [] })))),
+                supabase.from('stock_count_lines')
+                    .select('stock_item_id, stock_count_sessions!inner(created_at)')
+                    .gte('stock_count_sessions.created_at', since)
+            ]);
+            if (cancelled) return;
+            const lastCounted = new Map();
+            for (const l of counted.data || []) {
+                const t = l.stock_count_sessions?.created_at;
+                if (t && (!lastCounted.has(l.stock_item_id) || t > lastCounted.get(l.stock_item_id))) lastCounted.set(l.stock_item_id, t);
+            }
+            setSpotData({ ranked: rankVariance(recon), lastCounted });
+        })().catch(err => console.warn('[spot suggestions]', err));
+        return () => { cancelled = true; };
+    }, [kind, shopDay, spotData]);
+
+    const spotSuggestions = useMemo(() => (spotData && kind === 'spot'
+        ? suggestSpotCount({ ranked: spotData.ranked, items, lastCounted: spotData.lastCounted, unitCostOf: countUnitCost })
+        : []), [spotData, kind, items]);
+    const suggestedIds = useMemo(() => new Set(spotSuggestions.map(x => x.item.id)), [spotSuggestions]);
 
     const applyLastClosing = () => {
         if (!lastClosing) return;
@@ -267,9 +300,9 @@ export default function StockCountPage() {
     const visible = useMemo(() => {
         const q = search.trim().toLowerCase();
         return items
-            .filter(i => scope === 'all' || i.track_mode === 'daily')
+            .filter(i => scope === 'all' || (scope === 'suggested' ? suggestedIds.has(i.id) : i.track_mode === 'daily'))
             .filter(i => !q || i.name.toLowerCase().includes(q));
-    }, [items, scope, search]);
+    }, [items, scope, search, suggestedIds]);
 
     const lines = buildCountLines(counts);
     const filled = lines.length;
@@ -448,6 +481,28 @@ export default function StockCountPage() {
                                 <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
                                     นับปิดร้านแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
                                 </p>
+                            )}
+                            {kind === 'spot' && spotSuggestions.length > 0 && (
+                                <div className="border border-[oklch(85%_0.012_28)] bg-white">
+                                    <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2 border-b border-[oklch(90%_0.008_28)]">
+                                        <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
+                                            <span className="font-bold text-[oklch(18%_0.012_28)]">แนะนำให้นับตอนนี้ {spotSuggestions.length} รายการ</span>
+                                            <span className="block">ไม่ต้องนับทั้งร้าน ตัวที่ขาดบ่อยหรือมูลค่าสูงที่ยังไม่ได้นับ</span>
+                                        </p>
+                                        <button type="button" onClick={() => setScope(scope === 'suggested' ? 'all' : 'suggested')} aria-pressed={scope === 'suggested'}
+                                            className={`px-3 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${scope === 'suggested' ? 'bg-white border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black'}`}>
+                                            {scope === 'suggested' ? 'แสดงทั้งหมด' : 'นับเฉพาะที่แนะนำ'}
+                                        </button>
+                                    </div>
+                                    <ul className="divide-y divide-[oklch(92%_0.006_28)]">
+                                        {spotSuggestions.map(({ item, why }) => (
+                                            <li key={item.id} className="grid grid-cols-[1fr_auto] gap-3 px-3 py-1.5 font-sans text-[12px] leading-5">
+                                                <span className="font-bold text-[oklch(18%_0.012_28)] break-words min-w-0">{item.name}</span>
+                                                <span className="text-[oklch(55%_0.010_28)] text-right">{why}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             )}
                             {kind === 'opening' && lastClosing && (
                                 <div className="grid grid-cols-[1fr_auto] gap-3 items-center border border-[oklch(85%_0.012_28)] bg-white px-3 py-2">
