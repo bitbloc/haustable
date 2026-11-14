@@ -676,7 +676,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     <>
                         {/* Tabular Grid */}
                         {(viewLayout === 'table' || viewLayout === 'auto') && (
-                            <div className={`${viewLayout === 'auto' ? 'hidden md:block' : 'block'} border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-x-auto shadow-xs`}>
+                            <div className={`${viewLayout === 'auto' ? 'hidden lg:block' : 'block'} border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-x-auto shadow-xs`}>
                                 <table className="w-full min-w-[760px] text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(92%_0.010_28)] font-mono text-xs uppercase text-[oklch(42%_0.010_28)] select-none">
@@ -761,7 +761,8 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                             </div>
                                                         )}
                                                         <div className="min-w-0">
-                                                            <div className="font-bold text-[oklch(18%_0.012_28)] text-sm truncate font-sans">
+                                                            {/* Wraps (max 2 lines) instead of truncating: a no-wrap name stretches the auto-width table */}
+                                                            <div className="font-bold text-[oklch(18%_0.012_28)] text-sm leading-snug line-clamp-2 break-words font-sans" title={item.name}>
                                                                 {item.name}
                                                             </div>
                                                             <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[oklch(55%_0.010_28)]">
@@ -835,7 +836,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
 
                                                 {/* Action Button */}
                                                 <td className="p-3 text-center whitespace-nowrap w-[13%] min-w-[110px]">
-                                                    <div className="flex items-center justify-center gap-1.5">
+                                                    <div className="flex flex-col items-stretch gap-1.5">
                                                     <button
                                                         onClick={() => handleOpenRecipe(item)}
                                                         className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
@@ -866,7 +867,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
 
                         {/* Mobile Compact Financial Cards */}
                         {(viewLayout === 'cards' || viewLayout === 'auto') && (
-                            <div className={`${viewLayout === 'auto' ? 'block md:hidden' : 'block'} space-y-3`}>
+                            <div className={`${viewLayout === 'auto' ? 'block lg:hidden' : 'block'} space-y-3`}>
                             {processedItems.map(item => (
                                 <div
                                     key={item.id}
