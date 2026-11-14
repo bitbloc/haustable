@@ -3045,7 +3045,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */}
             {qtyAdjustModalData && createPortal(
                 <div className="fixed inset-0 bg-black/65 z-[9999] flex items-center justify-center p-4 select-none font-sans">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
                         {(() => {
                             const { item: modalItem, initialQty, targetQty, removalReason } = qtyAdjustModalData;
                             const delta = targetQty - initialQty;
@@ -3061,7 +3061,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             return (
                                 <>
                                     {/* Structural Tabular Header */}
-                                    <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center justify-between">
+                                    <div className="shrink-0 p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center justify-between">
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider ${
@@ -3089,8 +3089,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         </button>
                                     </div>
 
-                                    {/* Body */}
-                                    <div className="p-5 flex flex-col gap-4">
+                                    {/* Body (scrolls on short screens; header and actions stay visible) */}
+                                    <div className="min-h-0 overflow-y-auto p-5 flex flex-col gap-4">
                                         {/* Item Card */}
                                         <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3.5 rounded-xs flex items-start justify-between gap-3">
                                             <div className="min-w-0 flex-1">
@@ -3217,7 +3217,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     </div>
 
                                     {/* Footer Actions */}
-                                    <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex gap-3">
+                                    <div className="shrink-0 p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex gap-3">
                                         <button
                                             type="button"
                                             disabled={isConfirmingQtyPrint}
