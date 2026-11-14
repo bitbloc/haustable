@@ -71,21 +71,21 @@ export default function StockPage() {
              // Fallback default
              setCategories([
                 ...defaultTabs,
-                { id: 'homemade', label: 'ซอสในบ้าน Homemade', icon: '🍳' },
-                { id: 'egg', label: 'ไข่ และข้าวสาร', icon: '🥚' },
-                { id: 'bar', label: 'บาร์ (Bar)', icon: '🍸' },
-                { id: 'meat', label: 'เนื้อสัตว์ (Meat)', icon: '🥩' },
-                { id: 'veg', label: 'ผัก (Veg)', icon: '🥬' },
-                { id: 'sauce', label: 'ซอส/เครื่องปรุง (Sauce)', icon: '🧂' },
-                { id: 'dry', label: 'ของแห้ง (Dry)', icon: '🥫' },
-                { id: 'curry', label: 'พริกแกง (Curry)', icon: '🥘' },
-                { id: 'frozen', label: 'อาหารแช่แข็ง (Frozen)', icon: '❄️' },
-                { id: 'oil', label: 'น้ำมัน (Oil)', icon: '🛢️' },
-                { id: 'soup', label: 'ซุป/สต๊อก (Soup)', icon: '🍲' },
-                { id: 'preserved', label: 'ของดอง', icon: '🏺' },
-                { id: 'packaging', label: 'แพ็คเกจ', icon: '📦' },
-                { id: 'supplies', label: 'ของใช้', icon: '🧽' },
-                { id: 'other', label: 'อื่นๆ', icon: '🔖' }
+                { id: 'homemade', label: 'ซอสในบ้าน Homemade' },
+                { id: 'egg', label: 'ไข่ และข้าวสาร' },
+                { id: 'bar', label: 'บาร์ (Bar)' },
+                { id: 'meat', label: 'เนื้อสัตว์ (Meat)' },
+                { id: 'veg', label: 'ผัก (Veg)' },
+                { id: 'sauce', label: 'ซอส/เครื่องปรุง (Sauce)' },
+                { id: 'dry', label: 'ของแห้ง (Dry)' },
+                { id: 'curry', label: 'พริกแกง (Curry)' },
+                { id: 'frozen', label: 'อาหารแช่แข็ง (Frozen)' },
+                { id: 'oil', label: 'น้ำมัน (Oil)' },
+                { id: 'soup', label: 'ซุป/สต๊อก (Soup)' },
+                { id: 'preserved', label: 'ของดอง' },
+                { id: 'packaging', label: 'แพ็คเกจ' },
+                { id: 'supplies', label: 'ของใช้' },
+                { id: 'other', label: 'อื่นๆ' }
             ]);
          }
     };

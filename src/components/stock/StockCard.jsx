@@ -49,7 +49,7 @@ export default function StockCard({
 
 
     const cat = categories?.find(c => c.id === item.category);
-    const categoryLabel = cat ? `${cat.icon} ${cat.label}` : '';
+    const categoryLabel = cat ? cat.label : '';
 
     return (
         <div 

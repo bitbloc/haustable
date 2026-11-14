@@ -187,3 +187,19 @@ export const getRecipeIssues = (item, rows = [], itemsById = new Map()) => {
     }
     return issues;
 };
+
+const CAPACITY_UNITS = new Set(['ml', 'g', 'l', 'kg']);
+
+/**
+ * How much one full counted unit holds (e.g. a 700 ml bottle), taken from the recipe unit
+ * setting. Returns { amount, unit } or null when unknown (count by % instead).
+ */
+export const fullUnitCapacity = (item) => {
+    const usage = String(item?.usage_unit || '').toLowerCase();
+    if (CAPACITY_UNITS.has(usage)) {
+        const per = usagePerStockUnit(item);
+        if (per > 1) return { amount: per, unit: usage };
+    }
+    if (Number(item?.capacity_per_unit) > 0) return { amount: Number(item.capacity_per_unit), unit: 'ml' };
+    return null;
+};

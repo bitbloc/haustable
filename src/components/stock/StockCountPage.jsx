@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import { logStaffActivity } from '../../utils/auditLogger';
-import { usagePerStockUnit } from '../../utils/recipeGraph';
+import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import {
     COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines, addDays, carryOverClosing
 } from '../../utils/stockCount';
@@ -75,18 +75,7 @@ const scanFeedback = (ok) => {
     } catch { /* sound is optional */ }
 };
 
-const MEASURE = new Set(['ml', 'g', 'l', 'kg']);
-
-/** ml (or g) in one full counted unit, when known; otherwise null (use % instead). */
-const capacityOf = (item) => {
-    const usage = String(item.usage_unit || '').toLowerCase();
-    if (MEASURE.has(usage)) {
-        const per = usagePerStockUnit(item);
-        if (per > 1) return { amount: per, unit: usage };
-    }
-    if (Number(item.capacity_per_unit) > 0) return { amount: Number(item.capacity_per_unit), unit: 'ml' };
-    return null;
-};
+const capacityOf = fullUnitCapacity;
 
 /** Full units + what is left in the open one -> one decimal count. */
 function OpenUnitHelper({ item, onApply, onClose }) {

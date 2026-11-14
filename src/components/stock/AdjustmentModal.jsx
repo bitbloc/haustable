@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Minus, Plus, Save, Package, Settings, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
 import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
-import { usagePerStockUnit } from '../../utils/recipeGraph';
+import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import { STOCK_REASONS } from '../../utils/stockLedger';
 
 // Why stock leaves outside of sales. Waste and staff meals get their own column
@@ -43,9 +42,9 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             setShowLiquidSlider(isLiquid);
             
             // Load capacity if exists
-            if (item.capacity_per_unit) {
-                setFullCapacityMl(item.capacity_per_unit);
-            }
+            // Full bottle size from the item's recipe unit setting (e.g. 700 ml); 750 ml if unknown
+            const cap = fullUnitCapacity(item);
+            if (cap && cap.unit === 'ml') setFullCapacityMl(cap.amount);
             
             let options = [];
             // Add Base Unit (Purchase/Pack Unit)
@@ -121,13 +120,6 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
         savingRef.current = true;
         setLoading(true);
         try {
-            // Save Capacity if changed and using calculator
-            if (mode === 'set' && useMlCalculator && fullCapacityMl !== item.capacity_per_unit) {
-                // Background update capacity
-                await import('../../lib/supabaseClient').then(({ supabase }) => 
-                    supabase.from('stock_items').update({ capacity_per_unit: fullCapacityMl }).eq('id', item.id)
-                );
-            }
 
             const mainVal = parseFloat(amount || 0); // Integer part
             
@@ -229,12 +221,12 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                     {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
-                        <Package className="w-12 h-12 text-gray-300" />
+                        <span className="text-[12px] text-gray-400">ยังไม่มีรูป</span>
                     )}
                     
                     <div className="absolute top-3 right-3 z-10 flex gap-1.5">
-                     <button onClick={onEdit} className="w-8.5 h-8.5 bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/50 active:scale-90 transition-all"><Settings className="w-4.5 h-4.5" /></button>
-                     <button onClick={onClose} className="w-8.5 h-8.5 bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/50 active:scale-90 transition-all"><X className="w-5 h-5" /></button>
+                     <button onClick={onEdit} className="h-8.5 px-3 bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-[13px] font-bold text-white hover:bg-black/50 active:scale-90 transition-all">แก้</button>
+                     <button onClick={onClose} className="h-8.5 px-3 bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-[13px] font-bold text-white hover:bg-black/50 active:scale-90 transition-all">ปิด</button>
                     </div>
                     
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent p-4 pt-12">
@@ -252,7 +244,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                     <div className="flex bg-gray-100 p-0.5 rounded-lg border border-[var(--color-hallmark-rule)]/50 mb-4 shadow-inner">
                         <button onClick={() => setMode('in')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'in' ? 'bg-white shadow text-green-700' : 'text-gray-400 hover:text-gray-600'}`}>+ รับเข้า</button>
                         <button onClick={() => setMode('out')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'out' ? 'bg-white shadow text-red-700' : 'text-gray-400 hover:text-gray-600'}`}>- เบิกออก</button>
-                        <button onClick={() => setMode('set')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'set' ? 'bg-[#1A1A1A] shadow text-white' : 'text-gray-400 hover:text-gray-600'}`}>📝 ตรวจนับ</button>
+                        <button onClick={() => setMode('set')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'set' ? 'bg-[#1A1A1A] shadow text-white' : 'text-gray-400 hover:text-gray-600'}`}>ตรวจนับ</button>
                     </div>
 
                     {/* Unit Selector */}
@@ -281,7 +273,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                     จำนวนที่ยังไม่เปิด
                                 </label>
                                 <div className="flex gap-2">
-                                    <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><Minus className="w-4 h-4 text-gray-500" /></button>
+                                    <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-500" aria-hidden="true">−</span><span className="sr-only">ลด 1</span></button>
                                     <input 
                                         type="number" 
                                         value={amount}
@@ -289,7 +281,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                         placeholder="0"
                                         className="flex-1 h-10 bg-gray-50/80 border border-[var(--color-hallmark-rule)] rounded-lg text-center text-xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] focus:ring-1 focus:ring-[#1A1A1A] transition-all"
                                     />
-                                    <button onClick={() => quickAdd(1)} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><Plus className="w-4 h-4 text-gray-700" /></button>
+                                    <button onClick={() => quickAdd(1)} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-700" aria-hidden="true">+</span><span className="sr-only">เพิ่ม 1</span></button>
                                 </div>
                             </div>
 
@@ -373,7 +365,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                                     </div>
                                                     <div className="text-right mt-1.5 flex justify-end">
                                                          <button onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className="text-[9px] font-bold text-blue-600 flex items-center gap-1 justify-end hover:bg-blue-50 px-2 py-0.5 rounded transition-colors border border-blue-100 bg-blue-50/30">
-                                                             <Calculator className="w-2.5 h-2.5" /> คำนวณ ml
+                                                             คำนวณ ml
                                                          </button>
                                                     </div>
                                                 </>
@@ -412,7 +404,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                 จำนวน
                             </label>
                             <div className="flex gap-2">
-                                <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><Minus className="w-4 h-4 text-gray-500" /></button>
+                                <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-500" aria-hidden="true">−</span><span className="sr-only">ลด 1</span></button>
                                 <input 
                                     type="number" 
                                     value={amount}
@@ -420,7 +412,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                     placeholder="0"
                                     className="flex-1 h-10 bg-gray-50/80 border border-[var(--color-hallmark-rule)] rounded-lg text-center text-xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] focus:ring-1 focus:ring-[#1A1A1A] transition-all"
                                 />
-                                <button onClick={() => quickAdd(1)} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><Plus className="w-4 h-4 text-gray-700" /></button>
+                                <button onClick={() => quickAdd(1)} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-700" aria-hidden="true">+</span><span className="sr-only">เพิ่ม 1</span></button>
                             </div>
                         </div>
                     )}
@@ -469,7 +461,6 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                     >
                         {loading ? 'กำลังบันทึก...' : (
                             <>
-                                <Save className="w-4 h-4" />
                                 {mode === 'set' ? 'บันทึกการนับ' : `ยืนยัน${mode === 'in' ? 'รับเข้า' : 'เบิกออก'}`}
                             </>
                         )}

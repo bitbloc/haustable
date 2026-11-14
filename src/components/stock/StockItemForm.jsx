@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { X, Save, Trash2, Camera, Upload, Scan, Calculator, DollarSign, Scale, Percent, AlertTriangle, Search, ShoppingCart, Globe, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
@@ -306,7 +305,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
                     <h2 className="font-bold text-lg">{isEdit ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full">
-                        <X className="w-5 h-5" />
+                        ปิด
                     </button>
                 </div>
 
@@ -316,13 +315,13 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         onClick={() => setActiveTab('basic')}
                         className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'basic' ? 'border-[#1A1A1A] text-[#1A1A1A]' : 'border-transparent text-gray-400'}`}
                     >
-                        📦 ข้อมูลทั่วไป
+                        ข้อมูลทั่วไป
                     </button>
                     <button 
                         onClick={() => setActiveTab('costing')}
-                        className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'costing' ? 'border-[#DFFF00] text-black bg-[#DFFF00]/10' : 'border-transparent text-gray-400'}`}
+                        className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'costing' ? 'border-[oklch(18%_0.012_28)] text-black' : 'border-transparent text-gray-400'}`}
                     >
-                        💰 ต้นทุน & หน่วย
+                        ต้นทุนและหน่วย
                     </button>
                 </div>
 
@@ -331,7 +330,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     {/* Unit Mismatch Warning */}
                     {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (
                         <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-xl flex gap-3 items-start animate-in slide-in-from-top-2">
-                             <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                              <div className="flex-1">
                                  <div className="text-sm font-bold text-yellow-800">พบหน่วยไม่ตรงกัน (Unit Mismatch)</div>
                                  <p className="text-xs text-yellow-700 mb-2">
@@ -369,10 +367,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             setShowPriceSearch(true);
                                             setPriceResults([]);
                                         }}
-                                        className="bg-[#DFFF00] text-black px-4 rounded-xl font-bold border border-[#DFFF00] hover:bg-yellow-400 transition-colors flex items-center gap-2 whitespace-nowrap"
+                                        className="bg-white text-[oklch(18%_0.012_28)] px-4 rounded-xl font-bold border border-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors flex items-center whitespace-nowrap"
                                         title="ค้นหาราคากลางจากเว็บ"
-                                    >
-                                        <Globe className="w-4 h-4" /> ราคากลาง
+                                    > ราคากลาง
                                     </button>
                                 </div>
                             </div>
@@ -398,7 +395,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         onChange={e => setFormData({ ...formData, barcode: e.target.value })}
                                     />
                                     <button onClick={() => setShowScanner(true)} className="absolute right-2 top-8 p-1.5 bg-gray-200 rounded-lg">
-                                        <Scan className="w-4 h-4" />
+                                        สแกน
                                     </button>
                                 </div>
                             </div>
@@ -428,8 +425,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </div>
                                 
                                 <div>
-                                    <label className="text-xs font-bold text-red-500 uppercase flex items-center gap-1">
-                                        <AlertTriangle className="w-3 h-3" /> จุดวิกฤต (Critical)
+                                    <label className="text-xs font-bold text-red-500 uppercase flex items-center gap-1"> จุดวิกฤต (Critical)
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <input 
@@ -486,12 +482,11 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         {formData.image_url ? (
                                             <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview"/>
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-400"><Camera className="w-6 h-6" /></div>
+                                            <div className="w-full h-full flex items-center justify-center text-[11px] text-gray-400">ยังไม่มีรูป</div>
                                         )}
                                     </div>
                                     <label className="flex-1 cursor-pointer">
                                         <div className="flex items-center justify-center gap-2 p-3 bg-white border border-dashed border-gray-300 rounded-xl hover:bg-gray-50">
-                                            <Upload className="w-4 h-4 text-gray-600" />
                                             <span className="text-sm">อัพโหลดรูปใหม่</span>
                                         </div>
                                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -506,7 +501,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         <div className="space-y-6">
                             {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && (
                                 <div className="bg-red-50 border border-red-200 p-3 rounded-xl flex gap-3 items-start animate-in slide-in-from-top-2">
-                                    <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                                     <div className="flex-1">
                                         <div className="text-sm font-bold text-red-800">คำเตือน: การแปลงหน่วยข้ามประเภท</div>
                                         <p className="text-xs text-red-700">
@@ -519,8 +513,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             
                             {/* 1. Buying Info */}
                             <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
-                                <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
-                                    <DollarSign className="w-4 h-4" /> 1. ข้อมูลการซื้อ (Buying) & ประเภท
+                                <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2"> 1. ข้อมูลการซื้อ (Buying) & ประเภท
                                 </h3>
                                 <div className="mb-3 p-3 bg-white rounded-lg border border-blue-200 flex items-center gap-3">
                                     <input 
@@ -576,8 +569,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
                             {/* 2. Usage Info */}
                             <div className="bg-green-50 p-4 rounded-xl space-y-3 border border-green-100">
-                                <h3 className="text-sm font-bold text-green-800 flex items-center gap-2">
-                                    <Scale className="w-4 h-4" /> 2. หน่วยที่ใช้ในสูตร (Usage)
+                                <h3 className="text-sm font-bold text-green-800 flex items-center gap-2"> 2. หน่วยที่ใช้ในสูตร (Usage)
                                 </h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="col-span-2">
@@ -614,8 +606,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
                             {/* 3. Yield Info */}
                             <div className="bg-orange-50 p-4 rounded-xl space-y-3 border border-orange-100">
-                                <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2">
-                                    <Percent className="w-4 h-4" /> 3. ประสิทธิภาพ (Yield %)
+                                <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2"> 3. ประสิทธิภาพ (Yield %)
                                 </h3>
                                 <div className="flex items-center gap-4">
                                     <div className="flex-1">
@@ -650,7 +641,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             {/* Yield Alert */}
                             {formData.yield_percent < 80 && (
                                 <div className="bg-red-50 p-3 rounded-xl border border-red-200 flex gap-3 items-start animate-pulse">
-                                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
                                     <div>
                                         <div className="font-bold text-red-700 text-sm">Yield ต่ำกว่าเกณฑ์ (Loss สูง)</div>
                                         <div className="text-xs text-red-600">ต้นทุนจริงจะสูงขึ้นมาก โปรดตรวจสอบว่ามีการสูญเสียมากขนาดนี้จริงหรือไม่</div>
@@ -662,7 +652,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             <div className="bg-[#1A1A1A] text-white p-4 rounded-xl flex justify-between items-center shadow-lg">
                                 <div>
                                     <div className="text-xs text-gray-400 mb-1">ต้นทุนจริง (Real Cost)</div>
-                                    <div className="text-2xl font-bold font-mono tracking-tight text-[#DFFF00]">
+                                    <div className="text-2xl font-bold font-mono tracking-tight text-[oklch(97%_0.008_28)]">
                                         ฿{realCost.toFixed(4)}
                                     </div>
                                     <div className="text-[10px] text-gray-400">ต่อ 1 {formData.usage_unit}</div>
@@ -700,7 +690,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             disabled={loading}
                             className="bg-red-50 text-red-600 p-4 rounded-xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center"
                         >
-                            <Trash2 className="w-5 h-5" />
+                            ลบ
                         </button>
                     )}
                     <button 
@@ -708,7 +698,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         disabled={loading}
                         className="flex-1 bg-[#1A1A1A] text-white p-4 rounded-xl font-bold hover:bg-black transition-colors flex items-center justify-center gap-2"
                     >
-                        {loading ? 'กำลังบันทึก...' : <><Save className="w-5 h-5" /> บันทึกข้อมูล</>}
+                        {loading ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                     </button>
                 </div>
             </div>
@@ -728,14 +718,13 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
                         {/* Header */}
                         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-zinc-900 text-white rounded-t-2xl">
-                            <h2 className="font-bold text-lg flex items-center gap-2">
-                                <Globe className="w-5 h-5 text-[#DFFF00]" /> ค้นหาราคากลางวัตถุดิบ
+                            <h2 className="font-bold text-lg flex items-center gap-2"> ค้นหาราคากลางวัตถุดิบ
                             </h2>
                             <button 
                                 onClick={() => setShowPriceSearch(false)} 
                                 className="p-2 hover:bg-zinc-800 rounded-full text-gray-400 hover:text-white transition-colors"
                             >
-                                <X className="w-5 h-5" />
+                                ปิด
                             </button>
                         </div>
                         
@@ -764,8 +753,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1.5 self-start mt-1 transition-colors"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5" /> ค้นหาโดยตรงบน Google Search (เปิดหน้าต่างใหม่)
+                            > ค้นหาโดยตรงบน Google Search (เปิดหน้าต่างใหม่)
                             </a>
                         </div>
 
@@ -778,7 +766,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </div>
                             ) : priceResults.length === 0 ? (
                                 <div className="text-center text-gray-400 py-12">
-                                    <Globe className="w-12 h-12 mx-auto mb-3 opacity-20 text-zinc-900" />
                                     <p className="font-medium text-sm">ค้นหาราคากลางอ้างอิงจากเว็บไซต์ต่างๆ</p>
                                     <p className="text-xs text-gray-400 mt-1">พิมพ์คำค้นหาแล้วกดปุ่มค้นหาด้านบน</p>
                                 </div>
