@@ -6,6 +6,8 @@ import {
     shopDayOf, addDays, displayUnit, isAbnormal, summarizeReconciliation, sortReconciliation, COUNT_KINDS
 } from '../../utils/stockCount';
 import { exportElementImage, downloadDataUrl, copyDataUrlImage } from '../../utils/reportImageExport';
+import { rankVariance, summarizeRanking, shopDayRange } from '../../utils/stockReports';
+import StockCardPanel from './StockCardPanel';
 
 const num = (v, digits = 2) => {
     if (v === null || v === undefined) return '—';
@@ -19,6 +21,9 @@ const baht = (v) => (v === null || v === undefined) ? '—'
 const timeOf = (iso) => iso
     ? new Date(iso).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })
     : '';
+const shortDate = (ymd) => new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString('th-TH', {
+    timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit'
+});
 const thaiDate = (ymd) => new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString('th-TH', {
     timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
 });
@@ -35,7 +40,27 @@ export default function StockReconciliationPage() {
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState('abnormal'); // 'abnormal' | 'counted' | 'all'
     const [exporting, setExporting] = useState(false);
+    const [view, setView] = useState('day'); // 'day' | 7 | 30 (days of accumulated variance)
+    const [ranking, setRanking] = useState({ loading: false, rows: [], days: 0, error: null });
+    const [cardFor, setCardFor] = useState(null); // { id, name, unit }
     const reportRef = useRef(null);
+
+    useEffect(() => {
+        if (view === 'day') return;
+        let cancelled = false;
+        const days = shopDayRange(day, view);
+        setRanking(r => ({ ...r, loading: true, error: null }));
+        Promise.all(days.map(d => supabase.rpc('stock_daily_reconciliation', { p_day: d })
+            .then(({ data, error }) => { if (error) throw error; return { day: d, rows: data || [] }; })))
+            .then(results => {
+                if (cancelled) return;
+                setRanking({ loading: false, rows: rankVariance(results), days: results.filter(r => r.rows.some(x => x.closing_qty !== null)).length, error: null });
+            })
+            .catch(err => { if (!cancelled) setRanking({ loading: false, rows: [], days: 0, error: err }); });
+        return () => { cancelled = true; };
+    }, [view, day]);
+
+    const rankSummary = useMemo(() => summarizeRanking(ranking.rows), [ranking.rows]);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -84,7 +109,7 @@ export default function StockReconciliationPage() {
                 await copyDataUrlImage(url);
                 toast.success('คัดลอกรูปแล้ว วางใน LINE ได้เลย', { id });
             } else {
-                downloadDataUrl(url, `STOCK_RECON_${day}.png`);
+                downloadDataUrl(url, view === 'day' ? `STOCK_RECON_${day}.png` : `STOCK_VARIANCE_${view}D_${day}.png`);
                 toast.success('บันทึก PNG แล้ว', { id });
             }
         } catch (err) {
@@ -105,12 +130,22 @@ export default function StockReconciliationPage() {
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK RECONCILIATION</span>
-                    <h2 className="font-sans font-bold text-xl leading-8">กระทบยอดสต๊อกรายวัน</h2>
+                    <h2 className="font-sans font-bold text-xl leading-8">{view === 'day' ? 'กระทบยอดสต๊อกรายวัน' : `อันดับผลต่างสะสม ${view} วัน`}</h2>
                     <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] max-w-prose">
-                        ยอดเปิด + รับเข้า + ผลิต − ใช้ผลิต − เสีย − ใช้ตามยอดขาย = ควรเหลือ เทียบกับยอดนับปิดร้าน วันทำการตัดรอบ 05:00
+                        {view === 'day'
+                            ? 'ยอดเปิด + รับเข้า + ผลิต − ใช้ผลิต − เสีย − ใช้ตามยอดขาย = ควรเหลือ เทียบกับยอดนับปิดร้าน วันทำการตัดรอบ 05:00'
+                            : 'รวมผลต่างของทุกวันที่นับปิดร้าน หาวัตถุดิบที่ขาดซ้ำ ๆ เพื่อตามแก้สูตรหรือการเบิก'}
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-white" role="tablist" aria-label="ช่วงรายงาน">
+                        {[['day', 'รายวัน'], [7, 'สะสม 7 วัน'], [30, 'สะสม 30 วัน']].map(([v, label]) => (
+                            <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)}
+                                className={`px-3 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${view === v ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)]'}`}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                     <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-white">
                         <button type="button" onClick={() => setDay(d => addDays(d, -1))} aria-label="วันก่อนหน้า"
                             className="px-3 py-2 font-sans font-bold text-[13px] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">ก่อนหน้า</button>
@@ -128,6 +163,78 @@ export default function StockReconciliationPage() {
                 <p className="p-4 border border-[oklch(85%_0.012_28)] bg-white font-sans text-[14px] leading-6">
                     ฐานข้อมูลยังไม่มีระบบกระทบยอด กรุณาติดตั้ง migration รอบนับและกระทบยอดก่อน
                 </p>
+            ) : view !== 'day' ? (
+                <div ref={reportRef} className="bg-white border border-[oklch(85%_0.012_28)]">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-[oklch(85%_0.012_28)] border-b border-[oklch(85%_0.012_28)]">
+                        <div className="p-3 col-span-2 lg:col-span-1">
+                            <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">ช่วง</span>
+                            <span className="font-sans font-bold text-[15px] leading-6">
+                                <span className="whitespace-nowrap">{shortDate(shopDayRange(day, view)[0])}</span> – <span className="whitespace-nowrap">{shortDate(day)}</span>
+                            </span>
+                            <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">มีนับปิดร้าน {ranking.days} จาก {view} วัน</span>
+                        </div>
+                        <div className="p-3">
+                            <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">รายการที่เคยผิดปกติ</span>
+                            <span className={`font-mono font-bold text-xl tabular-nums ${rankSummary.withAbnormal ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{rankSummary.withAbnormal}</span>
+                            <span className="font-sans text-[12px] text-[oklch(55%_0.010_28)]"> / {rankSummary.items}</span>
+                        </div>
+                        <div className="p-3">
+                            <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">ขาดสะสม (มูลค่า)</span>
+                            <span className={`font-mono font-bold text-xl tabular-nums ${rankSummary.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{baht(rankSummary.shortValue)}</span>
+                        </div>
+                        <div className="p-3">
+                            <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">สุทธิ (ขาด + เกิน)</span>
+                            <span className="font-mono font-bold text-xl tabular-nums">{baht(rankSummary.netValue)}</span>
+                        </div>
+                    </div>
+                    {ranking.loading ? (
+                        <p className="p-6 font-sans text-[14px] text-[oklch(55%_0.010_28)]">กำลังรวม {view} วัน...</p>
+                    ) : ranking.error ? (
+                        <p className="p-6 font-sans text-[14px] text-[oklch(52%_0.16_28)]">โหลดไม่สำเร็จ: {ranking.error.message}</p>
+                    ) : ranking.rows.length === 0 ? (
+                        <p className="p-6 font-sans text-[14px] leading-6 text-[oklch(42%_0.010_28)]">ยังไม่มีวันที่นับปิดร้านในช่วงนี้ จึงยังจัดอันดับผลต่างไม่ได้</p>
+                    ) : (
+                        <div className="overflow-x-auto" data-export-unclip>
+                            <table className="w-full min-w-[720px] border-collapse">
+                                <thead className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
+                                    <tr>
+                                        <th className={`${cellHead} w-10`}>#</th>
+                                        <th className="px-3 py-2 text-left font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)] whitespace-nowrap">รายการ</th>
+                                        <th className={cellHead}>วันที่นับ</th>
+                                        <th className={cellHead}>วันผิดปกติ</th>
+                                        <th className={cellHead}>ต่างรวม</th>
+                                        <th className={cellHead}>ขาดรวม</th>
+                                        <th className={cellHead}>สุทธิ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                                    {ranking.rows.map((r, i) => (
+                                        <tr key={r.stock_item_id} className={r.abnormalDays ? 'bg-[oklch(97%_0.02_28)]' : ''}>
+                                            <td className={`${cell} text-[oklch(55%_0.010_28)]`}>{i + 1}</td>
+                                            <td className="px-3 py-2 text-left">
+                                                <button type="button" onClick={() => setCardFor({ id: r.stock_item_id, name: r.name, unit: r.unit })}
+                                                    className="font-sans font-bold text-[13px] leading-5 text-left underline decoration-[oklch(85%_0.012_28)] underline-offset-2 hover:decoration-[oklch(18%_0.012_28)] cursor-pointer">
+                                                    {r.name}
+                                                </button>
+                                                <span className="font-sans text-[11px] leading-4 text-[oklch(55%_0.010_28)] block">{displayUnit(r.unit)}</span>
+                                            </td>
+                                            <td className={cell}>{r.daysCounted}</td>
+                                            <td className={`${cell} font-bold ${r.abnormalDays ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{r.abnormalDays}</td>
+                                            <td className={`${cell} ${r.variance < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{`${r.variance > 0 ? '+' : ''}${num(r.variance, 3)}`}</td>
+                                            <td className={`${cell} font-bold ${r.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
+                                                {r.priced ? baht(r.shortValue) : <span className="font-sans text-[11px] text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}
+                                            </td>
+                                            <td className={cell}>{r.priced ? baht(r.value) : '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    <p className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)]">
+                        นับเฉพาะวันที่มีนับปิดร้าน · เรียงจากขาดมากสุด · รายการที่ขาดซ้ำทุกวันในสัดส่วนเดิม มักแปลว่าสูตรตักน้อยกว่าที่ทำจริง · กดชื่อเพื่อดูความเคลื่อนไหว
+                    </p>
+                </div>
             ) : (
                 <div ref={reportRef} className="bg-white border border-[oklch(85%_0.012_28)]">
                     {/* Summary cells */}
@@ -215,10 +322,11 @@ export default function StockReconciliationPage() {
                                         return (
                                             <tr key={r.stock_item_id} className={bad ? 'bg-[oklch(97%_0.02_28)]' : ''}>
                                                 <td className={`px-3 py-2 text-left sticky left-0 ${bad ? 'bg-[oklch(97%_0.02_28)]' : 'bg-white'}`}>
-                                                    <span className="font-sans font-bold text-[13px] leading-5 block">
+                                                    <button type="button" onClick={() => setCardFor({ id: r.stock_item_id, name: r.name, unit: r.unit })}
+                                                        className="font-sans font-bold text-[13px] leading-5 block text-left underline decoration-[oklch(85%_0.012_28)] underline-offset-2 hover:decoration-[oklch(18%_0.012_28)] cursor-pointer">
                                                         {bad && <span className="inline-block w-1.5 h-1.5 mr-1.5 align-middle bg-[oklch(52%_0.16_28)]" aria-label="ผิดปกติ" />}
                                                         {r.name}
-                                                    </span>
+                                                    </button>
                                                     <span className="font-sans text-[11px] leading-4 text-[oklch(55%_0.010_28)]">
                                                         {displayUnit(r.unit)}{r.opening_source === 'ledger' ? ' · ยอดเปิดจากระบบ' : ''}
                                                         {r.closing_counted_at ? ` · นับ ${timeOf(r.closing_counted_at)}` : ''}
@@ -247,9 +355,13 @@ export default function StockReconciliationPage() {
                     )}
 
                     <p className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)]">
-                        ผิดปกติ = ต่างเกิน 5% ของยอดที่ควรเหลือ และเกิน ฿100 (รายการที่ไม่มีราคาใช้เฉพาะ %) · ใช้ตามยอดขายคำนวณจากสูตร ยังไม่ได้ตัดสต๊อกจริง
+                        ผิดปกติ = ต่างเกิน 5% ของยอดที่ควรเหลือ และเกิน ฿100 (รายการที่ไม่มีราคาใช้เฉพาะ %) · ใช้ตามยอดขายคำนวณจากสูตร ยังไม่ได้ตัดสต๊อกจริง · กดชื่อเพื่อดูความเคลื่อนไหว
                     </p>
                 </div>
+            )}
+
+            {cardFor && (
+                <StockCardPanel itemId={cardFor.id} itemName={cardFor.name} unit={cardFor.unit} onClose={() => setCardFor(null)} />
             )}
         </div>
     );
