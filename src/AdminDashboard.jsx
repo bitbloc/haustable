@@ -23,6 +23,7 @@ import OnlineAdvanceOrdersHub from './components/admin/overview/OnlineAdvanceOrd
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from './utils/tableTransferHelper'
+import { computeDailyOverviewMetrics } from './utils/overviewMetricsHelper'
 
 // Lazy-Loaded Dialog Modals (Improves First Contentful Paint & Mobile Performance)
 const DailySummarySlipModal = lazy(() => import('./components/admin/overview/DailySummarySlipModal'))
@@ -507,57 +508,11 @@ export default function AdminDashboard() {
         }).sort((a, b) => new Date(a.booking_time || a.created_at) - new Date(b.booking_time || b.created_at))
     }, [bookings, selectedDate])
 
-    // 4. Live Financial Metrics & Payment Breakdown for the selected date (Strictly Settled / Checked-Out Bills)
-    const { revenueToday, completedOrdersCount, activeUnpaidRevenue, activeUnpaidCount, dineInCount, pickupCount, paymentBreakdown } = useMemo(() => {
-        let rev = 0
-        let paidCount = 0
-        let activeUnpaid = 0
-        let activeCount = 0
-        let dineIn = 0
-        let pickup = 0
-        let cash = 0
-        let qr = 0
-        let credit = 0
-
-        dailyBookings.forEach(b => {
-            const amount = Number(b.total_amount || b.total_price || 0)
-            const isCompleted = b.status === 'completed' || b.status === 'paid' || b.status === 'success'
-            const isActiveUnpaid = b.status === 'seated' || b.status === 'confirmed' || b.status === 'ready'
-
-            if (isCompleted) {
-                rev += amount
-                paidCount++
-
-                // Payment breakdown
-                const breakdown = getBookingPaymentBreakdown(b)
-                cash += breakdown.cash
-                qr += breakdown.qr
-                credit += breakdown.credit
-            } else if (isActiveUnpaid) {
-                activeUnpaid += amount
-                activeCount++
-            }
-
-            // Active channels tracking
-            if (b.status !== 'cancelled' && b.status !== 'void') {
-                if (b.booking_type === 'dine_in' || b.booking_type === 'walk_in') {
-                    dineIn++
-                } else if (b.booking_type === 'pickup') {
-                    pickup++
-                }
-            }
-        })
-
-        return {
-            revenueToday: rev,
-            completedOrdersCount: paidCount,
-            activeUnpaidRevenue: activeUnpaid,
-            activeUnpaidCount: activeCount,
-            dineInCount: dineIn,
-            pickupCount: pickup,
-            paymentBreakdown: { cash, qr, credit }
-        }
-    }, [dailyBookings])
+    // 4. Live Financial Metrics & Payment Breakdown for the selected date (Settled vs Active Unpaid Bills)
+    const { revenueToday, completedOrdersCount, activeUnpaidRevenue, activeUnpaidCount, dineInCount, pickupCount, paymentBreakdown } = useMemo(
+        () => computeDailyOverviewMetrics(dailyBookings, getBookingPaymentBreakdown),
+        [dailyBookings]
+    )
 
     // 5. Derived Floor Occupancy (Always accurate in both LIVE NOW and PRO ANALYTICS)
     const derivedFloorOccupancy = useMemo(() => {
@@ -921,6 +876,8 @@ export default function AdminDashboard() {
                             omniOnlineBookings={omniOnlineBookings}
                             revenueToday={revenueToday}
                             yesterdayRevenue={yesterdayRevenue}
+                            activeUnpaidRevenue={activeUnpaidRevenue}
+                            activeUnpaidCount={activeUnpaidCount}
                             shifts={shifts}
                             selectedDate={selectedDate}
                             loading={loading}

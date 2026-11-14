@@ -238,6 +238,98 @@ describe('Admin Dashboard Flow & UX/UI Audit', () => {
         expect(resNumbered.sections[1].title).toContain('2. สัญญาณลูกค้าออนไลน์')
         expect(resNumbered.sections[2].title).toContain('3. ยุทธวิธีผลักดันยอด')
     })
+
+    it('computes active unpaid open-table revenue accurately from order_items, deposits, split payments, and exclusions', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { computeDailyOverviewMetrics, computeBookingUnpaidAmount } = await import('../overviewMetricsHelper.js')
+
+        const bookings = [
+            // 1. Settled bill
+            { id: 'paid-1', status: 'completed', total_amount: 3783, booking_type: 'walk_in' },
+            // 2. Seated table with live order_items while total_amount is still stale/0
+            {
+                id: 'open-1',
+                status: 'seated',
+                total_amount: 0,
+                booking_type: 'dine_in',
+                order_items: [
+                    { id: 'i1', quantity: 2, price_at_time: 250 },
+                    { id: 'i2', quantity: 1, price_at_time: 180 },
+                    { id: 'i3', quantity: 1, price_at_time: 99, status: 'void' }
+                ]
+            },
+            // 3. Seated table with partial split payment & deposit already collected
+            {
+                id: 'open-2',
+                status: 'seated',
+                total_amount: 1200,
+                deposit_amount: 300,
+                staff_remark: '[SPLIT_ROUNDS:[{"amount":400,"method":"qr"}]]',
+                booking_type: 'walk_in',
+                order_items: [
+                    { id: 'i4', quantity: 1, price_at_time: 1200 }
+                ]
+            },
+            // 4. Online reservation that already prepaid full deposit (must NOT count as unpaid)
+            {
+                id: 'res-prepaid',
+                status: 'confirmed',
+                source: 'online',
+                booking_type: 'dine_in',
+                total_amount: 500,
+                deposit_amount: 500,
+                order_items: []
+            },
+            // 5. Line Man ready order (platform prepaid -> must NOT count as unpaid)
+            {
+                id: 'lineman-1',
+                status: 'ready',
+                source: 'lineman',
+                booking_type: 'pickup',
+                total_amount: 420
+            },
+            // 6. Pay-at-store pickup preparing
+            {
+                id: 'pickup-unpaid',
+                status: 'preparing',
+                booking_type: 'pickup',
+                total_amount: 240,
+                deposit_amount: 0
+            },
+            // 7. Cancelled bill (must be excluded)
+            { id: 'void-1', status: 'cancelled', total_amount: 999 }
+        ]
+
+        expect(computeBookingUnpaidAmount(bookings[1])).toBe(680) // 2*250 + 180, void skipped
+        expect(computeBookingUnpaidAmount(bookings[2])).toBe(500) // 1200 - 300 - 400
+        expect(computeBookingUnpaidAmount(bookings[3])).toBe(0)
+        expect(computeBookingUnpaidAmount(bookings[4])).toBe(0)
+        expect(computeBookingUnpaidAmount(bookings[5])).toBe(240)
+
+        const metrics = computeDailyOverviewMetrics(bookings)
+        expect(metrics.revenueToday).toBe(3783)
+        expect(metrics.completedOrdersCount).toBe(1)
+        expect(metrics.activeUnpaidRevenue).toBe(1420) // 680 + 500 + 240
+        expect(metrics.activeUnpaidCount).toBe(3)
+
+        // Verify Executive Bento & Simplified Live Overview render unpaid revenue controls cleanly
+        const execSource = fs.readFileSync(
+            path.resolve(process.cwd(), 'src/components/admin/overview/AdminExecutiveDataVizDashboard.jsx'),
+            'utf8'
+        )
+        expect(execSource).toContain('ยังไม่คิดเงิน')
+        expect(execSource).toContain('activeUnpaidRevenue.toLocaleString()')
+        expect(execSource).toContain('activeUnpaidCount')
+        expect(execSource).toContain('totalProjectedRevenue.toLocaleString()')
+
+        const liveSource = fs.readFileSync(
+            path.resolve(process.cwd(), 'src/components/admin/overview/SimplifiedLiveOverview.jsx'),
+            'utf8'
+        )
+        expect(liveSource).toContain('ยังไม่คิดเงิน')
+        expect(liveSource).toContain('resolvedUnpaidRevenue.toLocaleString()')
+    })
 })
 
 

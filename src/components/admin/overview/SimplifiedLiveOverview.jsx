@@ -674,6 +674,8 @@ export default function SimplifiedLiveOverview({
     omniOnlineBookings = [],
     revenueToday = 0, 
     yesterdayRevenue = 0,
+    activeUnpaidRevenue = null,
+    activeUnpaidCount = null,
     shifts = [], 
     selectedDate = getThaiDate(),
     loading = false, 
@@ -1331,22 +1333,44 @@ export default function SimplifiedLiveOverview({
                             </div>
                         </div>
 
-                        {/* KPI 3: SALES TODAY / DAILY REVENUE */}
-                        <div className="pt-3 sm:pt-0 sm:px-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
-                                    {!isToday ? 'ยอดขายประจำวัน' : 'ยอดขายวันนี้'}
-                                </span>
-                            </div>
-                            <div className="mt-1">
-                                <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                    ฿{revenueToday.toLocaleString()}
+                        {/* KPI 3: SALES TODAY / DAILY REVENUE + UNPAID ACTIVE BILLS */}
+                        {(() => {
+                            const resolvedUnpaidRevenue = activeUnpaidRevenue !== null ? Number(activeUnpaidRevenue || 0) : counts.activeRevenue
+                            const resolvedUnpaidCount = activeUnpaidCount !== null ? Number(activeUnpaidCount || 0) : counts.occupied
+                            return (
+                                <div className="pt-3 sm:pt-0 sm:px-4">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                            {!isToday ? 'ยอดขายประจำวัน (ชำระแล้ว)' : 'ยอดขายวันนี้ (ชำระแล้ว)'}
+                                        </span>
+                                        <span className="font-mono text-[11px] font-medium text-[oklch(50%_0.010_28)] tabular-nums">
+                                            {trendText}
+                                        </span>
+                                    </div>
+                                    <div className="mt-1">
+                                        <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                            ฿{revenueToday.toLocaleString()}
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-[oklch(88%_0.012_28)] font-mono text-[11px] tabular-nums">
+                                            <span className="font-sans text-[oklch(48%_0.010_28)]">
+                                                ยังไม่คิดเงิน ({resolvedUnpaidCount} บิล):
+                                            </span>
+                                            <span className={`font-semibold ${resolvedUnpaidRevenue > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(50%_0.010_28)]'}`}>
+                                                ฿{resolvedUnpaidRevenue.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        {resolvedUnpaidRevenue > 0 && (
+                                            <div className="flex items-center justify-between gap-2 mt-0.5 font-mono text-[11px] text-[oklch(45%_0.010_28)] tabular-nums">
+                                                <span className="font-sans">รวมยอดคาดการณ์:</span>
+                                                <span className="font-semibold text-[oklch(18%_0.012_28)]">
+                                                    ฿{(revenueToday + resolvedUnpaidRevenue).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="font-mono text-[11px] font-medium text-[oklch(50%_0.010_28)] mt-0.5 tabular-nums">
-                                    {trendText}
-                                </div>
-                            </div>
-                        </div>
+                            )
+                        })()}
                     </div>
                 )}
 

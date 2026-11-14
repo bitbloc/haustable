@@ -143,7 +143,7 @@ export default function AdminExecutiveDataVizDashboard({
         const credit = Number(paymentBreakdown?.credit || 0)
         const sum = qr + cash + credit
         if (sum === 0) {
-            return { qr: 0, cash: 0, credit: 0, qrPct: 70, cashPct: 30, creditPct: 0, sum: 0 }
+            return { qr: 0, cash: 0, credit: 0, qrPct: 0, cashPct: 0, creditPct: 0, sum: 0 }
         }
         const qrPct = Math.round((qr / sum) * 100)
         const creditPct = Math.round((credit / sum) * 100)
@@ -165,9 +165,9 @@ export default function AdminExecutiveDataVizDashboard({
                 pick,
                 online,
                 total: 0,
-                dinePct: 85,
-                pickPct: 10,
-                onlinePct: 5
+                dinePct: 0,
+                pickPct: 0,
+                onlinePct: 0
             }
         }
 
@@ -250,6 +250,8 @@ export default function AdminExecutiveDataVizDashboard({
         return Math.round(revenueToday / completedOrdersCount)
     }, [revenueToday, completedOrdersCount])
 
+    const totalProjectedRevenue = Number(revenueToday || 0) + Number(activeUnpaidRevenue || 0)
+
     return (
         <div className="space-y-4 font-sans select-none">
             {/* Top Minimal Executive Header Breadcrumb */}
@@ -324,6 +326,18 @@ export default function AdminExecutiveDataVizDashboard({
                                 <span className="text-[oklch(45%_0.010_28)]">ลูกค้าในร้าน:</span>
                                 <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{totalGuests} ท่าน</span>
                             </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-[oklch(90%_0.010_28)]">
+                                <span className="text-[oklch(45%_0.010_28)]">ยังไม่คิดเงิน:</span>
+                                <span className={`font-mono font-bold tabular-nums ${
+                                    activeUnpaidRevenue > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(52%_0.010_28)]'
+                                }`}>
+                                    {loading
+                                        ? '...'
+                                        : activeUnpaidRevenue > 0
+                                            ? `฿${activeUnpaidRevenue.toLocaleString()} (${activeUnpaidCount} บิล)`
+                                            : '฿0 · ไม่มีค้าง'}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -382,16 +396,21 @@ export default function AdminExecutiveDataVizDashboard({
                                     Activity
                                 </span>
                                 <span className="font-mono text-[11px] text-[oklch(48%_0.010_28)]">
-                                    Hourly Revenue
+                                    Hourly Revenue · ชำระแล้ว
                                 </span>
                             </div>
-                            <div className="mt-1 flex items-baseline gap-2">
+                            <div className="mt-1 flex items-baseline gap-2 flex-wrap">
                                 <h3 className="font-mono text-2xl sm:text-3xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     {loading ? '...' : `฿${revenueToday.toLocaleString()}`}
                                 </h3>
                                 <span className={`font-mono text-xs font-semibold ${deltaInfo.isPos ? 'text-[oklch(38%_0.10_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
                                     {deltaInfo.text}
                                 </span>
+                                {activeUnpaidRevenue > 0 && (
+                                    <span className="font-mono text-xs text-[oklch(52%_0.16_28)] tabular-nums">
+                                        · รอคิดเงิน +฿{activeUnpaidRevenue.toLocaleString()}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -455,7 +474,7 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* CARD 2B: Treasury & Payments + POS Card (Right Top, 5 cols)           */}
                     {/* --------------------------------------------------------------------- */}
                     <div className="md:col-span-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-3">
-                        {/* Upper: Virtual Cards / Payment Ratio */}
+                        {/* Upper: Settled vs Active Unpaid Revenue + Payment Ratio */}
                         <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 rounded-2xl shadow-2xs space-y-2.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold text-[oklch(18%_0.012_28)]">
@@ -472,29 +491,59 @@ export default function AdminExecutiveDataVizDashboard({
                                 )}
                             </div>
 
-                            <div>
-                                <div className="text-[11px] text-[oklch(48%_0.010_28)]">ยอดรวมชำระแล้ว:</div>
-                                <div className="font-mono text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                    ฿{revenueToday.toLocaleString()}
+                            {/* 2-Column Settled vs Unpaid Split */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="min-w-0">
+                                    <div className="text-[11px] text-[oklch(48%_0.010_28)]">ชำระแล้ว (ปิดบิล):</div>
+                                    <div className="font-mono text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums truncate">
+                                        {loading ? '...' : `฿${revenueToday.toLocaleString()}`}
+                                    </div>
+                                    <div className="text-[10px] font-mono text-[oklch(38%_0.10_140)] font-semibold mt-0.5 tabular-nums">
+                                        +{completedOrdersCount} บิลปิดยอดแล้ว
+                                    </div>
                                 </div>
-                                <div className="text-[10px] font-mono text-[oklch(38%_0.10_140)] font-semibold mt-0.5">
-                                    +{completedOrdersCount} บิลปิดยอดแล้ว
+
+                                <div className="min-w-0 border-l border-[oklch(88%_0.012_28)] pl-3">
+                                    <div className="flex items-center gap-1.5 text-[11px] text-[oklch(48%_0.010_28)]">
+                                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeUnpaidRevenue > 0 ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[oklch(75%_0.010_28)]'}`} />
+                                        <span className="truncate">ยังไม่คิดเงิน:</span>
+                                    </div>
+                                    <div className={`font-mono text-xl sm:text-2xl font-bold tabular-nums truncate ${
+                                        activeUnpaidRevenue > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'
+                                    }`}>
+                                        {loading ? '...' : `฿${activeUnpaidRevenue.toLocaleString()}`}
+                                    </div>
+                                    <div className={`text-[10px] font-mono font-semibold mt-0.5 tabular-nums ${
+                                        activeUnpaidCount > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'
+                                    }`}>
+                                        {activeUnpaidCount > 0 ? `${activeUnpaidCount} บิลรอชำระ` : 'ไม่มีบิลค้าง'}
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Split Progress Bar */}
-                            <div className="space-y-1.5 pt-1">
+                            <div className="space-y-1.5 pt-0.5">
                                 <div className="h-2 w-full rounded-full bg-[oklch(92%_0.008_28)] overflow-hidden flex gap-0.5">
-                                    <div
-                                        style={{ width: `${paymentMix.qrPct}%` }}
-                                        className="h-full bg-[oklch(45%_0.08_140)] transition-[width] duration-300"
-                                    />
-                                    <div
-                                        style={{ width: `${paymentMix.cashPct}%` }}
-                                        className="h-full bg-[oklch(18%_0.012_28)] transition-[width] duration-300"
-                                    />
+                                    {paymentMix.qrPct > 0 && (
+                                        <div
+                                            style={{ width: `${paymentMix.qrPct}%` }}
+                                            className="h-full bg-[oklch(45%_0.08_140)] transition-[width] duration-300"
+                                        />
+                                    )}
+                                    {paymentMix.cashPct > 0 && (
+                                        <div
+                                            style={{ width: `${paymentMix.cashPct}%` }}
+                                            className="h-full bg-[oklch(18%_0.012_28)] transition-[width] duration-300"
+                                        />
+                                    )}
+                                    {paymentMix.creditPct > 0 && (
+                                        <div
+                                            style={{ width: `${paymentMix.creditPct}%` }}
+                                            className="h-full bg-[oklch(52%_0.16_28)] transition-[width] duration-300"
+                                        />
+                                    )}
                                 </div>
-                                <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(48%_0.010_28)] tabular-nums">
+                                <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(48%_0.010_28)] tabular-nums gap-2 flex-wrap">
                                     <span className="flex items-center gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
                                         PromptPay {paymentMix.qrPct}%
@@ -503,7 +552,21 @@ export default function AdminExecutiveDataVizDashboard({
                                         <span className="w-1.5 h-1.5 rounded-full bg-[oklch(18%_0.012_28)]" />
                                         เงินสด {paymentMix.cashPct}%
                                     </span>
+                                    {paymentMix.creditPct > 0 && (
+                                        <span className="flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]" />
+                                            บัตร {paymentMix.creditPct}%
+                                        </span>
+                                    )}
                                 </div>
+                            </div>
+
+                            {/* Projected Combined Total Footer (Closes arithmetic: Paid + Unpaid) */}
+                            <div className="flex items-center justify-between pt-2 border-t border-[oklch(88%_0.012_28)] text-[11px]">
+                                <span className="text-[oklch(48%_0.010_28)]">รวมยอดทั้งหมด (ปิดบิล + ค้างโต๊ะ)</span>
+                                <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                    {loading ? '...' : `฿${totalProjectedRevenue.toLocaleString()}`}
+                                </span>
                             </div>
                         </div>
 
@@ -635,21 +698,21 @@ export default function AdminExecutiveDataVizDashboard({
                                 <span className="font-bold text-base text-[oklch(18%_0.012_28)] block">
                                     {occupiedTables} <small className="font-normal text-[11px] text-[oklch(48%_0.010_28)]">/{totalTables}</small>
                                 </span>
-                                <span className="text-[10px] text-[oklch(48%_0.010_28)] uppercase">โต๊ะเปิดในร้าน</span>
+                                <span className="text-[11px] font-sans text-[oklch(48%_0.010_28)]">โต๊ะเปิดในร้าน</span>
                             </div>
 
                             <div>
                                 <span className="font-bold text-base text-[oklch(18%_0.012_28)] block">
                                     {totalGuests}
                                 </span>
-                                <span className="text-[10px] text-[oklch(48%_0.010_28)] uppercase">จำนวนลูกค้า</span>
+                                <span className="text-[11px] font-sans text-[oklch(48%_0.010_28)]">จำนวนลูกค้า</span>
                             </div>
 
                             <div>
                                 <span className="font-bold text-base text-[oklch(18%_0.012_28)] block">
                                     {totalTables > 0 ? (completedOrdersCount / totalTables).toFixed(1) : '1.0'}x
                                 </span>
-                                <span className="text-[10px] text-[oklch(48%_0.010_28)] uppercase">รอบหมุนเวียนโต๊ะ</span>
+                                <span className="text-[11px] font-sans text-[oklch(48%_0.010_28)]">รอบหมุนเวียนโต๊ะ</span>
                             </div>
                         </div>
                     </div>
@@ -693,17 +756,19 @@ export default function AdminExecutiveDataVizDashboard({
                                             />
 
                                             {/* Dine-in Arc (Primary) */}
-                                            <circle
-                                                cx={size / 2}
-                                                cy={size / 2}
-                                                r={r}
-                                                stroke="oklch(45% 0.08 140)"
-                                                strokeWidth={stroke}
-                                                strokeDasharray={`${dineLen} ${c}`}
-                                                strokeDashoffset="0"
-                                                fill="none"
-                                                strokeLinecap="round"
-                                            />
+                                            {dineLen > 0 && (
+                                                <circle
+                                                    cx={size / 2}
+                                                    cy={size / 2}
+                                                    r={r}
+                                                    stroke="oklch(45% 0.08 140)"
+                                                    strokeWidth={stroke}
+                                                    strokeDasharray={`${dineLen} ${c}`}
+                                                    strokeDashoffset="0"
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                />
+                                            )}
 
                                             {/* Pickup Arc */}
                                             {pickLen > 0 && (
@@ -746,10 +811,12 @@ export default function AdminExecutiveDataVizDashboard({
                                             </span>
                                         </div>
 
-                                        {/* Floating Tag next to Donut */}
-                                        <span className="absolute top-2 right-0 font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                                            {channelMix.pickPct}% Pick
-                                        </span>
+                                        {/* Floating Tag next to Donut (only shown when Pick-up orders exist) */}
+                                        {channelMix.pickPct > 0 && (
+                                            <span className="absolute top-1 -right-2 font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
+                                                {channelMix.pickPct}% Pick
+                                            </span>
+                                        )}
                                     </div>
                                 )
                             })()}
@@ -761,21 +828,21 @@ export default function AdminExecutiveDataVizDashboard({
                                 <span className="font-bold text-base text-[oklch(18%_0.012_28)] block">
                                     {channelMix.dine}
                                 </span>
-                                <span className="text-[10px] text-[oklch(48%_0.010_28)] uppercase">ทานที่ร้าน</span>
+                                <span className="text-[11px] font-sans text-[oklch(48%_0.010_28)]">ทานที่ร้าน</span>
                             </div>
 
                             <div>
                                 <span className="font-bold text-base text-[oklch(18%_0.012_28)] block">
                                     {channelMix.pick}
                                 </span>
-                                <span className="text-[10px] text-[oklch(48%_0.010_28)] uppercase">สั่งกลับ</span>
+                                <span className="text-[11px] font-sans text-[oklch(48%_0.010_28)]">สั่งกลับ</span>
                             </div>
 
                             <div>
                                 <span className="font-bold text-base text-[oklch(18%_0.012_28)] block">
                                     {channelMix.online}
                                 </span>
-                                <span className="text-[10px] text-[oklch(48%_0.010_28)] uppercase">จองออนไลน์</span>
+                                <span className="text-[11px] font-sans text-[oklch(48%_0.010_28)]">จองออนไลน์</span>
                             </div>
                         </div>
                     </div>
