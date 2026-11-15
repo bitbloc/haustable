@@ -233,7 +233,7 @@ export default function POSDashboard() {
             const cached = localStorage.getItem('pos_default_vat_enabled');
             if (cached !== null) return cached === 'true';
         } catch (e) {}
-        return true;
+        return false; // not VAT-registered: never add VAT unless the setting says so
     });
     const [availableTables, setAvailableTables] = useState([]);
     const [availableMergeTables, setAvailableMergeTables] = useState([]);
@@ -5155,7 +5155,7 @@ export default function POSDashboard() {
                     const cached = localStorage.getItem('pos_default_vat_enabled');
                     if (cached !== null) return cached === 'true';
                 } catch (e) {}
-                return true;
+                return false;
             })();
             setSplitIncludeTax(typeof tax === 'boolean' ? tax : defaultVat);
             setShowSplitModal(true);

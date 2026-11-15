@@ -783,7 +783,7 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
         cfg = getPrinterConfig() || {};
     } catch (e) {}
 
-    let isDefaultVatEnabled = true;
+    let isDefaultVatEnabled = false; // no VAT unless the setting says so
     try {
         const cached = localStorage.getItem('pos_default_vat_enabled');
         if (cached !== null) isDefaultVatEnabled = cached === 'true';

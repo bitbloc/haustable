@@ -34,7 +34,7 @@ export default function POSSplitPaymentModal({
             const cached = localStorage.getItem('pos_default_vat_enabled');
             if (cached !== null) return cached === 'true';
         } catch (e) {}
-        return true;
+        return false; // not VAT-registered: never add VAT unless the setting says so
     }, [includeTax]);
     // 3 Split Modes: 'EQUAL' | 'PERCENT' | 'CUSTOM'
     const [splitMode, setSplitMode] = useState('EQUAL');

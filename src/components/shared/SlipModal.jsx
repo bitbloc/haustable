@@ -574,7 +574,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
         const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
         const netAfterDiscount = Math.max(0, subtotal - discountVal);
 
-        let isDefaultVatEnabled = true;
+        let isDefaultVatEnabled = false; // no VAT unless the setting says so
         try {
             const cached = localStorage.getItem('pos_default_vat_enabled');
             if (cached !== null) isDefaultVatEnabled = cached === 'true';

@@ -128,7 +128,7 @@ export function getSplitTotalPaid(booking) {
  * @param {boolean} includeTax - Whether 7% VAT is included
  * @returns {Object} Calculated split balance metrics
  */
-export function calculateSplitBalance(booking, orderItems = [], includeTax = true) {
+export function calculateSplitBalance(booking, orderItems = [], includeTax = false) {
     const rounds = getBookingSplitRounds(booking);
     const splitPaid = rounds.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount) || 0) : 0;

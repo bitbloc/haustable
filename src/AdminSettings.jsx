@@ -99,7 +99,7 @@ export default function AdminSettings() {
         spotify_client_secret: '',
         link_og_image_url: '',
         link_og_description: '',
-        default_vat_enabled: 'true',
+        default_vat_enabled: 'false',
         crm_welcome_xhaus: '10.00',
         crm_redeem_rate_xhaus: '1.00',
         crm_min_redeem_xhaus: '10.00',

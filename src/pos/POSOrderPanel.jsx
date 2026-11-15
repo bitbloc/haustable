@@ -68,14 +68,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             const cached = localStorage.getItem('pos_default_vat_enabled');
             if (cached !== null) return cached === 'true';
         } catch (e) {}
-        return true;
+        return false; // not VAT-registered: never add VAT unless the setting says so
     });
     const [includeTax, setIncludeTax] = React.useState(() => {
         try {
             const cached = localStorage.getItem('pos_default_vat_enabled');
             if (cached !== null) return cached === 'true';
         } catch (e) {}
-        return true;
+        return false; // not VAT-registered: never add VAT unless the setting says so
     });
     const tableVatOverridesRef = React.useRef(new Map());
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
@@ -1594,7 +1594,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </div>
                     )}
                     
-                    {/* VAT Toggle Row */}
+                    {/* VAT Toggle Row: only when the shop turns VAT on in settings (not VAT-registered today),
+                        or when this bill already carries VAT, so a cashier cannot add 7% by accident */}
+                    {(defaultVatEnabled || includeTax) && (
                     <div className="flex justify-between items-center py-1 border-b border-dashed border-[#D1D1CD] pb-2 mt-1 text-xs">
                         <div className="flex items-center gap-2">
                             <span>VAT (7%)</span>
@@ -1616,6 +1618,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             {includeTax ? `฿${Math.ceil((netBeforeTax * 7) / 100).toLocaleString()}` : '฿0'}
                         </span>
                     </div>
+                    )}
 
                     {/* Payment / Deposit Status Row */}
                     {isFullyPaid && (totalPaidAmount > 0 || isStatusCompleted) && (
