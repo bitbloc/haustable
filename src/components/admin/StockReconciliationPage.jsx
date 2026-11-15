@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import {
-    shopDayOf, addDays, displayUnit, isAbnormal, summarizeReconciliation, sortReconciliation, COUNT_KINDS,
+    shopDayOf, addDays, displayUnit, formatPackQty, isAbnormal, summarizeReconciliation, sortReconciliation, COUNT_KINDS,
     DEFAULT_THRESHOLDS, THRESHOLD_KEYS, thresholdsFromSettings
 } from '../../utils/stockCount';
 import { exportElementImage, downloadDataUrl, copyDataUrlImage } from '../../utils/reportImageExport';
@@ -44,6 +44,21 @@ export default function StockReconciliationPage() {
     const [view, setView] = useState('day'); // 'day' | 7 | 30 (days of accumulated variance)
     const [ranking, setRanking] = useState({ loading: false, rows: [], days: 0, error: null });
     const [cardFor, setCardFor] = useState(null); // { id, name, unit }
+    // Pack-to-usage conversion per item, so 14.98 packs of cups reads "14 แพ็ค 49 แก้ว"
+    const [itemUnits, setItemUnits] = useState({});
+    useEffect(() => {
+        let cancelled = false;
+        supabase.from('stock_items').select('id, conversion_factor, usage_unit')
+            .then(({ data }) => {
+                if (cancelled || !data) return;
+                setItemUnits(Object.fromEntries(data.map(i => [i.id, { factor: Number(i.conversion_factor) || 1, usageUnit: i.usage_unit }])));
+            });
+        return () => { cancelled = true; };
+    }, []);
+    const qty = (v, r, digits) => {
+        const u = itemUnits[r.stock_item_id];
+        return (u && formatPackQty(v, { factor: u.factor, packUnit: r.unit, usageUnit: u.usageUnit })) ?? num(v, digits);
+    };
     // "Abnormal" = off by more than X% AND more than ฿Y (app_settings, shared with Telegram)
     const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
     const [thDraft, setThDraft] = useState(null); // { percent, baht } while editing
@@ -260,7 +275,7 @@ export default function StockReconciliationPage() {
                                             </td>
                                             <td className={cell}>{r.daysCounted}</td>
                                             <td className={`${cell} font-bold ${r.abnormalDays ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{r.abnormalDays}</td>
-                                            <td className={`${cell} ${r.variance < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{`${r.variance > 0 ? '+' : ''}${num(r.variance, 3)}`}</td>
+                                            <td className={`${cell} ${r.variance < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{`${r.variance > 0 ? '+' : ''}${qty(r.variance, r, 3)}`}</td>
                                             <td className={`${cell} font-bold ${r.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
                                                 {r.priced ? baht(r.shortValue) : <span className="font-sans text-xs text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}
                                             </td>
@@ -401,16 +416,16 @@ export default function StockReconciliationPage() {
                                                         {r.closing_counted_at ? ` · นับ ${timeOf(r.closing_counted_at)}` : ''}
                                                     </span>
                                                 </td>
-                                                <td className={cell}>{num(r.opening_qty)}</td>
-                                                <td className={cell}>{num(r.received)}</td>
-                                                <td className={cell}>{num(r.produced)}</td>
-                                                <td className={cell}>{num(r.used_in_production)}</td>
-                                                <td className={cell}>{num(r.waste)}</td>
-                                                <td className={cell}>{num(r.sales_usage)}</td>
-                                                <td className={`${cell} font-bold`}>{num(r.expected_close)}</td>
-                                                <td className={`${cell} font-bold`}>{num(r.closing_qty)}</td>
+                                                <td className={cell}>{qty(r.opening_qty, r)}</td>
+                                                <td className={cell}>{qty(r.received, r)}</td>
+                                                <td className={cell}>{qty(r.produced, r)}</td>
+                                                <td className={cell}>{qty(r.used_in_production, r)}</td>
+                                                <td className={cell}>{qty(r.waste, r)}</td>
+                                                <td className={cell}>{qty(r.sales_usage, r)}</td>
+                                                <td className={`${cell} font-bold`}>{qty(r.expected_close, r)}</td>
+                                                <td className={`${cell} font-bold`}>{qty(r.closing_qty, r)}</td>
                                                 <td className={`${cell} font-bold ${v < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
-                                                    {r.variance === null ? '—' : `${v > 0 ? '+' : ''}${num(v)}`}
+                                                    {r.variance === null ? '—' : `${v > 0 ? '+' : ''}${qty(v, r)}`}
                                                 </td>
                                                 <td className={`${cell} ${Number(r.variance_value) < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
                                                     {Number(r.unit_cost) > 0 ? baht(r.variance_value) : <span className="font-sans text-xs text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 import MakroPriceSheet from './MakroPriceSheet';
+import { parseMakroUnits } from '../../utils/makroUnits';
 import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { calculateRealUnitCost } from '../../utils/costUtils';
@@ -205,13 +206,31 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const [showPriceSearch, setShowPriceSearch] = useState(false);
     const [priceSearchTerm, setPriceSearchTerm] = useState('');
     // Picked a makro.pro product: its price is per item as sold (one pack), so it goes to "price per pack"
+    // Units come from the product title too ("น้ำเชื่อม 1.8 ล." -> 1 ขวด = 1,800 มล.), but only
+    // when this item has no units yet: changing the usage unit of an item already in recipes
+    // would change what those recipe quantities mean.
     const handleSelectPrice = (product) => {
+        const units = parseMakroUnits(product.title, product.unitSize);
+        const unitsUnset = !isEdit || ((formData.usage_unit || 'unit') === 'unit' && Number(formData.conversion_factor || 1) === 1);
+        const applyUnits = Boolean(units && unitsUnset);
         setFormData(prev => ({
             ...prev,
             name: prev.name?.trim() ? prev.name : product.title,
-            cost_price: product.price
+            cost_price: product.price,
+            ...(applyUnits ? {
+                pack_size: 1,
+                pack_unit: units.packUnit,
+                usage_unit: units.usageUnit,
+                conversion_factor: units.conversionFactor
+            } : {})
         }));
-        toast.success(`ใส่ราคา ฿${product.price} ต่อแพ็คจาก makro แล้ว ตรวจขนาดและหน่วยซื้อให้ตรงกับ "${product.title}"`);
+        if (applyUnits) {
+            toast.success(`ใส่ราคา ฿${product.price} และหน่วย ${units.summary} จาก makro แล้ว ตรวจให้ตรงกับของที่ซื้อจริง`);
+        } else if (units) {
+            toast.success(`ใส่ราคา ฿${product.price} แล้ว · makro ระบุ ${units.summary} ถ้าหน่วยของรายการนี้ต่างจากนี้ ให้แก้ที่แท็บต้นทุนและหน่วย`);
+        } else {
+            toast.success(`ใส่ราคา ฿${product.price} ต่อแพ็คจาก makro แล้ว ตรวจขนาดและหน่วยซื้อให้ตรงกับ "${product.title}"`);
+        }
         setShowPriceSearch(false);
     };
 
@@ -539,7 +558,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             value={formData.pack_unit}
                                             onChange={e => handleUnitChange('pack_unit', e.target.value)}
                                         >
-                                            {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                                            {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                                         </select>
                                     </div>
                                 </div>

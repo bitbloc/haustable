@@ -146,3 +146,33 @@ export const thresholdsFromSettings = (rows = []) => {
         baht: get(THRESHOLD_KEYS.baht) ?? DEFAULT_THRESHOLDS.baht
     };
 };
+
+/** Short labels for amounts written inside a table cell. */
+const SHORT_UNITS = { g: 'ก.', kg: 'กก.', ml: 'มล.', l: 'ล.' };
+const shortUnit = (u) => SHORT_UNITS[u] || displayUnit(u);
+
+/**
+ * A stock quantity in counting units (packs) written the way staff count it: whole packs plus
+ * the loose remainder in the usage unit, e.g. 14.98 packs of 50 cups -> "14 แพ็ค 49 แก้ว",
+ * 5.97 gallons of 1000 ml -> "5 แกลอน 967 มล.", -0.02 packs of 1000 g -> "-20 ก.".
+ * Grams and millilitres are whole numbers (nobody weighs 0.3 ml). Returns null when the item
+ * has no pack-to-usage conversion (factor <= 1), so the caller keeps its plain number.
+ */
+export function formatPackQty(qty, { factor, packUnit, usageUnit } = {}) {
+    if (qty === null || qty === undefined) return null;
+    const n = Number(qty);
+    const f = Number(factor);
+    if (!Number.isFinite(n) || !(f > 1)) return null;
+    if (n === 0) return '0';
+    const sign = n < 0 ? '-' : '';
+    const step = (usageUnit === 'g' || usageUnit === 'ml') ? 1 : 0.01;
+    const totalUsage = Math.round(Math.abs(n) * f / step) * step;
+    let packs = Math.floor((totalUsage + 1e-9) / f);
+    let rest = Math.round((totalUsage - packs * f) / step) * step;
+    if (rest >= f - 1e-9) { packs += 1; rest = 0; }
+    if (packs === 0 && rest === 0) return `${sign}<1 ${shortUnit(usageUnit)}`;
+    const parts = [];
+    if (packs > 0) parts.push(`${packs.toLocaleString('th-TH')} ${shortUnit(packUnit)}`.trim());
+    if (rest > 0) parts.push(`${Number(rest.toFixed(2)).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${shortUnit(usageUnit)}`.trim());
+    return sign + parts.join(' ');
+}

@@ -132,3 +132,32 @@ describe('summarizeWithdrawals', () => {
         expect(tx.filter(TX_FILTERS.all)).toHaveLength(4);
     });
 });
+
+import { formatPackQty } from '../stockCount';
+
+describe('formatPackQty: packs plus loose pieces instead of pack decimals', () => {
+    const cups = { factor: 50, packUnit: 'แพ็ค', usageUnit: 'glass' };
+    it('writes whole packs and the loose remainder', () => {
+        expect(formatPackQty(14.98, cups)).toBe('14 แพ็ค 49 แก้ว');
+        expect(formatPackQty(15, cups)).toBe('15 แพ็ค');
+        expect(formatPackQty(0.02, cups)).toBe('1 แก้ว');
+        expect(formatPackQty(0, cups)).toBe('0');
+    });
+    it('keeps the sign for shortfalls', () => {
+        expect(formatPackQty(-0.02, { factor: 1000, packUnit: 'pack', usageUnit: 'g' })).toBe('-20 ก.');
+        expect(formatPackQty(-1.2, cups)).toBe('-1 แพ็ค 10 แก้ว');
+    });
+    it('handles float noise without showing 50 of 50', () => {
+        expect(formatPackQty(1.29, { factor: 110, packUnit: 'แพ็ค', usageUnit: 'pcs' })).toBe('1 แพ็ค 31.9 ชิ้น');
+        expect(formatPackQty(2.9999999, cups)).toBe('3 แพ็ค');
+    });
+    it('writes liquids and weights as whole ml / g with short units', () => {
+        expect(formatPackQty(5.9667, { factor: 1000, packUnit: 'แกลอน', usageUnit: 'ml' })).toBe('5 แกลอน 967 มล.');
+        expect(formatPackQty(-2.5, { factor: 1000, packUnit: 'kg', usageUnit: 'g' })).toBe('-2 กก. 500 ก.');
+        expect(formatPackQty(0.0002, { factor: 1000, packUnit: 'bottle', usageUnit: 'ml' })).toBe('<1 มล.');
+    });
+    it('returns null when there is no conversion, so the plain number is shown', () => {
+        expect(formatPackQty(2.5, { factor: 1, packUnit: 'kg', usageUnit: 'kg' })).toBeNull();
+        expect(formatPackQty(null, cups)).toBeNull();
+    });
+});
