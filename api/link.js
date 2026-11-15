@@ -382,6 +382,8 @@ function generateStandaloneLandingHtml(data) {
     const hoursMainEn = hoursMain.replace(/\s*น\.?\s*$/, '').replace(' - ', ' – ')
     const hoursNoteEn = hoursNote.replace(/ปิดรับออเดอร์|ครัวปิด/, 'Last order').replace(/\s*น\.?\s*$/, '')
     const peopleEn = key => key === '1' ? '1 person' : `${key} people`
+    // "11:00 - 21:30 น." → open and close times for the two-column hours grid
+    const hoursSplit = hoursMain.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/)
 
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
@@ -705,6 +707,28 @@ function generateStandaloneLandingHtml(data) {
         .hours-state::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); }
         .hours-state.closed { color: var(--color-muted); }
         .hours-state.closed::before { background: var(--color-neutral); }
+        /* Live countdown: each digit is a 0-9 strip that slides, no library, no layout shift */
+        /* Open time · timeline · close time. The line between them is the day: ink up to now, accent tick at last order */
+        .hours-grid { display: grid; grid-template-columns: auto minmax(40px, 1fr) auto; column-gap: var(--space-3); row-gap: var(--space-1); align-items: center; margin-top: var(--space-2); }
+        .hg-label { font-size: var(--text-sm); font-weight: 600; color: var(--color-muted); line-height: 1.4; }
+        .hg-label.hg-end { grid-column: 3; }
+        .hg-end { text-align: right; }
+        .hg-time { font-size: clamp(36px, 10.5vw, 52px); font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+        .hours-line { position: relative; height: 14px; }
+        .hours-line::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-rule); }
+        .hl-fill { position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-ink); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .hl-last { position: absolute; top: 3px; left: calc(var(--l, 0) * 100%); width: 2px; height: 8px; margin-left: -1px; background: var(--color-accent); }
+        .hl-now { position: absolute; inset: 0; transform: translateX(calc(var(--p, 0) * 100%)); transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1); opacity: 0; }
+        .hl-now > span { position: absolute; left: -1px; top: 0; width: 2px; height: 14px; background: var(--color-ink); }
+        .hours-line.live .hl-now { opacity: 1; }
+        .hours-line.closed .hl-fill, .hours-line.closed .hl-now { opacity: 0; }
+        .hours-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px var(--space-2); margin-top: var(--space-2); font-size: var(--text-md); color: var(--color-muted); line-height: 1.4; }
+        .hc-time { display: inline-flex; align-items: flex-end; font-size: 22px; font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; }
+        .hc-d { display: inline-block; height: 1em; overflow: hidden; }
+        .hc-strip { display: flex; flex-direction: column; transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .hc-strip > span { display: block; height: 1em; line-height: 1; text-align: center; }
+        .hc-sep { padding: 0 1px; transform: translateY(-0.04em); }
+        .hc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
         /* Galleries */
         .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
@@ -916,8 +940,19 @@ function generateStandaloneLandingHtml(data) {
                     <span class="fact-label">${tt('เวลาเปิด-ปิด · ทุกวัน', 'Opening hours · daily')}</span>
                     <span class="hours-state" id="hours-state" hidden></span>
                 </div>
-                <span class="hours-main nb">${tt(hoursMain, hoursMainEn)}</span>
+                ${hoursSplit ? `<div class="hours-grid">
+                    <span class="hg-label">${tt('เปิด', 'Opens')}</span>
+                    <span class="hg-label hg-end">${tt('ปิด', 'Closes')}</span>
+                    <span class="hg-time">${hoursSplit[1]}</span>
+                    <span class="hours-line" id="hours-line" aria-hidden="true"><span class="hl-fill"></span><span class="hl-last"></span><span class="hl-now"><span></span></span></span>
+                    <span class="hg-time hg-end">${hoursSplit[2]}</span>
+                </div>` : `<span class="hours-main nb">${tt(hoursMain, hoursMainEn)}</span>`}
                 ${hoursNote ? `<span class="hours-note nb">${tt(hoursNote, hoursNoteEn)}</span>` : ''}
+                <span class="hours-count" id="hours-count" hidden>
+                    <span class="hc-label"></span>
+                    <span class="hc-time" aria-hidden="true"></span>
+                    <span class="hc-sr" role="status"></span>
+                </span>
             </div>
             <div class="fact full">
                 <span class="fact-label">${tt('ที่ตั้ง', 'Location')}</span>
@@ -1243,7 +1278,8 @@ function generateStandaloneLandingHtml(data) {
         }
 
         // ─── OPEN / CLOSED STATUS (Asia/Bangkok, from the hours text) ───
-        (function() {
+        // Named so the live countdown can refresh it the moment the shop opens or closes.
+        function updateOpenStatus() {
             const el = document.getElementById('open-status');
             if (!el) return;
             const m = (el.dataset.hours || '').match(/(\\d{1,2})[:.](\\d{2})\\s*-\\s*(\\d{1,2})[:.](\\d{2})/);
@@ -1291,6 +1327,157 @@ function generateStandaloneLandingHtml(data) {
                     if (!note.hidden && hoursLine) hoursLine.hidden = true;
                 }
             } catch(e) {}
+        }
+        updateOpenStatus();
+
+        // ─── LIVE COUNTDOWN in the hours card: last order / closing / opening, to the second ───
+        // Plain DOM + CSS transforms (no library), ticks once a second on the second boundary,
+        // sleeps while the tab is hidden. Each digit is a 0-9 strip that slides into place.
+        (function() {
+            const box = document.getElementById('hours-count');
+            const src = document.getElementById('open-status');
+            if (!box || !src) return;
+            const text = src.dataset.hours || '';
+            const hm = text.match(/(\\d{1,2})[:.](\\d{2})\\s*-\\s*(\\d{1,2})[:.](\\d{2})/);
+            if (!hm) return;
+            const km = text.match(/(?:ปิดรับออเดอร์|ครัวปิด)\\s*(\\d{1,2})[:.](\\d{2})/);
+            const labelEl = box.querySelector('.hc-label');
+            const timeEl = box.querySelector('.hc-time');
+            const srEl = box.querySelector('.hc-sr');
+            const DAY = 86400;
+            const open = (Number(hm[1]) * 60 + Number(hm[2])) * 60;
+            let close = (Number(hm[3]) * 60 + Number(hm[4])) * 60;
+            if (close <= open) close += DAY;
+            let last = km ? (Number(km[1]) * 60 + Number(km[2])) * 60 : null;
+            if (last !== null && last < open) last += DAY;
+            const LABELS = {
+                last: ['ปิดรับออเดอร์ในอีก', 'Last order in'],
+                close: ['ร้านปิดในอีก', 'Closes in'],
+                open: ['เปิดในอีก', 'Opens in']
+            };
+            let fmt;
+            try { fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }); } catch (e) { return; }
+
+            function nowSec() {
+                const p = fmt.formatToParts(new Date());
+                const g = function(t) { return Number(p.find(function(x) { return x.type === t; }).value); };
+                return g('hour') * 3600 + g('minute') * 60 + g('second');
+            }
+            function state() {
+                let n = nowSec();
+                if (n < open && n + DAY < close) n += DAY; // after midnight inside an overnight window
+                if (n >= open && n < close) {
+                    const p = (n - open) / (close - open);
+                    if (last !== null && n < last) return { kind: 'last', left: last - n, p: p };
+                    return { kind: 'close', left: close - n, p: p };
+                }
+                let to = open - n;
+                if (to <= 0) to += DAY;
+                return { kind: 'open', left: to };
+            }
+            function pad(n) { return n < 10 ? '0' + n : String(n); }
+
+            let cells = [];
+            let shape = '';
+            let kind = '';
+            function build(str) {
+                timeEl.textContent = '';
+                cells = [];
+                for (const ch of str) {
+                    if (ch === ':') {
+                        const sep = document.createElement('span');
+                        sep.className = 'hc-sep';
+                        sep.textContent = ':';
+                        timeEl.appendChild(sep);
+                        continue;
+                    }
+                    const d = document.createElement('span');
+                    d.className = 'hc-d';
+                    const strip = document.createElement('span');
+                    strip.className = 'hc-strip';
+                    for (let i = 0; i <= 10; i++) {
+                        const c = document.createElement('span');
+                        c.textContent = String(i % 10);
+                        strip.appendChild(c);
+                    }
+                    d.appendChild(strip);
+                    timeEl.appendChild(d);
+                    strip.style.transition = 'none';
+                    strip.style.transform = 'translateY(' + (-Number(ch)) + 'em)';
+                    cells.push({ strip: strip, v: Number(ch) });
+                }
+                void timeEl.offsetHeight;
+                cells.forEach(function(c) { c.strip.style.transition = ''; });
+                shape = str.replace(/\\d/g, '0');
+            }
+            function setDigit(cell, v) {
+                if (cell.v === v) return;
+                const from = cell.v;
+                cell.v = v;
+                if (v > from && from === 0) {
+                    // Counting down past 0 (0 -> 9, or 0 -> 5 on the seconds' tens): start from the
+                    // second "0" at the strip's end so the new digit drops in from above, like the rest.
+                    cell.strip.style.transition = 'none';
+                    cell.strip.style.transform = 'translateY(-10em)';
+                    void cell.strip.offsetHeight;
+                    cell.strip.style.transition = '';
+                }
+                cell.strip.style.transform = 'translateY(' + (-v) + 'em)';
+            }
+            function spoken(left) {
+                const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60);
+                return LABELS[kind][0] + ' ' + (h ? h + ' ชั่วโมง ' : '') + m + ' นาที';
+            }
+
+            let timer = null;
+            function tick() {
+                const s = state();
+                if (s.kind !== kind) {
+                    const changed = kind !== '';
+                    kind = s.kind;
+                    labelEl.innerHTML = TT(LABELS[kind][0], LABELS[kind][1]);
+                    if (changed) updateOpenStatus();
+                }
+                const h = Math.floor(s.left / 3600);
+                const m = Math.floor((s.left % 3600) / 60);
+                const sec = s.left % 60;
+                const str = (h ? h + ':' + pad(m) : String(m)) + ':' + pad(sec);
+                if (str.replace(/\\d/g, '0') !== shape) build(str);
+                else {
+                    let i = 0;
+                    for (const ch of str) { if (ch !== ':') setDigit(cells[i++], Number(ch)); }
+                }
+                // Screen readers hear the minute, not every second
+                if (sec === 0 || !srEl.textContent) srEl.textContent = spoken(s.left);
+                box.hidden = false;
+                drawLine(s);
+            }
+
+            // Timeline on the card's bottom divider. First paint starts at 0 and draws out to now.
+            const line = document.getElementById('hours-line');
+            let lineShown = false;
+            if (line && last !== null && last > open && last < close) line.style.setProperty('--l', String((last - open) / (close - open)));
+            else if (line) line.querySelector('.hl-last').hidden = true;
+            function drawLine(s) {
+                if (!line) return;
+                line.classList.toggle('closed', s.kind === 'open');
+                const p = s.kind === 'open' ? 0 : s.p;
+                if (!lineShown) {
+                    lineShown = true;
+                    line.classList.add('live');
+                    requestAnimationFrame(function() { requestAnimationFrame(function() { line.style.setProperty('--p', String(p)); }); });
+                    return;
+                }
+                line.style.setProperty('--p', String(p));
+            }
+            function schedule() {
+                clearTimeout(timer);
+                if (document.hidden) return;
+                tick();
+                timer = setTimeout(schedule, 1000 - (Date.now() % 1000) + 15);
+            }
+            document.addEventListener('visibilitychange', schedule);
+            schedule();
         })();
 
         // ─── LOCATION-FIRST MODE: ad sold the location (utm_content like "location", "map", "naga") ───
