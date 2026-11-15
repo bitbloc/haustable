@@ -169,11 +169,11 @@ export default function AdminSongRequests() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="font-bold text-[10px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
                             LIVE SONG REQUESTS QUEUE
                         </span>
-                        <div className="flex items-center gap-1.5 text-[10px] text-[oklch(45%_0.08_140)] font-bold">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
+                        <div className="flex items-center gap-1.5 text-[11px] text-[oklch(45%_0.08_140)] font-bold">
+                            <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] " />
                             <span>LIVE SYNC</span>
                         </div>
                     </div>
@@ -189,14 +189,14 @@ export default function AdminSongRequests() {
                     <button
                         type="button"
                         onClick={() => setShowTestModal(true)}
-                        className="px-3 py-2 bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
+                        className="px-3 py-2 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
                     >
                         + สร้างคิวทดสอบ
                     </button>
                     <button
                         type="button"
                         onClick={() => fetchRequests()}
-                        className="px-3 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        className="px-3 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-sm text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer "
                     >
                         <RefreshCw size={12} />
                         <span>รีเฟรชคิว</span>
@@ -206,23 +206,23 @@ export default function AdminSongRequests() {
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">เงินสนับสนุนสะสม</span>
+                <div className="bg-[oklch(99%_0.004_28)] p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] ">
+                    <span className="text-[11px] text-[oklch(55%_0.010_28)] uppercase font-bold block">เงินสนับสนุนสะสม</span>
                     <p className="text-xl font-bold text-[oklch(45%_0.08_140)] mt-0.5">฿{totalEarnings.toLocaleString()}</p>
                 </div>
 
-                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">รอการตรวจสอบ (Pending)</span>
+                <div className="bg-[oklch(99%_0.004_28)] p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] ">
+                    <span className="text-[11px] text-[oklch(55%_0.010_28)] uppercase font-bold block">รอการตรวจสอบ (Pending)</span>
                     <p className="text-xl font-bold text-[oklch(52%_0.16_28)] mt-0.5">{pendingCount} คิว</p>
                 </div>
 
-                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">กำลังเล่นอยู่ (Playing)</span>
+                <div className="bg-[oklch(99%_0.004_28)] p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] ">
+                    <span className="text-[11px] text-[oklch(55%_0.010_28)] uppercase font-bold block">กำลังเล่นอยู่ (Playing)</span>
                     <p className="text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5">{playingCount} เพลง</p>
                 </div>
 
-                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">เล่นเสร็จสิ้น (Completed)</span>
+                <div className="bg-[oklch(99%_0.004_28)] p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] ">
+                    <span className="text-[11px] text-[oklch(55%_0.010_28)] uppercase font-bold block">เล่นเสร็จสิ้น (Completed)</span>
                     <p className="text-xl font-bold text-[oklch(42%_0.010_28)] mt-0.5">{completedCount} คิว</p>
                 </div>
             </div>
@@ -242,8 +242,8 @@ export default function AdminSongRequests() {
                         onClick={() => setFilter(tab.id)}
                         className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all whitespace-nowrap ${
                             filter === tab.id
-                                ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
-                                : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
+                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
                         {tab.label}
@@ -252,7 +252,7 @@ export default function AdminSongRequests() {
             </div>
 
             {/* Song Queue List */}
-            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm shadow-2xs overflow-hidden">
+            <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden">
                 {loading ? (
                     <div className="text-center py-16 text-xs text-[oklch(55%_0.010_28)]">
                         <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
@@ -276,7 +276,7 @@ export default function AdminSongRequests() {
                                     {/* Left: Album Art & Song Info */}
                                     <div className="flex items-start gap-3.5 flex-1 min-w-0">
                                         {req.album_image ? (
-                                            <img src={req.album_image} alt="" className="w-14 h-14 rounded-sm object-cover shrink-0 border border-[oklch(85%_0.012_28)] shadow-2xs" />
+                                            <img src={req.album_image} alt="" className="w-14 h-14 rounded-sm object-cover shrink-0 border border-[oklch(85%_0.012_28)] " />
                                         ) : (
                                             <div className="w-14 h-14 rounded-sm bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center shrink-0 text-[oklch(55%_0.010_28)]">
                                                 <Music size={20} />
@@ -285,7 +285,7 @@ export default function AdminSongRequests() {
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                <span className="text-[10px] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold px-1.5 py-0.2 rounded-xs border border-[oklch(85%_0.012_28)]">
+                                                <span className="text-[11px] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold px-1.5 py-0.2 rounded-xs border border-[oklch(85%_0.012_28)]">
                                                     {durationMin}:{durationSec}
                                                 </span>
                                                 {req.track_id && (
@@ -293,15 +293,15 @@ export default function AdminSongRequests() {
                                                         href={req.track_id.startsWith('http') ? req.track_id : `https://open.spotify.com/track/${req.track_id}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-[10px] bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] font-bold px-1.5 py-0.2 rounded-xs border border-[oklch(45%_0.08_140)] flex items-center gap-1 hover:underline"
+                                                        className="text-[11px] bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] font-bold px-1.5 py-0.2 rounded-xs border border-[oklch(45%_0.08_140)] flex items-center gap-1 hover:underline"
                                                     >
                                                         Spotify <ExternalLink size={9} />
                                                     </a>
                                                 )}
-                                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                <span className="text-[11px] text-[oklch(55%_0.010_28)]">
                                                     {format(new Date(req.created_at), 'dd MMM, HH:mm')}
                                                 </span>
-                                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-xs border ${
+                                                <span className={`text-[11px] font-bold uppercase px-1.5 py-0.2 rounded-xs border ${
                                                     req.status === 'playing'
                                                         ? 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
                                                         : req.status === 'completed'
@@ -321,7 +321,7 @@ export default function AdminSongRequests() {
                                             <div className="mt-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(42%_0.010_28)]">
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <span>ผู้ขอ: <strong className="text-[oklch(18%_0.012_28)]">{req.requester_name}</strong></span>
-                                                    <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)] rounded-xs font-bold text-[10px]">
+                                                    <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)] rounded-xs font-bold text-[11px]">
                                                         Tip: ฿{donation}
                                                     </span>
                                                 </div>
@@ -346,12 +346,12 @@ export default function AdminSongRequests() {
                                                     title="ดูภาพสลิปโอนเงิน"
                                                 >
                                                     <img src={slipUrl} alt="Slip" className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-opacity">
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[oklch(97%_0.008_28)] text-[11px] font-bold transition-opacity">
                                                         ดูสลิป
                                                     </div>
                                                 </button>
                                             ) : (
-                                                <div className="w-12 h-16 bg-[oklch(97%_0.008_28)] rounded-sm border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] text-[9px]">
+                                                <div className="w-12 h-16 bg-[oklch(97%_0.008_28)] rounded-sm border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] text-[11px]">
                                                     ไม่มีสลิป
                                                 </div>
                                             )}
@@ -364,14 +364,14 @@ export default function AdminSongRequests() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleUpdateStatus(req.id, 'playing')}
-                                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white font-bold rounded-sm flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm flex items-center gap-1 cursor-pointer transition-colors "
                                                     >
                                                         <Play size={11} fill="currentColor" /> เล่นเพลง
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleUpdateStatus(req.id, 'rejected')}
-                                                        className="px-2.5 py-1.5 bg-white hover:bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] font-bold rounded-sm cursor-pointer transition-colors"
+                                                        className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] font-bold rounded-sm cursor-pointer transition-colors"
                                                     >
                                                         ปฏิเสธ
                                                     </button>
@@ -382,7 +382,7 @@ export default function AdminSongRequests() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleUpdateStatus(req.id, 'completed')}
-                                                    className="px-3 py-1.5 bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white font-bold rounded-sm flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                    className="px-3 py-1.5 bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-[oklch(97%_0.008_28)] font-bold rounded-sm flex items-center gap-1 cursor-pointer transition-colors "
                                                 >
                                                     <Check size={12} /> จบคิวเพลง
                                                 </button>
@@ -392,7 +392,7 @@ export default function AdminSongRequests() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleDelete(req.id)}
-                                                    className="px-2.5 py-1.5 bg-white hover:bg-[oklch(94%_0.02_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm cursor-pointer transition-colors flex items-center gap-1"
+                                                    className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.02_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm cursor-pointer transition-colors flex items-center gap-1"
                                                 >
                                                     <Trash2 size={12} /> ลบ
                                                 </button>
@@ -414,10 +414,10 @@ export default function AdminSongRequests() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-white rounded-sm p-4 max-w-sm w-full border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col max-h-[85vh] font-mono"
+                            className="bg-[oklch(99%_0.004_28)] rounded-sm p-4 max-w-sm w-full border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col max-h-[85vh] font-mono"
                         >
                             <div className="flex justify-between items-center pb-2 mb-3 border-b border-[oklch(85%_0.012_28)]">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">VERIFICATION SLIP</span>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">VERIFICATION SLIP</span>
                                 <button onClick={() => setViewingSlipUrl(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
                                     <X size={16} />
                                 </button>
@@ -439,11 +439,11 @@ export default function AdminSongRequests() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-white rounded-sm max-w-sm w-full border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col font-mono"
+                            className="bg-[oklch(99%_0.004_28)] rounded-sm max-w-sm w-full border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col font-mono"
                         >
                             <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex justify-between items-center">
                                 <div>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">TEST BENCH</span>
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">TEST BENCH</span>
                                     <h3 className="text-sm font-bold uppercase text-[oklch(18%_0.012_28)]">สร้างคิวขอเพลงทดสอบ</h3>
                                 </div>
                                 <button onClick={() => setShowTestModal(false)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
@@ -453,47 +453,47 @@ export default function AdminSongRequests() {
 
                             <form onSubmit={handleSubmitTestRequest} className="p-5 space-y-3">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ชื่อเพลง (Song Name) *</label>
+                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ชื่อเพลง (Song Name) *</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="เช่น Daylight"
                                         value={testForm.trackName}
                                         onChange={e => setTestForm({ ...testForm, trackName: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] font-bold outline-none focus:border-black"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] font-bold outline-none focus:border-[oklch(18%_0.012_28)]"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ศิลปิน (Artist Name) *</label>
+                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ศิลปิน (Artist Name) *</label>
                                     <input
                                         type="text"
                                         required
                                         placeholder="เช่น David Kushner"
                                         value={testForm.artistName}
                                         onChange={e => setTestForm({ ...testForm, artistName: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ชื่อผู้ขอ (Requester)</label>
+                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ชื่อผู้ขอ (Requester)</label>
                                     <input
                                         type="text"
                                         value={testForm.requesterName}
                                         onChange={e => setTestForm({ ...testForm, requesterName: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ข้อความฝากถึงร้าน</label>
+                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ข้อความฝากถึงร้าน</label>
                                     <textarea
                                         rows={2}
                                         placeholder="ข้อความขอเพลง..."
                                         value={testForm.message}
                                         onChange={e => setTestForm({ ...testForm, message: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black resize-none"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] resize-none"
                                     />
                                 </div>
 
@@ -508,7 +508,7 @@ export default function AdminSongRequests() {
                                     <button
                                         type="submit"
                                         disabled={submittingTest}
-                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm disabled:opacity-50"
+                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm text-xs cursor-pointer disabled:opacity-50"
                                     >
                                         {submittingTest ? 'กำลังสร้าง...' : 'สร้างคิวทดสอบ'}
                                     </button>

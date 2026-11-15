@@ -1,9 +1,9 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import AdminPageHeader, { AdminTabs } from '../components/admin/AdminPageHeader'
+import { AdminTabPanel } from '../components/admin/AdminKit'
 import { Link, useSearchParams } from 'react-router-dom'
 import { LayoutGrid, List, Layers, Calculator, ShoppingBag, ClipboardCheck } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
 import OptionGroupList from './components/OptionGroupList'
@@ -123,21 +123,13 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
 
             {/* Content Area */}
             <div className="flex-1 bg-[oklch(98%_0.006_28)] rounded-sm border border-[oklch(85%_0.012_28)] p-4 md:p-6 overflow-hidden">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.12 }}
-                    >
+                <AdminTabPanel id={activeTab}>
                         {activeTab === 'items' && <MenuItemList />}
                         {activeTab === 'categories' && <MenuCategoryList />}
                         {activeTab === 'options' && <OptionGroupList />}
                         {FOOD_TABS[activeTab] && <FoodDrinkPage key={activeTab} initialView={FOOD_TABS[activeTab]} />}
                         {activeTab === 'stock' && <StockReconciliationPage />}
-                    </motion.div>
-                </AnimatePresence>
+                    </AdminTabPanel>
             </div>
         </div>
     )

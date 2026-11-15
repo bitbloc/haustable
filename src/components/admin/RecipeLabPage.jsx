@@ -47,7 +47,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
                 <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
                     <div>
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                             FORMULA CREATION
                         </span>
                         <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)]">
@@ -56,7 +56,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                     </div>
                     <button 
                         onClick={onClose} 
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
                     >
                         <X size={16} />
                     </button>
@@ -76,7 +76,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                             value={name}
                             onChange={e => setName(e.target.value)}
                             placeholder="เช่น ซอสคาราเมลโฮมเมด V1, หัวเชื้อชาไทยเข้มข้น"
-                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-white font-sans text-sm font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black transition-colors"
+                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-sm font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
                         />
                     </div>
 
@@ -87,7 +87,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                         <select
                             value={selectedFolder}
                             onChange={e => setSelectedFolder(e.target.value)}
-                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-white font-mono text-xs font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black cursor-pointer"
+                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer"
                         >
                             <option value="uncategorized">ทั่วไป (Uncategorized)</option>
                             {folders.filter(f => f !== 'all' && f !== 'uncategorized').map(f => (
@@ -107,7 +107,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                         <button
                             type="submit"
                             disabled={!name.trim()}
-                            className="flex-1 py-2.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black disabled:opacity-40 transition-colors cursor-pointer"
+                            className="flex-1 py-2.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40 transition-colors cursor-pointer"
                         >
                             สร้างและเปิดตัวปรุงสูตร →
                         </button>
@@ -132,7 +132,7 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
                         !
                     </div>
                     <div className="flex-1 min-w-0">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-red-700 block">
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-red-700 block">
                             DELETE CONFIRMATION
                         </span>
                         <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)] truncate">
@@ -152,10 +152,10 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
                                 <AlertCircle size={14} />
                                 <span>คำเตือน: สูตรนี้กำลังถูกใช้งานอยู่ ({item.usedInCount} เมนู)</span>
                             </div>
-                            <p className="text-[10px] text-red-700">
+                            <p className="text-[11px] text-red-700">
                                 เมนูต่อไปนี้พึ่งพาสูตรกลางนี้เป็นวัตถุดิบ หากลบจะส่งผลกระทบต่อการคิดต้นทุนและสต็อก:
                             </p>
-                            <ul className="list-disc list-inside space-y-0.5 text-[10px] pl-1 max-h-24 overflow-y-auto">
+                            <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1 max-h-24 overflow-y-auto">
                                 {(item.usedInNames || []).map((menuName, idx) => (
                                     <li key={idx} className="font-sans font-bold">{menuName}</li>
                                 ))}
@@ -186,7 +186,7 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
                             onConfirm(item.id);
                             onClose();
                         }}
-                        className="flex-1 py-2.5 bg-red-700 text-white font-bold uppercase hover:bg-red-800 transition-colors cursor-pointer"
+                        className="flex-1 py-2.5 bg-red-700 text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-red-800 transition-colors cursor-pointer"
                     >
                         ยืนยันลบสูตร (Delete)
                     </button>
@@ -257,7 +257,7 @@ function ProduceModal({ item, onClose, onDone }) {
         <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 font-sans backdrop-blur-xs">
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md shadow-2xl rounded-xs">
                 <div className="p-4 border-b border-[oklch(85%_0.012_28)]">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                         PRODUCTION
                     </span>
                     <h3 className="text-base font-bold font-sans leading-7 text-[oklch(18%_0.012_28)] break-words">
@@ -283,7 +283,7 @@ function ProduceModal({ item, onClose, onDone }) {
                                 autoFocus
                                 value={portions}
                                 onChange={e => setPortions(e.target.value)}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-base text-right outline-none focus:border-black"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono font-bold text-base text-right outline-none focus:border-[oklch(18%_0.012_28)]"
                             />
                         </div>
                         <div className="p-4 space-y-1.5">
@@ -299,7 +299,7 @@ function ProduceModal({ item, onClose, onDone }) {
                                 value={actualYield}
                                 onChange={e => setActualYield(e.target.value)}
                                 placeholder={expected ? String(Number(expected.toFixed(2))) : ''}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-base text-right outline-none focus:border-black"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono font-bold text-base text-right outline-none focus:border-[oklch(18%_0.012_28)]"
                             />
                         </div>
                     </div>
@@ -324,7 +324,7 @@ function ProduceModal({ item, onClose, onDone }) {
                         <button
                             type="submit"
                             disabled={!validPortions || !validActual || saving}
-                            className="py-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-sans font-bold hover:bg-black disabled:opacity-40 transition-colors cursor-pointer"
+                            className="py-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-sans font-bold hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40 transition-colors cursor-pointer"
                         >
                             {saving ? 'กำลังบันทึก...' : 'บันทึกการผลิต'}
                         </button>
@@ -361,21 +361,21 @@ function InlineFolderInput({ onSave, onCancel }) {
                 onChange={e => setName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="ชื่อโฟลเดอร์..."
-                className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs font-mono font-bold outline-none focus:border-black"
+                className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-mono font-bold outline-none focus:border-[oklch(18%_0.012_28)]"
             />
-            <div className="flex gap-1.5 font-mono text-[10px]">
+            <div className="flex gap-1.5 font-mono text-[11px]">
                 <button
                     type="button"
                     onClick={() => { if (name.trim()) onSave(name.trim()); }}
                     disabled={!name.trim()}
-                    className="flex-1 py-1 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase hover:bg-black disabled:opacity-40 cursor-pointer text-center"
+                    className="flex-1 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40 cursor-pointer text-center"
                 >
                     [สร้าง]
                 </button>
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-2 py-1 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] hover:bg-gray-100 cursor-pointer"
+                    className="px-2 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
                 >
                     [✕]
                 </button>
@@ -777,13 +777,13 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
     return (
         <div className={`font-sans text-[oklch(18%_0.012_28)] ${isEmbedded ? '' : 'min-h-screen bg-[oklch(97%_0.008_28)]'}`}>
             {/* Header Actions Bar (Dieter Rams Cellular Layout) */}
-            <div className={`${isEmbedded ? 'mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]' : 'sticky top-0 z-30 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] px-4 py-3 shadow-xs'}`}>
+            <div className={`${isEmbedded ? 'mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]' : 'sticky top-0 z-30 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] px-4 py-3 '}`}>
                 <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${isEmbedded ? '' : 'max-w-7xl mx-auto'}`}>
                     <div className="flex items-center gap-3 min-w-0">
                         {!isEmbedded && (
                             <button 
                                 onClick={() => navigate('/admin')} 
-                                className="p-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                                className="p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
                                 title="กลับสู่แผงควบคุม"
                             >
                                 <ArrowLeft size={16} />
@@ -791,7 +791,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                         )}
                         <div>
                             <div className="flex items-center gap-2">
-                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
                                     BASES &amp; PREP
                                 </span>
                             </div>
@@ -812,14 +812,14 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                             <input
                                 type="text"
                                 placeholder="ค้นหาชื่อ..."
-                                className="w-full sm:w-48 lg:w-56 bg-white border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] focus:outline-none focus:border-black transition-colors"
+                                className="w-full sm:w-48 lg:w-56 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
                             {searchQuery && (
                                 <button 
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-black"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]"
                                 >
                                     <X size={12} />
                                 </button>
@@ -828,7 +828,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
 
                         <button 
                             onClick={loadData} 
-                            className="p-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                            className="p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
                             title="รีเฟรชข้อมูล"
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -838,14 +838,14 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                             href="/manuals/recipe_entry_guide.html"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-sans font-bold leading-5 hover:bg-[oklch(90%_0.012_28)] transition-colors whitespace-nowrap"
+                            className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] font-sans font-bold leading-5 hover:bg-[oklch(90%_0.012_28)] transition-colors whitespace-nowrap"
                         >
                             คู่มือการลงสูตร
                         </a>
 
                         <button
                             onClick={() => setIsCreateOpen(true)}
-                            className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-black transition-colors shadow-xs cursor-pointer"
+                            className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
                         >
                             <Plus size={14} />
                             <span className="font-sans">สร้างเบสใหม่</span>
@@ -868,12 +868,12 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                 onClick={() => setActiveCategory(folder)}
                                 className={`px-3 py-1.5 border font-bold uppercase whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
                                     isActive
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-black'
-                                        : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:border-black'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
+                                        : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:border-[oklch(18%_0.012_28)]'
                                 }`}
                             >
                                 <span>{label}</span>
-                                <span className={`text-[10px] px-1 py-0.2 ${isActive ? 'bg-[oklch(35%_0.015_28)]' : 'bg-[oklch(92%_0.010_28)] text-[oklch(18%_0.012_28)]'}`}>
+                                <span className={`text-[11px] px-1 py-0.2 ${isActive ? 'bg-[oklch(35%_0.015_28)]' : 'bg-[oklch(92%_0.010_28)] text-[oklch(18%_0.012_28)]'}`}>
                                     {count}
                                 </span>
                             </button>
@@ -881,7 +881,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                     })}
                     <button
                         onClick={() => setIsCreatingFolder(true)}
-                        className="px-2.5 py-1.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold uppercase whitespace-nowrap hover:border-black cursor-pointer"
+                        className="px-2.5 py-1.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold uppercase whitespace-nowrap hover:border-[oklch(18%_0.012_28)] cursor-pointer"
                     >
                         + FOLDER
                     </button>
@@ -899,7 +899,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                 {!isCreatingFolder && (
                                     <button
                                         onClick={() => setIsCreatingFolder(true)}
-                                        className="text-[10px] text-[oklch(52%_0.16_28)] hover:text-black font-bold uppercase cursor-pointer"
+                                        className="text-[11px] text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] font-bold uppercase cursor-pointer"
                                         title="สร้างโฟลเดอร์ใหม่"
                                     >
                                         [+ ใหม่]
@@ -934,16 +934,16 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                             className={`w-full text-left p-2.5 font-bold flex items-center justify-between transition-colors cursor-pointer ${
                                                 isActive
                                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                    : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] hover:text-black'
+                                                    : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                             }`}
                                         >
                                             <span className="truncate pr-2 uppercase">
                                                 {folder !== 'all' && folder !== 'uncategorized' && <span className="text-[oklch(52%_0.16_28)] mr-1.5">#</span>}
                                                 {label}
                                             </span>
-                                            <span className={`text-[10px] px-1.5 py-0.5 font-mono ${
+                                            <span className={`text-[11px] px-1.5 py-0.5 font-mono ${
                                                 isActive 
-                                                    ? 'bg-[oklch(35%_0.015_28)] text-white' 
+                                                    ? 'bg-[oklch(35%_0.015_28)] text-[oklch(97%_0.008_28)]' 
                                                     : 'bg-[oklch(92%_0.010_28)] text-[oklch(18%_0.012_28)]'
                                             }`}>
                                                 {count}
@@ -985,7 +985,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                         className={`flex-1 min-w-fit px-3 py-2 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer transition-colors ${
                                             active
                                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                                         }`}
                                     >
                                         <span className="font-sans font-bold text-[13px] leading-6">{label}</span>
@@ -996,12 +996,12 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                         </div>
 
                         {loading ? (
-                            <div className="text-center py-20 border border-[oklch(85%_0.012_28)] bg-white font-mono text-xs text-[oklch(55%_0.010_28)] space-y-2">
+                            <div className="text-center py-20 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-xs text-[oklch(55%_0.010_28)] space-y-2">
                                 <RefreshCw size={20} className="animate-spin mx-auto text-[oklch(42%_0.010_28)]" />
                                 <div>กำลังโหลดข้อมูล Recipe Lab...</div>
                             </div>
                         ) : filteredRecipes.length === 0 ? (
-                            <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] bg-white p-6 font-mono text-xs space-y-3">
+                            <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-6 font-mono text-xs space-y-3">
                                 <div className="text-[oklch(55%_0.010_28)] font-bold uppercase tracking-wider">
                                     [NO FORMULAS FOUND]
                                 </div>
@@ -1010,7 +1010,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                 </p>
                                 <button
                                     onClick={() => setIsCreateOpen(true)}
-                                    className="px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black cursor-pointer"
+                                    className="px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] cursor-pointer"
                                 >
                                     + สร้างเบสใหม่
                                 </button>
@@ -1027,7 +1027,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                     return (
                                         <div 
                                             key={item.id} 
-                                            className={`border border-[oklch(85%_0.012_28)] bg-white flex flex-col justify-between rounded-xs transition-all duration-150 hover:border-black ${
+                                            className={`border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] flex flex-col justify-between rounded-xs transition-all duration-150 hover:border-[oklch(18%_0.012_28)] ${
                                                 activeDropdownId === item.id ? 'relative z-30 shadow-md' : 'relative z-0'
                                             }`}
                                         >
@@ -1043,14 +1043,14 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     {/* Usages Badge */}
                                                     {hasUsages ? (
                                                         <span 
-                                                            className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap"
+                                                            className="font-mono text-[11px] font-bold uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap"
                                                             title={`ใช้งานใน: ${item.usedInNames.join(', ')}`}
                                                         >
                                                             <LinkIcon size={10} />
                                                             <span>USED IN: {item.usedInCount}</span>
                                                         </span>
                                                     ) : (
-                                                        <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)]">
+                                                        <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
                                                             [STANDALONE]
                                                         </span>
                                                     )}
@@ -1063,7 +1063,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                             <input
                                                                 value={editingName}
                                                                 onChange={e => setEditingName(e.target.value)}
-                                                                className="flex-1 border border-black p-1 text-xs font-bold font-sans bg-white outline-none"
+                                                                className="flex-1 border border-[oklch(18%_0.012_28)] p-1 text-xs font-bold font-sans bg-[oklch(99%_0.004_28)] outline-none"
                                                                 autoFocus
                                                                 onKeyDown={e => {
                                                                     if (e.key === 'Enter') handleRename(item.id);
@@ -1072,7 +1072,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                             />
                                                             <button 
                                                                 onClick={() => handleRename(item.id)}
-                                                                className="p-1 bg-[oklch(18%_0.012_28)] text-white text-xs font-mono font-bold"
+                                                                className="p-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold"
                                                                 title="บันทึก"
                                                             >
                                                                 <Check size={13} />
@@ -1095,7 +1095,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                                     setEditingItemId(item.id);
                                                                     setEditingName(item.name);
                                                                 }}
-                                                                className="opacity-0 group-hover/title:opacity-100 p-0.5 text-[oklch(55%_0.010_28)] hover:text-black transition-opacity cursor-pointer flex-shrink-0"
+                                                                className="opacity-0 group-hover/title:opacity-100 p-0.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-opacity cursor-pointer flex-shrink-0"
                                                                 title="แก้ไขชื่อสูตร"
                                                             >
                                                                 <Pencil size={12} />
@@ -1145,7 +1145,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                 <div className="relative">
                                                     <button
                                                         onClick={() => setActiveDropdownId(activeDropdownId === item.id ? null : item.id)}
-                                                        className="w-full flex items-center justify-between p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
+                                                        className="w-full flex items-center justify-between p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
                                                     >
                                                         <span className="truncate">
                                                             โฟลเดอร์: [{folderName === 'uncategorized' ? 'ทั่วไป' : folderName}]
@@ -1159,8 +1159,8 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                                 className="fixed inset-0 z-40" 
                                                                 onClick={() => setActiveDropdownId(null)}
                                                             />
-                                                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[oklch(85%_0.012_28)] shadow-2xl z-50 py-1 font-mono text-xs max-h-56 overflow-y-auto animate-in fade-in duration-100 divide-y divide-[oklch(90%_0.008_28)] rounded-xs">
-                                                                <div className="px-2.5 py-1 text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)]">
+                                                            <div className="absolute left-0 right-0 top-full mt-1 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] shadow-2xl z-50 py-1 font-mono text-xs max-h-56 overflow-y-auto animate-in fade-in duration-100 divide-y divide-[oklch(90%_0.008_28)] rounded-xs">
+                                                                <div className="px-2.5 py-1 text-[11px] font-bold uppercase text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)]">
                                                                     ย้ายไปที่โฟลเดอร์
                                                                 </div>
                                                                 <button
@@ -1197,7 +1197,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                             <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-1.5 font-mono text-xs rounded-b-xs">
                                                 <button 
                                                     onClick={() => { setRecipeTarget(item); setIsRecipeOpen(true); }}
-                                                    className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                                                    className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] transition-colors flex items-center justify-center gap-1 cursor-pointer"
                                                 >
                                                     <span className="font-sans">แก้สูตร</span>
                                                 </button>
@@ -1205,7 +1205,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     <button
                                                         onClick={() => onOpenMethod({ type: 'stock', id: item.id, name: item.name })}
                                                         title="วิธีทำ (SOP) ของเบสนี้"
-                                                        className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                                                        className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
                                                     >
                                                         วิธีทำ
                                                     </button>
@@ -1214,7 +1214,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     <button
                                                         onClick={() => setMovingItem(item)}
                                                         title="ย้ายส่วนผสมไปเป็นสูตรของเมนู แล้วลบสูตรต่อแก้วนี้"
-                                                        className="flex-1 py-2 border border-[oklch(52%_0.16_28)] bg-white text-[oklch(52%_0.16_28)] font-sans font-bold hover:bg-[oklch(97%_0.02_28)] transition-colors cursor-pointer"
+                                                        className="flex-1 py-2 border border-[oklch(52%_0.16_28)] bg-[oklch(99%_0.004_28)] text-[oklch(52%_0.16_28)] font-sans font-bold hover:bg-[oklch(97%_0.02_28)] transition-colors cursor-pointer"
                                                     >
                                                         ย้ายไปเมนู
                                                     </button>
@@ -1222,14 +1222,14 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                 {canProduce && (
                                                     <button
                                                         onClick={() => setProducingItem(item)}
-                                                        className="flex-1 py-2 border border-[oklch(18%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                                                        className="flex-1 py-2 border border-[oklch(18%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
                                                     >
                                                         ผลิต
                                                     </button>
                                                 )}
                                                 <button 
                                                     onClick={() => setDeletingItem(item)}
-                                                    className="px-2.5 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(55%_0.010_28)] hover:text-red-700 hover:border-red-400 transition-colors cursor-pointer"
+                                                    className="px-2.5 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(55%_0.010_28)] hover:text-red-700 hover:border-red-400 transition-colors cursor-pointer"
                                                     title="ลบสูตรกลาง"
                                                 >
                                                     <Trash2 size={13} />

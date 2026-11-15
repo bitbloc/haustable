@@ -41,7 +41,7 @@ export default function CasualDiningInsights({ data }) {
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
                                 INSIGHTS // OPERATIONS
                             </span>
                             <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">

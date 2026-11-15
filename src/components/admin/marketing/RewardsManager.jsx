@@ -194,8 +194,8 @@ export default function RewardsManager() {
                             onClick={() => setStatusFilter('all')}
                             className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
                                 statusFilter === 'all'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
                             ทั้งหมด ({rewards.length})
@@ -205,8 +205,8 @@ export default function RewardsManager() {
                             onClick={() => setStatusFilter('active')}
                             className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
                                 statusFilter === 'active'
-                                    ? 'bg-[oklch(45%_0.08_140)] text-white shadow-2xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] '
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
                             เปิดใช้งาน ({activeCount})
@@ -216,8 +216,8 @@ export default function RewardsManager() {
                             onClick={() => setStatusFilter('inactive')}
                             className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
                                 statusFilter === 'inactive'
-                                    ? 'bg-[oklch(52%_0.16_28)] text-white shadow-2xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] '
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
                             ปิดใช้งาน ({rewards.length - activeCount})
@@ -232,7 +232,7 @@ export default function RewardsManager() {
                             placeholder="ค้นชื่อ, รหัสแลกรางวัล..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
                         />
                     </div>
                 </div>
@@ -240,7 +240,7 @@ export default function RewardsManager() {
                 <button
                     type="button"
                     onClick={() => handleOpenModal()}
-                    className="bg-[oklch(18%_0.012_28)] hover:bg-black text-white px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    className="bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer "
                 >
                     <Plus size={14} />
                     <span>เพิ่มของรางวัลใหม่</span>
@@ -249,12 +249,12 @@ export default function RewardsManager() {
 
             {/* Rewards Grid */}
             {loading ? (
-                <div className="text-center py-16 bg-white border border-[oklch(85%_0.012_28)] rounded-sm">
+                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
                     <p className="text-xs uppercase tracking-wider text-[oklch(55%_0.010_28)]">กำลังโหลดของรางวัล xhaus...</p>
                 </div>
             ) : filteredRewards.length === 0 ? (
-                <div className="text-center py-16 bg-white border border-dashed border-[oklch(85%_0.012_28)] rounded-sm">
+                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm">
                     <p className="text-xs uppercase tracking-wider text-[oklch(55%_0.010_28)]">ไม่พบรายการของรางวัลตามเงื่อนไข</p>
                 </div>
             ) : (
@@ -267,10 +267,10 @@ export default function RewardsManager() {
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={reward.id}
-                                className={`bg-white rounded-sm border p-4 flex flex-col justify-between transition-all ${
+                                className={`bg-[oklch(99%_0.004_28)] rounded-sm border p-4 flex flex-col justify-between transition-all ${
                                     !reward.is_active
                                         ? 'border-[oklch(85%_0.012_28)] opacity-60 bg-[oklch(98%_0.006_28)]'
-                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] shadow-2xs'
+                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] '
                                 }`}
                             >
                                 <div>
@@ -283,14 +283,14 @@ export default function RewardsManager() {
                                             <button
                                                 type="button"
                                                 onClick={() => handleCopyCode(reward.claim_code, reward.id)}
-                                                className="p-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm text-[oklch(55%_0.010_28)] hover:text-black transition-colors cursor-pointer"
+                                                className="p-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
                                                 title="คัดลอกรหัสแลกรางวัล"
                                             >
                                                 {copiedId === reward.id ? <Check size={13} className="text-[oklch(45%_0.08_140)]" /> : <Copy size={13} />}
                                             </button>
                                         </div>
 
-                                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-xs border ${
+                                        <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-xs border ${
                                             reward.is_active
                                                 ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
                                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
@@ -324,7 +324,7 @@ export default function RewardsManager() {
                                                 <span className="truncate">ผูกเมนู: <strong>{linkedItem.name}</strong> (Auto 0฿)</span>
                                             </div>
                                         ) : (
-                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] italic">
+                                            <div className="text-[11px] text-[oklch(55%_0.010_28)] italic">
                                                 ไม่มีเมนูผูกอัตโนมัติ
                                             </div>
                                         )}
@@ -368,11 +368,11 @@ export default function RewardsManager() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-white w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden font-mono max-h-[90vh] flex flex-col"
+                            className="bg-[oklch(99%_0.004_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden font-mono max-h-[90vh] flex flex-col"
                         >
                             <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex justify-between items-center">
                                 <div>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">xHAUS REWARDS CATALOG</span>
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">xHAUS REWARDS CATALOG</span>
                                     <h2 className="text-base font-bold uppercase text-[oklch(18%_0.012_28)]">
                                         {editingReward ? 'แก้ไขของรางวัล' : 'สร้างของรางวัลใหม่'}
                                     </h2>
@@ -384,7 +384,7 @@ export default function RewardsManager() {
 
                             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                         ชื่อของรางวัล (Reward Title) *
                                     </label>
                                     <input
@@ -393,12 +393,12 @@ export default function RewardsManager() {
                                         placeholder="เช่น เครื่องดื่ม Signature Drink 1 แก้ว"
                                         value={formData.title}
                                         onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black font-bold"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] font-bold"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                         คำอธิบาย / เงื่อนไขการรับ (Description)
                                     </label>
                                     <textarea
@@ -406,13 +406,13 @@ export default function RewardsManager() {
                                         placeholder="รายละเอียดของรางวัลและวิธีแลกรับ..."
                                         value={formData.description}
                                         onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black resize-none"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] resize-none"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-3">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                             แต้มที่ใช้ (Coins) *
                                         </label>
                                         <input
@@ -422,11 +422,11 @@ export default function RewardsManager() {
                                             placeholder="50"
                                             value={formData.xhaus_cost}
                                             onChange={e => setFormData({ ...formData, xhaus_cost: e.target.value })}
-                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black font-bold"
+                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] font-bold"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                             รหัสแลก (Code) *
                                         </label>
                                         <input
@@ -435,11 +435,11 @@ export default function RewardsManager() {
                                             placeholder="IHGLASS50"
                                             value={formData.claim_code}
                                             onChange={e => setFormData({ ...formData, claim_code: e.target.value.toUpperCase() })}
-                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] uppercase outline-none focus:border-black font-bold"
+                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] uppercase outline-none focus:border-[oklch(18%_0.012_28)] font-bold"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                             จำกัดสิทธิ์ (Limit)
                                         </label>
                                         <input
@@ -448,20 +448,20 @@ export default function RewardsManager() {
                                             placeholder="ไม่จำกัด"
                                             value={formData.usage_limit}
                                             onChange={e => setFormData({ ...formData, usage_limit: e.target.value })}
-                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-1.5">
-                                    <label className="block text-[10px] font-bold text-[oklch(18%_0.012_28)] uppercase flex items-center gap-1.5">
+                                    <label className="block text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase flex items-center gap-1.5">
                                         <LinkIcon size={12} className="text-[oklch(45%_0.08_140)]" />
                                         <span>Linked Menu Item (ผูกเมนูอัตโนมัติ 0.00 บาท ใน POS)</span>
                                     </label>
                                     <select
                                         value={formData.linked_menu_item_id}
                                         onChange={e => setFormData({ ...formData, linked_menu_item_id: e.target.value })}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black cursor-pointer font-bold"
+                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer font-bold"
                                     >
                                         <option value="">-- ไม่ผูกเมนู (No Auto-Inject Item) --</option>
                                         {menuItems.map(item => (
@@ -470,7 +470,7 @@ export default function RewardsManager() {
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                    <p className="text-[11px] text-[oklch(55%_0.010_28)]">
                                         เมื่อพนักงานนำรหัสนี้ไปใส่ในหน้าจอ POS เมนูที่เลือกจะถูกเพิ่มลงตะกร้าอัตโนมัติด้วยราคา 0.00 บาท
                                     </p>
                                 </div>
@@ -497,7 +497,7 @@ export default function RewardsManager() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm"
+                                        className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm text-xs cursor-pointer "
                                     >
                                         {editingReward ? 'บันทึกการแก้ไข' : 'สร้างของรางวัล'}
                                     </button>

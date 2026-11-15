@@ -354,14 +354,14 @@ export default function ExpensesTab({
                 
                 {/* Metric 01: Gross POS Revenue */}
                 <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
                         [01] POS GROSS REVENUE
                     </span>
                     <div>
                         <div className="font-mono font-black text-2xl tracking-tight text-[var(--color-ink)]">
                             ฿{Number(activePosRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </div>
-                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
+                        <span className="font-mono text-[11px] text-[var(--color-muted)] mt-0.5 block">
                             PERIOD: {isAllPeriods ? 'ALL TIME' : (periodMode === 'day' ? selectedDate : selectedMonth)}
                         </span>
                     </div>
@@ -369,14 +369,14 @@ export default function ExpensesTab({
 
                 {/* Metric 02: Total Operating Expenses */}
                 <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
                         [02] TOTAL STORE EXPENSES
                     </span>
                     <div>
                         <div className="font-mono font-black text-2xl tracking-tight text-[var(--color-accent)]">
                             ฿{monthlyStats.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </div>
-                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
+                        <span className="font-mono text-[11px] text-[var(--color-muted)] mt-0.5 block">
                             {monthlyStats.count} TRANSACTIONS
                         </span>
                     </div>
@@ -384,14 +384,14 @@ export default function ExpensesTab({
 
                 {/* Metric 03: Real Net Profit */}
                 <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2 bg-[var(--color-paper-2)]">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
                         [03] REAL NET OPERATING PROFIT
                     </span>
                     <div>
                         <div className={`font-mono font-black text-2xl tracking-tight ${monthlyStats.netProfit >= 0 ? 'text-[var(--color-ink)]' : 'text-red-600'}`}>
                             ฿{monthlyStats.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </div>
-                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
+                        <span className="font-mono text-[11px] text-[var(--color-muted)] mt-0.5 block">
                             {monthlyStats.netProfit >= 0 ? 'PROFITABLE (+NET)' : 'DEFICIT (-NET)'}
                         </span>
                     </div>
@@ -399,14 +399,14 @@ export default function ExpensesTab({
 
                 {/* Metric 04: Food Cost Ratio */}
                 <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2 bg-[var(--color-ink)] text-[var(--color-paper)]">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-paper)]/70">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--color-paper)]/70">
                         [04] FOOD &amp; DRINK COGS RATIO
                     </span>
                     <div>
                         <div className="font-mono font-black text-2xl tracking-tight text-amber-300">
                             {monthlyStats.foodCostPct.toFixed(1)}%
                         </div>
-                        <span className="font-mono text-[10px] text-[var(--color-paper)]/60 mt-0.5 block">
+                        <span className="font-mono text-[11px] text-[var(--color-paper)]/60 mt-0.5 block">
                             TARGET BENCHMARK: 30-35%
                         </span>
                     </div>
@@ -418,7 +418,7 @@ export default function ExpensesTab({
                 
                 {/* Proof Reliability (4 Cols) */}
                 <div className="md:col-span-4 p-4 sm:p-5 space-y-3">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
                         TAX DEDUCTION PROOF GRADES
                     </span>
                     <div className="space-y-2 font-mono text-xs">
@@ -439,7 +439,7 @@ export default function ExpensesTab({
 
                 {/* Major Categories Spread (8 Cols) */}
                 <div className="md:col-span-8 p-4 sm:p-5 space-y-3 bg-[var(--color-paper-2)]">
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
                         EXPENDITURE BY CATEGORY // {isAllPeriods ? 'ALL TIME' : (periodMode === 'day' ? selectedDate : selectedMonth)}
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
@@ -447,10 +447,10 @@ export default function ExpensesTab({
                             const val = monthlyStats.byCategory[cat.id] || 0;
                             return (
                                 <div key={cat.id} className="p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] flex flex-col justify-between min-h-[52px]">
-                                    <span className="text-[9px] text-[var(--color-muted)] truncate" title={cat.label}>
+                                    <span className="text-[11px] text-[var(--color-muted)] truncate" title={cat.label}>
                                         {cat.label}
                                     </span>
-                                    <span className={`font-bold mt-1 ${val > 0 ? 'text-[var(--color-ink)]' : 'text-gray-400'}`}>
+                                    <span className={`font-bold mt-1 ${val > 0 ? 'text-[var(--color-ink)]' : 'text-[oklch(50%_0.010_28)]'}`}>
                                         ฿{val.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                                     </span>
                                 </div>
@@ -478,7 +478,7 @@ export default function ExpensesTab({
                         <button
                             type="button"
                             onClick={() => setShowOnlyDuplicates(!showOnlyDuplicates)}
-                            className={`px-3 py-1.5 font-bold text-xs border border-amber-600 transition-colors cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'}`}
+                            className={`px-3 py-1.5 font-bold text-xs border border-amber-600 transition-colors cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-[oklch(97%_0.008_28)]' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'}`}
                         >
                             {showOnlyDuplicates ? '✓ กำลังแสดงเฉพาะบิลซ้ำ (SHOW ALL)' : '🔍 กรองดูเฉพาะบิลซ้ำ (SHOW DUPLICATES)'}
                         </button>
@@ -532,7 +532,7 @@ export default function ExpensesTab({
                             <button
                                 type="button"
                                 onClick={() => setShowOnlyDuplicates(true)}
-                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-white font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
+                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-[oklch(97%_0.008_28)] font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
                             >
                                 <AlertTriangle size={11} />
                                 <span>DUPLICATES ({duplicateIds.size})</span>
@@ -625,7 +625,7 @@ export default function ExpensesTab({
 
                     <button
                         onClick={() => setShowLedgerPrintView(true)}
-                        className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-600 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm rounded-xs"
+                        className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-600 text-[oklch(97%_0.008_28)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] rounded-xs"
                         title="เปิดสมุดรายงานค่าใช้จ่ายและรายจ่ายประจำเดือน (A4 Table Print & PDF)"
                     >
                         <FileText size={13} className="text-blue-200" />
@@ -634,7 +634,7 @@ export default function ExpensesTab({
 
                     <button
                         onClick={() => setShowMonthlyExporter(true)}
-                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm rounded-xs"
+                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] rounded-xs"
                         title="เปิดระบบจัดการพิมพ์หลักฐานใบเสร็จทั้งเดือน (A4 Print / B&W Enhanced)"
                     >
                         <Printer size={13} className="text-emerald-300" />
@@ -643,7 +643,7 @@ export default function ExpensesTab({
 
                     <button
                         onClick={onOpenCreateModal}
-                        className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm"
+                        className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] "
                     >
                         <Plus size={14} />
                         <span>+ LOG EXPENSE</span>
@@ -664,7 +664,7 @@ export default function ExpensesTab({
                             setPeriodMode('all');
                             try { localStorage.setItem('onhaus_tax_expense_period_mode', 'all'); } catch {}
                         }}
-                        className="px-3 py-1 bg-amber-900 text-white font-bold rounded text-[11px] cursor-pointer hover:bg-black"
+                        className="px-3 py-1 bg-amber-900 text-[oklch(97%_0.008_28)] font-bold rounded text-[11px] cursor-pointer hover:bg-[oklch(18%_0.012_28)]"
                     >
                         ดูรายการทั้งหมด (VIEW ALL) &rarr;
                     </button>
@@ -676,7 +676,7 @@ export default function ExpensesTab({
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse font-mono text-xs">
                         <thead>
-                            <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-[10px] text-[var(--color-neutral)] tracking-wider uppercase font-bold">
+                            <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-[11px] text-[var(--color-neutral)] tracking-wider uppercase font-bold">
                                 <th className="p-3 border-r border-[var(--color-rule)] w-28">DATE</th>
                                 <th className="p-3 border-r border-[var(--color-rule)] min-w-[180px]">TITLE / VENDOR</th>
                                 <th className="p-3 border-r border-[var(--color-rule)] w-36">CATEGORY</th>
@@ -703,7 +703,7 @@ export default function ExpensesTab({
                                             <td className="p-3 border-r border-[var(--color-rule)] text-[11px] text-[var(--color-neutral)]">
                                                 {exp.expense_date}
                                                 {isDuplicate && (
-                                                    <span className="block mt-1 text-[9px] font-bold text-amber-700 bg-amber-200/80 px-1 py-0.5 border border-amber-300 w-fit">
+                                                    <span className="block mt-1 text-[11px] font-bold text-amber-700 bg-amber-200/80 px-1 py-0.5 border border-amber-300 w-fit">
                                                         ⚠️ DUPLICATE
                                                     </span>
                                                 )}
@@ -712,24 +712,24 @@ export default function ExpensesTab({
                                                 <div className="font-sans font-bold text-xs text-[var(--color-ink)] flex items-center gap-1.5">
                                                     <span>{exp.title}</span>
                                                 </div>
-                                                <div className="text-[10px] text-[var(--color-muted)] flex items-center gap-2 mt-0.5">
+                                                <div className="text-[11px] text-[var(--color-muted)] flex items-center gap-2 mt-0.5">
                                                     <span>{exp.vendor_name || 'ไม่ระบุผู้ขาย'}</span>
                                                     {exp.vendor_tax_id && (
                                                         <span>• TAX: {exp.vendor_tax_id}</span>
                                                     )}
                                                 </div>
                                                 {exp.notes && (
-                                                    <div className="text-[9px] text-[var(--color-neutral)] italic mt-0.5 truncate max-w-sm">
+                                                    <div className="text-[11px] text-[var(--color-neutral)] italic mt-0.5 truncate max-w-sm">
                                                         {exp.notes}
                                                     </div>
                                                 )}
                                             </td>
                                             <td className="p-3 border-r border-[var(--color-rule)] text-[11px]">
-                                                <span className="px-1.5 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold text-[10px]">
+                                                <span className="px-1.5 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold text-[11px]">
                                                     {catObj?.label || exp.category}
                                                 </span>
                                             </td>
-                                            <td className="p-3 border-r border-[var(--color-rule)] text-center text-[10px]">
+                                            <td className="p-3 border-r border-[var(--color-rule)] text-center text-[11px]">
                                                 {exp.doc_type === 'tax_invoice' && (
                                                     <span className="text-[var(--color-ink)] font-bold">GRADE A (INV)</span>
                                                 )}
@@ -744,7 +744,7 @@ export default function ExpensesTab({
                                                 {(() => {
                                                     const urls = parseReceiptUrls(exp.receipt_image_url);
                                                     if (urls.length === 0) {
-                                                        return <span className="text-gray-300 text-[10px]">-</span>;
+                                                        return <span className="text-[oklch(50%_0.010_28)] text-[11px]">-</span>;
                                                     }
                                                     return (
                                                         <button
@@ -754,11 +754,11 @@ export default function ExpensesTab({
                                                                 setPreviewPageIndex(0);
                                                                 setPreviewRotation(0);
                                                             }}
-                                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 bg-white"
+                                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 bg-[oklch(99%_0.004_28)]"
                                                         >
                                                             VIEW
                                                             {urls.length > 1 && (
-                                                                <span className="bg-[var(--color-ink)] text-white text-[8px] px-1 py-0.2 rounded-xs font-mono">
+                                                                <span className="bg-[var(--color-ink)] text-[oklch(97%_0.008_28)] text-[11px] px-1 py-0.2 rounded-xs font-mono">
                                                                     {urls.length}P
                                                                 </span>
                                                             )}
@@ -769,7 +769,7 @@ export default function ExpensesTab({
                                             <td className="p-3 border-r border-[var(--color-rule)] text-right font-black text-xs text-[var(--color-ink)]">
                                                 ฿{Number(exp.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                 {exp.vat_included && (
-                                                    <div className="text-[9px] text-[var(--color-muted)] font-normal">
+                                                    <div className="text-[11px] text-[var(--color-muted)] font-normal">
                                                         VAT: ฿{Number(exp.vat_amount || 0).toFixed(2)}
                                                     </div>
                                                 )}
@@ -808,14 +808,14 @@ export default function ExpensesTab({
                     onClick={() => setPreviewImage(null)}
                 >
                     <div 
-                        className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl"
+                        className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-[oklch(18%_0.012_28)] overflow-hidden shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800">
+                        <div className="p-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex justify-between items-center font-mono text-xs border-b border-zinc-800">
                             <div className="flex items-center gap-3">
                                 <span>RECEIPT OPTICAL INSPECTOR</span>
                                 {previewUrls.length > 1 && (
-                                    <span className="bg-zinc-800 text-emerald-400 px-2 py-0.5 text-[10px] font-bold border border-zinc-700">
+                                    <span className="bg-[oklch(18%_0.012_28)] text-emerald-400 px-2 py-0.5 text-[11px] font-bold border border-zinc-700">
                                         PAGE {previewPageIndex + 1} OF {previewUrls.length}
                                     </span>
                                 )}
@@ -824,13 +824,13 @@ export default function ExpensesTab({
                                 <button
                                     type="button"
                                     onClick={() => setPreviewRotation(prev => (prev + 90) % 360)}
-                                    className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1 border border-zinc-700 cursor-pointer"
+                                    className="px-2 py-1 bg-[oklch(18%_0.012_28)] hover:bg-zinc-700 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1 border border-zinc-700 cursor-pointer"
                                     title="หมุน 90 องศา"
                                 >
                                     <RotateCw size={12} />
                                     <span>หมุน 90°</span>
                                 </button>
-                                <button onClick={() => setPreviewImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
+                                <button onClick={() => setPreviewImage(null)} className="text-[oklch(97%_0.008_28)] hover:text-red-400 p-1 cursor-pointer">
                                     <X size={18} />
                                 </button>
                             </div>
@@ -852,7 +852,7 @@ export default function ExpensesTab({
                                         setPreviewPageIndex(prev => Math.max(0, prev - 1));
                                         setPreviewRotation(0);
                                     }}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
                                 >
                                     ◀ PREV
                                 </button>
@@ -866,7 +866,7 @@ export default function ExpensesTab({
                                         setPreviewPageIndex(prev => Math.min(previewUrls.length - 1, prev + 1));
                                         setPreviewRotation(0);
                                     }}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
                                 >
                                     NEXT ▶
                                 </button>
@@ -875,7 +875,7 @@ export default function ExpensesTab({
 
                         {/* Thumbnail Navigation Bar */}
                         {previewUrls.length > 1 && (
-                            <div className="p-2 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
+                            <div className="p-2 bg-[oklch(18%_0.012_28)] border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
                                 {previewUrls.map((url, idx) => (
                                     <button
                                         key={idx}

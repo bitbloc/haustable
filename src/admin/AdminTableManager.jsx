@@ -1,6 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import AdminPageHeader, { AdminTabs } from '../components/admin/AdminPageHeader'
+import { AdminStatStrip, AdminTabPanel } from '../components/admin/AdminKit'
 import { supabase } from '../lib/supabaseClient'
 import TableManager from '../components/shared/TableManager'
 import AdminTableEditor from '../AdminTableEditor'
@@ -126,72 +127,24 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
                 />
             </AdminPageHeader>
 
-            {/* Realtime KPI Bar (Dieter Rams Structural Grid) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm font-mono">
-                    <span className="text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] tracking-wider block">
-                        TOTAL STORE CAPACITY
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl font-black text-[oklch(18%_0.012_28)]">
-                            {metrics.totalTables} TABLES
-                        </span>
-                        <span className="text-xs text-[oklch(55%_0.010_28)]">
-                            ({metrics.totalCapacity} Seats)
-                        </span>
-                    </div>
-                </div>
-
-                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm font-mono">
-                    <span className="text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] tracking-wider block">
-                        LIVE OCCUPANCY RATE
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl font-black text-[oklch(52%_0.16_28)]">
-                            {metrics.occupancyRate}%
-                        </span>
-                        <span className="text-xs text-[oklch(55%_0.010_28)]">
-                            ({metrics.occupiedTables}/{metrics.totalTables} Occ)
-                        </span>
-                    </div>
-                </div>
-
-                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm font-mono">
-                    <span className="text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] tracking-wider block">
-                        SEATED GUESTS
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl font-black text-[oklch(18%_0.012_28)]">
-                            {metrics.seatedGuests} PAX
-                        </span>
-                        <span className="text-xs text-[oklch(45%_0.08_140)] font-bold">
-                            ACTIVE
-                        </span>
-                    </div>
-                </div>
-
-                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm font-mono">
-                    <span className="text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] tracking-wider block">
-                        ACTIVE BILLS TOTAL
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl font-black text-[oklch(18%_0.012_28)]">
-                            ฿{metrics.activeBillTotal.toLocaleString()}
-                        </span>
-                        <span className="text-xs text-[oklch(55%_0.010_28)]">
-                            LIVE
-                        </span>
-                    </div>
-                </div>
-            </div>
+            <AdminStatStrip
+                items={[
+                    { key: 'capacity', label: 'ความจุร้าน', value: `${metrics.totalTables} โต๊ะ`, note: `${metrics.totalCapacity} ที่นั่ง` },
+                    { key: 'occupancy', label: 'โต๊ะที่ใช้อยู่', value: `${metrics.occupancyRate}%`, note: `${metrics.occupiedTables} จาก ${metrics.totalTables} โต๊ะ`, tone: metrics.occupiedTables > 0 ? 'accent' : undefined },
+                    { key: 'guests', label: 'ลูกค้าในร้าน', value: `${metrics.seatedGuests} ท่าน`, note: 'กำลังนั่งโต๊ะ' },
+                    { key: 'bills', label: 'ยอดบิลที่เปิดอยู่', value: `฿${metrics.activeBillTotal.toLocaleString()}`, note: 'ยังไม่ชำระ' }
+                ]}
+            />
 
             {/* Tab Body */}
             <div className="flex-1 bg-[oklch(98%_0.006_28)] rounded-sm border border-[oklch(85%_0.012_28)] overflow-hidden">
-                {activeTab === 'live' ? (
-                    <TableManager isStaffView={false} />
-                ) : (
-                    <AdminTableEditor />
-                )}
+                <AdminTabPanel id={activeTab}>
+                    {activeTab === 'live' ? (
+                        <TableManager isStaffView={false} />
+                    ) : (
+                        <AdminTableEditor />
+                    )}
+                </AdminTabPanel>
             </div>
         </div>
     )

@@ -64,14 +64,14 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
             {/* Header */}
             <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-1.5 py-0.2 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                         STRATEGY
                     </span>
                     <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
                         MENU ENGINEERING // เมทริกซ์กลยุทธ์เมนู (4 QUADRANTS)
                     </span>
                 </div>
-                <span className="text-[10px] text-[oklch(42%_0.010_28)]">
+                <span className="text-[11px] text-[oklch(42%_0.010_28)]">
                     วิเคราะห์ยอดขายคู่กับมาร์จิ้นเพื่อปรับกลยุทธ์
                 </span>
             </div>
@@ -88,7 +88,7 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
                             <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
                                 [STARS] เมนูดาวเด่น // ขายดี + กำไรสูง
                             </span>
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
                                 {quadrants.stars.length} รายการ
                             </span>
                         </div>
@@ -114,7 +114,7 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
                             <span className="font-bold text-[oklch(45%_0.08_140)] flex items-center gap-1.5">
                                 [NICHE] เมนูพรีเมียม // กำไรสูงต่อจาน แต่ขายน้อย
                             </span>
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
                                 {quadrants.niche.length} รายการ
                             </span>
                         </div>
@@ -145,7 +145,7 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
                             <span className="font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
                                 [VOLUME] เมนูปริมาณ // ขายดีแต่มาร์จิ้นต่ำ
                             </span>
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
                                 {quadrants.volume.length} รายการ
                             </span>
                         </div>
@@ -171,7 +171,7 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
                             <span className="font-bold text-[oklch(42%_0.010_28)] flex items-center gap-1.5">
                                 [REVIEW] เมนูรอทบทวน // ขายน้อย + กำไรต่ำ
                             </span>
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
                                 {quadrants.problems.length} รายการ
                             </span>
                         </div>

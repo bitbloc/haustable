@@ -23,7 +23,7 @@ export default function CRMFinancialSummary({ data }) {
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
                                 CRM // LOYALTY
                             </span>
                             <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
@@ -74,21 +74,21 @@ export default function CRMFinancialSummary({ data }) {
                         {/* Comparative Spend Boxes */}
                         <div className="grid grid-cols-2 gap-3 pt-2 font-mono text-xs">
                             <div className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
-                                <div className="text-[10px] text-[oklch(42%_0.010_28)]">ยอดเฉลี่ย/ท่าน [สมาชิก]</div>
+                                <div className="text-[11px] text-[oklch(42%_0.010_28)]">ยอดเฉลี่ย/ท่าน [สมาชิก]</div>
                                 <div className="font-bold text-lg text-[oklch(52%_0.16_28)] tabular-nums">
                                     ฿{memberShare.avgSpendMember}
                                 </div>
-                                <div className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                <div className="text-[11px] text-[oklch(45%_0.08_140)] font-bold">
                                     {memberShare.avgSpendMember > memberShare.avgSpendNonMember ? 'สูงกว่าลูกค้าทั่วไป' : 'สะสมแต้มต่อเนื่อง'}
                                 </div>
                             </div>
 
                             <div className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
-                                <div className="text-[10px] text-[oklch(42%_0.010_28)]">ยอดเฉลี่ย/ท่าน [ทั่วไป]</div>
+                                <div className="text-[11px] text-[oklch(42%_0.010_28)]">ยอดเฉลี่ย/ท่าน [ทั่วไป]</div>
                                 <div className="font-bold text-lg text-[oklch(18%_0.012_28)] tabular-nums">
                                     ฿{memberShare.avgSpendNonMember}
                                 </div>
-                                <div className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                <div className="text-[11px] text-[oklch(42%_0.010_28)]">
                                     ลูกค้า Walk-in ทั่วไป
                                 </div>
                             </div>
@@ -113,12 +113,12 @@ export default function CRMFinancialSummary({ data }) {
                                     <div key={idx} className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
                                         <div className="flex items-center justify-between">
                                             <span className="font-bold text-[oklch(18%_0.012_28)]">{tier.name}</span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)]">{tier.members || 0} คน</span>
+                                            <span className="text-[11px] text-[oklch(42%_0.010_28)]">{tier.members || 0} คน</span>
                                         </div>
                                         <div className="font-bold text-base text-[oklch(18%_0.012_28)] tabular-nums">
                                             ฿{(tier.totalSales || 0).toLocaleString()}
                                         </div>
-                                        <div className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                        <div className="text-[11px] text-[oklch(42%_0.010_28)]">
                                             เฉลี่ย ฿{tier.members > 0 ? Math.round(tier.totalSales / tier.members) : 0} /ท่าน
                                         </div>
                                     </div>
@@ -163,7 +163,7 @@ export default function CRMFinancialSummary({ data }) {
                                         <td className="p-3 font-bold border-r border-[oklch(85%_0.012_28)]">#{sp.rank || idx + 1}</td>
                                         <td className="p-3 font-bold text-sm font-sans border-r border-[oklch(85%_0.012_28)]">{sp.name}</td>
                                         <td className="p-3 border-r border-[oklch(85%_0.012_28)]">
-                                            <span className="px-2 py-0.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-[10px]">
+                                            <span className="px-2 py-0.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-[11px]">
                                                 {sp.tier}
                                             </span>
                                         </td>

@@ -34,7 +34,7 @@ export default function TopMenuInfographic({ data }) {
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
                                 RANKING // POS
                             </span>
                             <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
@@ -76,7 +76,7 @@ export default function TopMenuInfographic({ data }) {
                                 }`}
                             >
                                 <span>{cat.label}</span>
-                                <span className="ml-1.5 text-[10px] opacity-80">({countInCat})</span>
+                                <span className="ml-1.5 text-[11px] opacity-80">({countInCat})</span>
                             </button>
                         )
                     })}
@@ -105,7 +105,7 @@ export default function TopMenuInfographic({ data }) {
                             className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 space-y-3 relative"
                         >
                             {idx === 0 && (
-                                <span className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[10px] font-mono font-bold px-2 py-0.5 uppercase tracking-wider">
+                                <span className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] font-mono font-bold px-2 py-0.5 uppercase tracking-wider">
                                     RANK #1
                                 </span>
                             )}
@@ -130,19 +130,19 @@ export default function TopMenuInfographic({ data }) {
                             {/* Key Stats Bar */}
                             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
                                 <div>
-                                    <div className="text-[10px] text-[oklch(42%_0.010_28)]">ยอดขายรวม</div>
+                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">ยอดขายรวม</div>
                                     <div className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
                                         ฿{item.revenue.toLocaleString()}
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] text-[oklch(42%_0.010_28)]">จำนวนที่ขาย</div>
+                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">จำนวนที่ขาย</div>
                                     <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                         {item.units} ที่
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] text-[oklch(42%_0.010_28)]">เฉลี่ย/หน่วย</div>
+                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">เฉลี่ย/หน่วย</div>
                                     <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                         ฿{item.units > 0 ? Math.round(item.revenue / item.units) : 0}
                                     </div>
@@ -151,7 +151,7 @@ export default function TopMenuInfographic({ data }) {
 
                             {/* Relative Progress Rule */}
                             <div className="space-y-1 pt-1">
-                                <div className="flex justify-between font-mono text-[10px] text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between font-mono text-[11px] text-[oklch(42%_0.010_28)]">
                                     <span>ความนิยมเทียบอันดับ 1</span>
                                     <span className="font-bold text-[oklch(52%_0.16_28)]">{pctOfMax}%</span>
                                 </div>

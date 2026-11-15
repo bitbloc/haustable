@@ -231,7 +231,7 @@ export default function OnlineAdvanceOrdersHub({
     }
 
     return (
-        <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl overflow-hidden shadow-2xs font-sans">
+        <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl overflow-hidden font-sans">
             {/* 1. Clean Bento Header Strip */}
             <div className="p-4 md:p-5 bg-[oklch(97%_0.008_28)] border-b border-[oklch(88%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 flex-wrap">

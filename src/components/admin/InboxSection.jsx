@@ -13,13 +13,13 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
             <div className="flex items-center justify-between bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] px-4 py-3 rounded-sm mb-4">
                 <div className="flex items-center gap-3">
                     <span className="flex h-3 w-3 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[oklch(52%_0.16_28)] opacity-75"></span>
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(52%_0.16_28)] opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-[oklch(52%_0.16_28)]"></span>
                     </span>
                     <div>
                         <div className="font-mono text-xs md:text-sm font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] flex items-center gap-2">
                             <span>PRIORITY INBOX</span>
-                            <span className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 text-[10px] rounded-sm">
+                            <span className="bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 text-[11px] rounded-sm">
                                 {bookings.length} ACTION REQUIRED
                             </span>
                         </div>
@@ -53,13 +53,13 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
                                         <Clock size={15} className="text-[oklch(52%_0.16_28)]" />
                                         {formatThaiTimeOnly(booking.booking_time)}
                                     </div>
-                                    <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] flex items-center gap-1 mt-0.5">
+                                    <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)] flex items-center gap-1 mt-0.5">
                                         <Calendar size={11} />
                                         {formatThaiDateOnly(booking.booking_time)}
                                     </div>
                                 </div>
 
-                                <span className={`font-mono text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-sm border ${
+                                <span className={`font-mono text-[11px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-sm border ${
                                     isDineIn 
                                         ? 'bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.12_28)] border-[oklch(82%_0.02_28)]' 
                                         : 'bg-[oklch(94%_0.02_220)] text-[oklch(35%_0.10_220)] border-[oklch(82%_0.02_220)]'
@@ -75,7 +75,7 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
                                         {customerName}
                                     </div>
                                     {booking.tables_layout?.table_name && (
-                                        <span className="font-mono text-[10px] font-bold bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded-sm">
+                                        <span className="font-mono text-[11px] font-bold bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded-sm">
                                             {booking.tables_layout.table_name}
                                         </span>
                                     )}
@@ -84,7 +84,7 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
                                 {customerPhone && (
                                     <a 
                                         href={`tel:${customerPhone}`}
-                                        className="font-mono text-xs text-[oklch(42%_0.010_28)] hover:text-black flex items-center gap-1.5 underline decoration-dotted"
+                                        className="font-mono text-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] flex items-center gap-1.5 underline decoration-dotted"
                                     >
                                         <Phone size={12} /> {customerPhone}
                                     </a>
@@ -145,7 +145,7 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
                                     <button
                                         type="button"
                                         onClick={() => onUpdateStatus(booking.id, 'confirmed')}
-                                        className="py-2 font-mono text-xs font-bold uppercase rounded-sm bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white border border-[oklch(18%_0.012_28)] transition-colors flex items-center justify-center gap-1"
+                                        className="py-2 font-mono text-xs font-bold uppercase rounded-sm bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] transition-colors flex items-center justify-center gap-1"
                                     >
                                         <Check size={14} /> ACCEPT
                                     </button>

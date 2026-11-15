@@ -111,7 +111,7 @@ export default function TimeSlotStudio({
     }, [activeSlots]);
 
     return (
-        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl p-5 shadow-2xs space-y-5 font-sans">
+        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl p-5 space-y-5 font-sans">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[oklch(85%_0.012_28)] pb-4">
                 <div className="flex items-center gap-3">
@@ -137,13 +137,13 @@ export default function TimeSlotStudio({
             </div>
 
             {/* Quick Generator Toolbar */}
-            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 space-y-3">
+            <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 space-y-3">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[oklch(85%_0.012_28)] pb-2.5">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] flex items-center gap-1.5">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] flex items-center gap-1.5">
                         <Sparkles size={12} className="text-[oklch(52%_0.16_28)]" />
                         AUTO-GENERATOR (สร้างอัตโนมัติตามช่วงเวลา {openingTime} - {closingTime}):
                     </span>
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
                         <button
                             type="button"
                             onClick={() => emitChanges([])}
@@ -194,7 +194,7 @@ export default function TimeSlotStudio({
             </div>
 
             {/* Visual Slots Chips Studio & Custom Adder */}
-            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-4">
+            <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-4">
                 <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2.5">
                     <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                         รอบเวลาที่เปิดให้บริการ (คลิกชิปเพื่อเปิด/ปิดรอบเวลา)
@@ -202,7 +202,7 @@ export default function TimeSlotStudio({
                     <button
                         type="button"
                         onClick={() => setShowCustomInput(!showCustomInput)}
-                        className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 cursor-pointer"
+                        className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                         <Plus size={12} /> {showCustomInput ? 'ปิดช่องเพิ่ม' : '+ เพิ่มรอบเวลาพิเศษ'}
                     </button>
@@ -216,12 +216,12 @@ export default function TimeSlotStudio({
                             type="time"
                             value={customTimeInput}
                             onChange={(e) => setCustomTimeInput(e.target.value)}
-                            className="bg-white border border-[oklch(85%_0.012_28)] rounded px-2 py-1 font-mono text-xs font-bold outline-none focus:border-[oklch(18%_0.012_28)]"
+                            className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded px-2 py-1 font-mono text-xs font-bold outline-none focus:border-[oklch(18%_0.012_28)]"
                             required
                         />
                         <button
                             type="submit"
-                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold rounded hover:bg-black transition-colors cursor-pointer"
+                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold rounded hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
                         >
                             + เพิ่มรอบ
                         </button>
@@ -248,12 +248,12 @@ export default function TimeSlotStudio({
                                                 key={slot}
                                                 type="button"
                                                 onClick={() => toggleSlot(slot)}
-                                                className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[oklch(97%_0.008_28)] hover:bg-red-50 hover:border-red-300 border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] transition-all cursor-pointer shadow-2xs select-none"
+                                                className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[oklch(97%_0.008_28)] hover:bg-red-50 hover:border-red-300 border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] transition-all cursor-pointer select-none"
                                                 title="คลิกเพื่อลบรอบเวลานี้"
                                             >
                                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:bg-red-500 transition-colors"></span>
                                                 <span>{slot}</span>
-                                                <X size={12} className="text-gray-400 group-hover:text-red-600 transition-colors ml-0.5" />
+                                                <X size={12} className="text-[oklch(50%_0.010_28)] group-hover:text-red-600 transition-colors ml-0.5" />
                                             </button>
                                         ))}
                                     </div>
@@ -265,7 +265,7 @@ export default function TimeSlotStudio({
             </div>
 
             {/* Read-only raw preview for developer inspection */}
-            <div className="flex items-center justify-between font-mono text-[10px] text-[oklch(55%_0.010_28)] pt-1">
+            <div className="flex items-center justify-between font-mono text-[11px] text-[oklch(55%_0.010_28)] pt-1">
                 <span className="truncate max-w-[80%]">
                     Raw database string: <span className="text-[oklch(18%_0.012_28)]">{value || '(empty)'}</span>
                 </span>

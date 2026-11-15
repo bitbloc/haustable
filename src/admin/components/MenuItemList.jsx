@@ -105,7 +105,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`bg-[oklch(98%_0.004_28)] border rounded-sm p-3 flex justify-between gap-3 items-stretch relative select-none group transition-colors duration-150 shadow-xs ${
+            className={`bg-[oklch(98%_0.004_28)] border rounded-sm p-3 flex justify-between gap-3 items-stretch relative select-none group transition-colors duration-150 ${
                 isOutOfStock 
                     ? 'border-[oklch(88%_0.010_28)] bg-[oklch(95%_0.008_28)]/70 opacity-75' 
                     : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
@@ -127,7 +127,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     )}
                     {isOutOfStock && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-[10px] font-mono font-bold text-[oklch(97%_0.008_28)] uppercase tracking-wider bg-red-700 px-1 py-0.5 rounded-xs">
+                            <span className="text-[11px] font-mono font-bold text-[oklch(97%_0.008_28)] uppercase tracking-wider bg-red-700 px-1 py-0.5 rounded-xs">
                                 หมด
                             </span>
                         </div>
@@ -151,11 +151,11 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     </div>
 
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span className="text-[9px] font-mono text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded-xs">
+                        <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded-xs">
                             {item.menu_categories?.name || item.category || 'ทั่วไป'}
                         </span>
                         {item.remaining_stock !== null && item.remaining_stock !== undefined && (
-                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
+                            <span className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
                                 item.remaining_stock <= 0
                                     ? 'bg-red-50 text-red-700 border-red-300'
                                     : item.remaining_stock <= 5
@@ -166,7 +166,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             </span>
                         )}
                         {item.is_drink_stamp_eligible && (
-                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-xs">
+                            <span className="text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-xs">
                                 10 FREE 1
                             </span>
                         )}
@@ -236,7 +236,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     <button
                         onClick={(e) => handleToggleRecommended(e, item)}
                         aria-pressed={isRecommended === true}
-                        className={`px-2 py-1 rounded-xs text-[10px] font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-[11px] font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             isRecommended
                                 ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] hover:bg-[oklch(47%_0.16_28)]'
                                 : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
@@ -249,7 +249,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     {/* Quick Stock Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleToggleStock(e, item)}
-                        className={`px-2 py-1 rounded-xs text-[10px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-[11px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             item.is_available !== false 
                                 ? 'bg-green-50 text-green-800 border-green-300 hover:bg-green-100' 
                                 : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
@@ -262,7 +262,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     {/* Quick Pickup Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleTogglePickup(e, item)}
-                        className={`px-2 py-1 rounded-xs text-[10px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-[11px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             item.is_pickup_available !== false 
                                 ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]' 
                                 : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
@@ -342,7 +342,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                 <div className="flex items-center gap-2">
                     <span className="font-bold font-sans text-sm text-[oklch(18%_0.012_28)] leading-normal">{item.name}</span>
                     {item.is_drink_stamp_eligible && (
-                        <span className="text-[9px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
+                        <span className="text-[11px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
                             10 FREE 1
                         </span>
                     )}
@@ -360,7 +360,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             {/* Stock Count */}
             <td className="py-2 px-3 text-center">
                 {item.remaining_stock !== null && item.remaining_stock !== undefined ? (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
+                    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
                         item.remaining_stock <= 0
                             ? 'bg-red-50 text-red-700 border-red-300'
                             : item.remaining_stock <= 5
@@ -370,7 +370,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                         {item.remaining_stock}
                     </span>
                 ) : (
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
+                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
                 )}
             </td>
 
@@ -379,7 +379,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                 <button
                     onClick={(e) => handleToggleRecommended(e, item)}
                     aria-pressed={item.is_recommended === true}
-                    className={`px-2 py-1 rounded-xs text-[10px] font-bold font-sans border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                    className={`px-2 py-1 rounded-xs text-[11px] font-bold font-sans border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                         item.is_recommended
                             ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
                             : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
@@ -394,7 +394,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={(e) => handleToggleStock(e, item)}
-                    className={`px-2 py-1 rounded-xs text-[10px] font-bold border transition-colors duration-150 cursor-pointer ${
+                    className={`px-2 py-1 rounded-xs text-[11px] font-bold border transition-colors duration-150 cursor-pointer ${
                         item.is_available !== false
                             ? 'bg-green-50 text-green-800 border-green-300 hover:bg-green-100'
                             : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
@@ -408,7 +408,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={(e) => handleTogglePickup(e, item)}
-                    className={`px-2 py-1 rounded-xs text-[10px] font-bold border transition-colors duration-150 cursor-pointer ${
+                    className={`px-2 py-1 rounded-xs text-[11px] font-bold border transition-colors duration-150 cursor-pointer ${
                         item.is_pickup_available !== false
                             ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
                             : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
@@ -1266,7 +1266,7 @@ export default function MenuItemList() {
 
                     <button 
                         onClick={handleCreate} 
-                        className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 shadow-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                     >
                         <Plus size={15} /> สร้างเมนูใหม่
                     </button>
@@ -1274,7 +1274,7 @@ export default function MenuItemList() {
             </div>
 
             {/* Search & Filter Bar (Rams Tabular Style) */}
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-3 mb-5 space-y-3 shadow-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-3 mb-5 space-y-3 ">
                 <div className="flex flex-col sm:flex-row gap-2.5">
                     {/* Search Input */}
                     <div className="relative flex-1">
@@ -1307,7 +1307,7 @@ export default function MenuItemList() {
                                 onClick={() => setStatusFilter(chip.id)}
                                 className={`px-2.5 py-1.5 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                                     statusFilter === chip.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-xs'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] '
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                             >
@@ -1370,7 +1370,7 @@ export default function MenuItemList() {
 
             {/* Recommended Panel: what the customer table page shows in its showcase row, in that order */}
             {!loading && (
-                <section className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm mb-5 shadow-xs" aria-labelledby="rec-panel-title">
+                <section className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm mb-5 " aria-labelledby="rec-panel-title">
                     <div className="px-3 py-2.5 flex items-center justify-between gap-3 border-b border-[oklch(85%_0.012_28)]">
                         <div className="min-w-0">
                             <h3 id="rec-panel-title" className="text-sm font-bold text-[oklch(18%_0.012_28)] leading-normal">
@@ -1470,7 +1470,7 @@ export default function MenuItemList() {
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="h-28 bg-[oklch(94%_0.010_28)] animate-pulse rounded-sm border border-[oklch(85%_0.012_28)]" />
+                        <div key={i} className="h-28 bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)]" />
                     ))}
                 </div>
             ) : filteredMenuItems.length === 0 ? (
@@ -1485,10 +1485,10 @@ export default function MenuItemList() {
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                 >
-                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] rounded-sm overflow-x-auto shadow-xs">
+                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] rounded-sm overflow-x-auto ">
                         <table className="w-full border-collapse font-mono text-xs text-left min-w-[700px]">
                             <thead>
-                                <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase text-[10px]">
+                                <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase text-[11px]">
                                     <th className="py-2.5 px-3 w-8 text-center">#</th>
                                     <th className="py-2.5 px-3 w-12 text-center">รูป</th>
                                     <th className="py-2.5 px-3 font-bold">ชื่อเมนู / หมวดหมู่</th>
@@ -1596,12 +1596,12 @@ export default function MenuItemList() {
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] gap-1">
                                                 <ImageIcon size={20} />
-                                                <span className="text-[9px] font-mono">ไม่มีรูป</span>
+                                                <span className="text-[11px] font-mono">ไม่มีรูป</span>
                                             </div>
                                         )}
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="inline-block bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-xs font-mono font-bold text-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 shadow-xs">
+                                        <label className="inline-block bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-xs font-mono font-bold text-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 ">
                                             <span>เลือกรูปภาพ</span>
                                             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                         </label>
@@ -1723,7 +1723,7 @@ export default function MenuItemList() {
                                     />
                                     <div>
                                         <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">มีสินค้า (In Stock)</div>
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">เปิดให้สั่งซื้อได้</div>
+                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">เปิดให้สั่งซื้อได้</div>
                                     </div>
                                 </label>
 
@@ -1736,7 +1736,7 @@ export default function MenuItemList() {
                                     />
                                     <div>
                                         <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">เมนูแนะนำ (Recommended)</div>
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">แสดงแถบไฮไลต์ REC</div>
+                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">แสดงแถบไฮไลต์ REC</div>
                                     </div>
                                 </label>
 
@@ -1749,7 +1749,7 @@ export default function MenuItemList() {
                                     />
                                     <div>
                                         <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">รับ Pick-up หน้าร้าน</div>
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">สั่งล่วงหน้าผ่านเว็บ</div>
+                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">สั่งล่วงหน้าผ่านเว็บ</div>
                                     </div>
                                 </label>
 
@@ -1762,7 +1762,7 @@ export default function MenuItemList() {
                                     />
                                     <div>
                                         <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">สะสมแก้ว 10 ฟรี 1</div>
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">สิทธิ์ Drink Stamp</div>
+                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">สิทธิ์ Drink Stamp</div>
                                     </div>
                                 </label>
                             </div>
@@ -1774,7 +1774,7 @@ export default function MenuItemList() {
                                         <label className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block">
                                             กลุ่มตัวเลือกเสริม (Option Groups)
                                         </label>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">
+                                        <span className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">
                                             เลือกกลุ่มตัวเลือกที่เมนูนี้รองรับ เช่น ความหวาน, นม, ท็อปปิ้ง
                                         </span>
                                     </div>
@@ -1788,7 +1788,7 @@ export default function MenuItemList() {
                                 </div>
 
                                 {isOptionPickerOpen && (
-                                    <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xs space-y-2 shadow-sm">
+                                    <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xs space-y-2 ">
                                         <input
                                             type="text"
                                             placeholder="ค้นหากลุ่มตัวเลือก..."
@@ -1820,7 +1820,7 @@ export default function MenuItemList() {
                                                             />
                                                             <span>{og.name}</span>
                                                         </div>
-                                                        <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] tabular-nums">
+                                                        <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)] tabular-nums">
                                                             {(og.option_choices || []).length} choices
                                                         </span>
                                                     </label>
@@ -1838,7 +1838,7 @@ export default function MenuItemList() {
                                         return (
                                             <span 
                                                 key={groupId}
-                                                className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-xs text-xs font-mono font-bold flex items-center gap-1.5 shadow-2xs"
+                                                className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-xs text-xs font-mono font-bold flex items-center gap-1.5 "
                                             >
                                                 <span>{group.name}</span>
                                                 <button
@@ -1872,7 +1872,7 @@ export default function MenuItemList() {
                             <button 
                                 type="button"
                                 onClick={handleSubmit} 
-                                className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 shadow-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                             >
                                 บันทึกเมนู
                             </button>

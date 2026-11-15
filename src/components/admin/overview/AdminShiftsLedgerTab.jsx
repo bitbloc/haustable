@@ -134,7 +134,7 @@ export default function AdminShiftsLedgerTab({
             <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-xs">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-xs">
                             MASTER SHIFT LEDGER
                         </span>
                         <span className="text-xs text-[oklch(55%_0.010_28)] font-bold">
@@ -148,19 +148,19 @@ export default function AdminShiftsLedgerTab({
 
                 <div className="flex items-center gap-4 text-xs">
                     <div className="text-right">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] uppercase">จำนวนกะทั้งหมด</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] uppercase">จำนวนกะทั้งหมด</div>
                         <div className="text-base font-bold text-[oklch(18%_0.012_28)] tabular-nums">{sortedShifts.length} กะ</div>
                     </div>
                     <div className="h-7 w-px bg-[oklch(85%_0.012_28)]" />
                     <div className="text-right">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] uppercase">เงินสดเข้าลิ้นชักรวม</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] uppercase">เงินสดเข้าลิ้นชักรวม</div>
                         <div className="text-base font-bold text-[oklch(35%_0.08_140)] tabular-nums">
                             +฿{sortedShifts.reduce((acc, s) => acc + Number(s.total_in || 0), 0).toLocaleString()}
                         </div>
                     </div>
                     <div className="h-7 w-px bg-[oklch(85%_0.012_28)]" />
                     <div className="text-right">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] uppercase">เงินสดเบิกจ่ายรวม</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] uppercase">เงินสดเบิกจ่ายรวม</div>
                         <div className="text-base font-bold text-[oklch(52%_0.16_28)] tabular-nums">
                             -฿{sortedShifts.reduce((acc, s) => acc + Number(s.total_out || 0), 0).toLocaleString()}
                         </div>
@@ -170,7 +170,7 @@ export default function AdminShiftsLedgerTab({
 
             {/* Shifts Table */}
             {sortedShifts.length === 0 ? (
-                <div className="p-12 text-center bg-white border border-[oklch(85%_0.012_28)] rounded-sm">
+                <div className="p-12 text-center bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
                     <p className="text-xs font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
                         ไม่พบข้อมูลกะในวันที่ {selectedDate}
                     </p>
@@ -179,11 +179,11 @@ export default function AdminShiftsLedgerTab({
                     </p>
                 </div>
             ) : (
-                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden shadow-2xs">
+                <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden ">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                             <thead>
-                                <tr className="bg-[oklch(95%_0.008_28)] border-b border-[oklch(85%_0.012_28)] text-[9px] uppercase tracking-wider text-[oklch(42%_0.010_28)] select-none">
+                                <tr className="bg-[oklch(95%_0.008_28)] border-b border-[oklch(85%_0.012_28)] text-[11px] uppercase tracking-wider text-[oklch(42%_0.010_28)] select-none">
                                     <th className="py-3 px-3.5 w-8">#</th>
                                     <th className="py-3 px-3">พนักงาน / กะ</th>
                                     <th className="py-3 px-3">เวลาเปิด</th>
@@ -231,12 +231,12 @@ export default function AdminShiftsLedgerTab({
                                                     <div className="font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
                                                         <span>กะ {idx + 1}: {s.staff_name || 'ไม่ระบุชื่อ'}</span>
                                                         {isOpen && (
-                                                            <span className="text-[9px] px-1.5 py-0.2 rounded-xs bg-emerald-100 text-emerald-800 font-bold">
+                                                            <span className="text-[11px] px-1.5 py-0.2 rounded-xs bg-emerald-100 text-emerald-800 font-bold">
                                                                 เปิดอยู่
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    <div className="text-[11px] text-[oklch(55%_0.010_28)]">
                                                         ID: {s.id?.slice(0, 14)}
                                                     </div>
                                                 </td>
@@ -300,7 +300,7 @@ export default function AdminShiftsLedgerTab({
                                                         type="button"
                                                         disabled={loadingShiftId === s.id}
                                                         onClick={() => handleOpenShiftSlip(s, idx)}
-                                                        className="px-2.5 py-1 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[10px] font-bold text-[oklch(18%_0.012_28)] hover:border-[oklch(60%_0.012_28)] transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-2xs"
+                                                        className="px-2.5 py-1 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[11px] font-bold text-[oklch(18%_0.012_28)] hover:border-[oklch(60%_0.012_28)] transition-all cursor-pointer inline-flex items-center gap-1.5 "
                                                         title="เปิดดูสลิปสรุปปิดกะ / บันทึก PNG หรือแชร์เข้า LINE"
                                                     >
                                                         <FileText size={11} className="text-[oklch(52%_0.16_28)]" />
@@ -318,18 +318,18 @@ export default function AdminShiftsLedgerTab({
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="flex items-center justify-between text-[11px] font-bold text-[oklch(18%_0.012_28)]">
                                                                     <span>รายการเงินเข้า - ออกในกะนี้ (CASH ADJUSTMENTS)</span>
-                                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">{adjs.length} รายการ</span>
+                                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">{adjs.length} รายการ</span>
                                                                 </div>
 
                                                                 {adjs.length === 0 ? (
-                                                                    <div className="py-6 text-center border border-dashed border-[oklch(85%_0.012_28)] rounded-xs bg-white text-xs text-[oklch(55%_0.010_28)]">
+                                                                    <div className="py-6 text-center border border-dashed border-[oklch(85%_0.012_28)] rounded-xs bg-[oklch(99%_0.004_28)] text-xs text-[oklch(55%_0.010_28)]">
                                                                         ไม่มีการนำเงินเข้าหรือเบิกเงินสดระหว่างกะนี้
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-white max-h-[220px] overflow-y-auto no-scrollbar">
+                                                                    <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(99%_0.004_28)] max-h-[220px] overflow-y-auto no-scrollbar">
                                                                         <table className="w-full text-left border-collapse text-xs">
                                                                             <thead>
-                                                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[8px] uppercase tracking-wider text-[oklch(42%_0.010_28)] select-none sticky top-0">
+                                                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[11px] uppercase tracking-wider text-[oklch(42%_0.010_28)] select-none sticky top-0">
                                                                                     <th className="py-2 px-2.5 w-16">เวลา</th>
                                                                                     <th className="py-2 px-2.5 w-20">ประเภท</th>
                                                                                     <th className="py-2 px-2.5 text-right w-24">จำนวน</th>
@@ -344,9 +344,9 @@ export default function AdminShiftsLedgerTab({
                                                                                     const aTime = adj.timestamp ? new Date(adj.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '-'
                                                                                     return (
                                                                                         <tr key={adj.id || aIdx} className="hover:bg-[oklch(96%_0.008_28)]">
-                                                                                            <td className="py-2 px-2.5 text-[9px] text-[oklch(50%_0.010_28)] tabular-nums">{aTime}</td>
+                                                                                            <td className="py-2 px-2.5 text-[11px] text-[oklch(50%_0.010_28)] tabular-nums">{aTime}</td>
                                                                                             <td className="py-2 px-2.5">
-                                                                                                <span className={`px-1 py-0.2 rounded-2xs text-[8px] font-bold uppercase ${
+                                                                                                <span className={`px-1 py-0.2 rounded-2xs text-[11px] font-bold uppercase ${
                                                                                                     isIn ? 'bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)]' : 'bg-[oklch(92%_0.04_28)] text-[oklch(40%_0.14_28)]'
                                                                                                 }`}>
                                                                                                     {isIn ? 'เงินเข้า' : 'เงินออก'}
@@ -360,7 +360,7 @@ export default function AdminShiftsLedgerTab({
                                                                                             <td className="py-2 px-2.5 font-medium text-[11px] text-[oklch(18%_0.012_28)]">
                                                                                                 {adj.note || '-'}
                                                                                             </td>
-                                                                                            <td className="py-2 px-2.5 text-[9px]">
+                                                                                            <td className="py-2 px-2.5 text-[11px]">
                                                                                                 <span className={`px-1 py-0.2 rounded-2xs border ${cat.color}`}>
                                                                                                     {cat.label}
                                                                                                 </span>
@@ -378,13 +378,13 @@ export default function AdminShiftsLedgerTab({
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="flex items-center justify-between text-[11px] font-bold text-[oklch(18%_0.012_28)]">
                                                                     <span>สรุปยอดขาย & เมนูขายดีประจำกะ (TOP SELLERS)</span>
-                                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
                                                                         ยอดขายรวม: ฿{Number(s.total_sales || 0).toLocaleString()}
                                                                     </span>
                                                                 </div>
 
                                                                 {/* Sales Channel Sub-bar */}
-                                                                <div className="grid grid-cols-3 gap-2 text-center text-[10px] bg-white border border-[oklch(85%_0.012_28)] p-2 rounded-xs">
+                                                                <div className="grid grid-cols-3 gap-2 text-center text-[11px] bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-2 rounded-xs">
                                                                     <div>
                                                                         <div className="text-[oklch(55%_0.010_28)]">เงินสด</div>
                                                                         <div className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{Number(s.cash_sales || 0).toLocaleString()}</div>
@@ -400,7 +400,7 @@ export default function AdminShiftsLedgerTab({
                                                                 </div>
 
                                                                 {/* Top Items Table */}
-                                                                <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-white max-h-[170px] overflow-y-auto no-scrollbar">
+                                                                <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(99%_0.004_28)] max-h-[170px] overflow-y-auto no-scrollbar">
                                                                     {sellersLoading[s.id] ? (
                                                                         <div className="py-8 text-center text-[11px] text-[oklch(55%_0.010_28)]">
                                                                             กำลังโหลดรายการสินค้าในกะ...
@@ -412,7 +412,7 @@ export default function AdminShiftsLedgerTab({
                                                                     ) : (
                                                                         <table className="w-full text-left border-collapse text-xs">
                                                                             <thead>
-                                                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[8px] uppercase tracking-wider text-[oklch(42%_0.010_28)] sticky top-0">
+                                                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[11px] uppercase tracking-wider text-[oklch(42%_0.010_28)] sticky top-0">
                                                                                     <th className="py-2 px-2.5">รายการอาหาร/เครื่องดื่ม</th>
                                                                                     <th className="py-2 px-2.5 text-right w-16">จำนวน</th>
                                                                                     <th className="py-2 px-2.5 text-right w-24">ยอดเงิน</th>

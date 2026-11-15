@@ -75,7 +75,7 @@ export default function StockCardPanel({ itemId, itemName, unit, onClose }) {
                 onClick={e => e.stopPropagation()}>
                 <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
                     <div className="px-4 py-3 min-w-0">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK CARD · {DAYS} DAYS</span>
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK CARD · {DAYS} DAYS</span>
                         <h2 id="stock-card-title" className="font-bold text-lg leading-7 break-words">{itemName}</h2>
                         <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
                             คงเหลือในระบบ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{data.item ? qty(data.item.current_quantity) : '—'}</span> {u}
@@ -102,7 +102,7 @@ export default function StockCardPanel({ itemId, itemName, unit, onClose }) {
                                     <span className="font-mono text-[12px] leading-5 text-[oklch(42%_0.010_28)] tabular-nums">สุทธิ {signed(d.netLedger)}</span>
                                 )}
                             </div>
-                            <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-white">
+                            <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]">
                                 {d.ledger.map((r, i) => (
                                     <li key={`${r.at}-${i}`} className="grid grid-cols-[3rem_1fr_auto] gap-x-3 px-4 py-2 items-baseline">
                                         <span className="font-mono text-[12px] text-[oklch(55%_0.010_28)]">{timeOf(r.at)}</span>

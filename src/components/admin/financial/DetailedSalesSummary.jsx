@@ -42,7 +42,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                 {/* Header */}
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[oklch(94%_0.010_28)]">
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                        <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
                             VELOCITY // HOURLY
                         </span>
                         <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)]">
@@ -73,9 +73,9 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                 >
                                     {/* Tooltip on Hover */}
                                     {isHovered && (
-                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-20 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[10px] font-mono px-2 py-1 border border-[oklch(85%_0.012_28)] whitespace-nowrap pointer-events-none text-center">
+                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-20 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-mono px-2 py-1 border border-[oklch(85%_0.012_28)] whitespace-nowrap pointer-events-none text-center">
                                             <div className="font-bold text-[oklch(97%_0.008_28)]">฿{h.gross.toLocaleString()}</div>
-                                            <div className="text-[oklch(85%_0.012_28)] text-[9px]">{h.bills} บิล // {h.hour}</div>
+                                            <div className="text-[oklch(85%_0.012_28)] text-[11px]">{h.bills} บิล // {h.hour}</div>
                                         </div>
                                     )}
 
@@ -94,7 +94,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     </div>
 
                                     {/* Hour Label */}
-                                    <span className={`text-[10px] font-mono mt-2 font-bold truncate max-w-full ${
+                                    <span className={`text-[11px] font-mono mt-2 font-bold truncate max-w-full ${
                                         isPeak ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'
                                     }`}>
                                         {String(h.hour ?? '').split(':')[0] || idx}

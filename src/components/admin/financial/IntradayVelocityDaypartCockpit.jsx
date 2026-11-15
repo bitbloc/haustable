@@ -1592,7 +1592,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     }, [currentDaypart, dayMetrics?.paceDeltaPct])
 
     return (
-        <div ref={containerRef} className="rounded-2xl border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(88%_0.012_28)] font-sans text-[oklch(18%_0.012_28)] w-full max-w-full overflow-hidden shadow-2xs">
+        <div ref={containerRef} className="rounded-2xl border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(88%_0.012_28)] font-sans text-[oklch(18%_0.012_28)] w-full max-w-full overflow-hidden ">
 
             {/* ========================================================================= */}
             {/* 1. CLEAN BENTO HEADER TOOLBAR: TITLE, STATUS PILL & SEGMENTED TABS        */}
@@ -1640,7 +1640,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     onClick={() => setMonthViewMode(tab.id)}
                                     className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
                                         monthViewMode === tab.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
                                             : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                     }`}
                                 >
@@ -1661,7 +1661,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     onClick={() => setActiveSubTab(tab.id)}
                                     className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap ${
                                         activeSubTab === tab.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
                                             : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                     }`}
                                 >
@@ -2364,7 +2364,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                         y={padYTop + 12}
                                                         textAnchor="middle"
                                                         fill={colorPaper}
-                                                        className="font-mono text-[7px] font-bold"
+                                                        className="font-mono text-[11px] font-bold"
                                                     >
                                                         {pt.adDirs > 0 && pt.adInquiries > 0
                                                             ? `${pt.adTotal} SIG`
@@ -2470,7 +2470,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                             x={fx - 6}
                                                             y={fyHigh - 5}
                                                             textAnchor="end"
-                                                            className="font-mono text-[8px] font-semibold fill-[oklch(45%_0.08_140)] tabular-nums"
+                                                            className="font-mono text-[11px] font-semibold fill-[oklch(45%_0.08_140)] tabular-nums"
                                                         >
                                                             สูง ~{lastPt.forecastHigh}p
                                                         </text>
@@ -2530,7 +2530,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                             x={getX(23) - 6}
                                                             y={getYMoney(targetAmt) - 6}
                                                             textAnchor="end"
-                                                            className="font-mono text-[8.5px] font-semibold fill-[oklch(45%_0.015_28)] select-none tabular-nums"
+                                                            className="font-mono text-[11px] font-semibold fill-[oklch(45%_0.015_28)] select-none tabular-nums"
                                                         >
                                                             เป้า ฿{Math.round(targetAmt / 1000)}k
                                                         </text>
@@ -2750,7 +2750,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 return (
                                     <div className="flex items-center gap-4 flex-wrap">
                                         {pt?.isGoalExceeded && (
-                                            <span className="px-2 py-0.5 bg-[oklch(50%_0.15_142)] text-white font-bold text-[10px] rounded-xs flex items-center gap-1 shadow-xs animate-in fade-in duration-150">
+                                            <span className="px-2 py-0.5 bg-[oklch(50%_0.15_142)] text-[oklch(97%_0.008_28)] font-bold text-[11px] rounded-xs flex items-center gap-1 animate-in fade-in duration-150">
                                                 <span>[GOAL HIT]</span>
                                                 {pt.goalDeltaPct > 0 && <span>+{pt.goalDeltaPct}%</span>}
                                             </span>
@@ -2762,7 +2762,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             <span className="font-bold text-[oklch(52%_0.16_28)]">
                                                 {pt?.isFuture ? `~${pt?.forecast} ท่าน (กรอบ ${pt?.forecastLow}-${pt?.forecastHigh})` : `${pt?.pax || 0} ท่าน`}
                                             </span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
+                                            <span className="text-[11px] text-[oklch(42%_0.010_28)] ml-1">
                                                 (สถิติเดิม: ~{pt?.baselinePax} ท่าน)
                                             </span>
                                         </div>
@@ -2771,7 +2771,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             <span className={`font-bold ${pt?.isGoalExceeded ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'}`}>
                                                 ฿{(pt?.sale || 0).toLocaleString()}
                                             </span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
+                                            <span className="text-[11px] text-[oklch(42%_0.010_28)] ml-1">
                                                 (เป้าชม.: ฿{(pt?.targetSales || 0).toLocaleString()})
                                             </span>
                                         </div>
@@ -2780,7 +2780,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             <span className="font-bold text-[oklch(18%_0.012_28)]">
                                                 ฿{(pt?.cumulativeSales || 0).toLocaleString()}
                                             </span>
-                                            <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
+                                            <span className="text-[11px] text-[oklch(42%_0.010_28)] ml-1">
                                                 (เกณฑ์เป้า: ฿{(pt?.benchmarkCumulative || 0).toLocaleString()})
                                             </span>
                                         </div>
@@ -2796,14 +2796,14 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 <span className="font-bold text-[oklch(45%_0.08_140)]">
                                                     {pt.adTotal} สัญญาณ
                                                 </span>
-                                                <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
+                                                <span className="text-[11px] text-[oklch(42%_0.010_28)] ml-1">
                                                     (แผนที่ {pt.adDirs} · ติดต่อ {pt.adInquiries})
                                                 </span>
                                             </div>
                                         )}
                                         {pt?.isFuture && pt?.isLifted && (
                                             <div>
-                                                <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                                <span className="text-[11px] text-[oklch(45%_0.08_140)] font-bold">
                                                     AD LIFT +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%
                                                 </span>
                                             </div>
@@ -2855,9 +2855,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         : 'border-[oklch(85%_0.012_28)]'
                                 }`}>
                                     <div className="flex items-center justify-between gap-1">
-                                        <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">HOURLY SALES</div>
+                                        <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] font-bold truncate">HOURLY SALES</div>
                                         {drillHourData.isGoalExceeded && (
-                                            <span className="px-1.5 py-0.2 bg-[oklch(50%_0.15_142)] text-white text-[8px] sm:text-[9px] font-bold rounded-xs shrink-0">
+                                            <span className="px-1.5 py-0.2 bg-[oklch(50%_0.15_142)] text-[oklch(97%_0.008_28)] text-[11px] sm:text-[11px] font-bold rounded-xs shrink-0">
                                                 [GOAL HIT +{drillHourData.goalDeltaPct}%]
                                             </span>
                                         )}
@@ -2867,7 +2867,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     }`}>
                                         ฿{(drillHourData.sale || 0).toLocaleString()}
                                     </div>
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate flex items-center justify-between gap-1">
+                                    <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] mt-1 truncate flex items-center justify-between gap-1">
                                         <span>สะสม: ฿{(drillHourData.cumulativeSales || 0).toLocaleString()}</span>
                                         {filterMode === 'month' ? (
                                             <span>เฉลี่ย: ฿{(drillHourData.avgSales || 0).toLocaleString()}/วัน</span>
@@ -2878,11 +2878,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </div>
 
                                 <div className="p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] min-w-0">
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">GUEST TRAFFIC</div>
+                                    <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] font-bold truncate">GUEST TRAFFIC</div>
                                     <div className="text-base sm:text-lg md:text-xl font-bold text-[oklch(52%_0.16_28)] mt-0.5 truncate">
                                         {drillHourData.isFuture ? `~${drillHourData.forecast} Pax` : `${drillHourData.pax || 0} Pax`}
                                     </div>
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
+                                    <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] mt-1 truncate">
                                         {drillHourData.isFuture && drillHourData.isLifted ? (
                                             <span>สถิติเดิม: ~{drillHourData.baselinePax} Pax <span className="text-[oklch(45%_0.08_140)] font-bold">(หนุน Ad Lift +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%)</span></span>
                                         ) : (
@@ -2894,26 +2894,26 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </div>
 
                                 <div className="p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] min-w-0">
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">BILLS & AVERAGE CHECK</div>
+                                    <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] font-bold truncate">BILLS & AVERAGE CHECK</div>
                                     <div className="text-base sm:text-lg md:text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5 truncate">
                                         {drillHourOrders.length} บิล
                                     </div>
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
+                                    <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] mt-1 truncate">
                                         เฉลี่ย ฿{drillHourOrders.length > 0 ? Math.round((drillHourData.sale || 0) / drillHourOrders.length).toLocaleString() : 0} / บิล
                                     </div>
                                 </div>
 
                                 <div className="p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] min-w-0">
                                     <div className="flex items-center justify-between gap-1">
-                                        <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">ONLINE SEARCH INTENT</div>
-                                        <span className="text-[9px] text-[oklch(55%_0.010_28)] font-mono shrink-0">
+                                        <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] font-bold truncate">ONLINE SEARCH INTENT</div>
+                                        <span className="text-[11px] text-[oklch(55%_0.010_28)] font-mono shrink-0">
                                             {drilldownHour}:00 น.
                                         </span>
                                     </div>
                                     <div className="text-base sm:text-lg md:text-xl font-bold text-[oklch(45%_0.08_140)] mt-0.5 truncate">
                                         {drillHourData.adTotal || 0} Signals
                                     </div>
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
+                                    <div className="text-[11px] sm:text-[11px] text-[oklch(42%_0.010_28)] mt-1 truncate">
                                         {drillHourData.isFuture && (drillHourData.adTotal || 0) === 0 ? (
                                             <span className="text-[oklch(55%_0.010_28)]">
                                                 {drillHourData.isLifted
@@ -2929,9 +2929,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                             {/* Top Items Ordered in this hour */}
                             <div className="pt-2">
-                                <div className="text-[10px] sm:text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-2 flex items-center justify-between">
+                                <div className="text-[11px] sm:text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-2 flex items-center justify-between">
                                     <span className="truncate">TOP MENU ITEMS IN THIS HOUR // รายการอาหารยอดนิยม</span>
-                                    <span className="text-[10px] text-[oklch(42%_0.010_28)] font-normal shrink-0">
+                                    <span className="text-[11px] text-[oklch(42%_0.010_28)] font-normal shrink-0">
                                         {drillTopItems.length > 0 ? `${drillTopItems.length} รายการหลัก` : ''}
                                     </span>
                                 </div>
@@ -2947,7 +2947,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     <div className="font-bold text-[11px] text-[oklch(18%_0.012_28)] truncate" title={item.name}>
                                                         {idx + 1}. {item.name}
                                                     </div>
-                                                    <div className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">
                                                         จำนวน {item.qty} ที่
                                                     </div>
                                                 </div>
@@ -3007,7 +3007,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         isGoalHit
                                             ? 'border-[oklch(45%_0.08_140)] bg-[oklch(95%_0.02_140)]'
                                             : isActive
-                                            ? 'border-[oklch(52%_0.16_28)] shadow-2xs'
+                                            ? 'border-[oklch(52%_0.16_28)] '
                                             : 'border-[oklch(88%_0.012_28)]'
                                     }`}
                                 >
@@ -3026,11 +3026,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         </div>
                                         <div className="flex items-center gap-1">
                                             {isGoalHit && (
-                                                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] tabular-nums">
+                                                <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] tabular-nums">
                                                     +{dp.goalDeltaPct}%
                                                 </span>
                                             )}
-                                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                                            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
                                                 isActive
                                                     ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                                                     : isPassed
@@ -3052,7 +3052,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             </span>
                                             <div className="flex items-center gap-1.5">
                                                 {filterMode === 'day' && dp.dpTargetSales > 0 && (
-                                                    <span className="text-[10.5px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
+                                                    <span className="text-[11px] font-mono text-[oklch(50%_0.010_28)] tabular-nums">
                                                         (เป้า ฿{dp.dpTargetSales >= 1000 ? `${Math.round(dp.dpTargetSales / 1000)}k` : dp.dpTargetSales})
                                                     </span>
                                                 )}
@@ -3065,7 +3065,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             <span>
                                                 ลูกค้า <strong className="text-[oklch(18%_0.012_28)]">{dp.pax}</strong> ท่าน
                                                 {filterMode === 'day' && (
-                                                    <span className="text-[10.5px] ml-1 text-[oklch(55%_0.010_28)]">(สถิติ ~{dp.baselinePax})</span>
+                                                    <span className="text-[11px] ml-1 text-[oklch(55%_0.010_28)]">(สถิติ ~{dp.baselinePax})</span>
                                                 )}
                                             </span>
                                             <span>฿{dp.spendPerHead}/หัว</span>
@@ -3102,7 +3102,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left font-mono text-xs divide-y divide-[oklch(85%_0.012_28)]">
-                                <thead className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-[10px] uppercase">
+                                <thead className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-[11px] uppercase">
                                     <tr>
                                         <th className="p-2.5">ชั่วโมง (Hour)</th>
                                         <th className="p-2.5">ช่วงเวลา (Daypart)</th>
@@ -3137,12 +3137,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 <td className="p-2.5 font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
                                                     <span>{h}:00 - {h + 1}:00</span>
                                                     {isCurrentHour && (
-                                                        <span className="px-1 py-0.2 text-[8px] bg-[oklch(45%_0.08_140)] text-white uppercase">
+                                                        <span className="px-1 py-0.2 text-[11px] bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] uppercase">
                                                             NOW
                                                         </span>
                                                     )}
                                                     {isGoal && (
-                                                        <span className="px-1 py-0.2 text-[8px] bg-[oklch(50%_0.15_142)] text-white uppercase font-bold">
+                                                        <span className="px-1 py-0.2 text-[11px] bg-[oklch(50%_0.15_142)] text-[oklch(97%_0.008_28)] uppercase font-bold">
                                                             GOAL
                                                         </span>
                                                     )}
@@ -3156,7 +3156,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                             <span className="font-bold text-[oklch(18%_0.012_28)]">
                                                                 {(pt?.pax || 0).toLocaleString()} ท่าน
                                                             </span>
-                                                            <span className="text-[oklch(42%_0.010_28)] ml-1 text-[10px]">
+                                                            <span className="text-[oklch(42%_0.010_28)] ml-1 text-[11px]">
                                                                 / เฉลี่ย ~{pt?.avgPax || 0}
                                                             </span>
                                                         </>
@@ -3176,12 +3176,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 }`}>
                                                     <span>฿{(pt?.sale || 0).toLocaleString()}</span>
                                                     {isGoal && pt?.goalDeltaPct > 0 && (
-                                                        <span className="text-[9px] ml-1 text-[oklch(50%_0.15_142)]">
+                                                        <span className="text-[11px] ml-1 text-[oklch(50%_0.15_142)]">
                                                             (+{pt.goalDeltaPct}%)
                                                         </span>
                                                     )}
                                                     {filterMode === 'month' && (pt?.avgSales || 0) > 0 && (
-                                                        <span className="text-[10px] font-normal text-[oklch(42%_0.010_28)] ml-1 font-sans">
+                                                        <span className="text-[11px] font-normal text-[oklch(42%_0.010_28)] ml-1 font-sans">
                                                             (~฿{pt.avgSales.toLocaleString()}/วัน)
                                                         </span>
                                                     )}
@@ -3197,7 +3197,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                         <>
                                                             <span>{(pt?.bills || 0).toLocaleString()} บิล</span>
                                                             {(pt?.avgBills || 0) > 0 && (
-                                                                <span className="text-[10px] ml-1 text-[oklch(55%_0.010_28)]">
+                                                                <span className="text-[11px] ml-1 text-[oklch(55%_0.010_28)]">
                                                                     (~{pt.avgBills}/ว.)
                                                                 </span>
                                                             )}
@@ -3207,9 +3207,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     )}
                                                 </td>
                                                 <td className="p-2.5 text-right">
-                                                    <span className={`px-1.5 py-0.5 text-[10px] font-bold ${
+                                                    <span className={`px-1.5 py-0.5 text-[11px] font-bold ${
                                                         (pt?.seatOccupancyPct || 0) > 60
-                                                            ? 'bg-[oklch(52%_0.16_28)] text-white'
+                                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                                                             : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)]'
                                                     }`}>
                                                         {pt?.seatOccupancyPct || 0}%
@@ -3231,7 +3231,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             {filterMode === 'month' ? (
                                                 <>
                                                     <span>{(monthMetrics?.monthPax || 0).toLocaleString()} ท่าน</span>
-                                                    <span className="text-[oklch(42%_0.010_28)] ml-1 text-[10px] font-normal">
+                                                    <span className="text-[oklch(42%_0.010_28)] ml-1 text-[11px] font-normal">
                                                         / เฉลี่ย ~{monthMetrics ? Math.round(monthMetrics.monthPax / monthMetrics.activeDaysCount) : 0}
                                                     </span>
                                                 </>
@@ -3399,13 +3399,13 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-[oklch(18%_0.012_28)]">#{idx + 1}</span>
                                             <span>{d.date}</span>
-                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)]">
+                                            <span className="text-[11px] font-sans text-[oklch(50%_0.010_28)]">
                                                 ({d.isWeekend ? 'วันหยุด' : 'วันธรรมดา'})
                                             </span>
                                         </div>
                                         <div className="text-right">
                                             <span className="font-semibold text-[oklch(18%_0.012_28)]">฿{d.sales.toLocaleString()}</span>
-                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
+                                            <span className="text-[11px] font-sans text-[oklch(50%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
                                         </div>
                                     </div>
                                 ))}
@@ -3426,13 +3426,13 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-[oklch(18%_0.012_28)]">#{idx + 1}</span>
                                             <span>{d.date}</span>
-                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)]">
+                                            <span className="text-[11px] font-sans text-[oklch(50%_0.010_28)]">
                                                 ({d.isWeekend ? 'วันหยุด' : 'วันธรรมดา'})
                                             </span>
                                         </div>
                                         <div className="text-right">
                                             <span className="font-semibold text-[oklch(52%_0.16_28)]">฿{d.sales.toLocaleString()}</span>
-                                            <span className="text-[10.5px] font-sans text-[oklch(50%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
+                                            <span className="text-[11px] font-sans text-[oklch(50%_0.010_28)] ml-2">({d.pax} ท่าน)</span>
                                         </div>
                                     </div>
                                 ))}
@@ -3469,7 +3469,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 >
                                     <div className="flex items-center justify-between gap-1.5">
                                         <span className="font-semibold text-xs text-[oklch(18%_0.012_28)] truncate">{dp.thaiLabel}</span>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
                                             dp.status === 'active'
                                                 ? 'bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)]'
                                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(50%_0.010_28)]'

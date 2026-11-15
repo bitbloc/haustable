@@ -124,7 +124,7 @@ export default function AdminArcade() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="font-bold text-[10px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
                             [ ARCADE GAMING & WEEKLY REWARDS ]
                         </span>
                     </div>
@@ -140,7 +140,7 @@ export default function AdminArcade() {
                     <button
                         type="button"
                         onClick={() => fetchData(true)}
-                        className="px-3 py-2 bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
+                        className="px-3 py-2 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
                         title="รีเฟรชข้อมูล"
                     >
                         [ REFRESH ]
@@ -149,7 +149,7 @@ export default function AdminArcade() {
                         type="button"
                         onClick={handleRunDrawing}
                         disabled={drawingLoading}
-                        className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                        className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                     >
                         <span>{drawingLoading ? '[ กำลังประมวลผล... ]' : '[ ▶ จับรางวัล & รีเซ็ตสัปดาห์ ]'}</span>
                     </button>
@@ -157,17 +157,17 @@ export default function AdminArcade() {
             </div>
 
             {/* Rules & Rank Matrix Info Card */}
-            <div className="bg-white border border-[oklch(85%_0.012_28)] p-4 rounded-sm text-xs text-[oklch(42%_0.010_28)] space-y-2">
+            <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm text-xs text-[oklch(42%_0.010_28)] space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold">
                         <span className="uppercase text-[11px]">[ RULES ] กติกาการแจกเหรียญ xhaus & เกณฑ์ Rank:</span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
                         <span className="px-1.5 py-0.5 rounded-xs border bg-[#E9F344] text-[#181615] border-[#181615]">[RANK S+] 40+</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-[#BD4924] text-[#FAF7F2] border-[#181615]">[RANK S] 35–39</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-emerald-100 text-emerald-900 border-emerald-700">[RANK A] 20–34</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-amber-100 text-amber-900 border-amber-600">[RANK B] 10–19</span>
-                        <span className="px-1.5 py-0.5 rounded-xs border bg-stone-200 text-stone-700 border-stone-400">[RANK C] 0–9</span>
+                        <span className="px-1.5 py-0.5 rounded-xs border bg-[oklch(90%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]">[RANK C] 0–9</span>
                     </div>
                 </div>
                 <ul className="list-disc pl-5 space-y-1 text-[11px] text-[oklch(55%_0.010_28)]">
@@ -184,12 +184,12 @@ export default function AdminArcade() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="bg-[oklch(94%_0.02_140)] border border-[oklch(45%_0.08_140)] p-4 rounded-sm text-xs text-[oklch(18%_0.012_28)] relative shadow-sm"
+                        className="bg-[oklch(94%_0.02_140)] border border-[oklch(45%_0.08_140)] p-4 rounded-sm text-xs text-[oklch(18%_0.012_28)] relative "
                     >
                         <button
                             type="button"
                             onClick={() => setDrawResult(null)}
-                            className="absolute top-3 right-3 text-[oklch(45%_0.08_140)] hover:text-black cursor-pointer font-bold text-[10px]"
+                            className="absolute top-3 right-3 text-[oklch(45%_0.08_140)] hover:text-[oklch(18%_0.012_28)] cursor-pointer font-bold text-[11px]"
                         >
                             [ CLOSE ]
                         </button>
@@ -199,8 +199,8 @@ export default function AdminArcade() {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="bg-white p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
-                                <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)] block">
+                            <div className="bg-[oklch(99%_0.004_28)] p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
+                                <span className="text-[11px] uppercase font-bold text-[oklch(55%_0.010_28)] block">
                                     [ #01 TOP PLAYER // อันดับ 1 ประจำสัปดาห์ ]
                                 </span>
                                 <p className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
@@ -211,8 +211,8 @@ export default function AdminArcade() {
                                 </span>
                             </div>
 
-                            <div className="bg-white p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
-                                <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)] block">
+                            <div className="bg-[oklch(99%_0.004_28)] p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
+                                <span className="text-[11px] uppercase font-bold text-[oklch(55%_0.010_28)] block">
                                     [ RAFFLE WINNER // ผู้ชนะตั๋วสุ่มลุ้นโชค ]
                                 </span>
                                 <p className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
@@ -230,10 +230,10 @@ export default function AdminArcade() {
             {/* Grid Layout: Leaderboard & Raffle Tickets */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* 1. Leaderboard Table */}
-                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-4 shadow-2xs">
+                <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-4 ">
                     <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)] mb-3">
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)]">[ ROSTER ]</span>
+                            <span className="text-[11px] font-bold text-[oklch(52%_0.16_28)]">[ ROSTER ]</span>
                             <h3 className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                                 คะแนน Leaderboard สัปดาห์นี้ ({leaderboard.length} ผู้เล่น)
                             </h3>
@@ -250,7 +250,7 @@ export default function AdminArcade() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs border-collapse font-mono">
                                 <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase text-[10px]">
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase text-[11px]">
                                         <th className="py-2 px-2 w-12 text-center">อันดับ</th>
                                         <th className="py-2 px-2">ชื่อผู้เล่น</th>
                                         <th className="py-2 px-2 text-center">RANK</th>
@@ -268,9 +268,9 @@ export default function AdminArcade() {
                                                 className={isTop1 ? 'bg-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(98%_0.006_28)]'}
                                             >
                                                 <td className="py-2.5 px-2 text-center">
-                                                    <span className={`px-1.5 py-0.5 rounded-xs text-[10px] font-bold ${
+                                                    <span className={`px-1.5 py-0.5 rounded-xs text-[11px] font-bold ${
                                                         isTop1 
-                                                            ? 'bg-[oklch(52%_0.16_28)] text-white' 
+                                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 
                                                             : isTop3 
                                                                 ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]' 
                                                                 : 'text-[oklch(55%_0.010_28)]'
@@ -282,12 +282,12 @@ export default function AdminArcade() {
                                                     {item.display_name || 'Anonymous Player'}
                                                 </td>
                                                 <td className="py-2.5 px-2 text-center">
-                                                    <span className={`px-1.5 py-0.5 rounded-xs border text-[9px] font-bold ${rankInfo.badgeBg} ${rankInfo.badgeText} ${rankInfo.badgeBorder}`}>
+                                                    <span className={`px-1.5 py-0.5 rounded-xs border text-[11px] font-bold ${rankInfo.badgeBg} ${rankInfo.badgeText} ${rankInfo.badgeBorder}`}>
                                                         [{rankInfo.rank} // {rankInfo.titleTh}]
                                                     </span>
                                                 </td>
                                                 <td className="py-2.5 px-2 text-right font-bold text-[oklch(52%_0.16_28)]">
-                                                    {item.score} <span className="text-[10px] font-normal text-[oklch(55%_0.010_28)]">PTS</span>
+                                                    {item.score} <span className="text-[11px] font-normal text-[oklch(55%_0.010_28)]">PTS</span>
                                                 </td>
                                             </tr>
                                         )
@@ -299,10 +299,10 @@ export default function AdminArcade() {
                 </div>
 
                 {/* 2. Raffle Tickets Log */}
-                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-4 shadow-2xs">
+                <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-4 ">
                     <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)] mb-3">
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-[oklch(45%_0.08_140)]">[ RAFFLE ]</span>
+                            <span className="text-[11px] font-bold text-[oklch(45%_0.08_140)]">[ RAFFLE ]</span>
                             <h3 className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                                 ตั๋วสุ่มลุ้นโชคในสัปดาห์นี้ ({raffleTickets.length} ใบ)
                             </h3>
@@ -319,7 +319,7 @@ export default function AdminArcade() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs border-collapse font-mono">
                                 <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase text-[10px]">
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase text-[11px]">
                                         <th className="py-2 px-2">ชื่อผู้ถือตั๋ว</th>
                                         <th className="py-2 px-2 text-center">สถิติ (RANK)</th>
                                         <th className="py-2 px-2 text-right">วันที่ได้รับ</th>
@@ -332,11 +332,11 @@ export default function AdminArcade() {
                                         return (
                                             <tr key={log.id} className="hover:bg-[oklch(98%_0.006_28)]">
                                                 <td className="py-2.5 px-2 font-medium text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
-                                                    <span className="text-[9px] font-bold text-[oklch(45%_0.08_140)]">[TICKET]</span>
+                                                    <span className="text-[11px] font-bold text-[oklch(45%_0.08_140)]">[TICKET]</span>
                                                     <span>{profileName}</span>
                                                 </td>
                                                 <td className="py-2.5 px-2 text-center font-bold text-[oklch(18%_0.012_28)]">
-                                                    <span className={`px-1.5 py-0.5 rounded-xs border text-[9px] font-bold mr-1.5 ${ticketRank.badgeBg} ${ticketRank.badgeText} ${ticketRank.badgeBorder}`}>
+                                                    <span className={`px-1.5 py-0.5 rounded-xs border text-[11px] font-bold mr-1.5 ${ticketRank.badgeBg} ${ticketRank.badgeText} ${ticketRank.badgeBorder}`}>
                                                         [{ticketRank.rank}]
                                                     </span>
                                                     {log.score} PTS

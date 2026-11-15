@@ -61,7 +61,7 @@ function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
     const current = options.some(o => o.value === rawVal) ? rawVal : defaultVal;
     return (
         <div>
-            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
                 Receipt Width (ความกว้างตัวอักษรบนสลิป)
             </label>
             <select
@@ -75,7 +75,7 @@ function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
             >
                 {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <p className="text-[10px] text-[var(--color-neutral)] mt-1 leading-relaxed">
+            <p className="text-[11px] text-[var(--color-neutral)] mt-1 leading-relaxed">
                 สำหรับ Sunmi D2s Plus (80mm) แนะนำ 42 ตัวอักษรสำหรับใบเสร็จ (ป้องกันตัวเลข .00 ตกบรรทัดจากสระไทย) และ 48 ตัวอักษรสำหรับสลิปครัว/บาร์
             </p>
         </div>
@@ -427,14 +427,14 @@ export default function HardwarePrintersTab({
                                 <Printer size={16} />
                                 Cashier Printer (เครื่องพิมพ์แคชเชียร์)
                             </h2>
-                            <span className="px-2 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]">
+                            <span className="px-2 py-0.5 rounded font-mono text-[11px] font-bold uppercase tracking-wider bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]">
                                 {printerConfig.cashier_printer_type}
                             </span>
                         </div>
 
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
                                     Connection Type (การเชื่อมต่อ)
                                 </label>
                                 <select
@@ -453,7 +453,7 @@ export default function HardwarePrintersTab({
                             {printerConfig.cashier_printer_type === 'lan' && (
                                 <div className="grid grid-cols-3 gap-2">
                                     <div className="col-span-2">
-                                        <label className="block text-[9px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">IP Address</label>
+                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">IP Address</label>
                                         <input
                                             type="text"
                                             value={printerConfig.cashier_printer_ip || ''}
@@ -463,7 +463,7 @@ export default function HardwarePrintersTab({
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[9px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">Port</label>
+                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">Port</label>
                                         <input
                                             type="text"
                                             value={printerConfig.cashier_printer_port || '9100'}
@@ -477,7 +477,7 @@ export default function HardwarePrintersTab({
 
                             {printerConfig.cashier_printer_type === 'bluetooth' && (
                                 <div className="space-y-1">
-                                    <label className="block text-[9px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">Bluetooth Device Name / MAC</label>
+                                    <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">Bluetooth Device Name / MAC</label>
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -489,7 +489,7 @@ export default function HardwarePrintersTab({
                                         <button
                                             type="button"
                                             onClick={() => handleScanBluetooth('cashier')}
-                                            className="px-3 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[10px] font-bold uppercase rounded-lg cursor-pointer whitespace-nowrap"
+                                            className="px-3 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[11px] font-bold uppercase rounded-lg cursor-pointer whitespace-nowrap"
                                         >
                                             Scan & Pair
                                         </button>
@@ -498,7 +498,7 @@ export default function HardwarePrintersTab({
                             )}
 
                             <div>
-                                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
                                     Paper Width (ความกว้างกระดาษ)
                                 </label>
                                 <select
@@ -534,14 +534,14 @@ export default function HardwarePrintersTab({
                                 <Printer size={16} />
                                 Kitchen Printer (เครื่องพิมพ์ในครัว)
                             </h2>
-                            <span className="px-2 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]">
+                            <span className="px-2 py-0.5 rounded font-mono text-[11px] font-bold uppercase tracking-wider bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]">
                                 {printerConfig.kitchen_printer_type}
                             </span>
                         </div>
 
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
                                     Connection Type (การเชื่อมต่อ)
                                 </label>
                                 <select
@@ -560,7 +560,7 @@ export default function HardwarePrintersTab({
                             {printerConfig.kitchen_printer_type === 'lan' && (
                                 <div className="grid grid-cols-3 gap-2">
                                     <div className="col-span-2">
-                                        <label className="block text-[9px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">IP Address</label>
+                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">IP Address</label>
                                         <input
                                             type="text"
                                             value={printerConfig.kitchen_printer_ip || ''}
@@ -570,7 +570,7 @@ export default function HardwarePrintersTab({
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[9px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">Port</label>
+                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">Port</label>
                                         <input
                                             type="text"
                                             value={printerConfig.kitchen_printer_port || '9100'}
@@ -583,7 +583,7 @@ export default function HardwarePrintersTab({
                             )}
 
                             <div>
-                                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
                                     Paper Width (ความกว้างกระดาษ)
                                 </label>
                                 <select
@@ -629,7 +629,7 @@ export default function HardwarePrintersTab({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className={`px-2.5 py-1 rounded-md font-mono text-[10px] font-bold uppercase tracking-wider border ${
+                        <span className={`px-2.5 py-1 rounded-md font-mono text-[11px] font-bold uppercase tracking-wider border ${
                             audioMuted || audioVolume === 0 
                                 ? 'bg-amber-50 border-amber-300 text-amber-900' 
                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
@@ -642,9 +642,9 @@ export default function HardwarePrintersTab({
                                 unlockAudioEngine();
                                 toggleAudioMute();
                             }}
-                            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md border transition-colors cursor-pointer touch-manipulation ${
+                            className={`px-3 py-1 text-[11px] font-mono font-bold uppercase rounded-md border transition-colors cursor-pointer touch-manipulation ${
                                 audioMuted 
-                                    ? 'bg-amber-600 text-white border-amber-700 hover:bg-amber-700' 
+                                    ? 'bg-amber-600 text-[oklch(97%_0.008_28)] border-amber-700 hover:bg-amber-700' 
                                     : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                             }`}
                         >
@@ -657,7 +657,7 @@ export default function HardwarePrintersTab({
                     {/* Volume Slider & Presets */}
                     <div className="bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] space-y-3">
                         <div className="flex justify-between items-center text-xs font-mono">
-                            <span className="text-[var(--color-neutral)] uppercase font-bold text-[10px]">ระดับความดังของเสียง</span>
+                            <span className="text-[var(--color-neutral)] uppercase font-bold text-[11px]">ระดับความดังของเสียง</span>
                             <span className="font-bold text-[var(--color-ink)] text-sm">{audioVolume}%</span>
                         </div>
                         <input
@@ -679,7 +679,7 @@ export default function HardwarePrintersTab({
                             }}
                             className="w-full h-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"
                         />
-                        <div className="flex justify-between text-[9px] font-mono text-[var(--color-muted)]">
+                        <div className="flex justify-between text-[11px] font-mono text-[var(--color-muted)]">
                             <span>0% (ปิดเสียง)</span>
                             <span>50%</span>
                             <span>100% (ดังสุด)</span>
@@ -704,9 +704,9 @@ export default function HardwarePrintersTab({
                                             setAudioVolume(preset.val);
                                             if (preset.val > 0) testPlayAlertSound(preset.val);
                                         }}
-                                        className={`py-1.5 px-1 rounded-md border text-center text-[10px] font-mono font-bold uppercase transition-all cursor-pointer touch-manipulation active:scale-95 ${
+                                        className={`py-1.5 px-1 rounded-md border text-center text-[11px] font-mono font-bold uppercase transition-all cursor-pointer touch-manipulation active:scale-95 ${
                                             isSelected 
-                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] shadow-xs' 
+                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] ' 
                                                 : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)]'
                                         }`}
                                     >
@@ -720,7 +720,7 @@ export default function HardwarePrintersTab({
                     {/* Test Audio & Engine Info */}
                     <div className="bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] flex flex-col justify-between space-y-3">
                         <div>
-                            <h3 className="font-mono font-bold uppercase text-[10px] text-[var(--color-ink)] mb-1">
+                            <h3 className="font-mono font-bold uppercase text-[11px] text-[var(--color-ink)] mb-1">
                                 Android APK & Sunmi POS Zero-Stutter Mastering
                             </h3>
                             <p className="text-[11px] font-mono text-[var(--color-neutral)] leading-relaxed">
@@ -738,9 +738,9 @@ export default function HardwarePrintersTab({
                                 testPlayAlertSound(null, 1200);
                                 setTimeout(() => setIsTestingAudio(false), 1200);
                             }}
-                            className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 shadow-xs ${
+                            className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${
                                 isTestingAudio
-                                    ? 'bg-[var(--color-accent)] text-white opacity-90 cursor-not-allowed'
+                                    ? 'bg-[var(--color-accent)] text-[oklch(97%_0.008_28)] opacity-90 cursor-not-allowed'
                                     : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
                             }`}
                         >
@@ -762,15 +762,15 @@ export default function HardwarePrintersTab({
                             พอร์ตจำลองเครื่องพิมพ์เสมือน (Port 9100) เพื่อดักจับออเดอร์ LINE MAN เข้า POS อัตโนมัติ
                         </p>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink)] animate-pulse" />
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink)] " />
                         PORT 9100 LISTENING
                     </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2 bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
-                        <h3 className="font-mono font-bold uppercase text-[10px] text-[var(--color-ink)]">
+                        <h3 className="font-mono font-bold uppercase text-[11px] text-[var(--color-ink)]">
                             การตั้งค่าในแอป Wongnai Merchant App (WMA)
                         </h3>
                         <ol className="space-y-1 text-[11px] font-mono text-[var(--color-muted)] list-decimal list-inside leading-relaxed">
@@ -784,7 +784,7 @@ export default function HardwarePrintersTab({
 
                     <div className="space-y-2 bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] flex flex-col justify-between">
                         <div>
-                            <h3 className="font-mono font-bold uppercase text-[10px] text-[var(--color-ink)]">
+                            <h3 className="font-mono font-bold uppercase text-[11px] text-[var(--color-ink)]">
                                 ตรวจสอบและทดสอบการรับออเดอร์ (Diagnostic Test)
                             </h3>
                             <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1 leading-relaxed">
@@ -802,7 +802,7 @@ export default function HardwarePrintersTab({
                                     toast.error('ทดสอบไม่สำเร็จ: ' + (e.message || 'Error'));
                                 }
                             }}
-                            className="w-full py-2.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                            className="w-full py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer "
                         >
                             ทดสอบยิงออเดอร์จำลอง LINE MAN (Simulate Test)
                         </button>
@@ -832,7 +832,7 @@ export default function HardwarePrintersTab({
                             <h3 className="text-xs font-mono font-bold uppercase text-[var(--color-ink)]">
                                 หมวดหมู่ยังไม่ระบุ
                             </h3>
-                            <span className="text-[10px] bg-[var(--color-paper-2)] px-2 py-0.5 rounded font-mono font-bold text-[var(--color-ink)]">
+                            <span className="text-[11px] bg-[var(--color-paper-2)] px-2 py-0.5 rounded font-mono font-bold text-[var(--color-ink)]">
                                 {allCategories.filter(cat => !(printerConfig.kitchen_categories || []).includes(cat.id) && !(printerConfig.bar_categories || []).includes(cat.id)).length}
                             </span>
                         </div>
@@ -851,14 +851,14 @@ export default function HardwarePrintersTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleAssignCategory(cat.id, 'kitchen')}
-                                                className="bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[9px] font-bold px-2 py-1 rounded cursor-pointer"
+                                                className="bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[11px] font-bold px-2 py-1 rounded cursor-pointer"
                                             >
                                                 + ครัว
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleAssignCategory(cat.id, 'bar')}
-                                                className="bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-mono text-[9px] font-bold px-2 py-1 rounded cursor-pointer"
+                                                className="bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-mono text-[11px] font-bold px-2 py-1 rounded cursor-pointer"
                                             >
                                                 + บาร์
                                             </button>
@@ -879,7 +879,7 @@ export default function HardwarePrintersTab({
                             <h3 className="text-xs font-mono font-bold uppercase text-[var(--color-ink)]">
                                 พิมพ์ออกครัว (Kitchen)
                             </h3>
-                            <span className="text-[10px] bg-[var(--color-paper-2)] px-2 py-0.5 rounded font-mono font-bold text-[var(--color-ink)]">
+                            <span className="text-[11px] bg-[var(--color-paper-2)] px-2 py-0.5 rounded font-mono font-bold text-[var(--color-ink)]">
                                 {(printerConfig.kitchen_categories || []).length}
                             </span>
                         </div>
@@ -898,7 +898,7 @@ export default function HardwarePrintersTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleAssignCategory(cat.id, 'bar')}
-                                                className="bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-mono text-[9px] font-bold px-1.5 py-1 rounded cursor-pointer"
+                                                className="bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-mono text-[11px] font-bold px-1.5 py-1 rounded cursor-pointer"
                                             >
                                                 → บาร์
                                             </button>
@@ -926,7 +926,7 @@ export default function HardwarePrintersTab({
                             <h3 className="text-xs font-mono font-bold uppercase text-[var(--color-ink)]">
                                 พิมพ์ออกบาร์ (Bar)
                             </h3>
-                            <span className="text-[10px] bg-[var(--color-paper-2)] px-2 py-0.5 rounded font-mono font-bold text-[var(--color-ink)]">
+                            <span className="text-[11px] bg-[var(--color-paper-2)] px-2 py-0.5 rounded font-mono font-bold text-[var(--color-ink)]">
                                 {(printerConfig.bar_categories || []).length}
                             </span>
                         </div>
@@ -945,7 +945,7 @@ export default function HardwarePrintersTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleAssignCategory(cat.id, 'kitchen')}
-                                                className="bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-mono text-[9px] font-bold px-1.5 py-1 rounded cursor-pointer"
+                                                className="bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-mono text-[11px] font-bold px-1.5 py-1 rounded cursor-pointer"
                                             >
                                                 ← ครัว
                                             </button>
@@ -982,7 +982,7 @@ export default function HardwarePrintersTab({
                                 key={tab}
                                 type="button"
                                 onClick={() => setPreviewTab(tab)}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-colors cursor-pointer ${
+                                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase transition-colors cursor-pointer ${
                                     previewTab === tab
                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                         : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
@@ -1004,7 +1004,7 @@ export default function HardwarePrintersTab({
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                    <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
                                         ชื่อร้านบนหัวสลิป (Shop Header Name)
                                     </label>
                                     <input
@@ -1016,7 +1016,7 @@ export default function HardwarePrintersTab({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                    <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
                                         เบอร์โทรศัพท์ (Phone)
                                     </label>
                                     <input
@@ -1029,7 +1029,7 @@ export default function HardwarePrintersTab({
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
                                     ที่อยู่ร้านบนสลิป (Address)
                                 </label>
                                 <input
@@ -1041,7 +1041,7 @@ export default function HardwarePrintersTab({
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
                                     เลขประจำตัวผู้เสียภาษี (VAT / Tax ID)
                                 </label>
                                 <input
@@ -1073,12 +1073,12 @@ export default function HardwarePrintersTab({
                                         onClick={() => handleSavePrinter({ ...printerConfig, divider_style: style.id })}
                                         className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer flex flex-col justify-between ${
                                             (printerConfig.divider_style || 'dashed') === style.id
-                                                ? 'bg-[var(--color-paper-2)] border-[var(--color-ink)] shadow-xs'
+                                                ? 'bg-[var(--color-paper-2)] border-[var(--color-ink)] '
                                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:border-[var(--color-neutral)]'
                                         }`}
                                     >
                                         <span className="text-[11px] font-mono font-bold text-[var(--color-ink)]">{style.name}</span>
-                                        <span className="font-mono text-[10px] text-[var(--color-neutral)] mt-1 overflow-hidden whitespace-nowrap block">
+                                        <span className="font-mono text-[11px] text-[var(--color-neutral)] mt-1 overflow-hidden whitespace-nowrap block">
                                             {style.pattern}
                                         </span>
                                     </button>
@@ -1102,12 +1102,12 @@ export default function HardwarePrintersTab({
                                         }}
                                         className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
                                             printerConfig.footer_ascii_art === preset.art
-                                                ? 'bg-[var(--color-paper-2)] border-[var(--color-ink)] shadow-xs'
+                                                ? 'bg-[var(--color-paper-2)] border-[var(--color-ink)] '
                                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:border-[var(--color-neutral)]'
                                         }`}
                                     >
                                         <span className="text-xs font-mono font-bold text-[var(--color-ink)]">{preset.name}</span>
-                                        <pre className="font-mono text-[9px] text-[var(--color-neutral)] mt-1.5 whitespace-pre leading-tight bg-[var(--color-paper-2)] p-2 rounded border border-[var(--color-rule)]">
+                                        <pre className="font-mono text-[11px] text-[var(--color-neutral)] mt-1.5 whitespace-pre leading-tight bg-[var(--color-paper-2)] p-2 rounded border border-[var(--color-rule)]">
                                             {preset.art}
                                         </pre>
                                     </button>
@@ -1115,7 +1115,7 @@ export default function HardwarePrintersTab({
                             </div>
 
                             <div className="space-y-1 pt-2">
-                                <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)]">
+                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)]">
                                     ข้อความ ASCII Art ที่ใช้งานอยู่
                                 </label>
                                 <textarea
@@ -1128,7 +1128,7 @@ export default function HardwarePrintersTab({
                             </div>
 
                             <div className="space-y-1 pt-2 border-t border-[var(--color-rule)]">
-                                <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)]">
+                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)]">
                                     ข้อความท้ายสลิปหลัก (Shop Footer Text)
                                 </label>
                                 <input
@@ -1148,28 +1148,28 @@ export default function HardwarePrintersTab({
 
                     {/* Right Column: Physical Simulated Receipt Card (5 cols) */}
                     <div className="lg:col-span-5 flex flex-col items-center">
-                        <div className="text-[10px] font-mono font-bold uppercase text-[var(--color-neutral)] mb-2 flex items-center gap-1.5">
+                        <div className="text-[11px] font-mono font-bold uppercase text-[var(--color-neutral)] mb-2 flex items-center gap-1.5">
                             <span>Live Thermal Receipt Mockup</span>
-                            <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded text-[9px]">
+                            <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded text-[11px]">
                                 {printerConfig.cashier_paper_size || '80mm'}
                             </span>
                         </div>
 
                         {/* Simulated Thermal Paper Card */}
-                        <div className="w-full max-w-[320px] bg-white border border-[var(--color-rule)] shadow-lg p-5 text-black font-mono text-[11px] leading-snug rounded-t-xl select-none">
+                        <div className="w-full max-w-[320px] bg-[oklch(99%_0.004_28)] border border-[var(--color-rule)] shadow-lg p-5 text-[oklch(18%_0.012_28)] font-mono text-[11px] leading-snug rounded-t-xl select-none">
                             {previewTab === 'billing' ? (
                                 <div className="text-center pb-2 mb-2">
                                     <div className="font-bold text-base tracking-tight uppercase">
                                         {settings.receipt_shop_name || 'IN THE HAUS'}
                                     </div>
                                     {settings.receipt_shop_address && (
-                                        <div className="text-[9px] text-gray-600 mt-0.5">{settings.receipt_shop_address}</div>
+                                        <div className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">{settings.receipt_shop_address}</div>
                                     )}
                                     {settings.receipt_shop_phone && (
-                                        <div className="text-[9px] text-gray-600">TEL: {settings.receipt_shop_phone}</div>
+                                        <div className="text-[11px] text-[oklch(42%_0.010_28)]">TEL: {settings.receipt_shop_phone}</div>
                                     )}
                                     {settings.receipt_shop_vat && (
-                                        <div className="text-[9px] text-gray-600">TAX ID: {settings.receipt_shop_vat}</div>
+                                        <div className="text-[11px] text-[oklch(42%_0.010_28)]">TAX ID: {settings.receipt_shop_vat}</div>
                                     )}
                                 </div>
                             ) : (
@@ -1181,18 +1181,18 @@ export default function HardwarePrintersTab({
                             )}
 
                             {/* Divider Line */}
-                            <div className="text-center font-mono text-[10px] overflow-hidden whitespace-nowrap my-1 font-bold">
+                            <div className="text-center font-mono text-[11px] overflow-hidden whitespace-nowrap my-1 font-bold">
                                 {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                             </div>
 
                             {/* Queue & Table Box */}
-                            <div className="border-2 border-black p-2 text-center my-3 bg-gray-50">
+                            <div className="border-2 border-[oklch(18%_0.012_28)] p-2 text-center my-3 bg-[oklch(97%_0.008_28)]">
                                 <div className="text-sm font-bold uppercase">โต๊ะ 04 (TABLE 04)</div>
                                 <div className="text-xs font-bold mt-0.5">คิว: #HAUS-102</div>
                             </div>
 
                             {previewTab === 'billing' && (
-                                <div className="my-2 text-[10px] space-y-0.5">
+                                <div className="my-2 text-[11px] space-y-0.5">
                                     <div>วันที่: {new Date().toLocaleString('th-TH')}</div>
                                     <div>ลูกค้า: Walk-in</div>
                                     <div>พนักงาน: CASHIER A</div>
@@ -1200,7 +1200,7 @@ export default function HardwarePrintersTab({
                             )}
 
                             {/* Divider Line */}
-                            <div className="text-center font-mono text-[10px] overflow-hidden whitespace-nowrap my-1 font-bold">
+                            <div className="text-center font-mono text-[11px] overflow-hidden whitespace-nowrap my-1 font-bold">
                                 {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                             </div>
 
@@ -1211,24 +1211,24 @@ export default function HardwarePrintersTab({
                                     <span className="flex-1 pr-1 truncate">ข้าวผัดกระเพราเนื้อสับไข่ดาว</span>
                                     <span className="shrink-0 tabular-nums">145.-</span>
                                 </div>
-                                <div className="text-[9px] text-gray-600 pl-6">+ ไข่ดาวสุกพิเศษ</div>
+                                <div className="text-[11px] text-[oklch(42%_0.010_28)] pl-6">+ ไข่ดาวสุกพิเศษ</div>
 
                                 <div className="flex justify-between items-start font-bold">
                                     <span className="w-6 shrink-0">2x</span>
                                     <span className="flex-1 pr-1 truncate">MATCHA LATTE ICE</span>
                                     <span className="shrink-0 tabular-nums">240.-</span>
                                 </div>
-                                <div className="text-[9px] text-gray-600 pl-6">+ หวาน 50%</div>
+                                <div className="text-[11px] text-[oklch(42%_0.010_28)] pl-6">+ หวาน 50%</div>
                             </div>
 
                             {/* Divider Line */}
-                            <div className="text-center font-mono text-[10px] overflow-hidden whitespace-nowrap my-1 font-bold">
+                            <div className="text-center font-mono text-[11px] overflow-hidden whitespace-nowrap my-1 font-bold">
                                 {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                             </div>
 
                             {/* Billing Totals */}
                             {previewTab === 'billing' && (
-                                <div className="space-y-1 text-[10px] my-2">
+                                <div className="space-y-1 text-[11px] my-2">
                                     <div className="flex justify-between">
                                         <span>จำนวนชิ้น</span>
                                         <span className="tabular-nums">3 ชิ้น</span>
@@ -1245,17 +1245,17 @@ export default function HardwarePrintersTab({
                             )}
 
                             {/* Divider Line */}
-                            <div className="text-center font-mono text-[10px] overflow-hidden whitespace-nowrap my-1 font-bold">
+                            <div className="text-center font-mono text-[11px] overflow-hidden whitespace-nowrap my-1 font-bold">
                                 {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                             </div>
 
                             {/* ASCII Footer */}
                             {previewTab === 'billing' && (
                                 <>
-                                    <div className="text-center my-3 whitespace-pre font-mono text-[9px] font-bold leading-tight bg-gray-50 p-2 rounded border border-dashed border-gray-300">
+                                    <div className="text-center my-3 whitespace-pre font-mono text-[11px] font-bold leading-tight bg-[oklch(97%_0.008_28)] p-2 rounded border border-dashed border-[oklch(85%_0.012_28)]">
                                         {printerConfig.footer_ascii_art || `T H A N K   Y O U\n  S E E   Y O U   A G A I N`}
                                     </div>
-                                    <div className="text-center font-bold text-[9px] uppercase tracking-wider">
+                                    <div className="text-center font-bold text-[11px] uppercase tracking-wider">
                                         {printerConfig.shop_footer_text || settings.receipt_shop_footer || 'THANK YOU FOR YOUR VISIT'}
                                     </div>
                                 </>
@@ -1274,7 +1274,7 @@ export default function HardwarePrintersTab({
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col font-mono text-[var(--color-ink)]">
                         <div className="bg-[var(--color-ink)] text-[var(--color-paper)] p-4 flex justify-between items-center">
                             <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                <span className="animate-pulse">●</span> SCANNING FOR PRINTERS
+                                <span className="">●</span> SCANNING FOR PRINTERS
                             </span>
                             <button
                                 type="button"
@@ -1286,7 +1286,7 @@ export default function HardwarePrintersTab({
                         </div>
 
                         <div className="p-4 flex-1 overflow-y-auto max-h-72 space-y-2">
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-neutral)]">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-neutral)]">
                                 Select printer from the list below:
                             </p>
 
@@ -1305,7 +1305,7 @@ export default function HardwarePrintersTab({
                                             className="w-full text-left px-4 py-3 min-h-[44px] hover:bg-[var(--color-paper)] text-xs font-bold text-[var(--color-ink)] flex items-center justify-between transition-colors cursor-pointer"
                                         >
                                             <span>{device.name}</span>
-                                            <span className="text-[9px] text-[var(--color-neutral)] font-normal">{device.deviceId}</span>
+                                            <span className="text-[11px] text-[var(--color-neutral)] font-normal">{device.deviceId}</span>
                                         </button>
                                     ))}
                                 </div>

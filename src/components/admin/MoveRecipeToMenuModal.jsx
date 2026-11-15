@@ -95,7 +95,7 @@ export default function MoveRecipeToMenuModal({ item, onClose, onMoved }) {
                 className={`w-full sm:max-w-md max-h-[88dvh] flex flex-col bg-[oklch(97%_0.008_28)] border ${RULE} text-[oklch(18%_0.012_28)] font-sans`}
                 onClick={e => e.stopPropagation()}>
                 <div className={`shrink-0 px-4 pt-4 pb-3 border-b ${RULE}`}>
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">MOVE TO MENU</span>
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">MOVE TO MENU</span>
                     <h2 id="move-recipe-title" className="font-bold text-base leading-7 break-words">ย้าย "{item.name}" ไปเป็นสูตรของเมนู</h2>
                     <p className={`text-[12px] leading-5 ${MUTED}`}>
                         ส่วนผสมจะไปอยู่ที่สูตรของเมนูที่เลือก ใช้ทั้งคิดต้นทุนและตัดสต๊อก แล้วลบสูตรต่อแก้วนี้ออก
@@ -103,9 +103,9 @@ export default function MoveRecipeToMenuModal({ item, onClose, onMoved }) {
                 </div>
                 <div className={`shrink-0 p-3 border-b ${RULE}`}>
                     <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาเมนู..." aria-label="ค้นหาเมนู"
-                        className={`w-full p-2 border ${RULE} bg-white text-[14px] outline-none focus:border-black`} />
+                        className={`w-full p-2 border ${RULE} bg-[oklch(99%_0.004_28)] text-[14px] outline-none focus:border-[oklch(18%_0.012_28)]`} />
                 </div>
-                <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-[oklch(90%_0.008_28)] bg-white" role="listbox" aria-label="เมนู">
+                <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]" role="listbox" aria-label="เมนู">
                     {matches.map(m => (
                         <li key={m.id}>
                             <button type="button" role="option" aria-selected={target?.id === m.id} onClick={() => setTarget(m)}
@@ -117,9 +117,9 @@ export default function MoveRecipeToMenuModal({ item, onClose, onMoved }) {
                     {matches.length === 0 && <li className={`px-4 py-4 text-[14px] ${NEUTRAL}`}>พิมพ์ชื่อเมนูเพื่อค้นหา</li>}
                 </ul>
                 <div className={`shrink-0 grid grid-cols-2 border-t ${RULE} divide-x divide-[oklch(85%_0.012_28)]`}>
-                    <button type="button" onClick={onClose} disabled={busy} className="py-3 font-bold text-[14px] bg-white hover:bg-[oklch(94%_0.010_28)] cursor-pointer disabled:opacity-40">ยกเลิก</button>
+                    <button type="button" onClick={onClose} disabled={busy} className="py-3 font-bold text-[14px] bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer disabled:opacity-40">ยกเลิก</button>
                     <button type="button" onClick={move} disabled={!target || busy}
-                        className="py-3 font-bold text-[14px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer disabled:opacity-40">
+                        className="py-3 font-bold text-[14px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(18%_0.012_28)] cursor-pointer disabled:opacity-40">
                         {busy ? 'กำลังย้าย...' : target ? `ย้ายไป ${target.name.length > 18 ? target.name.slice(0, 18) + '…' : target.name}` : 'เลือกเมนู'}
                     </button>
                 </div>

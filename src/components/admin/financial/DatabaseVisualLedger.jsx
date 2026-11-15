@@ -115,7 +115,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(97%_0.008_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
                                 LEDGER // STREAM
                             </span>
                             <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
@@ -189,7 +189,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                 onClick={() => setChannelFilter(btn.id)}
                                 className={`px-2.5 py-1.5 font-bold transition-colors whitespace-nowrap ${
                                     channelFilter === btn.id
-                                        ? 'bg-[oklch(52%_0.16_28)] text-white'
+                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                                         : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
                                 }`}
                             >
@@ -268,7 +268,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                                     </div>
                                                     <button
                                                         onClick={() => handleCopyId(tx.id)}
-                                                        className="text-[10px] text-[oklch(42%_0.010_28)] hover:text-[oklch(52%_0.16_28)] font-mono block mt-0.5 hover:underline"
+                                                        className="text-[11px] text-[oklch(42%_0.010_28)] hover:text-[oklch(52%_0.16_28)] font-mono block mt-0.5 hover:underline"
                                                         title="Click to copy full UUID"
                                                     >
                                                         #{tx.id.slice(0, 8)} {copiedId === tx.id ? '[COPIED]' : ''}
@@ -281,7 +281,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                                         <span className="font-bold text-xs px-2 py-0.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
                                                             {tx.tableName || (isDineIn ? 'WALK-IN' : 'PICKUP')}
                                                         </span>
-                                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]">
+                                                        <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]">
                                                             {isDineIn ? 'DINE-IN' : 'PICKUP'}
                                                         </span>
                                                     </div>
@@ -293,7 +293,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                                         {tx.guestName || 'Guest'}
                                                     </div>
                                                     {tx.memberTier && (
-                                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(52%_0.16_28)] inline-block mt-0.5">
+                                                        <span className="text-[11px] font-mono font-bold px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(52%_0.16_28)] inline-block mt-0.5">
                                                             TIER: {tx.memberTier}
                                                         </span>
                                                     )}
@@ -312,7 +312,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                                     >
                                                         {tx.items?.length || 0} รายการ {isExpanded ? '▲' : '▼'}
                                                     </button>
-                                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] truncate max-w-[160px] font-sans">
+                                                    <div className="text-[11px] text-[oklch(42%_0.010_28)] truncate max-w-[160px] font-sans">
                                                         {(tx.items || []).map(i => i.name).slice(0, 2).join(', ')}
                                                         {(tx.items?.length || 0) > 2 ? '…' : ''}
                                                     </div>
@@ -330,7 +330,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                                     <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                                         ฿{parseFloat(tx.total_amount || 0).toLocaleString()}
                                                     </div>
-                                                    <div className="text-[10px] font-bold text-[oklch(45%_0.08_140)]">
+                                                    <div className="text-[11px] font-bold text-[oklch(45%_0.08_140)]">
                                                         {tx.status === 'completed' ? 'SETTLED' : tx.status.toUpperCase()}
                                                     </div>
                                                 </td>
@@ -368,7 +368,7 @@ export default function DatabaseVisualLedger({ rawTransactions = [], timeRangeLa
                                                                     <div key={idx} className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-between">
                                                                         <div>
                                                                             <div className="font-bold text-[oklch(18%_0.012_28)] font-sans">{item.name}</div>
-                                                                            <div className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                                                            <div className="text-[11px] text-[oklch(42%_0.010_28)]">
                                                                                 {item.quantity} x ฿{item.price_at_time || item.price}
                                                                             </div>
                                                                         </div>

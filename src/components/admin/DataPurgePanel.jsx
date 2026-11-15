@@ -285,14 +285,14 @@ export default function DataPurgePanel() {
             )}
 
             {/* Header Banner - Dieter Rams / Thai Modern Industrial Style */}
-            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-6 rounded-2xl shadow-sm">
+            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-6 rounded-2xl ">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="bg-[oklch(18%_0.012_28)] text-white text-[10px] font-mono px-2 py-0.5 rounded tracking-wider uppercase font-bold">
+                            <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-mono px-2 py-0.5 rounded tracking-wider uppercase font-bold">
                                 SYSTEM UTILITY
                             </span>
-                            <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] font-bold">
+                            <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)] font-bold">
                                 GO-LIVE DATA PURGE
                             </span>
                         </div>
@@ -308,7 +308,7 @@ export default function DataPurgePanel() {
                         type="button"
                         onClick={fetchRecordCounts}
                         disabled={loadingCounts}
-                        className="self-start md:self-auto flex items-center gap-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                        className="self-start md:self-auto flex items-center gap-2 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                     >
                         <RefreshCw size={14} className={loadingCounts ? 'animate-spin' : ''} />
                         รีเฟรชยอดข้อมูล
@@ -317,7 +317,7 @@ export default function DataPurgePanel() {
 
                 {/* Safe CRM Guarantee Banner */}
                 <div className="mt-5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-4 flex items-start gap-3">
-                    <div className="p-2 bg-emerald-600 text-white rounded-lg shrink-0 mt-0.5">
+                    <div className="p-2 bg-emerald-600 text-[oklch(97%_0.008_28)] rounded-lg shrink-0 mt-0.5">
                         <ShieldCheck size={18} strokeWidth={2.2} />
                     </div>
                     <div>
@@ -333,15 +333,15 @@ export default function DataPurgePanel() {
             </div>
 
             {/* Master All-In-One Purge CTA */}
-            <div className="bg-[#1A1A1A] text-white p-6 rounded-2xl border border-black shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="bg-[#1A1A1A] text-[oklch(97%_0.008_28)] p-6 rounded-2xl border border-[oklch(18%_0.012_28)] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5">
                 <div className="space-y-1 max-w-2xl">
-                    <div className="inline-flex items-center gap-1.5 bg-[#E9F344] text-[#1A1A1A] px-2.5 py-0.5 rounded text-[10px] font-mono font-black uppercase tracking-wider">
+                    <div className="inline-flex items-center gap-1.5 bg-[#E9F344] text-[#1A1A1A] px-2.5 py-0.5 rounded text-[11px] font-mono font-black uppercase tracking-wider">
                         ⚡ ALL-IN-ONE GO-LIVE RESET
                     </div>
-                    <h3 className="text-base font-bold text-white tracking-tight">
+                    <h3 className="text-base font-bold text-[oklch(97%_0.008_28)] tracking-tight">
                         ล้างข้อมูลทดสอบทั้งหมดพร้อมกัน (Wipe All Operational Test Data)
                     </h3>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
+                    <p className="text-xs text-[oklch(50%_0.010_28)] leading-relaxed">
                         ล้างข้อมูลออเดอร์, บิลขาย, กะการเงิน, ประวัติสต็อก, ภาษี และบันทึกกิจกรรมทั้งหมดในคลิกเดียว เพื่อเตรียมเปิดร้านจริงวันที่ 1 โดยยังคงข้อมูลลูกค้า CRM, เมนูอาหาร และผังโต๊ะไว้ครบถ้วน
                     </p>
                 </div>
@@ -358,7 +358,7 @@ export default function DataPurgePanel() {
                         warningNotes: 'การดำเนินการนี้จะลบข้อมูลธุรกรรมการทดสอบทั้งหมด แต่จะเก็บรายชื่อลูกค้า CRM เมนู และการตั้งค่าร้านไว้ 100%',
                         hasStockZeroOption: true
                     })}
-                    className="shrink-0 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs px-6 py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer border border-red-500"
+                    className="shrink-0 bg-red-600 hover:bg-red-700 active:scale-95 text-[oklch(97%_0.008_28)] font-bold text-xs px-6 py-3.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer border border-red-500"
                 >
                     <Trash2 size={16} />
                     ล้างข้อมูลทดสอบทั้งหมด
@@ -372,12 +372,12 @@ export default function DataPurgePanel() {
                     return (
                         <div
                             key={cat.id}
-                            className="bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)] p-5 rounded-2xl shadow-sm transition-all flex flex-col justify-between"
+                            className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)] p-5 rounded-2xl transition-all flex flex-col justify-between"
                         >
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between gap-2 border-b border-[oklch(94%_0.010_28)] pb-3">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)]">
+                                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)]">
                                             {cat.badge}
                                         </span>
                                         <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate">
@@ -385,7 +385,7 @@ export default function DataPurgePanel() {
                                         </span>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200">
+                                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(90%_0.008_28)]">
                                             {cat.recordsCount} รายการ
                                         </span>
                                     </div>
@@ -396,13 +396,13 @@ export default function DataPurgePanel() {
                                 </p>
 
                                 <div className="bg-[oklch(97%_0.008_28)] rounded-lg p-2.5 text-[11px] font-mono text-[oklch(42%_0.010_28)] border border-[oklch(90%_0.010_28)]">
-                                    <div className="font-bold text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider mb-1">
+                                    <div className="font-bold text-[11px] text-[oklch(55%_0.010_28)] uppercase tracking-wider mb-1">
                                         ขอบเขตข้อมูลในระบบ:
                                     </div>
                                     <div className="text-[oklch(18%_0.012_28)] font-sans text-xs">
                                         {cat.recordsBreakdown}
                                     </div>
-                                    <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-1 truncate">
+                                    <div className="text-[11px] text-[oklch(55%_0.010_28)] mt-1 truncate">
                                         ตาราง: {cat.tables.join(', ')}
                                     </div>
                                 </div>
@@ -410,11 +410,11 @@ export default function DataPurgePanel() {
 
                             <div className="mt-4 pt-3 border-t border-[oklch(94%_0.010_28)] flex items-center justify-between">
                                 {cat.isCrmSafe ? (
-                                    <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                                    <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
                                         <ShieldCheck size={13} /> ไม่ลบรายชื่อสมาชิก
                                     </span>
                                 ) : (
-                                    <span className="text-[10px] text-zinc-500 font-mono">
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] font-mono">
                                         รหัส: 1500323553
                                     </span>
                                 )}
@@ -422,10 +422,10 @@ export default function DataPurgePanel() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveModal(cat)}
-                                    className={`text-xs font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                                    className={`text-xs font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                                         isHighDanger
-                                            ? 'bg-red-50 hover:bg-red-600 hover:text-white text-red-700 border border-red-200'
-                                            : 'bg-zinc-100 hover:bg-zinc-800 hover:text-white text-zinc-800 border border-zinc-300'
+                                            ? 'bg-red-50 hover:bg-red-600 hover:text-[oklch(97%_0.008_28)] text-red-700 border border-red-200'
+                                            : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]'
                                     }`}
                                 >
                                     <Trash2 size={13} />
@@ -438,7 +438,7 @@ export default function DataPurgePanel() {
             </div>
 
             {/* Protected Master Data Legend */}
-            <div className="bg-white border border-[oklch(85%_0.012_28)] p-5 rounded-2xl shadow-sm">
+            <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-5 rounded-2xl ">
                 <div className="flex items-center gap-2 mb-3">
                     <Database size={16} className="text-[oklch(52%_0.16_28)]" />
                     <h3 className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
@@ -447,24 +447,24 @@ export default function DataPurgePanel() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div className="p-3 bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(90%_0.010_28)]">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">ลูกค้า & CRM</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">ลูกค้า & CRM</div>
                         <div className="font-bold text-sm text-[oklch(18%_0.012_28)] mt-0.5">{counts.protected_profiles} บัญชี</div>
-                        <div className="text-[10px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
+                        <div className="text-[11px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
                     </div>
                     <div className="p-3 bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(90%_0.010_28)]">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">เมนูอาหาร</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">เมนูอาหาร</div>
                         <div className="font-bold text-sm text-[oklch(18%_0.012_28)] mt-0.5">{counts.protected_menu_items} รายการ</div>
-                        <div className="text-[10px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
+                        <div className="text-[11px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
                     </div>
                     <div className="p-3 bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(90%_0.010_28)]">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">รายการคลังวัตถุดิบ</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">รายการคลังวัตถุดิบ</div>
                         <div className="font-bold text-sm text-[oklch(18%_0.012_28)] mt-0.5">{counts.protected_stock_items} รายการ</div>
-                        <div className="text-[10px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
+                        <div className="text-[11px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
                     </div>
                     <div className="p-3 bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(90%_0.010_28)]">
-                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">การตั้งค่าร้าน & SOP</div>
+                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono font-bold uppercase">การตั้งค่าร้าน & SOP</div>
                         <div className="font-bold text-sm text-[oklch(18%_0.012_28)] mt-0.5">ผังโต๊ะ / เครื่องพิมพ์</div>
-                        <div className="text-[10px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
+                        <div className="text-[11px] text-emerald-600 font-bold mt-0.5">✓ ปลอดภัย 100%</div>
                     </div>
                 </div>
             </div>
@@ -472,15 +472,15 @@ export default function DataPurgePanel() {
             {/* SECURITY MODAL: Passcode Verification */}
             {activeModal && (
                 <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-lg w-full border border-gray-200 shadow-2xl overflow-hidden animate-scale-up">
+                    <div className="bg-[oklch(99%_0.004_28)] rounded-2xl max-w-lg w-full border border-[oklch(90%_0.008_28)] shadow-2xl overflow-hidden animate-scale-up">
                         {/* Modal Header */}
-                        <div className="bg-red-600 text-white p-5 flex items-start justify-between">
+                        <div className="bg-red-600 text-[oklch(97%_0.008_28)] p-5 flex items-start justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="p-2.5 bg-red-700/80 rounded-xl">
-                                    <AlertTriangle size={22} className="text-white" />
+                                    <AlertTriangle size={22} className="text-[oklch(97%_0.008_28)]" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-base text-white tracking-tight">
+                                    <h3 className="font-bold text-base text-[oklch(97%_0.008_28)] tracking-tight">
                                         {activeModal.confirmTitle}
                                     </h3>
                                     <p className="text-xs text-red-100 mt-0.5 font-mono">
@@ -491,7 +491,7 @@ export default function DataPurgePanel() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 space-y-5 text-gray-800">
+                        <div className="p-6 space-y-5 text-[oklch(18%_0.012_28)]">
                             {/* Warning Box */}
                             <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl text-xs text-amber-900 leading-relaxed">
                                 <strong className="font-bold block mb-1">ข้อควรระวัง:</strong>
@@ -500,12 +500,12 @@ export default function DataPurgePanel() {
 
                             {/* Tables to be purged */}
                             <div className="text-xs space-y-1">
-                                <span className="font-bold text-gray-600 uppercase text-[10px] tracking-wider">
+                                <span className="font-bold text-[oklch(42%_0.010_28)] uppercase text-[11px] tracking-wider">
                                     ตารางฐานข้อมูลที่จะได้รับผลกระทบ:
                                 </span>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                     {activeModal.tables.map(t => (
-                                        <span key={t} className="bg-gray-100 text-gray-800 font-mono text-[11px] px-2 py-0.5 rounded border border-gray-200">
+                                        <span key={t} className="bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-mono text-[11px] px-2 py-0.5 rounded border border-[oklch(90%_0.008_28)]">
                                             {t}
                                         </span>
                                     ))}
@@ -514,7 +514,7 @@ export default function DataPurgePanel() {
 
                             {/* Optional Stock Quantity Zeroing Checkbox */}
                             {activeModal.hasStockZeroOption && (
-                                <label className="flex items-start gap-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl cursor-pointer hover:bg-zinc-100/70 transition-colors">
+                                <label className="flex items-start gap-3 p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(90%_0.008_28)] rounded-xl cursor-pointer hover:bg-zinc-100/70 transition-colors">
                                     <input
                                         type="checkbox"
                                         checked={resetStockQty}
@@ -522,10 +522,10 @@ export default function DataPurgePanel() {
                                         className="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500 cursor-pointer"
                                     />
                                     <div>
-                                        <span className="font-bold text-xs text-gray-900 block">
+                                        <span className="font-bold text-xs text-[oklch(18%_0.012_28)] block">
                                             รีเซ็ตจำนวนสต็อกสินค้าคงเหลือ (Current Quantity) เป็น 0
                                         </span>
-                                        <span className="text-[11px] text-gray-500">
+                                        <span className="text-[11px] text-[oklch(50%_0.010_28)]">
                                             เลือกตัวเลือกนี้หากต้องการเริ่มนับสต็อกจริงหน้างาน (Physical Count) ก่อนเปิดร้าน
                                         </span>
                                     </div>
@@ -533,12 +533,12 @@ export default function DataPurgePanel() {
                             )}
 
                             {/* Passcode Input Field */}
-                            <div className="space-y-2 pt-2 border-t border-gray-100">
-                                <label className="block text-xs font-bold text-gray-800">
+                            <div className="space-y-2 pt-2 border-t border-[oklch(90%_0.008_28)]">
+                                <label className="block text-xs font-bold text-[oklch(18%_0.012_28)]">
                                     กรุณากรอกรหัสผ่านความปลอดภัย <span className="font-mono text-red-600 font-bold">1500323553</span> เพื่อยืนยัน:
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[oklch(50%_0.010_28)]">
                                         <Lock size={16} />
                                     </div>
                                     <input
@@ -547,7 +547,7 @@ export default function DataPurgePanel() {
                                         placeholder="กรอกรหัส 1500323553"
                                         value={inputPasscode}
                                         onChange={(e) => setInputPasscode(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-mono tracking-widest text-gray-900 outline-none focus:border-red-600 focus:bg-white transition-all font-bold"
+                                        className="w-full pl-10 pr-4 py-3 bg-[oklch(97%_0.008_28)] border-2 border-[oklch(90%_0.008_28)] rounded-xl text-sm font-mono tracking-widest text-[oklch(18%_0.012_28)] outline-none focus:border-red-600 focus:bg-[oklch(99%_0.004_28)] transition-all font-bold"
                                     />
                                 </div>
                                 {inputPasscode && inputPasscode.trim() !== REQUIRED_PASSCODE && (
@@ -559,7 +559,7 @@ export default function DataPurgePanel() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="bg-gray-50 p-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                        <div className="bg-[oklch(97%_0.008_28)] p-4 border-t border-[oklch(90%_0.008_28)] flex items-center justify-end gap-3">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -568,7 +568,7 @@ export default function DataPurgePanel() {
                                     setResetStockQty(false);
                                 }}
                                 disabled={isPurging}
-                                className="px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                                className="px-4 py-2.5 rounded-xl border border-[oklch(85%_0.012_28)] text-xs font-bold text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
                             >
                                 ยกเลิก
                             </button>
@@ -576,10 +576,10 @@ export default function DataPurgePanel() {
                                 type="button"
                                 onClick={handleExecutePurge}
                                 disabled={inputPasscode.trim() !== REQUIRED_PASSCODE || isPurging}
-                                className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all shadow flex items-center gap-2 ${
+                                className={`px-5 py-2.5 rounded-xl text-xs font-bold text-[oklch(97%_0.008_28)] transition-all shadow flex items-center gap-2 ${
                                     inputPasscode.trim() === REQUIRED_PASSCODE && !isPurging
                                         ? 'bg-red-600 hover:bg-red-700 cursor-pointer shadow-red-500/20 active:scale-95'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                                        : 'bg-gray-300 text-[oklch(50%_0.010_28)] cursor-not-allowed opacity-60'
                                 }`}
                             >
                                 {isPurging ? (

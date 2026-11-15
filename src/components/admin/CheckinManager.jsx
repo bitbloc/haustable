@@ -791,15 +791,15 @@ const decodeHTMLEntities = (text) => {
 
             {/* Quick Add Bar (Always visible when not editing/showing full form) */}
             {!showForm && (
-                <div className="bg-paper border border-gray-200 shadow-sm rounded-3xl p-5 flex flex-col md:flex-row items-stretch md:items-end gap-3 animate-fade-in">
+                <div className="bg-paper border border-[oklch(90%_0.008_28)] rounded-3xl p-5 flex flex-col md:flex-row items-stretch md:items-end gap-3 animate-fade-in">
                     <div className="flex-1 min-w-0">
-                        <label className="block text-[10px] font-bold text-subInk uppercase mb-1">⚡ วางลิงก์เพื่อเพิ่มออโต้ทันที (Instagram / Facebook / Google Maps)</label>
+                        <label className="block text-[11px] font-bold text-subInk uppercase mb-1">⚡ วางลิงก์เพื่อเพิ่มออโต้ทันที (Instagram / Facebook / Google Maps)</label>
                         <input
                             type="text"
                             value={quickAddUrl}
                             onChange={(e) => setQuickAddUrl(e.target.value)}
                             placeholder="วางลิงก์โพสต์ เช่น https://www.instagram.com/p/..."
-                            className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono h-[42px]"
+                            className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono h-[42px]"
                         />
                     </div>
                     <div className="flex gap-2 items-center justify-end">
@@ -807,7 +807,7 @@ const decodeHTMLEntities = (text) => {
                             type="button"
                             onClick={handleQuickAdd}
                             disabled={quickAddLoading}
-                            className="bg-brand text-zinc-900 border border-brand hover:opacity-95 font-bold text-xs py-2 px-6 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
+                            className="bg-brand text-[oklch(18%_0.012_28)] border border-brand hover:opacity-95 font-bold text-xs py-2 px-6 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
                         >
                             {quickAddLoading ? (
                                 <>
@@ -823,7 +823,7 @@ const decodeHTMLEntities = (text) => {
                         <button
                             type="button"
                             onClick={() => setShowForm(true)}
-                            className="bg-canvas border border-gray-200 hover:bg-gray-100 text-ink font-bold text-xs py-2 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
+                            className="bg-canvas border border-[oklch(90%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-ink font-bold text-xs py-2 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
                             title="เปิดฟอร์มเพื่ออัปโหลดรูปเองหรือใส่ข้อมูลด้วยมือ"
                         >
                             <Plus size={13} /> เพิ่มด้วยตนเอง (Manual)
@@ -834,7 +834,7 @@ const decodeHTMLEntities = (text) => {
 
             {/* FORM CONTAINER (Add/Edit) */}
             {showForm && (
-                <div className="bg-paper border border-gray-250 shadow-sm rounded-3xl p-6 animate-fade-in space-y-4">
+                <div className="bg-paper border border-gray-250 rounded-3xl p-6 animate-fade-in space-y-4">
                     <div className="flex justify-between items-center pb-2 border-b border-gray-150">
                         <h3 className="font-bold text-sm text-ink uppercase tracking-wide">
                             {editingId ? '✍️ แก้ไขข้อมูลเช็กอิน' : '📸 เพิ่มโพสต์รีวิว/เช็กอินใหม่'}
@@ -849,22 +849,22 @@ const decodeHTMLEntities = (text) => {
 
                     {/* Auto-fetch from URL tool */}
                     {!editingId && (
-                        <div className="bg-canvas border border-gray-200 p-4 rounded-2xl flex flex-col md:flex-row md:items-end gap-3 mb-2">
+                        <div className="bg-canvas border border-[oklch(90%_0.008_28)] p-4 rounded-2xl flex flex-col md:flex-row md:items-end gap-3 mb-2">
                             <div className="flex-1">
-                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">🔗 ดึงข้อมูลอัตโนมัติจากลิงก์ (Instagram / Facebook / Google Maps)</label>
+                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">🔗 ดึงข้อมูลอัตโนมัติจากลิงก์ (Instagram / Facebook / Google Maps)</label>
                                 <input
                                     type="text"
                                     value={urlToFetch}
                                     onChange={(e) => setUrlToFetch(e.target.value)}
                                     placeholder="วางลิงก์โพสต์หรือรีวิว เช่น https://www.instagram.com/p/..."
-                                    className="w-full bg-paper border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono"
+                                    className="w-full bg-paper border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono"
                                 />
                             </div>
                             <button
                                 type="button"
                                 onClick={handleFetchUrl}
                                 disabled={fetchLoading}
-                                className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[40px] whitespace-nowrap"
+                                className="bg-[oklch(18%_0.012_28)] hover:bg-zinc-700 disabled:opacity-50 text-[oklch(97%_0.008_28)] font-bold text-xs py-2.5 px-5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[40px] whitespace-nowrap"
                             >
                                 {fetchLoading ? (
                                     <>
@@ -884,11 +884,11 @@ const decodeHTMLEntities = (text) => {
                         
                         {/* Source Selector */}
                         <div>
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Source / แพลตฟอร์ม</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Source / แพลตฟอร์ม</label>
                             <select
                                 value={formData.source}
                                 onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                             >
                                 <option value="instagram">Instagram Tag</option>
                                 <option value="facebook">Facebook Check-in</option>
@@ -899,38 +899,38 @@ const decodeHTMLEntities = (text) => {
 
                         {/* Location */}
                         <div>
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Location / สถานที่</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Location / สถานที่</label>
                             <input
                                 type="text"
                                 value={formData.location}
                                 onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                                 placeholder="เช่น IN THE HAUS ในบ้าน นครพนม"
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                             />
                         </div>
 
                         {/* User Name */}
                         <div>
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">User Display Name / ชื่อผู้รีวิว</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">User Display Name / ชื่อผู้รีวิว</label>
                             <input
                                 type="text"
                                 value={formData.user_name}
                                 onChange={(e) => setFormData(prev => ({ ...prev, user_name: e.target.value }))}
                                 placeholder="เช่น Pimchaya T. หรือ Liam A."
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                                 required
                             />
                         </div>
 
                         {/* User Handle / Description */}
                         <div>
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">User Handle / รายละเอียดบัญชี</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">User Handle / รายละเอียดบัญชี</label>
                             <input
                                 type="text"
                                 value={formData.user_handle}
                                 onChange={(e) => setFormData(prev => ({ ...prev, user_handle: e.target.value }))}
                                 placeholder={formData.source === 'instagram' ? 'เช่น @username' : 'เช่น Facebook Check-in / Local Guide'}
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                             />
                         </div>
 
@@ -938,20 +938,20 @@ const decodeHTMLEntities = (text) => {
                         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                             
                             <div className="md:col-span-2">
-                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Image URL / ลิงก์รูปภาพ</label>
+                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Image URL / ลิงก์รูปภาพ</label>
                                 <input
                                     type="text"
                                     value={formData.image_url}
                                     onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
                                     placeholder="ใส่ลิงก์รูปภาพโดยตรง หรืออัปโหลดไฟล์ด้านข้าง"
-                                    className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                    className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Upload Photo / อัปโหลดรูป</label>
-                                <label className="flex items-center justify-center gap-2 bg-canvas border border-gray-200 border-dashed p-2 rounded-xl text-subInk hover:text-ink cursor-pointer hover:border-brand transition-all text-xs font-bold h-[40px]">
+                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Upload Photo / อัปโหลดรูป</label>
+                                <label className="flex items-center justify-center gap-2 bg-canvas border border-[oklch(90%_0.008_28)] border-dashed p-2 rounded-xl text-subInk hover:text-ink cursor-pointer hover:border-brand transition-all text-xs font-bold h-[40px]">
                                     {uploadingImage ? (
                                         <>
                                             <Loader2 size={14} className="animate-spin" />
@@ -976,37 +976,37 @@ const decodeHTMLEntities = (text) => {
 
                         {/* Avatar Image URL */}
                         <div>
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">User Avatar URL / ลิงก์รูปโปรไฟล์</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">User Avatar URL / ลิงก์รูปโปรไฟล์</label>
                             <input
                                 type="text"
                                 value={formData.user_avatar}
                                 onChange={(e) => setFormData(prev => ({ ...prev, user_avatar: e.target.value }))}
                                 placeholder="เว้นว่างไว้เพื่อใช้รูปโปรไฟล์จำลอง"
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                             />
                         </div>
 
                         {/* Post Link / URL */}
                         <div>
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Social Post URL / ลิงก์ตรงโพสต์รีวิว</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Social Post URL / ลิงก์ตรงโพสต์รีวิว</label>
                             <input
                                 type="text"
                                 value={formData.post_url}
                                 onChange={(e) => setFormData(prev => ({ ...prev, post_url: e.target.value }))}
                                 placeholder="เช่น https://instagram.com/p/..."
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                             />
                         </div>
 
                         {/* Review text */}
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Review text / คำบรรยายโพสต์</label>
+                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Review text / คำบรรยายโพสต์</label>
                             <textarea
                                 value={formData.text}
                                 onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
                                 placeholder="พิมพ์ข้อความรีวิว คีย์เวิร์ด และแฮชแท็ก..."
                                 rows={3}
-                                className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                                 required
                             />
                         </div>
@@ -1014,11 +1014,11 @@ const decodeHTMLEntities = (text) => {
                         {/* Stars (Google) */}
                         {formData.source === 'google' && (
                             <div>
-                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Rating / คะแนนรีวิว</label>
+                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Rating / คะแนนรีวิว</label>
                                 <select
                                     value={formData.rating}
                                     onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) }))}
-                                    className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                    className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                                 >
                                     <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
                                     <option value="4">⭐⭐⭐⭐ (4/5)</option>
@@ -1032,13 +1032,13 @@ const decodeHTMLEntities = (text) => {
                         {/* Likes (FB/IG) */}
                         {formData.source !== 'google' && (
                             <div>
-                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Likes Count / จำนวนไลก์</label>
+                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Likes Count / จำนวนไลก์</label>
                                 <input
                                     type="number"
                                     min="0"
                                     value={formData.likes}
                                     onChange={(e) => setFormData(prev => ({ ...prev, likes: parseInt(e.target.value) }))}
-                                    className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                    className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                                 />
                             </div>
                         )}
@@ -1046,13 +1046,13 @@ const decodeHTMLEntities = (text) => {
                         {/* Comments (IG) */}
                         {formData.source === 'instagram' && (
                             <div>
-                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">Comments Count / จำนวนความเห็น</label>
+                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Comments Count / จำนวนความเห็น</label>
                                 <input
                                     type="number"
                                     min="0"
                                     value={formData.comments}
                                     onChange={(e) => setFormData(prev => ({ ...prev, comments: parseInt(e.target.value) }))}
-                                    className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
+                                    className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand"
                                 />
                             </div>
                         )}
@@ -1062,14 +1062,14 @@ const decodeHTMLEntities = (text) => {
                             <button
                                 type="button"
                                 onClick={resetForm}
-                                className="bg-canvas border border-gray-200 hover:bg-gray-100 text-ink font-bold text-xs py-2.5 px-5 rounded-xl transition-all cursor-pointer"
+                                className="bg-canvas border border-[oklch(90%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-ink font-bold text-xs py-2.5 px-5 rounded-xl transition-all cursor-pointer"
                             >
                                 ยกเลิก
                             </button>
                             <button
                                 type="submit"
                                 disabled={actionLoading || uploadingImage}
-                                className="bg-brand text-zinc-900 font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-1.5 transition-all hover:opacity-95 disabled:opacity-50 cursor-pointer border border-brand"
+                                className="bg-brand text-[oklch(18%_0.012_28)] font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-1.5 transition-all hover:opacity-95 disabled:opacity-50 cursor-pointer border border-brand"
                             >
                                 {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                                 บันทึกข้อมูล
@@ -1081,7 +1081,7 @@ const decodeHTMLEntities = (text) => {
             )}
 
             {/* CHECK-INS LIST TABLE */}
-            <div className="bg-paper border border-gray-200 shadow-sm rounded-3xl overflow-hidden">
+            <div className="bg-paper border border-[oklch(90%_0.008_28)] rounded-3xl overflow-hidden">
                 {loading ? (
                     <div className="p-12 flex items-center justify-center">
                         <Loader2 className="animate-spin text-subInk" size={24} />
@@ -1103,7 +1103,7 @@ const decodeHTMLEntities = (text) => {
                                     <th className="p-4 w-[100px] text-right">การจัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
                                 {checkins.map(item => (
                                     <tr key={item.id} className={`hover:bg-neutral-50/50 transition-colors ${selectedForCollage.includes(item.id) ? 'bg-[#E9F344]/10' : ''}`}>
                                         <td className="p-4 text-center">
@@ -1127,9 +1127,9 @@ const decodeHTMLEntities = (text) => {
                                             )}
                                         </td>
                                         <td className="p-4">
-                                            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-gray-50 flex items-center justify-center font-mono p-1.5 text-center text-[9px] leading-tight select-none">
+                                            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-[oklch(97%_0.008_28)] flex items-center justify-center font-mono p-1.5 text-center text-[11px] leading-tight select-none">
                                                 {item.image_url === 'text_only' ? (
-                                                    <span className="text-gray-400 font-bold">📝 POST-IT</span>
+                                                    <span className="text-[oklch(50%_0.010_28)] font-bold">📝 POST-IT</span>
                                                 ) : (
                                                     <img 
                                                         src={getProxiedImageUrl(item.image_url)} 
@@ -1143,9 +1143,9 @@ const decodeHTMLEntities = (text) => {
                                         <td className="p-4 space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-ink text-sm">{item.user_name}</span>
-                                                <span className="text-[10px] font-mono text-subInk">{item.user_handle}</span>
+                                                <span className="text-[11px] font-mono text-subInk">{item.user_handle}</span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-[10px] text-subInk">
+                                            <div className="flex items-center gap-1.5 text-[11px] text-subInk">
                                                 {item.source === 'instagram' && (
                                                     <span className="inline-flex items-center gap-1 text-[#E1306C] font-semibold"><Instagram size={10} /> Instagram</span>
                                                 )}
@@ -1162,7 +1162,7 @@ const decodeHTMLEntities = (text) => {
                                                     <span className="bg-yellow-100 text-yellow-800 font-bold px-1 rounded-sm">⭐{item.rating}</span>
                                                 )}
                                             </div>
-                                            <div className="text-[10px] text-subInk flex items-center gap-1">
+                                            <div className="text-[11px] text-subInk flex items-center gap-1">
                                                 <MapPin size={9} /> {item.location}
                                             </div>
                                         </td>
@@ -1182,7 +1182,7 @@ const decodeHTMLEntities = (text) => {
                                             <div className="flex justify-end gap-1">
                                                 <button
                                                     onClick={() => handleEdit(item)}
-                                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 text-subInk hover:text-ink flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                                                    className="w-8 h-8 rounded-lg hover:bg-[oklch(94%_0.010_28)] text-subInk hover:text-ink flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[oklch(90%_0.008_28)]"
                                                 >
                                                     <Edit2 size={13} />
                                                 </button>
@@ -1204,7 +1204,7 @@ const decodeHTMLEntities = (text) => {
             
             {/* FLOATING ACTION BAR FOR COLLAGE EXPORTER */}
             {selectedForCollage.length > 0 && (
-                <div className="fixed top-28 left-1/2 -translate-x-1/2 bg-[#23201D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-top-10 fade-in border border-gray-700">
+                <div className="fixed top-28 left-1/2 -translate-x-1/2 bg-[#23201D] text-[oklch(97%_0.008_28)] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-top-10 fade-in border border-gray-700">
                     <div className="flex flex-col">
                         <span className="font-mono text-xs font-bold text-[#E9F344] uppercase tracking-wider">Collage Generator</span>
                         <span className="text-sm font-bold">{selectedForCollage.length} Photos Selected (Max 6)</span>
@@ -1212,7 +1212,7 @@ const decodeHTMLEntities = (text) => {
                     <div className="flex gap-2">
                         <button 
                             onClick={() => setSelectedForCollage([])}
-                            className="px-4 py-2 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors cursor-pointer"
+                            className="px-4 py-2 text-xs font-bold bg-[oklch(18%_0.012_28)] hover:bg-zinc-700 rounded-lg transition-colors cursor-pointer"
                         >
                             Clear
                         </button>

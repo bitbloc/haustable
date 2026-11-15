@@ -221,7 +221,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
     }, [blockedList, todayStr]);
 
     return (
-        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl p-5 shadow-2xs space-y-5 font-sans">
+        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl p-5 space-y-5 font-sans">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[oklch(85%_0.012_28)] pb-4">
                 <div className="flex items-center gap-3">
@@ -247,7 +247,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
             </div>
 
             {/* Quick Presets Bar */}
-            <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider">
                 <span className="text-[oklch(55%_0.010_28)] mr-1 flex items-center gap-1">
                     <Sparkles size={11} /> PRESETS:
                 </span>
@@ -285,7 +285,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 
                 {/* 1. Visual Monthly Calendar Grid */}
-                <div className="lg:col-span-7 bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex flex-col justify-between">
+                <div className="lg:col-span-7 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex flex-col justify-between">
                     {/* Calendar Month Navigation */}
                     <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-3 mb-3">
                         <button
@@ -312,7 +312,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                     </div>
 
                     {/* Days of Week Header */}
-                    <div className="grid grid-cols-7 gap-1 text-center font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider mb-2">
+                    <div className="grid grid-cols-7 gap-1 text-center font-mono text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider mb-2">
                         <span className="text-red-600">อา</span>
                         <span>จ</span>
                         <span>อ</span>
@@ -335,13 +335,13 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                             let cellBg = 'bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]';
 
                             if (!dayObj.isCurrentMonth) {
-                                cellBg = 'opacity-30 bg-transparent text-[oklch(55%_0.010_28)] border-dashed border-gray-200';
+                                cellBg = 'opacity-30 bg-transparent text-[oklch(55%_0.010_28)] border-dashed border-[oklch(90%_0.008_28)]';
                             } else if (isBlocked) {
                                 // Red blocked style
                                 cellBg = 'bg-red-50 text-red-900 border-red-300 font-bold hover:bg-red-100 ring-1 ring-red-400';
                             } else if (isSelected) {
                                 // Terracotta staged selection style
-                                cellBg = 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] font-bold shadow-xs';
+                                cellBg = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] font-bold ';
                             } else if (isToday) {
                                 cellBg = 'bg-blue-50 text-blue-900 border-blue-300 font-bold';
                             }
@@ -357,13 +357,13 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                                     <span className="font-mono text-xs">{dayObj.day}</span>
                                     
                                     {isBlocked && (
-                                        <span className="text-[8px] font-mono uppercase tracking-tighter truncate max-w-full text-red-700 leading-none mt-0.5">
+                                        <span className="text-[11px] font-mono uppercase tracking-tighter truncate max-w-full text-red-700 leading-none mt-0.5">
                                             BLOCKED
                                         </span>
                                     )}
 
                                     {isSelected && (
-                                        <span className="text-[8px] font-mono uppercase tracking-tighter truncate max-w-full text-white/90 leading-none mt-0.5">
+                                        <span className="text-[11px] font-mono uppercase tracking-tighter truncate max-w-full text-white/90 leading-none mt-0.5">
                                             SELECTED
                                         </span>
                                     )}
@@ -377,7 +377,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                     </div>
 
                     {/* Legend Footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[oklch(85%_0.012_28)] pt-3 mt-3 text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[oklch(85%_0.012_28)] pt-3 mt-3 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
                         <div className="flex items-center gap-3">
                             <span className="flex items-center gap-1">
                                 <span className="w-2.5 h-2.5 rounded bg-red-100 border border-red-300"></span> วันหยุด (ล็อกแล้ว)
@@ -389,7 +389,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                                 <span className="w-2.5 h-2.5 rounded bg-blue-50 border border-blue-300"></span> วันนี้
                             </span>
                         </div>
-                        <span className="text-[9px] italic">💡 คลิกวันที่สีแดงเพื่อปลดล็อกได้ทันที</span>
+                        <span className="text-[11px] italic">💡 คลิกวันที่สีแดงเพื่อปลดล็อกได้ทันที</span>
                     </div>
                 </div>
 
@@ -399,8 +399,8 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                     {/* Action Form for Selected Staging Dates */}
                     <div className={`p-4 rounded-xl border transition-all ${
                         selectedDates.size > 0 
-                            ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] shadow-xs' 
-                            : 'bg-white border-[oklch(85%_0.012_28)] opacity-90'
+                            ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] ' 
+                            : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] opacity-90'
                     }`}>
                         <div className="flex justify-between items-center mb-2">
                             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
@@ -410,7 +410,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                                 <button
                                     type="button"
                                     onClick={() => setSelectedDates(new Set())}
-                                    className="text-[10px] font-mono text-red-600 hover:underline cursor-pointer"
+                                    className="text-[11px] font-mono text-red-600 hover:underline cursor-pointer"
                                 >
                                     ล้างที่เลือก
                                 </button>
@@ -423,7 +423,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                                 {Array.from(selectedDates).sort().map(dStr => (
                                     <span
                                         key={dStr}
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-[oklch(85%_0.012_28)] font-mono text-[10px] font-bold text-[oklch(18%_0.012_28)]"
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)]"
                                     >
                                         {dStr}
                                         <X
@@ -453,14 +453,14 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                                 placeholder="สาเหตุ (เช่น วันหยุดนักขัตฤกษ์, ปรับปรุงร้าน)"
-                                className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg px-3 py-2 text-xs font-sans text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-3 py-2 text-xs font-sans text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
                             />
 
                             <button
                                 type="button"
                                 disabled={selectedDates.size === 0 || isSaving}
                                 onClick={handleSaveSelected}
-                                className="w-full py-2.5 rounded-lg bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                                className="w-full py-2.5 rounded-lg bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 "
                             >
                                 <Check size={14} />
                                 <span>{isSaving ? 'SAVING...' : `ยืนยันล็อก ${selectedDates.size} วันหยุด`}</span>
@@ -469,12 +469,12 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                     </div>
 
                     {/* Active Blocked Dates List */}
-                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex-1 flex flex-col">
+                    <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex-1 flex flex-col">
                         <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2 mb-2">
                             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                                 วันหยุดที่ตั้งไว้ ({upcomingBlocked.length})
                             </span>
-                            <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">นับจากวันนี้</span>
+                            <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">นับจากวันนี้</span>
                         </div>
 
                         <div className="space-y-1.5 overflow-y-auto max-h-[220px] pr-1 flex-1">
@@ -497,7 +497,7 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                                                 <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
                                                 <span>{dLabel}</span>
                                             </div>
-                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] truncate pl-3">
+                                            <div className="text-[11px] text-[oklch(55%_0.010_28)] truncate pl-3">
                                                 {item.reason || 'ปิดรับจอง'}
                                             </div>
                                         </div>

@@ -280,7 +280,7 @@ export default function MenuCategoryList() {
 
                 <button 
                     onClick={handleCreate} 
-                    className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 shadow-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                 >
                     <Plus size={15} /> เพิ่มหมวดหมู่
                 </button>
@@ -290,7 +290,7 @@ export default function MenuCategoryList() {
             {loading ? (
                 <div className="space-y-2">
                     {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="h-16 bg-[oklch(94%_0.010_28)] animate-pulse rounded-sm border border-[oklch(85%_0.012_28)]" />
+                        <div key={i} className="h-16 bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)]" />
                     ))}
                 </div>
             ) : categories.length === 0 ? (
@@ -354,7 +354,7 @@ export default function MenuCategoryList() {
                             <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
+                                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
                                             10 FREE 1
                                         </span>
                                         <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
@@ -377,7 +377,7 @@ export default function MenuCategoryList() {
                             <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
                                             KITCHEN CUTOFF
                                         </span>
                                         <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
@@ -407,7 +407,7 @@ export default function MenuCategoryList() {
                                 </button>
                                 <button 
                                     type="submit" 
-                                    className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 shadow-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                    className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                 >
                                     บันทึกหมวดหมู่
                                 </button>
@@ -441,7 +441,7 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
             dragListener={false} 
             dragControls={controls}
             onDragEnd={onDragEnd}
-            className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm flex items-center justify-between group relative select-none hover:border-[oklch(52%_0.16_28)] transition-colors duration-150 shadow-xs"
+            className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm flex items-center justify-between group relative select-none hover:border-[oklch(52%_0.16_28)] transition-colors duration-150 "
         >
             <div className="flex items-center gap-3.5 min-w-0">
                 {/* Drag Handle */}
@@ -470,12 +470,12 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                             {category.name}
                         </h4>
                         {category.is_drink_stamp_eligible && (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
+                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
                                 10 FREE 1
                             </span>
                         )}
                         {category.hide_on_kitchen_close && (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
                                 ซ่อนเมื่อครัวปิด
                             </span>
                         )}

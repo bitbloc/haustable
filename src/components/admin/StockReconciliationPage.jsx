@@ -163,14 +163,14 @@ export default function StockReconciliationPage() {
 
     const cellHead = 'px-3 py-2 text-right font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)] whitespace-nowrap';
     const cell = 'px-3 py-2 text-right font-mono text-[13px] tabular-nums whitespace-nowrap';
-    const btn = 'px-3 py-2 border border-[oklch(85%_0.012_28)] bg-white font-sans font-bold text-[13px] leading-5 text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 cursor-pointer whitespace-nowrap';
+    const btn = 'px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans font-bold text-[13px] leading-5 text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 cursor-pointer whitespace-nowrap';
 
     return (
         <div className="font-sans text-[oklch(18%_0.012_28)] space-y-4">
             {/* Controls */}
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK RECONCILIATION</span>
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK RECONCILIATION</span>
                     <h2 className="font-sans font-bold text-xl leading-8">{view === 'day' ? 'กระทบยอดสต๊อกรายวัน' : `อันดับผลต่างสะสม ${view} วัน`}</h2>
                     <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] max-w-prose">
                         {view === 'day'
@@ -179,7 +179,7 @@ export default function StockReconciliationPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-white" role="tablist" aria-label="ช่วงรายงาน">
+                    <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]" role="tablist" aria-label="ช่วงรายงาน">
                         {[['day', 'รายวัน'], [7, 'สะสม 7 วัน'], [30, 'สะสม 30 วัน']].map(([v, label]) => (
                             <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)}
                                 className={`px-3 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${view === v ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)]'}`}>
@@ -187,11 +187,11 @@ export default function StockReconciliationPage() {
                             </button>
                         ))}
                     </div>
-                    <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-white">
+                    <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
                         <button type="button" onClick={() => setDay(d => addDays(d, -1))} aria-label="วันก่อนหน้า"
                             className="px-3 py-2 font-sans font-bold text-[13px] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">ก่อนหน้า</button>
                         <input type="date" value={day} max={today} onChange={e => e.target.value && setDay(e.target.value)}
-                            aria-label="วันทำการ" className="px-2 py-2 font-mono text-[13px] bg-white outline-none" />
+                            aria-label="วันทำการ" className="px-2 py-2 font-mono text-[13px] bg-[oklch(99%_0.004_28)] outline-none" />
                         <button type="button" onClick={() => setDay(d => addDays(d, 1))} disabled={day >= today} aria-label="วันถัดไป"
                             className="px-3 py-2 font-sans font-bold text-[13px] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 cursor-pointer">ถัดไป</button>
                     </div>
@@ -201,11 +201,11 @@ export default function StockReconciliationPage() {
             </div>
 
             {missingRpc ? (
-                <p className="p-4 border border-[oklch(85%_0.012_28)] bg-white font-sans text-[14px] leading-6">
+                <p className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-[14px] leading-6">
                     ฐานข้อมูลยังไม่มีระบบกระทบยอด กรุณาติดตั้ง migration รอบนับและกระทบยอดก่อน
                 </p>
             ) : view !== 'day' ? (
-                <div ref={reportRef} className="bg-white border border-[oklch(85%_0.012_28)]">
+                <div ref={reportRef} className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)]">
                     <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-[oklch(85%_0.012_28)] border-b border-[oklch(85%_0.012_28)]">
                         <div className="p-3 col-span-2 lg:col-span-1">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">ช่วง</span>
@@ -306,7 +306,7 @@ export default function StockReconciliationPage() {
                     </p>
                 </div>
             ) : (
-                <div ref={reportRef} className="bg-white border border-[oklch(85%_0.012_28)]">
+                <div ref={reportRef} className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)]">
                     {/* Summary cells */}
                     <div className="grid grid-cols-2 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-[oklch(85%_0.012_28)] border-b border-[oklch(85%_0.012_28)]">
                         <div className="p-3 col-span-2 lg:col-span-1">
@@ -350,7 +350,7 @@ export default function StockReconciliationPage() {
                     <div className="flex border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="กรองรายการ" data-export-hide>
                         {[['abnormal', 'ผิดปกติ', summary.abnormal], ['counted', 'นับแล้ว', summary.counted], ['all', 'ทั้งหมด', summary.items]].map(([v, label, n]) => (
                             <button key={v} type="button" role="tab" aria-selected={filter === v} onClick={() => setFilter(v)}
-                                className={`flex-1 sm:flex-none px-4 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${filter === v ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
+                                className={`flex-1 sm:flex-none px-4 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${filter === v ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
                                 {label} <span className="font-mono text-[11px]">{n}</span>
                             </button>
                         ))}
@@ -391,7 +391,7 @@ export default function StockReconciliationPage() {
                                         const v = Number(r.variance);
                                         return (
                                             <tr key={r.stock_item_id} className={bad ? 'bg-[oklch(97%_0.02_28)]' : ''}>
-                                                <td className={`px-3 py-2 text-left sticky left-0 ${bad ? 'bg-[oklch(97%_0.02_28)]' : 'bg-white'}`}>
+                                                <td className={`px-3 py-2 text-left sticky left-0 ${bad ? 'bg-[oklch(97%_0.02_28)]' : 'bg-[oklch(99%_0.004_28)]'}`}>
                                                     <button type="button" onClick={() => setCardFor({ id: r.stock_item_id, name: r.name, unit: r.unit })}
                                                         className="font-sans font-bold text-[13px] leading-5 block text-left underline decoration-[oklch(85%_0.012_28)] underline-offset-2 hover:decoration-[oklch(18%_0.012_28)] cursor-pointer">
                                                         {bad && <span className="inline-block w-1.5 h-1.5 mr-1.5 align-middle bg-[oklch(52%_0.16_28)]" aria-label="ผิดปกติ" />}
@@ -429,12 +429,12 @@ export default function StockReconciliationPage() {
                             <span className="flex flex-wrap items-center gap-1.5" data-export-hide>
                                 ผิดปกติเมื่อต่างเกิน
                                 <input type="text" inputMode="decimal" value={thDraft.percent} onChange={e => setThDraft(d => ({ ...d, percent: e.target.value }))} aria-label="เปอร์เซ็นต์"
-                                    className="w-12 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-white font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
+                                    className="w-12 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
                                 % และเกิน ฿
                                 <input type="text" inputMode="decimal" value={thDraft.baht} onChange={e => setThDraft(d => ({ ...d, baht: e.target.value }))} aria-label="บาท"
-                                    className="w-16 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-white font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
+                                    className="w-16 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
                                 <button type="button" onClick={saveThresholds} className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold cursor-pointer">บันทึก</button>
-                                <button type="button" onClick={() => setThDraft(null)} className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-white font-bold cursor-pointer">ยกเลิก</button>
+                                <button type="button" onClick={() => setThDraft(null)} className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-bold cursor-pointer">ยกเลิก</button>
                             </span>
                         ) : (
                             <span>

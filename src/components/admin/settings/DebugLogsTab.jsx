@@ -72,12 +72,12 @@ export default function DebugLogsTab() {
                     {/* Environment Info Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3.5 rounded-xl space-y-1">
-                            <div className="text-[10px] uppercase font-bold text-[var(--color-neutral)]">Environment Info</div>
+                            <div className="text-[11px] uppercase font-bold text-[var(--color-neutral)]">Environment Info</div>
                             <div>Platform: <span className="font-bold">{Capacitor.getPlatform()}</span></div>
                             <div>Native App: <span className="font-bold">{Capacitor.isNativePlatform() ? 'Yes' : 'No'}</span></div>
                         </div>
                         <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3.5 rounded-xl space-y-1">
-                            <div className="text-[10px] uppercase font-bold text-[var(--color-neutral)]">Log Statistics</div>
+                            <div className="text-[11px] uppercase font-bold text-[var(--color-neutral)]">Log Statistics</div>
                             <div>Total Logs: <span className="font-bold tabular-nums">{logs.length}</span></div>
                             <div>Crashes: <span className="font-bold text-[var(--color-accent)] tabular-nums">{crashLogs.length}</span></div>
                         </div>
@@ -98,14 +98,14 @@ export default function DebugLogsTab() {
                         <button
                             type="button"
                             onClick={handleCopyLogs}
-                            className="bg-[var(--color-paper)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer"
+                            className="bg-[var(--color-paper)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer"
                         >
                             <Copy size={12} /> Copy Logs
                         </button>
                         <button
                             type="button"
                             onClick={handleClearLogs}
-                            className="bg-[var(--color-paper)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] text-[var(--color-accent)] px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer"
+                            className="bg-[var(--color-paper)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] text-[var(--color-accent)] px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 cursor-pointer"
                         >
                             <Trash2 size={12} /> Clear Logs
                         </button>
@@ -121,14 +121,14 @@ export default function DebugLogsTab() {
                         logs.slice().reverse().map(log => (
                             <div key={log.id} className="p-3 hover:bg-[var(--color-paper-2)] transition-colors">
                                 <div className="flex justify-between items-start gap-2 mb-1">
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)]">
+                                    <span className="px-1.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)]">
                                         {log.level}
                                     </span>
-                                    <span className="text-[10px] text-[var(--color-neutral)]">{new Date(log.timestamp).toLocaleString('th-TH')}</span>
+                                    <span className="text-[11px] text-[var(--color-neutral)]">{new Date(log.timestamp).toLocaleString('th-TH')}</span>
                                 </div>
                                 <div className="font-bold text-[var(--color-ink)]">{log.title}</div>
                                 {log.details && (
-                                    <pre className="mt-1 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded text-[9px] text-[var(--color-muted)] overflow-x-auto whitespace-pre-wrap max-h-24">
+                                    <pre className="mt-1 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded text-[11px] text-[var(--color-muted)] overflow-x-auto whitespace-pre-wrap max-h-24">
                                         {JSON.stringify(log.details, null, 2)}
                                     </pre>
                                 )}

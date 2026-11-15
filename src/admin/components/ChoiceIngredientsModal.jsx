@@ -157,7 +157,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                 onClick={e => e.stopPropagation()}
             >
                 <div className={`px-5 pt-5 pb-4 border-b ${RULE}`}>
-                    <p className={`font-mono text-[10px] tracking-wider ${NEUTRAL}`}>วัตถุดิบของตัวเลือก · {group.name}</p>
+                    <p className={`font-mono text-[11px] tracking-wider ${NEUTRAL}`}>วัตถุดิบของตัวเลือก · {group.name}</p>
                     <h3 id="choice-ingredients-title" className={`text-lg font-bold leading-snug mt-1 ${INK}`}>{choice.name}</h3>
                     <p className={`text-xs leading-relaxed mt-2 ${MUTED}`}>
                         จำนวนต่อ 1 ที่ที่สั่ง เป็นหน่วยใช้ของวัตถุดิบ เลือก “ใช้เพิ่ม” สำหรับของที่ใส่เพิ่ม (เพิ่มช็อต, ไข่ดาว)
@@ -191,7 +191,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                 <div className="min-w-0">
                                                     <p className={`text-sm font-bold leading-snug ${INK}`}>{item?.name || 'ไม่พบวัตถุดิบ'}</p>
                                                     {item && (
-                                                        <p className={`font-mono text-[10px] mt-0.5 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(item)] || ''} · หน่วยใช้ {unit || '-'}</p>
+                                                        <p className={`font-mono text-[11px] mt-0.5 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(item)] || ''} · หน่วยใช้ {unit || '-'}</p>
                                                     )}
                                                 </div>
                                                 <button
@@ -250,7 +250,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                             </ul>
 
                             <div className="mt-4">
-                                <label htmlFor="choice-ingredient-search" className={`block font-mono text-[10px] uppercase tracking-wider mb-1.5 ${NEUTRAL}`}>เพิ่มวัตถุดิบ</label>
+                                <label htmlFor="choice-ingredient-search" className={`block font-mono text-[11px] uppercase tracking-wider mb-1.5 ${NEUTRAL}`}>เพิ่มวัตถุดิบ</label>
                                 <input
                                     id="choice-ingredient-search"
                                     ref={searchRef}
@@ -270,7 +270,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                     className={`w-full text-left px-3 py-2 flex items-baseline justify-between gap-3 hover:bg-[oklch(94%_0.010_28)] cursor-pointer ${FOCUS}`}
                                                 >
                                                     <span className={`text-sm leading-snug ${INK}`}>{i.name}</span>
-                                                    <span className={`font-mono text-[10px] shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {i.usage_unit || i.unit || '-'}</span>
+                                                    <span className={`font-mono text-[11px] shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {i.usage_unit || i.unit || '-'}</span>
                                                 </button>
                                             </li>
                                         ))}

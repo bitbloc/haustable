@@ -55,7 +55,7 @@ export default function TrafficAndVelocityDuo({
             {/* Header with Operational Indicators */}
             <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-1.5 py-0.2 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                         FLOW
                     </span>
                     <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
@@ -95,7 +95,7 @@ export default function TrafficAndVelocityDuo({
                         <div className="grid grid-cols-[repeat(13,minmax(38px,1fr))] min-w-[520px] gap-1 bg-[oklch(94%_0.010_28)] p-2 border border-[oklch(85%_0.012_28)] font-mono text-center">
                             {timeline.map(slot => (
                                 <div key={`traffic_${slot.hour}`} className="space-y-1">
-                                    <div className="text-[9px] text-[oklch(55%_0.010_28)]">{slot.hour}</div>
+                                    <div className="text-[11px] text-[oklch(55%_0.010_28)]">{slot.hour}</div>
                                     <div 
                                         className={`py-1 text-xs font-bold tabular-nums transition-colors ${
                                             slot.guests > 0 
@@ -125,9 +125,9 @@ export default function TrafficAndVelocityDuo({
                         <div className="grid grid-cols-[repeat(13,minmax(38px,1fr))] min-w-[520px] gap-1 bg-[oklch(94%_0.010_28)] p-2 border border-[oklch(85%_0.012_28)] font-mono text-center">
                             {timeline.map(slot => (
                                 <div key={`sales_${slot.hour}`} className="space-y-1">
-                                    <div className="text-[9px] text-[oklch(55%_0.010_28)]">{slot.hour}</div>
+                                    <div className="text-[11px] text-[oklch(55%_0.010_28)]">{slot.hour}</div>
                                     <div 
-                                        className={`py-1 text-[10px] font-bold tabular-nums truncate px-0.5 transition-colors ${
+                                        className={`py-1 text-[11px] font-bold tabular-nums truncate px-0.5 transition-colors ${
                                             slot.amount > 0 
                                                 ? slot.isCurrent 
                                                     ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 

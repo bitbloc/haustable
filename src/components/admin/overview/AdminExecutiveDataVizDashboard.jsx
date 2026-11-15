@@ -298,13 +298,13 @@ export default function AdminExecutiveDataVizDashboard({
                 {/* ========================================================================= */}
                 {/* 1. LEFT COLUMN (3 cols on desktop): Operational Briefing / Sentinel Card   */}
                 {/* ========================================================================= */}
-                <div className="lg:col-span-3 flex flex-col justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl shadow-2xs">
+                <div className="lg:col-span-3 flex flex-col justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl ">
                     <div>
                         <div className="flex items-center justify-between pb-3 border-b border-[oklch(88%_0.012_28)]">
                             <span className="text-xs font-semibold text-[oklch(18%_0.012_28)]">
                                 Operations Status
                             </span>
-                            <span className={`px-2 py-0.5 font-mono text-[10px] font-bold rounded-sm ${
+                            <span className={`px-2 py-0.5 font-mono text-[11px] font-bold rounded-sm ${
                                 !isToday
                                     ? 'bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]'
                                     : shiftSummary.isOpen
@@ -357,7 +357,7 @@ export default function AdminExecutiveDataVizDashboard({
                                     ประสิทธิภาพการหมุนเวียนโต๊ะและสลิปปิดวัน
                                 </p>
                             </div>
-                            <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-sm">
+                            <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-sm">
                                 100% OK
                             </span>
                         </div>
@@ -396,7 +396,7 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     {/* CARD 2A: Activity // Hourly Velocity Bars (Center Top, 7 cols)        */}
                     {/* --------------------------------------------------------------------- */}
-                    <div className="md:col-span-7 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl shadow-2xs flex flex-col justify-between">
+                    <div className="md:col-span-7 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
                         <div>
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold text-[oklch(18%_0.012_28)]">
@@ -445,7 +445,7 @@ export default function AdminExecutiveDataVizDashboard({
                                                     className="absolute z-20 pointer-events-none transition-transform duration-150 flex flex-col items-center"
                                                     style={{ bottom: `calc(${barHeight}% + 4px)` }}
                                                 >
-                                                    <span className="bg-[#E9F344] text-[oklch(18%_0.012_28)] font-mono font-bold text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-sm shadow-xs whitespace-nowrap tabular-nums">
+                                                    <span className="bg-[#E9F344] text-[oklch(18%_0.012_28)] font-mono font-bold text-[11px] sm:text-[11px] px-1.5 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
                                                         {item.hour}:00 &middot; ฿{Math.round(item.revenue / 1000)}k
                                                     </span>
                                                     <div className="w-1.5 h-1.5 bg-[#E9F344] rotate-45 -mt-0.5" />
@@ -469,7 +469,7 @@ export default function AdminExecutiveDataVizDashboard({
                             </div>
 
                             {/* X-Axis Hour Labels */}
-                            <div className="flex items-center justify-between text-[10px] font-mono text-[oklch(48%_0.010_28)] mt-2 pt-1 border-t border-[oklch(88%_0.012_28)]">
+                            <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(48%_0.010_28)] mt-2 pt-1 border-t border-[oklch(88%_0.012_28)]">
                                 {OPERATING_HOURS.map(h => (
                                     <span key={h}>{h}h</span>
                                 ))}
@@ -482,7 +482,7 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     <div className="md:col-span-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-3">
                         {/* Upper: Settled vs Active Unpaid Revenue + Payment Ratio */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 rounded-2xl shadow-2xs space-y-2.5">
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 rounded-2xl space-y-2.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold text-[oklch(18%_0.012_28)]">
                                     Treasury &amp; Settlement
@@ -505,7 +505,7 @@ export default function AdminExecutiveDataVizDashboard({
                                     <div className="font-mono text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums truncate">
                                         {loading ? '...' : `฿${revenueToday.toLocaleString()}`}
                                     </div>
-                                    <div className="text-[10px] font-mono text-[oklch(38%_0.10_140)] font-semibold mt-0.5 tabular-nums">
+                                    <div className="text-[11px] font-mono text-[oklch(38%_0.10_140)] font-semibold mt-0.5 tabular-nums">
                                         +{completedOrdersCount} บิลปิดยอดแล้ว
                                     </div>
                                 </div>
@@ -520,7 +520,7 @@ export default function AdminExecutiveDataVizDashboard({
                                     }`}>
                                         {loading ? '...' : `฿${activeUnpaidRevenue.toLocaleString()}`}
                                     </div>
-                                    <div className={`text-[10px] font-mono font-semibold mt-0.5 tabular-nums ${
+                                    <div className={`text-[11px] font-mono font-semibold mt-0.5 tabular-nums ${
                                         activeUnpaidCount > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'
                                     }`}>
                                         {activeUnpaidCount > 0 ? `${activeUnpaidCount} บิลรอชำระ` : 'ไม่มีบิลค้าง'}
@@ -578,24 +578,24 @@ export default function AdminExecutiveDataVizDashboard({
                         </div>
 
                         {/* Lower: Stylized POS Cash Drawer Card (Matches Green VISA Card in reference) */}
-                        <div className="bg-[oklch(42%_0.09_140)] text-[oklch(98%_0.006_28)] p-4 rounded-2xl shadow-xs flex flex-col justify-between space-y-3">
+                        <div className="bg-[oklch(42%_0.09_140)] text-[oklch(98%_0.006_28)] p-4 rounded-2xl flex flex-col justify-between space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="font-mono text-[10px] font-bold opacity-85">
+                                <span className="font-mono text-[11px] font-bold opacity-85">
                                     POS TERMINAL DRAWER
                                 </span>
-                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-white/20 rounded-xs">
+                                <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 bg-white/20 rounded-xs">
                                     CASH
                                 </span>
                             </div>
 
                             <div>
-                                <span className="text-[10px] font-mono opacity-75 block">ยอดเงินสดคาดการณ์ในลิ้นชัก:</span>
+                                <span className="text-[11px] font-mono opacity-75 block">ยอดเงินสดคาดการณ์ในลิ้นชัก:</span>
                                 <div className="font-mono text-2xl font-bold tabular-nums tracking-tight">
                                     ฿{shiftSummary.expectedCash.toLocaleString()}
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-[10px] font-mono opacity-85 pt-1 border-t border-white/15">
+                            <div className="flex items-center justify-between text-[11px] font-mono opacity-85 pt-1 border-t border-white/15">
                                 <span>ทอนเปิด ฿{shiftSummary.startingCash.toLocaleString()}</span>
                                 <span>{shiftSummary.floatOpenedTime ? `${shiftSummary.floatOpenedTime} น.` : 'ยังไม่เปิดกะ'}</span>
                             </div>
@@ -605,7 +605,7 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     {/* CARD 3A: Revenue Flow // Smooth Spline Wave (Center Bottom, 7 cols)   */}
                     {/* --------------------------------------------------------------------- */}
-                    <div className="md:col-span-7 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl shadow-2xs flex flex-col justify-between">
+                    <div className="md:col-span-7 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
                         <div>
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold text-[oklch(18%_0.012_28)]">
@@ -692,7 +692,7 @@ export default function AdminExecutiveDataVizDashboard({
                                         transform: 'translate(-50%, -130%)'
                                     }}
                                 >
-                                    <span className="bg-[#E9F344] text-[oklch(18%_0.012_28)] font-mono font-bold text-[10px] px-2 py-0.5 rounded-sm shadow-xs whitespace-nowrap tabular-nums">
+                                    <span className="bg-[#E9F344] text-[oklch(18%_0.012_28)] font-mono font-bold text-[11px] px-2 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
                                         ฿{splinePoints.peakPoint.value.toLocaleString()}
                                     </span>
                                 </div>
@@ -727,7 +727,7 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     {/* CARD 3B: Service Channels // Radial Donut Ring (Right Bottom, 5 cols)  */}
                     {/* --------------------------------------------------------------------- */}
-                    <div className="md:col-span-5 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl shadow-2xs flex flex-col justify-between">
+                    <div className="md:col-span-5 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-[oklch(18%_0.012_28)]">
                                 Service Channels
@@ -813,14 +813,14 @@ export default function AdminExecutiveDataVizDashboard({
                                             <span className="font-mono text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                                 {channelMix.dinePct}%
                                             </span>
-                                            <span className="text-[10px] font-mono text-[oklch(48%_0.010_28)]">
+                                            <span className="text-[11px] font-mono text-[oklch(48%_0.010_28)]">
                                                 Dine-in
                                             </span>
                                         </div>
 
                                         {/* Floating Tag next to Donut (only shown when Pick-up orders exist) */}
                                         {channelMix.pickPct > 0 && (
-                                            <span className="absolute top-1 -right-2 font-mono text-[10px] font-bold px-1.5 py-0.5 bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
+                                            <span className="absolute top-1 -right-2 font-mono text-[11px] font-bold px-1.5 py-0.5 bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
                                                 {channelMix.pickPct}% Pick
                                             </span>
                                         )}

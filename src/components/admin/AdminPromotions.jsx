@@ -23,8 +23,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     onClick={() => setActiveTab('promo')}
                     className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'promo'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
-                            : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
+                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
                     <Tag size={13} />
@@ -35,8 +35,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     onClick={() => setActiveTab('rewards')}
                     className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'rewards'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
-                            : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
+                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
                     <Gift size={13} />
@@ -47,8 +47,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     onClick={() => setActiveTab('stamps')}
                     className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'stamps'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
-                            : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
+                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
                     <Award size={13} />

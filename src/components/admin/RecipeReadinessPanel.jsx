@@ -111,11 +111,11 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
     const pct = summary.coveragePct;
 
     return (
-        <section className="border border-[oklch(85%_0.012_28)] bg-white" aria-labelledby="readiness-title">
+        <section className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]" aria-labelledby="readiness-title">
             {/* Header cells */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]">
                 <div className="p-4 space-y-1">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                         STOCK READINESS
                     </span>
                     <h2 id="readiness-title" className="font-sans font-bold text-base leading-7 text-[oklch(18%_0.012_28)]">
@@ -175,7 +175,7 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
                                             disabled={!!linkingId}
                                             onClick={() => handleLink(item, recipe)}
                                             title={`ใช้สูตร ${recipe.name} 1 ที่ต่อการขาย 1 ที่`}
-                                            className="px-2 py-1 border border-[oklch(18%_0.012_28)] bg-white font-sans text-[12px] leading-5 font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 transition-colors cursor-pointer max-w-full text-left"
+                                            className="px-2 py-1 border border-[oklch(18%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-[12px] leading-5 font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 transition-colors cursor-pointer max-w-full text-left"
                                         >
                                             {busy ? 'กำลังผูก...' : <>ผูก <span className="font-normal">{recipe.name}</span></>}
                                         </button>

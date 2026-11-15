@@ -16,14 +16,14 @@ const EVENT_TOGGLES = [
 function Toggle({ checked, onChange, label, desc }) {
     return (
         <label className={`p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-3 bg-[var(--color-paper)] ${
-            checked ? 'border-[var(--color-ink)] shadow-2xs' : 'border-[var(--color-rule)]'
+            checked ? 'border-[var(--color-ink)] ' : 'border-[var(--color-rule)]'
         }`}>
             <div className="min-w-0">
                 <span className="block font-bold text-xs text-[var(--color-ink)]">{label}</span>
                 <span className="block text-[11px] text-[var(--color-neutral)] leading-snug">{desc}</span>
             </div>
             <div className={`w-9 h-5 shrink-0 rounded-full p-0.5 transition-colors duration-200 ${checked ? 'bg-[var(--color-ink)]' : 'bg-[var(--color-rule)]'}`}>
-                <div className={`w-4 h-4 rounded-full bg-[var(--color-paper)] shadow-xs transform transition-transform duration-200 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+                <div className={`w-4 h-4 rounded-full bg-[var(--color-paper)] transform transition-transform duration-200 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
             </div>
             <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
         </label>

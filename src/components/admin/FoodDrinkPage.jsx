@@ -26,9 +26,9 @@ export default function FoodDrinkPage({ initialView = 'menus' }) {
 
     return (
         <div className="font-sans text-[oklch(18%_0.012_28)] space-y-4">
-            <div className="border border-[oklch(85%_0.012_28)] bg-white">
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
                 <div className="px-4 py-3 border-b border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">FOOD &amp; DRINK</span>
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">FOOD &amp; DRINK</span>
                     <h2 className="font-bold text-xl leading-8">สูตรและวิธีทำ</h2>
                     <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)] max-w-prose">
                         สูตรของเมนูคือรายการเดียวที่ใช้คิดต้นทุนและตัดสต๊อก เบสใช้เป็นส่วนผสมในสูตรเมนูได้ ส่วนวิธีทำ (SOP) ผูกกับเมนูหรือเบสและดึงส่วนผสมจากสูตรนั้น
@@ -37,7 +37,7 @@ export default function FoodDrinkPage({ initialView = 'menus' }) {
                 <div className="grid grid-cols-3 divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="ส่วนของ Food & Drink">
                     {VIEWS.map(v => (
                         <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
-                            className={`px-3 py-2.5 text-left cursor-pointer transition-colors ${view === v.id ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
+                            className={`px-3 py-2.5 text-left cursor-pointer transition-colors ${view === v.id ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
                             <span className="block font-bold text-[14px] leading-6">{v.label}</span>
                             <span className={`hidden sm:block text-[11px] leading-4 ${view === v.id ? 'text-[oklch(85%_0.012_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>{v.hint}</span>
                         </button>
@@ -55,7 +55,7 @@ export default function FoodDrinkPage({ initialView = 'menus' }) {
                 <div className="fixed inset-0 z-[60] bg-[oklch(97%_0.008_28)] overflow-y-auto" role="dialog" aria-modal="true" aria-label={`วิธีทำ ${methodFor.name}`}>
                     <div className="sticky top-0 z-10 grid grid-cols-[1fr_auto] items-center border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
                         <div className="px-4 py-2.5 min-w-0">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                                 วิธีทำ · {methodFor.type === 'menu' ? 'เมนู' : 'เบส'}
                             </span>
                             <span className="font-bold text-[15px] leading-6 break-words">{methodFor.name}</span>

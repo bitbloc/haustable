@@ -372,7 +372,7 @@ export default function AdminLayout() {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.18 }}
                             onClick={() => setSidebarOpen(false)}
-                            className="fixed inset-0 bg-[oklch(18%_0.012_28)]/40 z-50 lg:hidden"
+                            className="admin-scrim fixed inset-0 bg-[oklch(18%_0.012_28)]/40 z-50 lg:hidden"
                         />
                         <motion.aside
                             initial={{ x: '-100%' }}

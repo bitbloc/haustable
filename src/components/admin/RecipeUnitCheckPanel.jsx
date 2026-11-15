@@ -66,16 +66,16 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
     if (loading) return null;
     if (issues.length === 0) {
         return (
-            <p className={`border ${RULE} bg-white px-3 py-2 font-sans text-[12px] leading-5 ${NEUTRAL}`}>
+            <p className={`border ${RULE} bg-[oklch(99%_0.004_28)] px-3 py-2 font-sans text-[12px] leading-5 ${NEUTRAL}`}>
                 หน่วยในสูตรตรงกับหน่วยใช้ของวัตถุดิบทุกแถว
             </p>
         );
     }
 
     return (
-        <section className={`border ${RULE} bg-white font-sans text-[oklch(18%_0.012_28)]`} aria-labelledby="recipe-unit-check">
+        <section className={`border ${RULE} bg-[oklch(99%_0.004_28)] font-sans text-[oklch(18%_0.012_28)]`} aria-labelledby="recipe-unit-check">
             <div className={`px-3 py-2.5 border-b ${RULE} bg-[oklch(98%_0.004_28)]`}>
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">UNIT CHECK</span>
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">UNIT CHECK</span>
                 <h2 id="recipe-unit-check" className="font-bold text-[15px] leading-6">หน่วยในสูตรไม่ตรง {issues.length} แถว</h2>
                 <p className={`text-[12px] leading-5 ${MUTED}`}>
                     ต้นทุนและการตัดสต๊อกอ่านตัวเลขเป็นหน่วยใช้ของวัตถุดิบ แถวเหล่านี้จึงคิดผิดจนกว่าจะแก้
@@ -107,7 +107,7 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
                             )}
                             {onOpenRecipe && i.parentKind === 'menu' && (
                                 <button type="button" onClick={() => onOpenRecipe(i)}
-                                    className={`px-3 py-1.5 border ${RULE} bg-white text-[13px] font-bold ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer whitespace-nowrap`}>
+                                    className={`px-3 py-1.5 border ${RULE} bg-[oklch(99%_0.004_28)] text-[13px] font-bold ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer whitespace-nowrap`}>
                                     เปิดสูตร
                                 </button>
                             )}

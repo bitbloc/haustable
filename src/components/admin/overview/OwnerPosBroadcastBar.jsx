@@ -157,7 +157,7 @@ export default function OwnerPosBroadcastBar() {
     }
 
     return (
-        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3.5 shadow-2xs font-sans">
+        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3.5 font-sans">
             {/* Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[oklch(88%_0.012_28)]">
                 <div>

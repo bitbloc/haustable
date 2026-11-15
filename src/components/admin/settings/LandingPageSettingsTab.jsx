@@ -258,7 +258,7 @@ export default function LandingPageSettingsTab({
                         href="/link"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] px-4 py-2 rounded-xl text-xs font-mono font-bold transition-colors shadow-xs"
+                        className="inline-flex items-center gap-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] px-4 py-2 rounded-xl text-xs font-mono font-bold transition-colors "
                     >
                         <span>เปิดดูหน้า /link</span>
                         <ExternalLink size={13} />
@@ -352,7 +352,7 @@ export default function LandingPageSettingsTab({
                     placeholder="ริมแม่น้ำโขง · นครพนม"
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
-                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                     แสดงเป็น "วิธีมาที่ร้าน" (กดเปิดดู) ใต้บรรทัดที่ตั้งแบบสั้น
                 </p>
             </div>
@@ -381,7 +381,7 @@ export default function LandingPageSettingsTab({
                         placeholder="ห่าง 2 นาที จากลานพญานาค"
                         className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                     />
-                    <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                    <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                         ควรใช้คำเดียวกับ headline ใน Google Ads
                     </p>
                 </div>
@@ -408,7 +408,7 @@ export default function LandingPageSettingsTab({
                         placeholder="143 หรือ Set Size XL สำหรับ 4-6 ท่าน"
                         className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                     />
-                    <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                    <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                         ใส่ ID เมนู หรือบางส่วนของชื่อเมนู · ชุดนี้ขึ้นเป็นอันดับแรกในกลุ่ม
                     </p>
                 </div>
@@ -423,7 +423,7 @@ export default function LandingPageSettingsTab({
                         placeholder="Set :"
                         className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                     />
-                    <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                    <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                         บางส่วนของชื่อหมวด คั่นด้วยจุลภาค · แบ่งกลุ่มตาม "สำหรับ 2-4 ท่าน" ในชื่อเมนู · ไม่มีจำนวนท่าน = กลุ่ม 1 คน
                     </p>
                 </div>
@@ -464,7 +464,7 @@ export default function LandingPageSettingsTab({
                     placeholder="#141=0, #143=0, แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, ใบเหลียง=0, ต้มจิ๋ว=0"
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
-                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                     คำในชื่อเมนู=ระดับ คั่นด้วยจุลภาค · #ID=ระดับ ใช้กำหนดทั้งเมนู/ทั้งชุด (เช่น #143=0 ให้ XL สำรับในบ้านเป็นไม่เผ็ด) · 0 ไม่เผ็ด · 1 เผ็ดน้อย · 2 เผ็ดกลาง · 3 เผ็ดมาก · เมนูที่ไม่ตรงคำไหนจะไม่มีป้าย · เว้นว่าง = ค่าเริ่มต้น
                 </p>
             </div>
@@ -480,12 +480,12 @@ export default function LandingPageSettingsTab({
                     placeholder="Hausmade."
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
-                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                     ชื่อหมวดคั่นด้วยจุลภาค · สินค้า Hausmade ไม่แสดงอยู่แล้ว · ยังมีให้เห็นใน "เมนูทั้งหมด"
                 </p>
             </div>
 
-            <div className="text-[10px] font-mono text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] rounded-xl p-2.5">
+            <div className="text-[11px] font-mono text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] rounded-xl p-2.5">
                 โหมดเน้นที่ตั้ง: ถ้า utm_content ของ ad มีคำว่า location / map / directions / naga / พญานาค หน้า /link จะขึ้นแถบ "นำทางมาร้านเลย" สีเหลืองไว้บนสุด
             </div>
 
@@ -500,7 +500,7 @@ export default function LandingPageSettingsTab({
                     placeholder="#inthehausth, #homefood, #southernthaifood"
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
-                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                     ใส่เครื่องหมาย # นำหน้าและคั่นด้วยจุลภาค เช่น #tag1, #tag2, #tag3
                 </p>
             </div>
@@ -516,7 +516,7 @@ export default function LandingPageSettingsTab({
                     placeholder="เช่น https://widgets.elfsight.com/... หรือ JSON Feed URL"
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
-                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                     วางลิงก์ JSON Feed จากภายนอก (เช่น Elfsight, EmbedSocial) เพื่อแสดงรูปเช็กอินสด
                 </p>
             </div>
@@ -540,7 +540,7 @@ export default function LandingPageSettingsTab({
                     <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                         Contact & Direction Links (ลิงก์นำทาง & ช่องทางติดต่อ)
                     </h3>
-                    <span className="text-[10px] font-mono text-[var(--color-neutral)]">
+                    <span className="text-[11px] font-mono text-[var(--color-neutral)]">
                         ลิงก์สำหรับปุ่ม Float Bar และหน้าเชื่อมต่อ
                     </span>
                 </div>
@@ -560,7 +560,7 @@ export default function LandingPageSettingsTab({
                             placeholder="https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7"
                             className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
-                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                             ลิงก์ปุ่ม DIRECTIONS บน Float Bar และหน้าแรก (ซิงก์กับ Contact Map)
                         </p>
                     </div>
@@ -576,7 +576,7 @@ export default function LandingPageSettingsTab({
                             placeholder="https://lin.ee/EuzwG7c"
                             className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
-                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">
                             ลิงก์ปุ่ม LINE CHAT บน Float Bar
                         </p>
                     </div>
@@ -615,7 +615,7 @@ export default function LandingPageSettingsTab({
                     <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                         Menu Pages (รูปเมนู 10 หน้า)
                     </h3>
-                    <span className="text-[10px] font-mono text-[var(--color-neutral)]">
+                    <span className="text-[11px] font-mono text-[var(--color-neutral)]">
                         คลิกปุ่มเพื่อสลับระหว่างหน้าเมนูหลักกับแท็บโปรโมชั่น
                     </span>
                 </div>
@@ -638,7 +638,7 @@ export default function LandingPageSettingsTab({
                                         <button
                                             type="button"
                                             onClick={() => togglePromoSlot(slot)}
-                                            className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border transition-colors cursor-pointer ${
+                                            className={`px-1.5 py-0.5 rounded text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
                                                 isPromo
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                     : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
@@ -646,7 +646,7 @@ export default function LandingPageSettingsTab({
                                         >
                                             {isPromo ? 'PROMO' : 'MAIN'}
                                         </button>
-                                        <span className="text-[9px] font-mono text-[var(--color-neutral)] font-bold">
+                                        <span className="text-[11px] font-mono text-[var(--color-neutral)] font-bold">
                                             #{slot}
                                         </span>
                                     </div>
@@ -659,11 +659,11 @@ export default function LandingPageSettingsTab({
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <span className="text-[10px] font-mono text-[var(--color-neutral)]">ว่าง</span>
+                                            <span className="text-[11px] font-mono text-[var(--color-neutral)]">ว่าง</span>
                                         )}
                                         {uploading[`link_menu_${slot}`] && (
                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-4 h-4 border-2 border-[oklch(99%_0.004_28)] border-t-transparent rounded-full animate-spin" />
                                             </div>
                                         )}
                                     </div>
@@ -671,7 +671,7 @@ export default function LandingPageSettingsTab({
 
                                 <div className="mt-2 flex flex-col gap-1">
                                     <label className="w-full cursor-pointer">
-                                        <div className="bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-1 text-[9px] font-mono font-bold text-center text-[var(--color-ink)] transition-colors">
+                                        <div className="bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-1 text-[11px] font-mono font-bold text-center text-[var(--color-ink)] transition-colors">
                                             {url ? 'เปลี่ยนรูป' : 'อัปโหลด'}
                                         </div>
                                         <input
@@ -686,7 +686,7 @@ export default function LandingPageSettingsTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleSave(`link_menu_${slot}`, '')}
-                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-accent)] border border-[var(--color-rule)] rounded-md py-1 text-[9px] font-mono font-bold transition-colors text-center cursor-pointer"
+                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-accent)] border border-[var(--color-rule)] rounded-md py-1 text-[11px] font-mono font-bold transition-colors text-center cursor-pointer"
                                                 title="ลบเฉพาะช่องนี้"
                                             >
                                                 ลบ
@@ -694,7 +694,7 @@ export default function LandingPageSettingsTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleDeleteMenu(slot)}
-                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] hover:text-[var(--color-ink)] rounded-md py-1 text-[9px] font-mono font-bold transition-colors text-center cursor-pointer"
+                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] hover:text-[var(--color-ink)] rounded-md py-1 text-[11px] font-mono font-bold transition-colors text-center cursor-pointer"
                                                 title="ลบและเลื่อนคิวภาพถัดไปมาแทนที่"
                                             >
                                                 ลบ & เลื่อน
@@ -729,7 +729,7 @@ export default function LandingPageSettingsTab({
                     <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                         Signature Dishes (เมนูแนะนำ 3 จาน)
                     </h3>
-                    <p className="text-[10px] font-mono text-[var(--color-neutral)]">
+                    <p className="text-[11px] font-mono text-[var(--color-neutral)]">
                         หากไม่ระบุ ระบบจะไม่แสดงส่วนนี้ในหน้า /link
                     </p>
                 </div>
@@ -754,7 +754,7 @@ export default function LandingPageSettingsTab({
                                 )}
                             </div>
                             <label className="block cursor-pointer">
-                                <div className="text-center text-[10px] font-mono font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-1.5 border border-dashed border-[var(--color-rule)] rounded-lg">
+                                <div className="text-center text-[11px] font-mono font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-1.5 border border-dashed border-[var(--color-rule)] rounded-lg">
                                     {uploading[`link_sig_img_${n}`] ? 'กำลังอัปโหลด...' : 'เลือกรูปภาพ'}
                                 </div>
                                 <input
@@ -786,7 +786,7 @@ export default function LandingPageSettingsTab({
                                         handleSave(`link_sig_name_${n}`, '');
                                         handleSave(`link_sig_price_${n}`, '');
                                     }}
-                                    className="text-[10px] font-mono text-[var(--color-accent)] hover:underline w-full text-center py-1 cursor-pointer"
+                                    className="text-[11px] font-mono text-[var(--color-accent)] hover:underline w-full text-center py-1 cursor-pointer"
                                 >
                                     ลบข้อมูลจานนี้
                                 </button>
@@ -802,7 +802,7 @@ export default function LandingPageSettingsTab({
                     <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                         Atmosphere Gallery (รูปบรรยากาศร้าน 10 ช่อง)
                     </h3>
-                    <p className="text-[10px] font-mono text-[var(--color-neutral)]">
+                    <p className="text-[11px] font-mono text-[var(--color-neutral)]">
                         รูปช่องที่ #1 จะถูกใช้เป็นภาพปกบรรยากาศในแกลเลอรี
                     </p>
                 </div>
@@ -822,7 +822,7 @@ export default function LandingPageSettingsTab({
                             >
                                 <div>
                                     <div className="flex justify-between items-center mb-1.5">
-                                        <span className={`text-[9px] font-mono font-bold ${
+                                        <span className={`text-[11px] font-mono font-bold ${
                                             isFirst ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'
                                         }`}>
                                             #{slot} {isFirst ? '(COVER)' : ''}
@@ -837,11 +837,11 @@ export default function LandingPageSettingsTab({
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <span className="text-[10px] font-mono text-[var(--color-neutral)]">ว่าง</span>
+                                            <span className="text-[11px] font-mono text-[var(--color-neutral)]">ว่าง</span>
                                         )}
                                         {uploading[`link_atm_${slot}`] && (
                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-4 h-4 border-2 border-[oklch(99%_0.004_28)] border-t-transparent rounded-full animate-spin" />
                                             </div>
                                         )}
                                     </div>
@@ -849,7 +849,7 @@ export default function LandingPageSettingsTab({
 
                                 <div className="mt-2 flex flex-col gap-1">
                                     <label className="w-full cursor-pointer">
-                                        <div className="bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-1 text-[9px] font-mono font-bold text-center text-[var(--color-ink)] transition-colors">
+                                        <div className="bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-1 text-[11px] font-mono font-bold text-center text-[var(--color-ink)] transition-colors">
                                             {url ? 'เปลี่ยนรูป' : 'อัปโหลด'}
                                         </div>
                                         <input
@@ -864,7 +864,7 @@ export default function LandingPageSettingsTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleSave(`link_atm_${slot}`, '')}
-                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-accent)] border border-[var(--color-rule)] rounded-md py-1 text-[9px] font-mono font-bold transition-colors text-center cursor-pointer"
+                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-accent)] border border-[var(--color-rule)] rounded-md py-1 text-[11px] font-mono font-bold transition-colors text-center cursor-pointer"
                                                 title="ลบเฉพาะช่องนี้"
                                             >
                                                 ลบ
@@ -872,7 +872,7 @@ export default function LandingPageSettingsTab({
                                             <button
                                                 type="button"
                                                 onClick={() => handleDeleteAtm(slot)}
-                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] hover:text-[var(--color-ink)] rounded-md py-1 text-[9px] font-mono font-bold transition-colors text-center cursor-pointer"
+                                                className="flex-1 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] hover:text-[var(--color-ink)] rounded-md py-1 text-[11px] font-mono font-bold transition-colors text-center cursor-pointer"
                                                 title="ลบและเลื่อนคิวภาพถัดไปมาแทนที่"
                                             >
                                                 ลบ & เลื่อน

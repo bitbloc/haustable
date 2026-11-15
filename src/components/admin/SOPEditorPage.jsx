@@ -75,19 +75,19 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                 className="p-3 bg-[oklch(94%_0.010_28)] flex items-center justify-between cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors select-none"
             >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="w-5 h-5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex items-center justify-center text-[10px] font-mono font-bold flex-shrink-0">
+                    <span className="w-5 h-5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex items-center justify-center text-[11px] font-mono font-bold flex-shrink-0">
                         {index + 1}
                     </span>
                     <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate">
                         {step.title || <span className="text-[oklch(55%_0.010_28)] italic font-mono">[ขั้นตอนยังไม่มีชื่อ]</span>}
                     </span>
                     {step.duration_sec && (
-                        <span className="text-[10px] bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] px-1.5 py-0.2 font-mono font-bold flex-shrink-0">
+                        <span className="text-[11px] bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] px-1.5 py-0.2 font-mono font-bold flex-shrink-0">
                             {step.duration_sec}S
                         </span>
                     )}
                     {step.action && (
-                        <span className="text-[10px] text-[oklch(55%_0.010_28)] font-mono uppercase">
+                        <span className="text-[11px] text-[oklch(55%_0.010_28)] font-mono uppercase">
                             [{step.action}]
                         </span>
                     )}
@@ -97,7 +97,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                         type="button"
                         onClick={() => onMove(index, -1)} 
                         disabled={index === 0} 
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-black disabled:opacity-20 cursor-pointer text-xs"
+                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] disabled:opacity-20 cursor-pointer text-xs"
                         title="ย้ายขึ้น"
                     >
                         ▲
@@ -106,7 +106,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                         type="button"
                         onClick={() => onMove(index, 1)} 
                         disabled={isLast} 
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-black disabled:opacity-20 cursor-pointer text-xs"
+                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] disabled:opacity-20 cursor-pointer text-xs"
                         title="ย้ายลง"
                     >
                         ▼
@@ -119,7 +119,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                     >
                         <Trash2 size={14} />
                     </button>
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] ml-1 font-mono font-bold">
+                    <span className="text-[11px] text-[oklch(55%_0.010_28)] ml-1 font-mono font-bold">
                         {isExpanded ? '[ย่อ ▲]' : '[แก้ไข ▼]'}
                     </span>
                 </div>
@@ -130,11 +130,11 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                 <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div className="sm:col-span-1">
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">ประเภทการทำ</label>
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">ประเภทการทำ</label>
                             <select
                                 value={step.action || 'pour'}
                                 onChange={e => onUpdate(index, { ...step, action: e.target.value })}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-mono outline-none focus:border-black"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-mono outline-none focus:border-[oklch(18%_0.012_28)]"
                             >
                                 {SOP_ACTIONS.map(a => (
                                     <option key={a.key} value={a.key}>{a.labelEn || a.label} ({a.label})</option>
@@ -142,61 +142,61 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                             </select>
                         </div>
                         <div className="sm:col-span-3">
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">ชื่อขั้นตอน</label>
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">ชื่อขั้นตอน</label>
                             <input 
                                 value={step.title || ''} 
                                 onChange={e => onUpdate(index, { ...step, title: e.target.value })} 
                                 placeholder="ชื่อขั้นตอน (เช่น สกัดช็อตกาแฟ)" 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold outline-none focus:border-black" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-bold outline-none focus:border-[oklch(18%_0.012_28)]" 
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">รายละเอียดขั้นตอน</label>
+                        <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">รายละเอียดขั้นตอน</label>
                         <textarea 
                             value={step.instruction || ''} 
                             onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} 
                             placeholder="รายละเอียดขั้นตอนอย่างย่อ" 
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs outline-none focus:border-black resize-none" 
+                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs outline-none focus:border-[oklch(18%_0.012_28)] resize-none" 
                             rows={3} 
                         />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] uppercase block mb-1">[KEY POINT] จุดสำคัญ</label>
+                            <label className="text-[11px] font-mono font-bold text-[oklch(52%_0.16_28)] uppercase block mb-1">[KEY POINT] จุดสำคัญ</label>
                             <input 
                                 value={step.key_points || ''} 
                                 onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} 
                                 placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs outline-none focus:border-[oklch(52%_0.16_28)]" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs outline-none focus:border-[oklch(52%_0.16_28)]" 
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">[REASON] เหตุผล</label>
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">[REASON] เหตุผล</label>
                             <input 
                                 value={step.reason || ''} 
                                 onChange={e => onUpdate(index, { ...step, reason: e.target.value })} 
                                 placeholder="เหตุผล (เช่น ลดการแยกชั้น)" 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs outline-none focus:border-black" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs outline-none focus:border-[oklch(18%_0.012_28)]" 
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div className="sm:col-span-1">
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">เวลา (วินาที)</label>
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">เวลา (วินาที)</label>
                             <input
                                 type="number"
                                 value={step.duration_sec || ''}
                                 onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value, 10) : null })}
                                 placeholder="เช่น 30"
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs outline-none focus:border-black font-mono"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs outline-none focus:border-[oklch(18%_0.012_28)] font-mono"
                             />
                         </div>
                         <div className="sm:col-span-3">
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">แนบวัตถุดิบ (อ้างอิงสูตร)</label>
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">แนบวัตถุดิบ (อ้างอิงสูตร)</label>
                             {(() => {
                                 const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
                                 const available = (availableIngredients || []).filter(name => !refs.includes(name));
@@ -239,7 +239,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                                                         });
                                                     }
                                                 }}
-                                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs text-[oklch(42%_0.010_28)] outline-none cursor-pointer font-mono"
+                                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs text-[oklch(42%_0.010_28)] outline-none cursor-pointer font-mono"
                                             >
                                                 <option value="">+ แนบวัตถุดิบ...</option>
                                                 {available.map(name => (
@@ -269,7 +269,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
             <div className="flex flex-col sm:flex-row gap-2.5">
                 <div className="flex-1 flex gap-2 items-center min-w-0">
                     {ing.isLinked && (
-                        <span className="px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[9px] rounded-xs font-mono font-bold flex-shrink-0" title="ดึงข้อมูลจากคลังสินค้า">
+                        <span className="px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[11px] rounded-xs font-mono font-bold flex-shrink-0" title="ดึงข้อมูลจากคลังสินค้า">
                             [LINKED]
                         </span>
                     )}
@@ -279,7 +279,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                         readOnly={ing.isLinked}
                         title={ing.isLinked ? 'แก้ชื่อและปริมาณที่สูตรของเมนู / เบส' : undefined}
                         placeholder="ชื่อวัตถุดิบ"
-                        className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-bold outline-none focus:border-black ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-white'}`}
+                        className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-bold outline-none focus:border-[oklch(18%_0.012_28)] ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-[oklch(99%_0.004_28)]'}`}
                     />
                 </div>
                 
@@ -290,7 +290,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                             value={ing.qty || ''} 
                             onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })}
                             readOnly={ing.isLinked}
-                            className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs text-center font-mono font-bold outline-none focus:border-black tabular-nums ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-white'}`}  
+                            className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs text-center font-mono font-bold outline-none focus:border-[oklch(18%_0.012_28)] tabular-nums ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-[oklch(99%_0.004_28)]'}`}  
                             placeholder="จำนวน" 
                         />
                     </div>
@@ -301,7 +301,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                             onChange={e => onUpdate(index, { ...ing, unit: e.target.value })}
                             readOnly={ing.isLinked}
                             list="sop-units"
-                            className={`w-full p-2 border text-xs text-center font-mono outline-none ${showWarning ? 'border-[oklch(60%_0.15_28)] bg-[oklch(95%_0.02_45)]/20' : 'border-[oklch(85%_0.012_28)] bg-white'}`} 
+                            className={`w-full p-2 border text-xs text-center font-mono outline-none ${showWarning ? 'border-[oklch(60%_0.15_28)] bg-[oklch(95%_0.02_45)]/20' : 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]'}`} 
                             placeholder="หน่วย" 
                         />
                     </div>
@@ -314,14 +314,14 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                     <input 
                         value={ing.remark || ''} 
                         onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} 
-                        className="w-full p-1.5 border border-[oklch(90%_0.008_28)] bg-white text-xs outline-none focus:border-black" 
+                        className="w-full p-1.5 border border-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)] text-xs outline-none focus:border-[oklch(18%_0.012_28)]" 
                         placeholder="หมายเหตุ (เช่น กรองเอาแต่น้ำ)" 
                     />
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-3 font-mono">
                     <label className="flex items-center gap-1.5 text-xs text-[oklch(42%_0.010_28)] cursor-pointer select-none">
-                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded-xs text-black border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
+                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded-xs text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-[11px]">SCALE แก้ว</span>
                     </label>
                     <label className="flex items-center gap-1.5 text-xs text-[oklch(52%_0.16_28)] font-bold cursor-pointer select-none">
@@ -369,14 +369,14 @@ function QuickPasteModal({ onClose, onApply }) {
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-xl w-full rounded-sm shadow-2xl overflow-hidden font-sans flex flex-col max-h-[85vh]">
                 <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
                     <div>
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                             NATURAL TEXT PARSER
                         </span>
                         <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
                             วางข้อความนำเข้าสูตรด่วน (Quick Paste)
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-black">
+                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
                         <X size={18} />
                     </button>
                 </div>
@@ -389,14 +389,14 @@ function QuickPasteModal({ onClose, onApply }) {
                         value={text}
                         onChange={e => setText(e.target.value)}
                         placeholder={`มัทฉะลาเต้เย็น 16oz\n- ผงมัทฉะ 5g\n- น้ำร้อน 30ml\n- นมสด 120ml\n- ไซรัป 15ml (หวานปกติ 15, หวานน้อย 7.5, ไม่หวาน 0)\nขั้นตอน:\n1. ตีมัทฉะกับน้ำร้อน 30 วินาทีจนละลาย\n2. ใส่นมสดและน้ำแข็งเต็มแก้ว\n3. เทมัทฉะท็อปด้านบน`}
-                        className="w-full h-44 p-3 border border-[oklch(85%_0.012_28)] bg-white text-xs font-mono outline-none focus:border-black resize-none"
+                        className="w-full h-44 p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-mono outline-none focus:border-[oklch(18%_0.012_28)] resize-none"
                         autoFocus
                     />
 
                     {/* Live Parser Feedback */}
                     {text.trim() && (
                         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 font-mono text-xs space-y-1.5">
-                            <div className="text-[10px] font-bold uppercase text-[oklch(52%_0.16_28)]">
+                            <div className="text-[11px] font-bold uppercase text-[oklch(52%_0.16_28)]">
                                 ผลการวิเคราะห์ข้อมูลสด:
                             </div>
                             <div className="text-[oklch(18%_0.012_28)]">
@@ -411,10 +411,10 @@ function QuickPasteModal({ onClose, onApply }) {
                 </div>
 
                 <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-end gap-2 font-mono text-xs">
-                    <button onClick={onClose} className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-bold uppercase">
+                    <button onClick={onClose} className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] font-bold uppercase">
                         ยกเลิก
                     </button>
-                    <button onClick={handleConfirm} disabled={!text.trim()} className="px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black disabled:opacity-40">
+                    <button onClick={handleConfirm} disabled={!text.trim()} className="px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40">
                         นำเข้าข้อมูลสูตร
                     </button>
                 </div>
@@ -448,14 +448,14 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
             {/* Drawer Header */}
             <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
                 <div>
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
                         QUICK RECIPE DRAWER
                     </span>
                     <h3 className="font-mono text-sm font-bold uppercase text-[oklch(18%_0.012_28)] truncate max-w-[260px]">
                         {recipe.name}
                     </h3>
                 </div>
-                <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-black">
+                <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
                     <X size={18} />
                 </button>
             </div>
@@ -463,24 +463,24 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
             {/* Drawer Body */}
             <div className="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
                 {/* Meta stats */}
-                <div className="grid grid-cols-3 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-white font-mono text-center">
+                <div className="grid grid-cols-3 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-center">
                     <div className="p-2">
-                        <span className="block text-[8px] text-[oklch(55%_0.010_28)] uppercase">หมวดหมู่</span>
+                        <span className="block text-[11px] text-[oklch(55%_0.010_28)] uppercase">หมวดหมู่</span>
                         <span className="font-bold text-[oklch(18%_0.012_28)]">{recipe.category?.label || 'ทั่วไป'}</span>
                     </div>
                     <div className="p-2">
-                        <span className="block text-[8px] text-[oklch(55%_0.010_28)] uppercase">แก้วฐาน</span>
+                        <span className="block text-[11px] text-[oklch(55%_0.010_28)] uppercase">แก้วฐาน</span>
                         <span className="font-bold text-[oklch(18%_0.012_28)]">{recipe.base_glass_size_oz || 16} oz</span>
                     </div>
                     <div className="p-2">
-                        <span className="block text-[8px] text-[oklch(55%_0.010_28)] uppercase">ขั้นตอน</span>
+                        <span className="block text-[11px] text-[oklch(55%_0.010_28)] uppercase">ขั้นตอน</span>
                         <span className="font-bold text-[oklch(18%_0.012_28)]">{(recipe.steps || []).length} steps</span>
                     </div>
                 </div>
 
                 {/* Sweetness Selector */}
                 <div>
-                    <div className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1.5">
+                    <div className="font-mono text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1.5">
                         ทดลองสเกลระดับความหวาน (Sweetness Test):
                     </div>
                     <div className="grid grid-cols-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-[11px] text-center">
@@ -502,8 +502,8 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 </div>
 
                 {/* Ingredients with Inline Adjust */}
-                <div className="border border-[oklch(85%_0.012_28)] bg-white">
-                    <div className="p-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[10px] font-bold uppercase text-[oklch(18%_0.012_28)] flex justify-between">
+                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
+                    <div className="p-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[11px] font-bold uppercase text-[oklch(18%_0.012_28)] flex justify-between">
                         <span>ส่วนผสม (ปรับตัวเลขได้ทันที)</span>
                         <span>{recipe.ingredients?.length || 0} รายการ</span>
                     </div>
@@ -513,7 +513,7 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                                 <div className="min-w-0 flex-1">
                                     <div className="font-bold text-xs text-[oklch(18%_0.012_28)] truncate">{ing.name}</div>
                                     {ing.is_sweetener && (
-                                        <span className="font-mono text-[8px] font-bold text-[oklch(52%_0.16_28)] uppercase">[SWEETENER]</span>
+                                        <span className="font-mono text-[11px] font-bold text-[oklch(52%_0.16_28)] uppercase">[SWEETENER]</span>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -521,9 +521,9 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                                         type="number"
                                         value={inlineQty[idx] !== undefined ? inlineQty[idx] : ing.qty}
                                         onChange={e => setInlineQty({ ...inlineQty, [idx]: e.target.value })}
-                                        className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono font-bold text-xs bg-white focus:border-black outline-none"
+                                        className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono font-bold text-xs bg-[oklch(99%_0.004_28)] focus:border-[oklch(18%_0.012_28)] outline-none"
                                     />
-                                    <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] w-8 text-left">{ing.unit}</span>
+                                    <span className="font-mono text-[11px] text-[oklch(42%_0.010_28)] w-8 text-left">{ing.unit}</span>
                                 </div>
                             </div>
                         ))}
@@ -533,7 +533,7 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                             type="button"
                             onClick={handleInlineSave}
                             disabled={isSaving}
-                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[10px] font-bold uppercase hover:bg-black disabled:opacity-50"
+                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[11px] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-50"
                         >
                             {isSaving ? 'กำลังบันทึก...' : 'บันทึกตัวเลขที่ปรับ'}
                         </button>
@@ -541,8 +541,8 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 </div>
 
                 {/* Steps Glance */}
-                <div className="border border-[oklch(85%_0.012_28)] bg-white p-3 space-y-2">
-                    <span className="font-mono text-[10px] font-bold uppercase text-[oklch(55%_0.010_28)] block">
+                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-3 space-y-2">
+                    <span className="font-mono text-[11px] font-bold uppercase text-[oklch(55%_0.010_28)] block">
                         ลำดับขั้นตอนการชงย่อ:
                     </span>
                     <ol className="space-y-1.5 font-mono text-[11px] text-[oklch(18%_0.012_28)]">
@@ -561,7 +561,7 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 <button
                     type="button"
                     onClick={() => onExportPdf(recipe.id)}
-                    className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] flex items-center justify-center gap-1.5"
                 >
                     <Download size={13} />
                     <span>EXPORT PDF</span>
@@ -569,7 +569,7 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 <button
                     type="button"
                     onClick={() => onDuplicate(recipe.id)}
-                    className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] flex items-center justify-center gap-1.5"
                 >
                     <Copy size={13} />
                     <span>โคลนสูตร</span>
@@ -577,7 +577,7 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 <button
                     type="button"
                     onClick={() => onEditFull(recipe)}
-                    className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] flex items-center justify-center gap-1.5"
                 >
                     <Edit2 size={13} />
                     <span>แก้ไขเต็ม</span>
@@ -624,7 +624,7 @@ function ImportModal({ onClose, onImport }) {
                         value={search} 
                         onChange={e => setSearch(e.target.value)} 
                         placeholder="ค้นหาเมนูหรือเบส..." 
-                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs outline-none focus:border-black font-mono" 
+                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs outline-none focus:border-[oklch(18%_0.012_28)] font-mono" 
                         autoFocus 
                     />
                 </div>
@@ -639,10 +639,10 @@ function ImportModal({ onClose, onImport }) {
                         >
                             <div>
                                 <div className="font-bold text-xs text-[oklch(18%_0.012_28)] flex items-center gap-2">
-                                    {item.type === 'stock' && <span className="px-1.5 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] text-[9px] font-mono font-bold">BASE</span>}
+                                    {item.type === 'stock' && <span className="px-1.5 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] text-[11px] font-mono font-bold">BASE</span>}
                                     {item.name}
                                 </div>
-                                <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">{item.type === 'menu' ? 'เมนู' : 'เบส / ของเตรียม'}</div>
+                                <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">{item.type === 'menu' ? 'เมนู' : 'เบส / ของเตรียม'}</div>
                             </div>
                             <Download size={14} className="text-[oklch(55%_0.010_28)]" />
                         </button>
@@ -941,7 +941,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
                                 S.O.P. MANAGEMENT BENCH
                             </span>
                         </div>
@@ -975,7 +975,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                         <button 
                             onClick={() => setShowCategoryManager(true)} 
-                            className="p-2 hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)]" 
+                            className="p-2 hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)]" 
                             title="จัดการหมวดหมู่"
                         >
                             <Settings size={15} />
@@ -983,7 +983,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                         <button 
                             onClick={refresh} 
-                            className="p-2 hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)]"
+                            className="p-2 hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)]"
                             title="รีเฟรชข้อมูล"
                         >
                             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -991,7 +991,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                         <button 
                             onClick={handleNew} 
-                            className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-black transition-colors shadow-sm"
+                            className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-[oklch(18%_0.012_28)] transition-colors "
                         >
                             <Plus size={14} /> 
                             <span>NEW SOP</span>
@@ -1008,7 +1008,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         className={`pb-2.5 pt-1 whitespace-nowrap font-bold border-b-2 transition-colors uppercase ${
                             !activeCategory 
                                 ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)]' 
-                                : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-black'
+                                : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
                         [ทั้งหมด ({recipes.length})]
@@ -1022,7 +1022,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 className={`pb-2.5 pt-1 whitespace-nowrap font-bold border-b-2 transition-colors uppercase ${
                                     activeCategory === cat.id 
                                         ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)]' 
-                                        : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-black'
+                                        : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                             >
                                 [{cat.label} ({count})]
@@ -1039,10 +1039,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         placeholder="ค้นหาชื่อเมนู, ชื่ออังกฤษ, หรือวัตถุดิบ..."
                         value={searchQuery || ''}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-9 py-2.5 bg-white border border-[oklch(85%_0.012_28)] text-xs font-mono outline-none focus:border-black transition-all"
+                        className="w-full pl-9 pr-9 py-2.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-xs font-mono outline-none focus:border-[oklch(18%_0.012_28)] transition-all"
                     />
                     {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-black">
+                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
                             <X size={15} />
                         </button>
                     )}
@@ -1051,19 +1051,19 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 {/* Recipe Ledger List */}
                 {loading ? (
                     <div className="space-y-2 font-mono text-xs">
-                        {[1,2,3,4].map(i => <div key={i} className="h-14 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] animate-pulse" />)}
+                        {[1,2,3,4].map(i => <div key={i} className="h-14 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] " />)}
                     </div>
                 ) : recipes.length === 0 ? (
-                    <div className="text-center py-16 text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] bg-white">
+                    <div className="text-center py-16 text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
                         <p className="text-xs font-mono uppercase tracking-wider mb-2">ยังไม่มีสูตร SOP ในหมวดหมู่นี้</p>
                         <div className="flex justify-center gap-3">
-                            <button onClick={() => setShowQuickPaste(true)} className="text-black font-bold text-xs hover:underline font-mono">[QUICK PASTE นำเข้า]</button>
+                            <button onClick={() => setShowQuickPaste(true)} className="text-[oklch(18%_0.012_28)] font-bold text-xs hover:underline font-mono">[QUICK PASTE นำเข้า]</button>
                             <span>•</span>
-                            <button onClick={handleNew} className="text-black font-bold text-xs hover:underline font-mono">[+ สร้าง SOP ใหม่]</button>
+                            <button onClick={handleNew} className="text-[oklch(18%_0.012_28)] font-bold text-xs hover:underline font-mono">[+ สร้าง SOP ใหม่]</button>
                         </div>
                     </div>
                 ) : (
-                    <div className="border border-[oklch(85%_0.012_28)] bg-white divide-y divide-[oklch(90%_0.008_28)]">
+                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] divide-y divide-[oklch(90%_0.008_28)]">
                         {recipes.map(recipe => (
                             <div 
                                 key={recipe.id} 
@@ -1071,7 +1071,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 className="p-3.5 flex items-center justify-between gap-4 hover:bg-[oklch(98%_0.004_28)] transition-colors cursor-pointer group"
                             >
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <span className="font-mono text-[10px] font-bold px-2 py-1 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] uppercase flex-shrink-0">
+                                    <span className="font-mono text-[11px] font-bold px-2 py-1 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] uppercase flex-shrink-0">
                                         {recipe.category?.label || 'BAR'}
                                     </span>
                                     <div className="min-w-0">
@@ -1102,10 +1102,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 </div>
 
                                 <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                                    <span className={`px-2 py-0.5 text-[9px] font-mono font-bold border ${
+                                    <span className={`px-2 py-0.5 text-[11px] font-mono font-bold border ${
                                         recipe.is_published 
                                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-                                            : 'bg-gray-50 text-gray-500 border-gray-200'
+                                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(50%_0.010_28)] border-[oklch(90%_0.008_28)]'
                                     }`}>
                                         {recipe.is_published ? 'PUBLISHED' : 'DRAFT'}
                                     </span>
@@ -1113,7 +1113,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button 
                                         type="button"
                                         onClick={() => setExportModalConfig({ isOpen: true, recipeId: recipe.id })}
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
+                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
                                         title="พิมพ์คู่มือสูตรนี้ (A4 PDF)"
                                     >
                                         <Download size={15} />
@@ -1122,7 +1122,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button 
                                         type="button"
                                         onClick={() => handleDuplicateRecipe(recipe.id)}
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
+                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
                                         title="โคลนสูตรนี้ (Duplicate)"
                                     >
                                         <Copy size={15} />
@@ -1131,7 +1131,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button 
                                         type="button"
                                         onClick={() => setEditing({ ...recipe })} 
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
+                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
                                         title="แก้ไขสูตร"
                                     >
                                         <Edit2 size={15} />
@@ -1212,13 +1212,13 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={() => setEditing(null)} 
-                        className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] hover:text-black font-mono text-xs font-bold uppercase flex items-center gap-1"
+                        className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-mono text-xs font-bold uppercase flex items-center gap-1"
                     >
                         <ArrowLeft size={13} />
                         <span>กลับหน้ารายการ</span>
                     </button>
                     <div>
-                        <span className="font-mono text-[9px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block">
+                        <span className="font-mono text-[11px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block">
                             RECIPE WORKBENCH
                         </span>
                         <h2 className="font-mono text-base font-bold uppercase text-[oklch(18%_0.012_28)]">
@@ -1237,7 +1237,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             className={`px-3 py-1.5 font-bold uppercase transition-colors ${
                                 editorMode === 'simple' 
                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
                             SIMPLE (เรียบง่าย)
@@ -1248,7 +1248,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             className={`px-3 py-1.5 font-bold uppercase transition-colors ${
                                 editorMode === 'pro' 
                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
                             PRO (เจาะลึก QC)
@@ -1261,7 +1261,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         className={`px-3 py-1.5 border border-[oklch(85%_0.012_28)] font-bold uppercase transition-colors flex items-center gap-1 ${
                             showPreview 
                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                : 'bg-white text-[oklch(42%_0.010_28)] hover:text-black'
+                                : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
                         {showPreview ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -1272,7 +1272,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         type="button"
                         onClick={handleSave} 
                         disabled={saving} 
-                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
+                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-50 transition-colors flex items-center gap-1.5 "
                     >
                         <Save size={13} />
                         <span>{saving ? 'กำลังบันทึก...' : 'บันทึก SOP'}</span>
@@ -1297,7 +1297,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             className={`px-3 py-1 font-bold whitespace-nowrap transition-colors ${
                                 activeAnchor === item.id 
                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
                             {item.label}
@@ -1310,7 +1310,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 {/* Live Preview Box */}
                 {showPreview && (
                     <div className="bg-[oklch(18%_0.012_28)] p-4 rounded-xs border border-[oklch(30%_0.015_28)] shadow-2xl">
-                        <div className="text-[10px] text-[oklch(70%_0.010_28)] font-mono uppercase tracking-wider mb-3 px-1 border-b border-[oklch(30%_0.015_28)] pb-1 flex justify-between items-center">
+                        <div className="text-[11px] text-[oklch(70%_0.010_28)] font-mono uppercase tracking-wider mb-3 px-1 border-b border-[oklch(30%_0.015_28)] pb-1 flex justify-between items-center">
                             <span>SIMULATION: SOP RECIPE VIEWER SCREEN</span>
                             <span className="text-emerald-400 font-bold">[LIVE PREVIEW]</span>
                         </div>
@@ -1329,47 +1329,47 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 )}
 
                 {/* ── SECTION 1: ข้อมูลทั่วไป (General Info) ── */}
-                <section id="sec-basic" className="bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
+                <section id="sec-basic" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
                     <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex justify-between items-center">
                         <h3 className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest">
                             01 / ข้อมูลทั่วไป (GENERAL INFO)
                         </h3>
-                        <span className="text-[10px] font-mono text-[oklch(52%_0.16_28)] font-bold">
+                        <span className="text-[11px] font-mono text-[oklch(52%_0.16_28)] font-bold">
                             {editorMode === 'simple' ? '[SIMPLE MODE]' : '[PRO MODE]'}
                         </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
                                 ชื่อเมนู (ภาษาไทย) *
                             </label>
                             <input 
                                 value={editing.name} 
                                 onChange={e => setEditing({ ...editing, name: e.target.value })} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-bold focus:border-black outline-none" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-bold focus:border-[oklch(18%_0.012_28)] outline-none" 
                                 placeholder="เช่น มัทฉะลาเต้เย็น" 
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
                                 ชื่อเมนู (EN / optional)
                             </label>
                             <input 
                                 value={editing.name_en || ''} 
                                 onChange={e => setEditing({ ...editing, name_en: e.target.value })} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-mono focus:border-black outline-none" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-mono focus:border-[oklch(18%_0.012_28)] outline-none" 
                                 placeholder="e.g. Iced Matcha Latte" 
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
                                 หมวดหมู่สูตร SOP
                             </label>
                             <select 
                                 value={editing.category_id || ''} 
                                 onChange={e => setEditing({ ...editing, category_id: e.target.value })} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-mono focus:border-black outline-none"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-mono focus:border-[oklch(18%_0.012_28)] outline-none"
                             >
                                 <option value="">-- เลือกหมวดหมู่ --</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -1377,13 +1377,13 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         </div>
                         {!isCustomMode && (
                             <div>
-                                <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
+                                <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
                                     ขนาดแก้วมาตรฐาน (Base Glass Size)
                                 </label>
                                 <select 
                                     value={editing.base_glass_size_oz} 
                                     onChange={e => setEditing({ ...editing, base_glass_size_oz: parseInt(e.target.value, 10) })} 
-                                    className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-mono font-bold focus:border-black outline-none"
+                                    className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-mono font-bold focus:border-[oklch(18%_0.012_28)] outline-none"
                                 >
                                     {glassSizes.map(gs => <option key={gs.id} value={gs.size_oz}>{gs.size_oz} oz ({gs.name || gs.label})</option>)}
                                     <option value="16">16 oz (Default)</option>
@@ -1391,24 +1391,24 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             </div>
                         )}
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
                                 เวลาสกัด/เตรียม (Prep Time)
                             </label>
                             <input 
                                 value={editing.advanced_details?.prep_time || ''} 
                                 onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, prep_time: e.target.value }})} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-mono focus:border-black outline-none" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-mono focus:border-[oklch(18%_0.012_28)] outline-none" 
                                 placeholder="เช่น 2-3 นาที" 
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block mb-1">
                                 ระดับน้ำแข็งมาตรฐาน (Ice Level)
                             </label>
                             <input 
                                 value={editing.advanced_details?.ice_level || ''} 
                                 onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, ice_level: e.target.value }})} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-mono focus:border-black outline-none" 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-mono focus:border-[oklch(18%_0.012_28)] outline-none" 
                                 placeholder="เช่น เต็มแก้ว 100%" 
                             />
                         </div>
@@ -1417,7 +1417,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                 {/* ── SECTION 2: สเกลและขนาด (Scaling Rules) - Shown in PRO Mode ── */}
                 {editorMode === 'pro' && (
-                    <section id="sec-scaling" className="bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
+                    <section id="sec-scaling" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
                         <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex justify-between items-start">
                             <div>
                                 <h3 className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest">
@@ -1425,8 +1425,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 </h3>
                             </div>
                             <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
-                                <button type="button" onClick={() => toggleCustomMode(false)} className={`px-2.5 py-1 text-[10px] font-mono font-bold ${!isCustomMode ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(42%_0.010_28)]'}`}>แก้ว (OZ)</button>
-                                <button type="button" onClick={() => toggleCustomMode(true)} className={`px-2.5 py-1 text-[10px] font-mono font-bold ${isCustomMode ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(42%_0.010_28)]'}`}>เบส (CUSTOM)</button>
+                                <button type="button" onClick={() => toggleCustomMode(false)} className={`px-2.5 py-1 text-[11px] font-mono font-bold ${!isCustomMode ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>แก้ว (OZ)</button>
+                                <button type="button" onClick={() => toggleCustomMode(true)} className={`px-2.5 py-1 text-[11px] font-mono font-bold ${isCustomMode ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>เบส (CUSTOM)</button>
                             </div>
                         </div>
 
@@ -1442,10 +1442,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
                                             }}
                                             placeholder="ชื่อปุ่ม (เช่น 1.5 ลิตร)"
-                                            className="flex-1 p-1.5 border border-[oklch(85%_0.012_28)] text-xs font-bold bg-white"
+                                            className="flex-1 p-1.5 border border-[oklch(85%_0.012_28)] text-xs font-bold bg-[oklch(99%_0.004_28)]"
                                         />
-                                        <div className="flex items-center gap-1 bg-white px-2 py-1 border border-[oklch(85%_0.012_28)]">
-                                            <span className="text-[9px] font-mono font-bold text-[oklch(55%_0.010_28)]">MULTIPLIER</span>
+                                        <div className="flex items-center gap-1 bg-[oklch(99%_0.004_28)] px-2 py-1 border border-[oklch(85%_0.012_28)]">
+                                            <span className="text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)]">MULTIPLIER</span>
                                             <input 
                                                 type="number" step="0.01"
                                                 value={preset.multiplier}
@@ -1454,7 +1454,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                     newPresets[idx].multiplier = parseFloat(e.target.value) || 1;
                                                     setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
                                                 }}
-                                                className={`w-14 text-center font-mono font-bold text-xs outline-none ${preset.isBase ? 'text-[oklch(55%_0.010_28)]' : 'text-black'}`}
+                                                className={`w-14 text-center font-mono font-bold text-xs outline-none ${preset.isBase ? 'text-[oklch(55%_0.010_28)]' : 'text-[oklch(18%_0.012_28)]'}`}
                                                 disabled={preset.isBase}
                                             />
                                         </div>
@@ -1481,11 +1481,11 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 }}
                                                 className={`px-3 py-2 border font-mono text-left transition-all ${
                                                     isAvailable 
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-black' 
-                                                        : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:border-black'
+                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' 
+                                                        : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:border-[oklch(18%_0.012_28)]'
                                                 }`}
                                             >
-                                                <div className="text-[9px] uppercase">{isBase ? 'STANDARD' : isAvailable ? 'ON SALE' : 'OFF'}</div>
+                                                <div className="text-[11px] uppercase">{isBase ? 'STANDARD' : isAvailable ? 'ON SALE' : 'OFF'}</div>
                                                 <div className="font-bold text-sm">{gs.size_oz} OZ</div>
                                             </button>
                                         );
@@ -1497,7 +1497,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 )}
 
                 {/* ── SECTION 3: ส่วนผสมและระดับความหวาน (Ingredients & Sweetness Matrix) ── */}
-                <section id="sec-ingredients" className="bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
+                <section id="sec-ingredients" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
                     <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest">
@@ -1516,7 +1516,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             <button
                                 type="button"
                                 onClick={() => setShowImport(true)}
-                                className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(94%_0.010_28)] flex items-center gap-1"
+                                className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] font-bold uppercase hover:bg-[oklch(94%_0.010_28)] flex items-center gap-1"
                             >
                                 <Download size={12} />
                                 <span>{editing.source_menu_item_id || editing.source_stock_item_id ? 'เปลี่ยนเมนู / เบส' : 'ผูกกับเมนู / เบส'}</span>
@@ -1525,7 +1525,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 <button
                                     type="button"
                                     onClick={() => setRecipeEditorFor({ type: editing.source_menu_item_id ? 'menu' : 'stock', id: editing.source_menu_item_id || editing.source_stock_item_id })}
-                                    className="px-2.5 py-1 border border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-black flex items-center gap-1"
+                                    className="px-2.5 py-1 border border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-[oklch(18%_0.012_28)] flex items-center gap-1"
                                 >
                                     <span>แก้ส่วนผสมในสูตร</span>
                                 </button>
@@ -1551,7 +1551,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         <button 
                             type="button" 
                             onClick={addIngredient} 
-                            className="w-full py-2.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] font-mono font-bold text-xs text-[oklch(42%_0.010_28)] hover:text-black hover:border-black transition-colors uppercase"
+                            className="w-full py-2.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] font-mono font-bold text-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)] transition-colors uppercase"
                         >
                             {editing.source_menu_item_id || editing.source_stock_item_id ? '+ เพิ่มบรรทัดที่ไม่ใช่ของในสต๊อก (เช่น น้ำแข็ง)' : '+ เพิ่มวัตถุดิบ (ADD INGREDIENT)'}
                         </button>
@@ -1562,7 +1562,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         <div className="mt-5 pt-4 border-t border-[oklch(85%_0.012_28)] space-y-3">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <div>
-                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                                         SWEETNESS SPECIFICATION MATRIX
                                     </span>
                                     <h4 className="font-mono text-xs font-bold uppercase text-[oklch(18%_0.012_28)]">
@@ -1574,7 +1574,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button
                                         type="button"
                                         onClick={() => handleAutoFillSweetness(false)}
-                                        className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] text-white text-[11px] font-bold uppercase hover:bg-black transition-colors flex items-center gap-1"
+                                        className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] transition-colors flex items-center gap-1"
                                     >
                                         <Sparkles size={12} />
                                         <span>คำนวณมาตรฐาน (0/50/100/120%)</span>
@@ -1593,7 +1593,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                             <th className="p-2 text-left pl-3">สารหวาน</th>
                                             <th className="p-2">ไม่หวาน (0%)</th>
                                             <th className="p-2 text-[oklch(52%_0.16_28)] font-bold">หวานน้อย (50%)</th>
-                                            <th className="p-2 bg-[oklch(90%_0.015_28)] text-black font-bold">หวานปกติ (100%)</th>
+                                            <th className="p-2 bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)] font-bold">หวานปกติ (100%)</th>
                                             <th className="p-2">หวานมาก (120%)</th>
                                         </tr>
                                     </thead>
@@ -1628,7 +1628,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                             };
 
                                             return (
-                                                <tr key={sIdx} className="hover:bg-white transition-colors">
+                                                <tr key={sIdx} className="hover:bg-[oklch(99%_0.004_28)] transition-colors">
                                                     <td className="p-2 text-left pl-3 font-sans font-bold text-[oklch(18%_0.012_28)]">
                                                         {sw.name}
                                                     </td>
@@ -1637,7 +1637,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                             type="number"
                                                             value={noneVal}
                                                             onChange={e => updateLevel('none', e.target.value)}
-                                                            className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono text-xs bg-white"
+                                                            className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono text-xs bg-[oklch(99%_0.004_28)]"
                                                         />
                                                     </td>
                                                     <td className="p-2">
@@ -1646,12 +1646,12 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                                 type="number"
                                                                 value={lessVal}
                                                                 onChange={e => updateLevel('less', e.target.value)}
-                                                                className="w-16 p-1 border border-[oklch(52%_0.16_28)] text-center font-mono font-bold text-xs bg-white text-[oklch(52%_0.16_28)]"
+                                                                className="w-16 p-1 border border-[oklch(52%_0.16_28)] text-center font-mono font-bold text-xs bg-[oklch(99%_0.004_28)] text-[oklch(52%_0.16_28)]"
                                                             />
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('less', Math.max(0, lessVal - 5))}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[9px] hover:bg-gray-100"
+                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
                                                                 title="ลด 5ml"
                                                             >
                                                                 -5
@@ -1659,7 +1659,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('less', lessVal + 5)}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[9px] hover:bg-gray-100"
+                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
                                                                 title="เพิ่ม 5ml"
                                                             >
                                                                 +5
@@ -1671,7 +1671,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                             type="number"
                                                             value={normVal}
                                                             onChange={e => updateLevel('normal', e.target.value)}
-                                                            className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono font-bold text-xs bg-white"
+                                                            className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono font-bold text-xs bg-[oklch(99%_0.004_28)]"
                                                         />
                                                     </td>
                                                     <td className="p-2">
@@ -1680,19 +1680,19 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                                 type="number"
                                                                 value={extraVal}
                                                                 onChange={e => updateLevel('extra', e.target.value)}
-                                                                className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono text-xs bg-white"
+                                                                className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center font-mono text-xs bg-[oklch(99%_0.004_28)]"
                                                             />
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('extra', Math.max(0, extraVal - 5))}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[9px] hover:bg-gray-100"
+                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
                                                             >
                                                                 -5
                                                             </button>
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('extra', extraVal + 5)}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[9px] hover:bg-gray-100"
+                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
                                                             >
                                                                 +5
                                                             </button>
@@ -1709,7 +1709,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 </section>
 
                 {/* ── SECTION 4: ขั้นตอนการทำ (Steps with Starter Templates) ── */}
-                <section id="sec-steps" className="bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
+                <section id="sec-steps" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
                     <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest">
@@ -1760,7 +1760,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         <button 
                             type="button"
                             onClick={addStep} 
-                            className="w-full py-2.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] font-mono font-bold text-xs text-[oklch(42%_0.010_28)] hover:text-black hover:border-black transition-colors uppercase"
+                            className="w-full py-2.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] font-mono font-bold text-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)] transition-colors uppercase"
                         >
                             + เพิ่มขั้นตอนดำเนินการ (ADD STEP)
                         </button>
@@ -1769,12 +1769,12 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                 {/* ── SECTION 5: QC & มาตรฐานคุณภาพ (Shown only in PRO Mode) ── */}
                 {editorMode === 'pro' && (
-                    <section id="sec-pro" className="bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-6">
+                    <section id="sec-pro" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-6">
                         <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex justify-between items-center">
                             <h3 className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest">
                                 05 / มาตรฐานการบริการ & ประกันคุณภาพ (QC)
                             </h3>
-                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
                                 ADVANCED SECTION
                             </span>
                         </div>
@@ -1791,7 +1791,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     const arr = val.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
                                     setEditing({ ...editing, advanced_details: { ...editing.advanced_details, equipment: arr } });
                                 }}
-                                className="w-full p-2.5 border border-[oklch(85%_0.012_28)] text-xs focus:border-black outline-none font-mono"
+                                className="w-full p-2.5 border border-[oklch(85%_0.012_28)] text-xs focus:border-[oklch(18%_0.012_28)] outline-none font-mono"
                                 rows={2}
                                 placeholder="เช่น เหยือกตวง, แปรง Chasen, บิวเรตต์ (คั่นด้วย Enter หรือลูกน้ำ ,)"
                             />
@@ -1894,7 +1894,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                     advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
                                                 }));
                                             }} 
-                                            className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold text-red-600" 
+                                            className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-bold text-red-600" 
                                             placeholder="ปัญหาที่อาจเกิดขึ้น (เช่น ชาขมเกินไป)" 
                                         />
                                         <input 
@@ -1908,7 +1908,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                     advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
                                                 }));
                                             }} 
-                                            className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs" 
+                                            className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs" 
                                             placeholder="สาเหตุที่เป็นไปได้ (เช่น แช่ชานานเกินเวลา)" 
                                         />
                                         <input 
@@ -1952,7 +1952,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             type="checkbox" 
                             checked={editing.is_published} 
                             onChange={e => setEditing({ ...editing, is_published: e.target.checked })} 
-                            className="w-4 h-4 rounded-xs text-black border-[oklch(85%_0.012_28)] focus:ring-0" 
+                            className="w-4 h-4 rounded-xs text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0" 
                         />
                         <span>{editing.is_published ? '[PUBLISHED] เปิดใช้งานและแสดงในคู่มือบาร์' : '[DRAFT] ซ่อนไว้เป็นสูตรร่างภายใน'}</span>
                     </label>
@@ -1961,7 +1961,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         <button 
                             type="button" 
                             onClick={() => setEditing(null)} 
-                            className="px-4 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-bold uppercase"
+                            className="px-4 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] font-bold uppercase"
                         >
                             ยกเลิก
                         </button>
@@ -1969,7 +1969,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             type="button" 
                             onClick={handleSave} 
                             disabled={saving} 
-                            className="px-5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black disabled:opacity-50"
+                            className="px-5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-50"
                         >
                             {saving ? 'กำลังบันทึก...' : 'บันทึกสูตร'}
                         </button>

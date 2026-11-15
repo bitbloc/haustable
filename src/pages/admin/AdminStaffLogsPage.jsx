@@ -1,6 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import AdminPageHeader, { AdminTabs } from '../../components/admin/AdminPageHeader'
+import { AdminStatStrip, AdminFilterChips, AdminSearch, AdminSelect, AdminToolbar } from '../../components/admin/AdminKit'
 import { 
     Search, 
     RefreshCw, 
@@ -178,127 +179,51 @@ export default function AdminStaffLogsPage() {
                     </>}
                 />
 
-                {/* Summary Metrics Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-mono text-[oklch(50%_0.010_28)] uppercase tracking-wider block">กิจกรรมทั้งหมด</span>
-                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.total}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">ในรอบเวลาที่เลือก</span>
+                {/* Counts per module; each cell filters the table below */}
+                <AdminStatStrip
+                    className=""
+                    items={[
+                        { id: 'all', label: 'กิจกรรมทั้งหมด', value: stats.total, note: 'ในช่วงเวลาที่เลือก' },
+                        { id: 'sop', label: 'สูตร & SOP', value: stats.sopCount, note: 'สร้างและแก้ไข SOP' },
+                        { id: 'stock', label: 'ปรับแก้สต็อก', value: stats.stockCount, note: 'ตรวจนับ รับเข้า เบิกใช้' },
+                        { id: 'pos', label: 'POS & โต๊ะ', value: stats.posCount, note: 'ย้ายโต๊ะ รวมบิล ยกเลิก' },
+                        { id: 'shift', label: 'กะ & เงินสด', value: stats.shiftCount, note: 'เปิด-ปิดกะ เงินทอน' },
+                        { id: 'admin', label: 'หลังบ้านแอดมิน', value: stats.adminCount, note: 'เมนู ผังโต๊ะ โปรโมชั่น' }
+                    ].map(it => ({ ...it, key: it.id, active: selectedModule === it.id, onClick: () => setSelectedModule(it.id) }))}
+                />
+
+                <AdminToolbar className="">
+                    <div className="p-3 flex flex-col lg:flex-row gap-3 lg:items-center">
+                        <AdminSearch
+                            className="flex-1"
+                            value={searchTerm}
+                            onChange={setSearchTerm}
+                            placeholder="ค้นหาชื่อพนักงาน เลขโต๊ะ ชื่อวัตถุดิบ หรือคีย์เวิร์ด"
+                        />
+                        <AdminSelect
+                            label="พนักงาน"
+                            value={selectedStaff}
+                            onChange={setSelectedStaff}
+                            options={[{ key: 'all', label: 'พนักงานทั้งหมด' }, ...availableStaffList.map(st => ({ key: st, label: st }))]}
+                        />
+                        <AdminFilterChips
+                            label="ช่วงเวลา"
+                            layoutId="logs-date-chip"
+                            options={[
+                                { key: 'today', label: 'วันนี้' },
+                                { key: 'yesterday', label: 'เมื่อวาน' },
+                                { key: '7d', label: '7 วัน' },
+                                { key: '30d', label: '30 วัน' },
+                                { key: 'all', label: 'ทั้งหมด' }
+                            ]}
+                            value={dateRange}
+                            onChange={setDateRange}
+                        />
                     </div>
-
-                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-mono text-[oklch(38%_0.16_45)] uppercase tracking-wider block">สูตร & SOP</span>
-                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.sopCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">สร้าง/แก้ไข SOP บาร์&ครัว</span>
-                    </div>
-
-                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-mono text-[oklch(35%_0.12_140)] uppercase tracking-wider block">ปรับแก้สต็อก</span>
-                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.stockCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">ตรวจนับ / รับเข้า / เบิกใช้</span>
-                    </div>
-
-                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-mono text-[oklch(38%_0.12_230)] uppercase tracking-wider block">POS & โต๊ะ</span>
-                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.posCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">ย้ายโต๊ะ / รวมบิล / ยกเลิก</span>
-                    </div>
-
-                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-mono text-[oklch(38%_0.12_300)] uppercase tracking-wider block">กะ & เงินสด</span>
-                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.shiftCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">เปิด-ปิดกะ / เงินทอน</span>
-                    </div>
-
-                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
-                        <span className="text-xs font-mono text-[oklch(52%_0.16_28)] uppercase tracking-wider block">หลังบ้านแอดมิน</span>
-                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.adminCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">เมนู / ผังโต๊ะ / โปรโมชั่น</span>
-                    </div>
-                </div>
-
-                {/* Filters & Search Toolbar */}
-                <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-4 shadow-sm">
-                    {/* Top Row: Date Presets & Module Filter Tabs */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[oklch(90%_0.010_28)] pb-3">
-                        {/* Module Tabs */}
-                        <div className="flex flex-wrap gap-1.5">
-                            {[
-                                { id: 'all', label: 'ทั้งหมด' },
-                                { id: 'sop', label: 'สูตร & SOP' },
-                                { id: 'admin', label: 'หลังบ้านแอดมิน' },
-                                { id: 'stock', label: 'สต็อกวัตถุดิบ' },
-                                { id: 'pos', label: 'POS & โต๊ะ' },
-                                { id: 'shift', label: 'กะ / เงินสด' }
-                            ].map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setSelectedModule(tab.id)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
-                                        selectedModule === tab.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-sm'
-                                            : 'bg-[oklch(95%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(35%_0.010_28)]'
-                                    }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Date Preset Buttons */}
-                        <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] p-1 rounded-lg border border-[oklch(88%_0.012_28)]">
-                            {[
-                                { id: 'today', label: 'วันนี้' },
-                                { id: 'yesterday', label: 'เมื่อวาน' },
-                                { id: '7d', label: '7 วัน (Pro)' },
-                                { id: '30d', label: '30 วัน' },
-                                { id: 'all', label: 'ทั้งหมด' }
-                            ].map(p => (
-                                <button
-                                    key={p.id}
-                                    onClick={() => setDateRange(p.id)}
-                                    className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors cursor-pointer ${
-                                        dateRange === p.id 
-                                            ? 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] font-semibold shadow-xs' 
-                                            : 'text-[oklch(45%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                    }`}
-                                >
-                                    {p.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Bottom Row: Search & Staff Selector */}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                        <div className="sm:col-span-8 relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(50%_0.010_28)]" />
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="ค้นหา: ชื่อพนักงาน, เลขโต๊ะ (เช่น 04), ชื่อวัตถุดิบ, หรือคีย์เวิร์ด..."
-                                className="w-full pl-9 pr-4 py-2 bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] placeholder:text-[oklch(55%_0.010_28)]"
-                            />
-                        </div>
-
-                        <div className="sm:col-span-4 relative">
-                            <select
-                                value={selectedStaff}
-                                onChange={(e) => setSelectedStaff(e.target.value)}
-                                className="w-full px-3 py-2 bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] cursor-pointer"
-                            >
-                                <option value="all">พนักงานทั้งหมด (All Staff)</option>
-                                {availableStaffList.map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                </AdminToolbar>
 
                 {/* Main Data Table */}
-                <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden shadow-sm">
+                <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden ">
                     {loading ? (
                         <div className="p-12 text-center text-sm text-[oklch(50%_0.010_28)]">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[oklch(52%_0.16_28)] mb-3"></div>
@@ -334,13 +259,13 @@ export default function AdminStaffLogsPage() {
                                                 {/* Date & Time */}
                                                 <td className="py-3 px-4 font-mono text-[oklch(35%_0.012_28)] whitespace-nowrap">
                                                     <div className="font-semibold">{formattedTime}</div>
-                                                    <div className="text-[10px] text-[oklch(55%_0.010_28)]">{formattedDate}</div>
+                                                    <div className="text-[11px] text-[oklch(55%_0.010_28)]">{formattedDate}</div>
                                                 </td>
 
                                                 {/* Staff Name */}
                                                 <td className="py-3 px-4 font-medium text-[oklch(18%_0.012_28)] whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
-                                                        <div className="w-6 h-6 rounded-full bg-[oklch(92%_0.02_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[10px] font-mono font-bold text-[oklch(35%_0.012_28)]">
+                                                        <div className="w-6 h-6 rounded-full bg-[oklch(92%_0.02_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[11px] font-mono font-bold text-[oklch(35%_0.012_28)]">
                                                             {log.staff_name.charAt(0).toUpperCase()}
                                                         </div>
                                                         <span className="truncate max-w-[110px]" title={log.staff_name}>
@@ -351,7 +276,7 @@ export default function AdminStaffLogsPage() {
 
                                                 {/* Module Badge */}
                                                 <td className="py-3 px-4 whitespace-nowrap">
-                                                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${badge.bg}`}>
+                                                    <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-mono font-semibold border ${badge.bg}`}>
                                                         {badge.label}
                                                     </span>
                                                 </td>
@@ -415,7 +340,7 @@ export default function AdminStaffLogsPage() {
                         {/* Modal Header */}
                         <div className="p-4 border-b border-[oklch(88%_0.012_28)] flex items-center justify-between bg-[oklch(96%_0.008_28)]">
                             <div>
-                                <span className="text-[10px] font-mono uppercase tracking-wider text-[oklch(52%_0.16_28)] font-semibold">
+                                <span className="text-[11px] font-mono uppercase tracking-wider text-[oklch(52%_0.16_28)] font-semibold">
                                     Audit Detail Inspection
                                 </span>
                                 <h3 className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
@@ -435,31 +360,31 @@ export default function AdminStaffLogsPage() {
                             {/* Metadata Grid */}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[oklch(96%_0.008_28)] p-3 rounded-lg border border-[oklch(88%_0.012_28)] font-mono">
                                 <div>
-                                    <span className="text-[10px] text-[oklch(50%_0.010_28)] uppercase block">วัน-เวลา</span>
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">วัน-เวลา</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">
                                         {new Date(inspectLog.created_at).toLocaleString('th-TH')}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-[oklch(50%_0.010_28)] uppercase block">พนักงานผู้ปฏิบัติการ</span>
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">พนักงานผู้ปฏิบัติการ</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.staff_name}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-[oklch(50%_0.010_28)] uppercase block">หมวดหมู่ระบบ</span>
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">หมวดหมู่ระบบ</span>
                                     <span className="font-semibold uppercase text-[oklch(20%_0.012_28)]">{inspectLog.module}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-[oklch(50%_0.010_28)] uppercase block">Action Type</span>
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">Action Type</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.action_type}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-[oklch(50%_0.010_28)] uppercase block">ยอดเงิน / การเปลี่ยนแปลง</span>
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">ยอดเงิน / การเปลี่ยนแปลง</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">
                                         {inspectLog.amount ? `฿${inspectLog.amount}` : '-'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] text-[oklch(50%_0.010_28)] uppercase block">Source Table</span>
+                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">Source Table</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.source}</span>
                                 </div>
                             </div>
