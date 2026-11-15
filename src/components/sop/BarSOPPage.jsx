@@ -137,7 +137,7 @@ export default function BarSOPPage() {
             {/* ── Main Content ── */}
             <main className="px-4 pt-4 pb-20 safe-area-inset-bottom max-w-6xl mx-auto">
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                         {[1, 2, 3, 4].map(i => (
                             <div key={i} className="h-20 bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-lg " />
                         ))}
@@ -167,7 +167,7 @@ export default function BarSOPPage() {
                         </div>
 
                         {/* Recipe Cards Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                             {recipes.map(recipe => (
                                 <SOPRecipeCard
                                     key={recipe.id}
@@ -182,8 +182,6 @@ export default function BarSOPPage() {
                 )}
             </main>
 
-            {/* ── Footer (subtle branding) ── */}
-            <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-[var(--color-hallmark-paper)] to-transparent h-16 pointer-events-none z-10" />
         </div>
     );
 }

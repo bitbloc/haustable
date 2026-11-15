@@ -33,13 +33,9 @@ export default function StaffAuthLayout() {
 
         try {
             const { data: { session }, error } = await supabase.auth.getSession();
-            if (error || !session) {
-                if (isOptimistic) {
-                     console.log("Session expired, reverting optimistic auth");
-                }
-                
-                await supabase.auth.signOut();
-
+            // A failed read is not a missing session: never sign the user out on it.
+            if (error) throw error;
+            if (!session) {
                 localStorage.removeItem('staff_role');
                 localStorage.removeItem('staff_id');
                 setAuthStatus('unauthenticated');
@@ -58,7 +54,13 @@ export default function StaffAuthLayout() {
             const hasCustomPerms = Array.isArray(profile?.admin_permissions) && profile.admin_permissions.length > 0;
             const isAuthorizedStaff = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen', 'custom'].includes(role) || hasCustomPerms;
 
-            if (profileError || !profile || !isAuthorizedStaff) {
+            // Network trouble while reading the profile is not a "no permission" answer.
+            if (profileError && !profile) {
+                if (!isOptimistic) setAuthStatus('error');
+                return;
+            }
+
+            if (!profile || !isAuthorizedStaff) {
                 localStorage.removeItem('staff_role');
                 localStorage.removeItem('staff_id');
                 setAuthStatus('unauthorized');
@@ -71,7 +73,7 @@ export default function StaffAuthLayout() {
 
         } catch (err) {
             console.error("Staff Auth Error:", err);
-            if (!isOptimistic) setAuthStatus('unauthenticated');
+            if (!isOptimistic) setAuthStatus('error');
         }
     };
 
@@ -81,6 +83,24 @@ export default function StaffAuthLayout() {
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-8 h-8 border-4 border-[#1A1A1A] border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-gray-500 font-bold animate-pulse">Checking Access...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (authStatus === 'error') {
+        return (
+            <div className="min-h-screen bg-[oklch(97%_0.008_28)] flex items-center justify-center p-6">
+                <div className="max-w-sm space-y-3 text-center">
+                    <h1 className="text-lg font-semibold text-[oklch(18%_0.012_28)]">เชื่อมต่อไม่สำเร็จ</h1>
+                    <p className="text-sm leading-6 text-[oklch(42%_0.010_28)]">ตรวจสิทธิ์พนักงานไม่ได้ในตอนนี้ อาจเป็นเพราะอินเทอร์เน็ตหรือเซิร์ฟเวอร์ช้า คุณยังล็อกอินอยู่</p>
+                    <button
+                        type="button"
+                        onClick={() => { setAuthStatus('loading'); checkUser(); }}
+                        className="h-10 px-4 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-medium cursor-pointer"
+                    >
+                        ลองอีกครั้ง
+                    </button>
                 </div>
             </div>
         );

@@ -674,6 +674,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
     const [editorMode, setEditorMode] = useState('simple'); // 'simple' | 'pro'
     const [showImport, setShowImport] = useState(false);
     const [showQuickPaste, setShowQuickPaste] = useState(false);
+    const [onlyIncomplete, setOnlyIncomplete] = useState(false);
     const [showCategoryManager, setShowCategoryManager] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -989,6 +990,20 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                     </div>
                 </div>
 
+                {/* Completeness: what the bar would open and find empty */}
+                {(() => {
+                    const incomplete = recipes.filter(r => !(r.ingredients || []).length || !(r.steps || []).length).length;
+                    return incomplete > 0 ? (
+                        <p className="mb-3 text-[13px] leading-5 text-[oklch(42%_0.010_28)]">
+                            <span className="font-medium text-[oklch(45%_0.12_60)]">{incomplete} จาก {recipes.length} สูตรยังไม่ครบ</span>
+                            {' '}· ขาดส่วนผสมหรือขั้นตอน พนักงานบาร์จะเปิดเจอหน้าว่าง
+                            <button type="button" onClick={() => setOnlyIncomplete(v => !v)} className="ml-2 underline underline-offset-2 cursor-pointer text-[oklch(18%_0.012_28)]">
+                                {onlyIncomplete ? 'แสดงทั้งหมด' : 'ดูเฉพาะที่ยังไม่ครบ'}
+                            </button>
+                        </p>
+                    ) : null;
+                })()}
+
                 {/* Category switch */}
                 <AdminFilterChips
                     className="mb-3"
@@ -1039,11 +1054,11 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                     </div>
                 ) : (
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] divide-y divide-[oklch(90%_0.008_28)]">
-                        {recipes.map(recipe => (
+                        {(onlyIncomplete ? recipes.filter(r => !(r.ingredients || []).length || !(r.steps || []).length) : recipes).map(recipe => (
                             <div 
                                 key={recipe.id} 
                                 onClick={() => setDrawerRecipe(recipe)}
-                                className="p-3.5 flex items-center justify-between gap-4 hover:bg-[oklch(98%_0.004_28)] transition-colors cursor-pointer group"
+                                className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 hover:bg-[oklch(98%_0.004_28)] transition-colors cursor-pointer group"
                             >
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <span className="tabular-nums text-xs font-bold px-2 py-1 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] flex-shrink-0">
@@ -1060,26 +1075,31 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 whitespace-nowrap">
                                             <span>{recipe.base_glass_size_oz || 16}oz</span>
                                             <span>•</span>
-                                            <span>{(recipe.ingredients || []).length} ings</span>
+                                            {/* An empty part is the bar's problem, not a zero: say what is missing */}
+                                            {(recipe.ingredients || []).length > 0
+                                                ? <span>{(recipe.ingredients || []).length} ส่วนผสม</span>
+                                                : <span className="text-[oklch(45%_0.12_60)] font-medium">ยังไม่มีส่วนผสม</span>}
                                             <span>•</span>
-                                            <span>{(recipe.steps || []).length} steps</span>
+                                            {(recipe.steps || []).length > 0
+                                                ? <span>{(recipe.steps || []).length} ขั้นตอน</span>
+                                                : <span className="text-[oklch(45%_0.12_60)] font-medium">ยังไม่มีขั้นตอน</span>}
                                             {recipe.advanced_details?.sweetness_matrix && (
                                                 <>
                                                     <span>•</span>
-                                                    <span className="text-[oklch(52%_0.16_28)] font-bold">SWEETNESS MATRIX</span>
+                                                    <span>ตั้งระดับความหวานแล้ว</span>
                                                 </>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                                <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto" onClick={e => e.stopPropagation()}>
                                     <span className={`px-2 py-0.5 text-[11px] tabular-nums font-bold border ${
                                         recipe.is_published 
-                                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                                            ? 'bg-[oklch(95%_0.03_150)] text-[oklch(32%_0.08_150)] border-[oklch(85%_0.05_150)]' 
                                             : 'bg-[oklch(97%_0.008_28)] text-[oklch(50%_0.010_28)] border-[oklch(90%_0.008_28)]'
                                     }`}>
                                         {recipe.is_published ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}

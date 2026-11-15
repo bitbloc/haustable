@@ -58,7 +58,7 @@ export default function SOPRecipeCard({
     const t = darkMode ? {
         card: 'bg-[#1A1A1A] border-[#2A2A2A]',
         cardHover: 'hover:bg-[#222222]',
-        cardExpanded: 'bg-gradient-to-b from-[#1E1E1E] to-[#111111] border-[#333333] shadow-2xl',
+        cardExpanded: 'bg-[#181818] border-[#333333]',
         text: 'text-[#CCCCCC]',
         textMuted: 'text-[#666666]',
         textBright: 'text-[#FFFFFF]',
@@ -69,7 +69,7 @@ export default function SOPRecipeCard({
         divider: 'border-[#2A2A2A]',
         badge: 'bg-[#222222] text-[#888888] group-hover:bg-[#333333]',
         badgeActive: 'bg-[#DFFF00] text-[#0D0D0D]',
-        stepBg: 'bg-gradient-to-br from-[#1A1A1A] to-transparent border border-[#2A2A2A]',
+        stepBg: 'bg-[#161616] border border-[#2A2A2A]',
         sectionLabel: 'text-[#777777] flex items-center gap-2',
         ingredientRow: 'border-dashed border-[#333333]',
         scaledHighlight: 'text-[#DFFF00] font-bold drop-shadow-[0_0_8px_rgba(223,255,0,0.25)]',
@@ -102,8 +102,8 @@ export default function SOPRecipeCard({
     };
 
     return (
-        <div className={`rounded-lg border transition-all duration-200 overflow-hidden ${
-            expanded ? t.cardExpanded : `${t.card} ${t.cardHover}`
+        <div className={`rounded-lg border transition-colors duration-200 overflow-hidden ${
+            expanded ? `${t.cardExpanded} md:col-span-2` : `${t.card} ${t.cardHover}`
         }`}>
             {/* Collapsed Header — always visible */}
             <button
@@ -113,7 +113,7 @@ export default function SOPRecipeCard({
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Category Icon */}
                     <span className="text-2xl flex-shrink-0 select-none">
-                        {recipe?.category?.icon || '📋'}
+                        {recipe?.category?.icon || ''}
                     </span>
                     <div className="min-w-0 flex-1">
                         <h3 className={`font-bold text-lg leading-tight truncate ${t.textBright}`}>
@@ -207,7 +207,7 @@ export default function SOPRecipeCard({
                         {/* Cups Multiplier */}
                         <div className="flex-1 min-w-[200px]">
                             <div className={`text-xs font-bold mb-3 ${t.sectionLabel}`}>
-                                🥤 จำนวน / Cups
+                                จำนวนแก้ว
                             </div>
                             <div className={`p-1 rounded-lg flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-inner'}`}>
                                 {[1, 2, 3, 4, 5].map(num => (
@@ -225,10 +225,12 @@ export default function SOPRecipeCard({
                         </div>
                     </div>
 
-                    {/* Sweetness Selector (Thai Modern 4 Levels) */}
+                    {/* Sweetness Selector: only when the recipe has something to sweeten with,
+                        otherwise the four levels change nothing on screen */}
+                    {visibleIngredients.some(i => i.is_sweetener) && (
                     <div>
                         <div className={`text-xs tabular-nums font-bold mb-2 ${t.sectionLabel}`}>
-                            ระดับความหวาน (SWEETNESS LEVEL)
+                            ระดับความหวาน
                         </div>
                         <div className="p-1 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] inline-flex flex-wrap gap-1">
                             {[
@@ -256,6 +258,7 @@ export default function SOPRecipeCard({
                             })}
                         </div>
                     </div>
+                    )}
 
                     {/* Divider */}
                     <div className={`border-t border-dashed ${t.divider}`} />

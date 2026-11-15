@@ -1242,7 +1242,7 @@ export default function MenuItemList() {
             <AdminToolbar className="mb-5">
                 <div className="p-3 flex flex-col lg:flex-row gap-3 lg:items-center">
                     <AdminSearch
-                        className="flex-1"
+                        className="w-full lg:w-auto lg:flex-1"
                         value={searchQuery}
                         onChange={setSearchQuery}
                         placeholder="ค้นหาชื่อเมนู คำอธิบาย หรือหมวดหมู่"

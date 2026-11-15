@@ -107,10 +107,17 @@ export function classifyMenuCategory(rawCategoryName = '', rawItemName = '') {
     }
 
     // 4. Desserts (ของหวาน, เบเกอรี่, ไอศกรีม, ขนม)
-    if (
+    // A combined category such as "ของหวานและของทานเล่น" names both, so the category alone
+    // cannot decide: there the item name does, and everything else falls through to snacks.
+    const catIsSnackToo = cat.includes('ทานเล่น') || cat.includes('appetizer') || cat.includes('snack');
+    const catIsDessert = !catIsSnackToo && (
         cat.includes('ของหวาน') || cat.includes('dessert') || cat.includes('ขนม') ||
         cat.includes('ไอศกรีม') || cat.includes('ice cream') || cat.includes('bakery') ||
-        cat.includes('เบเกอรี่') ||
+        cat.includes('เบเกอรี่')
+    );
+    if (
+        catIsDessert ||
+        name.includes('บราวนี่') || name.includes('brownie') ||
         name.includes('ไอศกรีม') || name.includes('ice cream') || name.includes('เค้ก') ||
         name.includes('cake') || name.includes('ขนมหวาน') || name.includes('บัวลอย') ||
         name.includes('พุดดิ้ง') || name.includes('toast') || name.includes('โทสต์') ||

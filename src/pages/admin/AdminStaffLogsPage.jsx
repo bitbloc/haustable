@@ -195,7 +195,7 @@ export default function AdminStaffLogsPage() {
                 <AdminToolbar className="">
                     <div className="p-3 flex flex-col lg:flex-row gap-3 lg:items-center">
                         <AdminSearch
-                            className="flex-1"
+                            className="w-full lg:w-auto lg:flex-1"
                             value={searchTerm}
                             onChange={setSearchTerm}
                             placeholder="ค้นหาชื่อพนักงาน เลขโต๊ะ ชื่อวัตถุดิบ หรือคีย์เวิร์ด"

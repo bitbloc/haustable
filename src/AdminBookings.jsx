@@ -721,7 +721,7 @@ export default function AdminBookings() {
             <AdminToolbar>
                 <div className="p-3 flex flex-col lg:flex-row gap-3 lg:items-center">
                     <AdminSearch
-                        className="flex-1"
+                        className="w-full lg:w-auto lg:flex-1"
                         value={searchTerm}
                         onChange={setSearchTerm}
                         placeholder="ค้นหาชื่อลูกค้า เบอร์โทร #ID หรือโต๊ะ"

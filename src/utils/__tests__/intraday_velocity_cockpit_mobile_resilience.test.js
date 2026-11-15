@@ -428,20 +428,21 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         const dashboardPath = path.resolve(__dirname, '../../AdminDashboard.jsx')
         const source = fs.readFileSync(dashboardPath, 'utf8')
 
-        // 1. Tab navigation must use brutalist numbered codes
-        expect(source.includes("code: '01'")).toBe(true)
-        expect(source.includes("code: '02'")).toBe(true)
-        expect(source.includes("code: '03'")).toBe(true)
+        // 1. Tab navigation carries no index numbering (design-taste house rule: no 01 / 02 / 03)
+        expect(source.includes("code: '01'")).toBe(false)
+        expect(source.includes("code: '02'")).toBe(false)
+        expect(source.includes("code: '03'")).toBe(false)
 
         // 2. Tab items must not have icon properties
         expect(source.includes('icon: Receipt')).toBe(false)
         expect(source.includes('icon: Layers')).toBe(false)
         expect(source.includes('icon: Inbox')).toBe(false)
 
-        // 3. Header controls use Hallmark monospace badges instead of Lucide icons
-        expect(source.includes('[Z-REPORT]')).toBe(true)
-        expect(source.includes('[REFRESH]')).toBe(true)
-        expect(source.includes('AUDIO //')).toBe(true)
+        // 3. Header controls are plain labelled buttons, without bracketed or "//" badges
+        expect(source.includes('[Z-REPORT]')).toBe(false)
+        expect(source.includes('[REFRESH]')).toBe(false)
+        expect(source.includes('AUDIO //')).toBe(false)
+        expect(source.includes('สลิปปิดวัน')).toBe(true)
     })
 
     it('correctly aggregates monthly hourly matrix and connects monthMetrics to the table', async () => {

@@ -285,7 +285,7 @@ export default function MenuCategoryList() {
                     ยังไม่มีหมวดหมู่เมนู คลิก "เพิ่มหมวดหมู่" เพื่อเริ่มต้น
                 </div>
             ) : (
-                <Reorder.Group axis="y" values={categories} onReorder={handleReorder} className="grid gap-2.5">
+                <Reorder.Group axis="y" values={categories} onReorder={handleReorder} className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
                     {categories.map((cat, index) => (
                         <CategoryItem 
                             key={cat.id} 
@@ -341,8 +341,8 @@ export default function MenuCategoryList() {
                             <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <span className="tabular-nums text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
-                                            10 FREE 1
+                                        <span className="tabular-nums text-[11px] font-bold bg-[oklch(96%_0.03_80)] text-[oklch(35%_0.08_60)] border border-[oklch(88%_0.06_80)] px-1.5 py-0.2 rounded-xs">
+                                            10 ฟรี 1
                                         </span>
                                         <span className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                                             ร่วมรายการเครื่องดื่ม 10 แถม 1
@@ -364,7 +364,7 @@ export default function MenuCategoryList() {
                             <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <span className="tabular-nums text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                                        <span className="tabular-nums text-[11px] font-bold bg-[oklch(95%_0.03_25)] text-[oklch(42%_0.14_25)] border border-[oklch(88%_0.05_25)] px-1.5 py-0.2 rounded-xs">
                                             KITCHEN CUTOFF
                                         </span>
                                         <span className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
@@ -457,12 +457,12 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                             {category.name}
                         </h4>
                         {category.is_drink_stamp_eligible && (
-                            <span className="tabular-nums text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
-                                10 FREE 1
+                            <span className="tabular-nums text-[11px] font-bold bg-[oklch(96%_0.03_80)] text-[oklch(35%_0.08_60)] border border-[oklch(88%_0.06_80)] px-1.5 py-0.2 rounded-xs">
+                                10 ฟรี 1
                             </span>
                         )}
                         {category.hide_on_kitchen_close && (
-                            <span className="tabular-nums text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                            <span className="tabular-nums text-[11px] font-bold bg-[oklch(95%_0.03_25)] text-[oklch(42%_0.14_25)] border border-[oklch(88%_0.05_25)] px-1.5 py-0.2 rounded-xs">
                                 ซ่อนเมื่อครัวปิด
                             </span>
                         )}

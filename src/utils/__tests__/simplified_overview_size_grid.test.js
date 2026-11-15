@@ -59,8 +59,8 @@ describe('Simplified Overview Size & Grid Scaling (เล็ก - กลาง -
         expect(SIZE_CONFIGS.lg.tableRowPadding).toBe('py-3.5 px-3.5')
         expect(SIZE_CONFIGS.xl.tableRowPadding).toBe('py-4 px-4')
 
-        expect(SIZE_CONFIGS.sm.tableActionBtn).toContain('text-[10px]')
-        expect(SIZE_CONFIGS.md.tableActionBtn).toContain('text-[11px]')
+        expect(SIZE_CONFIGS.sm.tableActionBtn).toContain('text-[11px]') // 11px is the admin type floor
+        expect(SIZE_CONFIGS.md.tableActionBtn).toContain('text-xs')
         expect(SIZE_CONFIGS.lg.tableActionBtn).toContain('text-xs')
         expect(SIZE_CONFIGS.xl.tableActionBtn).toContain('text-sm')
     })

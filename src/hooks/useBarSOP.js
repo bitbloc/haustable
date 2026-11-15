@@ -43,13 +43,12 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         cacheRef.current.categories = data || [];
         setCategories(data || []);
 
-        // Auto-select first category if none selected
-        if (!activeCategory && data?.length > 0) {
-            setActiveCategory(data[0].id);
-        }
+        // No auto-select: the first load fetches every recipe, so "all" is the
+        // honest selection. (Auto-selecting the first category highlighted
+        // "Coffee" while the list still showed all 49 recipes.)
 
         return data || [];
-    }, [department, activeCategory]);
+    }, [department]);
 
     // ────────────────────────────────
     // Fetch Glass Sizes
