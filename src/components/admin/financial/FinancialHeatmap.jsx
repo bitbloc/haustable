@@ -78,14 +78,14 @@ export default function FinancialHeatmap({ data }) {
                 {/* Header */}
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[oklch(94%_0.010_28)]">
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
                             MATRIX // DENSITY
                         </span>
                         <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)]">
                             ความหนาแน่นยอดขายรายชั่วโมง (Heatmap 7 Days x 12 Hours)
                         </h4>
                     </div>
-                    <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center gap-2 tabular-nums text-xs text-[oklch(42%_0.010_28)]">
                         <span>น้อย</span>
                         <div className="flex gap-0.5 border border-[oklch(85%_0.012_28)] p-0.5 bg-[oklch(94%_0.010_28)]">
                             <span className="w-3.5 h-3.5 bg-[oklch(90%_0.02_28)]" />
@@ -101,7 +101,7 @@ export default function FinancialHeatmap({ data }) {
                 <div className="p-4 md:p-6 bg-[oklch(97%_0.008_28)] overflow-x-auto">
                     <div className="min-w-[640px]">
                         {/* Time Slots Header */}
-                        <div className="grid grid-cols-13 gap-1 mb-1 font-mono text-[11px] font-bold text-[oklch(42%_0.010_28)] text-center">
+                        <div className="grid grid-cols-13 gap-1 mb-1 tabular-nums text-xs font-bold text-[oklch(42%_0.010_28)] text-center">
                             <div className="text-left">DAY/HR</div>
                             {timeSlots.map((ts, idx) => (
                                 <div key={idx}>{ts}</div>
@@ -114,7 +114,7 @@ export default function FinancialHeatmap({ data }) {
                                 ? heatmapMatrix[dayIdx] 
                                 : Array(12).fill(0)
                             return (
-                                <div key={dayIdx} className="grid grid-cols-13 gap-1 my-1 items-center font-mono text-xs">
+                                <div key={dayIdx} className="grid grid-cols-13 gap-1 my-1 items-center tabular-nums text-xs">
                                     <div className="font-bold text-[oklch(18%_0.012_28)] text-left">{day}</div>
                                     {row.map((val, timeIdx) => (
                                         <div
@@ -134,7 +134,7 @@ export default function FinancialHeatmap({ data }) {
 
             {/* 2. Shift Windows Grid */}
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                <div className="p-4 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                     TIME-SLOT BEHAVIOR // สถิติพฤติกรรม 4 ช่วงเวลา
                 </div>
 
@@ -152,17 +152,17 @@ export default function FinancialHeatmap({ data }) {
                                 }`}
                             >
                                 <div className="space-y-1">
-                                    <div className="flex items-center justify-between font-mono text-[11px]">
+                                    <div className="flex items-center justify-between tabular-nums text-xs">
                                         <span className="font-bold text-[oklch(52%_0.16_28)]">{sw.code}</span>
                                         <span className="px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-[oklch(18%_0.012_28)]">
                                             {sw.time}
                                         </span>
                                     </div>
                                     <h5 className="font-bold text-sm text-[oklch(18%_0.012_28)]">{sw.name}</h5>
-                                    <p className="text-xs text-[oklch(42%_0.010_28)]">{sw.highlight}</p>
+                                    <p className="text-[13px] text-[oklch(42%_0.010_28)]">{sw.highlight}</p>
                                 </div>
 
-                                <div className="space-y-1.5 pt-2 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
+                                <div className="space-y-1.5 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
                                     <div className="flex justify-between items-baseline">
                                         <span className="text-[oklch(42%_0.010_28)]">ยอดขาย:</span>
                                         <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">
@@ -177,7 +177,7 @@ export default function FinancialHeatmap({ data }) {
                                         </span>
                                     </div>
 
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                                    <div className="text-xs text-[oklch(42%_0.010_28)] pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
                                         {sw.foodDrinkRatio}
                                     </div>
                                 </div>

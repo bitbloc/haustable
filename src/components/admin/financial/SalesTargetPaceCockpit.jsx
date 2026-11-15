@@ -178,9 +178,9 @@ export default function SalesTargetPaceCockpit({
         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
             
             {/* Header / Status Banner */}
-            <div className="p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+            <div className="p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 font-bold uppercase text-[11px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-2 py-0.5 font-bold text-[11px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                         PACE // TARGET
                     </span>
                     <span className="font-bold text-[oklch(18%_0.012_28)]">
@@ -189,7 +189,7 @@ export default function SalesTargetPaceCockpit({
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <span className={`px-2 py-0.5 text-[11px] font-bold uppercase border ${
+                    <span className={`px-2 py-0.5 text-[11px] font-bold border ${
                         isHit
                             ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] border-[oklch(45%_0.08_140)]'
                             : pacingCalc.isOnPace
@@ -208,17 +208,17 @@ export default function SalesTargetPaceCockpit({
                 <div className="p-4 md:p-6 md:col-span-6 space-y-4">
                     <div className="flex items-baseline justify-between">
                         <div>
-                            <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] block">
+                            <span className="text-xs tabular-nums text-[oklch(42%_0.010_28)] block">
                                 {pacingCalc.accumulatedLabel}
                             </span>
-                            <div className="font-mono text-3xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                            <div className=" text-3xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                 ฿{Math.round(currentSales).toLocaleString()}{' '}
                                 <span className="text-sm font-normal text-[oklch(55%_0.010_28)]">
                                     / ฿{targetSales.toLocaleString()}
                                 </span>
                             </div>
                         </div>
-                        <div className="text-right font-mono">
+                        <div className="text-right tabular-nums">
                             <span className="text-2xl font-bold text-[oklch(52%_0.16_28)] tabular-nums">{progressPct}%</span>
                         </div>
                     </div>
@@ -232,21 +232,21 @@ export default function SalesTargetPaceCockpit({
                     </div>
 
                     {/* Pace Math Row */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
                         <div className="p-2.5 bg-[oklch(94%_0.010_28)]">
-                            <span className="text-[11px] text-[oklch(42%_0.010_28)] block uppercase">ยอดคงเหลือถึงเป้า</span>
+                            <span className="text-xs text-[oklch(42%_0.010_28)] block ">ยอดคงเหลือถึงเป้า</span>
                             <span className="text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                 {pacingCalc.remainingLabel}
                             </span>
                         </div>
                         <div className="p-2.5 bg-[oklch(94%_0.010_28)]">
-                            <span className="text-[11px] text-[oklch(42%_0.010_28)] block uppercase">
+                            <span className="text-xs text-[oklch(42%_0.010_28)] block ">
                                 {pacingCalc.paceBoxTitle}
                             </span>
                             <span className={`text-sm font-bold tabular-nums ${pacingCalc.isOnPace ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
                                 {pacingCalc.paceBoxVal}{' '}
                                 {pacingCalc.paceBoxUnit && (
-                                    <span className="text-[11px] font-normal text-[oklch(42%_0.010_28)]">{pacingCalc.paceBoxUnit}</span>
+                                    <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">{pacingCalc.paceBoxUnit}</span>
                                 )}
                             </span>
                         </div>
@@ -255,11 +255,11 @@ export default function SalesTargetPaceCockpit({
 
                 {/* Right 6 cols: Period Sparkline Chart (Hourly for Day, Daily for Month, Monthly for Year) */}
                 <div className="p-4 md:p-6 md:col-span-6 flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-[11px] text-[oklch(42%_0.010_28)] uppercase">
+                    <div className="flex items-center justify-between text-xs tabular-nums">
+                        <span className="text-xs text-[oklch(42%_0.010_28)] ">
                             {pacingCalc.chartTitle}
                         </span>
-                        <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                        <span className="text-xs text-[oklch(55%_0.010_28)]">
                             {pacingCalc.velocitySubtitle}
                         </span>
                     </div>
@@ -274,7 +274,7 @@ export default function SalesTargetPaceCockpit({
                                     className="flex-1 flex flex-col items-center h-full justify-end group relative"
                                 >
                                     {/* Tooltip on hover */}
-                                    <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded-none text-[11px] font-mono whitespace-nowrap z-20 transition-opacity">
+                                    <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded-none text-[11px] tabular-nums whitespace-nowrap z-20 transition-opacity">
                                         {slot.tooltip}
                                     </div>
 
@@ -289,7 +289,7 @@ export default function SalesTargetPaceCockpit({
                                         }`}
                                         style={{ height: `${Math.max(barHeightPct, 6)}%` }}
                                     />
-                                    <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-1 select-none truncate">
+                                    <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)] mt-1 select-none truncate">
                                         {slot.label}
                                     </span>
                                 </div>
@@ -297,7 +297,7 @@ export default function SalesTargetPaceCockpit({
                         })}
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span>{pacingCalc.footerStart}</span>
                         <span className="text-[oklch(52%_0.16_28)] font-bold">{pacingCalc.footerMid}</span>
                         <span>{pacingCalc.footerEnd}</span>

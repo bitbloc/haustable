@@ -4,11 +4,12 @@ import { createPortal } from 'react-dom';
 import MenuCostPage from './MenuCostPage';
 import RecipeLabPage from './RecipeLabPage';
 import SOPEditorPage from './SOPEditorPage';
+import { AdminFilterChips, AdminTabPanel } from './AdminKit';
 
 const VIEWS = [
-    { id: 'menus', label: 'เมนู', hint: 'สูตรของแต่ละจาน / แก้ว ต้นทุน และ GP' },
-    { id: 'bases', label: 'เบส / ของเตรียม', hint: 'ซอส เบสชา นมมิกซ์ ทำเป็น portion แล้วเก็บสต๊อก' },
-    { id: 'methods', label: 'วิธีทำทั้งหมด', hint: 'คลัง SOP หมวด ขนาดแก้ว และพิมพ์' }
+    { id: 'menus', label: 'เมนู', hint: 'สูตรของแต่ละจานและแก้ว ใช้คิดต้นทุน GP และตัดสต๊อก' },
+    { id: 'bases', label: 'เบส / ของเตรียม', hint: 'ซอส เบสชา นมมิกซ์ ทำเป็น portion แล้วใช้เป็นส่วนผสมในสูตรเมนู' },
+    { id: 'methods', label: 'วิธีทำ (SOP)', hint: 'ขั้นตอน แก้ว การตกแต่ง ผูกกับเมนูหรือเบส และพิมพ์คู่มือ' }
 ];
 
 /**
@@ -26,36 +27,29 @@ export default function FoodDrinkPage({ initialView = 'menus' }) {
 
     return (
         <div className="font-sans text-[oklch(18%_0.012_28)] space-y-4">
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
-                <div className="px-4 py-3 border-b border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">FOOD &amp; DRINK</span>
-                    <h2 className="font-bold text-xl leading-8">สูตรและวิธีทำ</h2>
-                    <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)] max-w-prose">
-                        สูตรของเมนูคือรายการเดียวที่ใช้คิดต้นทุนและตัดสต๊อก เบสใช้เป็นส่วนผสมในสูตรเมนูได้ ส่วนวิธีทำ (SOP) ผูกกับเมนูหรือเบสและดึงส่วนผสมจากสูตรนั้น
-                    </p>
-                </div>
-                <div className="grid grid-cols-3 divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="ส่วนของ Food & Drink">
-                    {VIEWS.map(v => (
-                        <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
-                            className={`px-3 py-2.5 text-left cursor-pointer transition-colors ${view === v.id ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
-                            <span className="block font-bold text-[14px] leading-6">{v.label}</span>
-                            <span className={`hidden sm:block text-[11px] leading-4 ${view === v.id ? 'text-[oklch(85%_0.012_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>{v.hint}</span>
-                        </button>
-                    ))}
-                </div>
+            {/* One switch for the three parts of a recipe, with what the current part is for */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <AdminFilterChips
+                    label="ส่วนของ Food & Drink"
+                    layoutId="food-drink-view"
+                    options={VIEWS.map(v => ({ key: v.id, label: v.label }))}
+                    value={view}
+                    onChange={setView}
+                />
+                <p className="text-[13px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">{current?.hint}</p>
             </div>
 
-            <p className="sm:hidden text-[12px] leading-5 text-[oklch(42%_0.010_28)]">{current?.hint}</p>
-
+            <AdminTabPanel id={view}>
             {view === 'menus' && <MenuCostPage isEmbedded onOpenMethod={openMethod} />}
             {view === 'bases' && <RecipeLabPage isEmbedded onOpenMethod={openMethod} />}
             {view === 'methods' && <SOPEditorPage isEmbedded />}
+            </AdminTabPanel>
 
             {methodFor && createPortal(
                 <div className="fixed inset-0 z-[60] bg-[oklch(97%_0.008_28)] overflow-y-auto" role="dialog" aria-modal="true" aria-label={`วิธีทำ ${methodFor.name}`}>
                     <div className="sticky top-0 z-10 grid grid-cols-[1fr_auto] items-center border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
                         <div className="px-4 py-2.5 min-w-0">
-                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                            <span className="text-xs text-[oklch(42%_0.010_28)] block">
                                 วิธีทำ · {methodFor.type === 'menu' ? 'เมนู' : 'เบส'}
                             </span>
                             <span className="font-bold text-[15px] leading-6 break-words">{methodFor.name}</span>

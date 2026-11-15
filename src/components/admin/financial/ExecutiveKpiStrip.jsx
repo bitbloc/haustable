@@ -60,10 +60,10 @@ export default function ExecutiveKpiStrip({
     return (
         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
             {/* Header Meta Strip */}
-            <div className="px-4 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-[oklch(42%_0.010_28)]">
+            <div className="px-4 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs text-[oklch(42%_0.010_28)]">
                 <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]"></span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
                         AT-A-GLANCE STATUS
                     </span>
                     <span className="text-[oklch(55%_0.010_28)]">เปรียบเทียบ: {compareLabel}</span>
@@ -87,112 +87,112 @@ export default function ExecutiveKpiStrip({
                 
                 {/* Cell 1: Sales Today / Period */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span>{resolvedSalesTitle}</span>
-                        <span className="text-[11px] uppercase px-1 py-0.2 border border-[oklch(85%_0.012_28)]">NET</span>
+                        <span className="text-[11px] px-1 py-0.2 border border-[oklch(85%_0.012_28)]">NET</span>
                     </div>
                     <div>
-                        <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        <div className=" text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
                             ฿{Math.round(salesToday).toLocaleString()}
                         </div>
                     </div>
-                    <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                    <div className="tabular-nums text-xs pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
                         <span className={isPositive(salesGrowthPct) ? 'text-[oklch(45%_0.08_140)] font-bold' : 'text-[oklch(52%_0.16_28)] font-bold'}>
                             {formatDiff(salesGrowthPct)}
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)] text-[11px] truncate max-w-[80px]">{resolvedCompareSubtext}</span>
+                        <span className="text-[oklch(55%_0.010_28)] text-xs truncate max-w-[80px]">{resolvedCompareSubtext}</span>
                     </div>
                 </div>
 
                 {/* Cell 2: Completed Orders */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span>ORDERS</span>
-                        <span className="text-[11px] uppercase px-1 py-0.2 border border-[oklch(85%_0.012_28)]">BILLS</span>
+                        <span className="text-[11px] px-1 py-0.2 border border-[oklch(85%_0.012_28)]">BILLS</span>
                     </div>
                     <div>
-                        <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        <div className=" text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
                             {orderCount}
                         </div>
                     </div>
-                    <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                    <div className="tabular-nums text-xs pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
                         <span className={isPositive(orderGrowthPct) ? 'text-[oklch(45%_0.08_140)] font-bold' : 'text-[oklch(52%_0.16_28)] font-bold'}>
                             {formatDiff(orderGrowthPct)}
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)] text-[11px]">บิลสำเร็จ</span>
+                        <span className="text-[oklch(55%_0.010_28)] text-xs">บิลสำเร็จ</span>
                     </div>
                 </div>
 
                 {/* Cell 3: Guests (Pax) */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span>GUESTS</span>
-                        <span className="text-[11px] uppercase px-1 py-0.2 border border-[oklch(85%_0.012_28)]">HEADCOUNT</span>
+                        <span className="text-[11px] px-1 py-0.2 border border-[oklch(85%_0.012_28)]">HEADCOUNT</span>
                     </div>
                     <div>
-                        <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        <div className=" text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
                             {guestCount} <span className="text-xs font-normal text-[oklch(55%_0.010_28)]">ท่าน</span>
                         </div>
                     </div>
-                    <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                    <div className="tabular-nums text-xs pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
                         <span className={isPositive(guestGrowthPct) ? 'text-[oklch(45%_0.08_140)] font-bold' : 'text-[oklch(52%_0.16_28)] font-bold'}>
                             {formatDiff(guestGrowthPct)}
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)] text-[11px]">ผู้ทานในร้าน</span>
+                        <span className="text-[oklch(55%_0.010_28)] text-xs">ผู้ทานในร้าน</span>
                     </div>
                 </div>
 
                 {/* Cell 4: Average Ticket (Avg Bill) */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span>AVG TICKET</span>
-                        <span className="text-[11px] uppercase px-1 py-0.2 border border-[oklch(85%_0.012_28)]">PER BILL</span>
+                        <span className="text-[11px] px-1 py-0.2 border border-[oklch(85%_0.012_28)]">PER BILL</span>
                     </div>
                     <div>
-                        <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        <div className=" text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
                             ฿{Math.round(avgTicket).toLocaleString()}
                         </div>
                     </div>
-                    <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                    <div className="tabular-nums text-xs pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
                         <span className={isPositive(avgTicketGrowthPct) ? 'text-[oklch(45%_0.08_140)] font-bold' : 'text-[oklch(52%_0.16_28)] font-bold'}>
                             {formatDiff(avgTicketGrowthPct)}
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)] text-[11px]">เฉลี่ยต่อบิล</span>
+                        <span className="text-[oklch(55%_0.010_28)] text-xs">เฉลี่ยต่อบิล</span>
                     </div>
                 </div>
 
                 {/* Cell 5: Sales Target Progress */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span>TARGET %</span>
-                        <span className="text-[11px] font-bold text-[oklch(52%_0.16_28)] uppercase">{targetProgressPct}%</span>
+                        <span className="text-xs font-bold text-[oklch(52%_0.16_28)] ">{targetProgressPct}%</span>
                     </div>
                     <div>
-                        <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        <div className=" text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
                             {targetProgressPct}%
                         </div>
                     </div>
-                    <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
-                        <span className="text-[oklch(55%_0.010_28)] text-[11px]">ขาดอีก:</span>
+                    <div className="tabular-nums text-xs pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                        <span className="text-[oklch(55%_0.010_28)] text-xs">ขาดอีก:</span>
                         <span className="text-[oklch(18%_0.012_28)] font-bold">฿{remainingToTarget.toLocaleString()}</span>
                     </div>
                 </div>
 
                 {/* Cell 6: Velocity & Forecast Close */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(94%_0.010_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                         <span className="font-bold text-[oklch(18%_0.012_28)]">VELOCITY</span>
-                        <span className="text-[11px] uppercase px-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold">
+                        <span className="text-[11px] px-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold">
                             {currentHourStr}
                         </span>
                     </div>
                     <div>
-                        <div className="font-mono text-xl sm:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
+                        <div className=" text-xl sm:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
                             ฿{Math.round(currentVelocityPerHour).toLocaleString()} <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">{velocityUnit}</span>
                         </div>
                     </div>
-                    <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
-                        <span className="text-[oklch(55%_0.010_28)] text-[11px]">Forecast:</span>
+                    <div className="tabular-nums text-xs pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                        <span className="text-[oklch(55%_0.010_28)] text-xs">Forecast:</span>
                         <span className="font-bold text-[oklch(18%_0.012_28)]">≈ ฿{Math.round(forecastClose).toLocaleString()}</span>
                     </div>
                 </div>

@@ -329,19 +329,16 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                         {!isEmbedded && (
                             <button
                                 onClick={() => navigate('/admin')}
-                                className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs rounded-xs transition-colors"
+                                className="admin-btn h-9"
                             >
-                                [← กลับ]
+                                ← กลับ
                             </button>
                         )}
                         <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)]">[FINANCIAL AUDIT]</span>
-                                <h1 className="text-base font-bold font-mono uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                    Food Costing (วิเคราะห์ต้นทุนเมนู)
-                                </h1>
-                            </div>
-                            <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                            <h2 className="text-base font-semibold text-[oklch(18%_0.012_28)]">
+                                ต้นทุนเมนู
+                            </h2>
+                            <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
                                 วิเคราะห์สัดส่วนต้นทุนวัตถุดิบ (COGS) อัตรากำไรขั้นต้น และความคุ้มค่าราคาขายต่อหน่วย
                             </p>
                         </div>
@@ -349,7 +346,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
                         {/* View Mode Segmented Controls */}
-                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xs font-mono text-xs">
+                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xs tabular-nums text-xs">
                             <button
                                 onClick={() => setViewLayout('table')}
                                 className={`px-2 py-1 transition-colors ${
@@ -359,7 +356,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                 }`}
                                 title="แสดงแบบตารางละเอียด"
                             >
-                                [ตาราง]
+                                ตาราง
                             </button>
                             <button
                                 onClick={() => setViewLayout('cards')}
@@ -370,27 +367,27 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                 }`}
                                 title="แสดงแบบการ์ดขนาดกะทัดรัด"
                             >
-                                [การ์ด]
+                                การ์ด
                             </button>
                         </div>
 
                         <button
                             onClick={handleExportCSV}
                             disabled={menuItems.length === 0}
-                            className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs rounded-xs flex items-center gap-1.5 transition-colors disabled:opacity-40"
+                            className="admin-btn h-9 disabled:opacity-40"
                             title="ดาวน์โหลดข้อมูลเป็นไฟล์ Excel / CSV"
                         >
                             <span className="text-[oklch(52%_0.16_28)] font-bold">↓</span>
-                            <span>[EXPORT CSV]</span>
+                            <span>EXPORT CSV</span>
                         </button>
                         <button
                             onClick={() => loadData(true)}
                             disabled={loading}
-                            className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs rounded-xs flex items-center gap-1.5 transition-colors disabled:opacity-40"
+                            className="admin-btn h-9 disabled:opacity-40"
                             title="รีเฟรชข้อมูลล่าสุด"
                         >
-                            <span className={`font-mono ${loading ? 'animate-spin inline-block' : ''}`}>↻</span>
-                            <span>[รีเฟรช]</span>
+                            <span className={`tabular-nums ${loading ? 'animate-spin inline-block' : ''}`}>↻</span>
+                            <span>รีเฟรช</span>
                         </button>
                     </div>
                 </div>
@@ -417,18 +414,18 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     {/* Card 1: Recipe Coverage */}
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase tracking-wider font-bold">
-                                01 / ครอบคลุมสูตรมาตรฐาน
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)] font-bold">
+                                ครอบคลุมสูตรมาตรฐาน
                             </span>
-                            <span className="font-mono text-[11px] px-1.5 py-0.5 bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] rounded-xs">
+                            <span className="tabular-nums text-[11px] px-1.5 py-0.5 bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] rounded-xs">
                                 COVERAGE
                             </span>
                         </div>
                         <div className="flex items-baseline gap-2 my-1">
-                            <span className="text-2xl font-mono font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                            <span className="text-2xl tabular-nums font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                 {metrics.coveragePct.toFixed(1)}%
                             </span>
-                            <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                                 ({metrics.recipeCount}/{metrics.totalItems})
                             </span>
                         </div>
@@ -439,7 +436,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                 style={{ width: `${Math.min(100, metrics.coveragePct)}%` }}
                             />
                         </div>
-                        <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                        <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                             {metrics.missingRecipeCount > 0 ? (
                                 <span className="text-[oklch(45%_0.14_28)]">รอผูกสูตรอีก {metrics.missingRecipeCount} เมนู</span>
                             ) : (
@@ -451,10 +448,10 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     {/* Card 2: Average Food Cost % */}
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase tracking-wider font-bold">
-                                02 / ต้นทุนอาหารเฉลี่ย
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)] font-bold">
+                                ต้นทุนอาหารเฉลี่ย
                             </span>
-                            <span className={`font-mono text-[11px] px-1.5 py-0.5 rounded-xs font-bold ${
+                            <span className={`tabular-nums text-[11px] px-1.5 py-0.5 rounded-xs font-bold ${
                                 metrics.avgFoodCost <= targetFoodCostPct
                                     ? 'bg-[oklch(90%_0.04_140)] text-[oklch(35%_0.08_140)]'
                                     : metrics.avgFoodCost <= 35
@@ -465,7 +462,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             </span>
                         </div>
                         <div className="flex items-baseline gap-2 my-1">
-                            <span className={`text-2xl font-mono font-bold tracking-tight ${
+                            <span className={`text-2xl tabular-nums font-bold tracking-tight ${
                                 metrics.avgFoodCost <= targetFoodCostPct
                                     ? 'text-[oklch(35%_0.08_140)]'
                                     : metrics.avgFoodCost <= 35
@@ -474,11 +471,11 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             }`}>
                                 {metrics.avgFoodCost.toFixed(1)}%
                             </span>
-                            <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                                 (Food Cost)
                             </span>
                         </div>
-                        <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)] mt-2">
+                        <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)] mt-2">
                             เป้าหมายมาตรฐานร้าน: {targetFoodCostPct.toFixed(0)}% (28 - 32%)
                         </div>
                     </div>
@@ -494,22 +491,22 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                         title="คลิกเพื่อกรองเฉพาะเมนูที่ต้นทุนสูงเกิน 35%"
                     >
                         <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase tracking-wider font-bold">
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)] font-bold">
                                 03 / ต้นทุนสูงเกินเกณฑ์ (&gt;35%)
                             </span>
-                            <span className="font-mono text-[11px] px-1.5 py-0.5 bg-[oklch(90%_0.06_28)] text-[oklch(45%_0.14_28)] rounded-xs font-bold">
+                            <span className="tabular-nums text-[11px] px-1.5 py-0.5 bg-[oklch(90%_0.06_28)] text-[oklch(45%_0.14_28)] rounded-xs font-bold">
                                 ALERT
                             </span>
                         </div>
                         <div className="flex items-baseline gap-2 my-1">
-                            <span className={`text-2xl font-mono font-bold tracking-tight ${metrics.highCostCount > 0 ? 'text-[oklch(45%_0.14_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
+                            <span className={`text-2xl tabular-nums font-bold tracking-tight ${metrics.highCostCount > 0 ? 'text-[oklch(45%_0.14_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
                                 {metrics.highCostCount}
                             </span>
-                            <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">รายการ</span>
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">รายการ</span>
                         </div>
-                        <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)] mt-2">
+                        <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)] mt-2">
                             {filterMode === 'high_cost' ? (
-                                <span className="text-[oklch(52%_0.16_28)] font-bold">[กำลังแสดงตัวกรองนี้]</span>
+                                <span className="text-[oklch(52%_0.16_28)] font-bold">กำลังแสดงตัวกรองนี้</span>
                             ) : (
                                 <span>คลิกเพื่อดูเมนูที่ควรปรับสูตรหรือราคา</span>
                             )}
@@ -519,22 +516,22 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     {/* Card 4: Gross Profit Margin % */}
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase tracking-wider font-bold">
-                                04 / กำไรขั้นต้นเฉลี่ย
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)] font-bold">
+                                กำไรขั้นต้นเฉลี่ย
                             </span>
-                            <span className="font-mono text-[11px] px-1.5 py-0.5 bg-[oklch(90%_0.04_140)] text-[oklch(35%_0.08_140)] rounded-xs font-bold">
+                            <span className="tabular-nums text-[11px] px-1.5 py-0.5 bg-[oklch(90%_0.04_140)] text-[oklch(35%_0.08_140)] rounded-xs font-bold">
                                 MARGIN
                             </span>
                         </div>
                         <div className="flex items-baseline gap-2 my-1">
-                            <span className="text-2xl font-mono font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                            <span className="text-2xl tabular-nums font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                 {metrics.avgMargin.toFixed(1)}%
                             </span>
-                            <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                                 (Gross Profit)
                             </span>
                         </div>
-                        <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)] mt-2">
+                        <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)] mt-2">
                             กำไรเฉลี่ย ฿{metrics.avgProfit.toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / หน่วยขาย
                         </div>
                     </div>
@@ -545,18 +542,18 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between">
                         {/* Search */}
                         <div className="flex-1 min-w-[200px] flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] px-3 py-1.5">
-                            <span className="font-mono text-xs text-[oklch(55%_0.010_28)] mr-2">FIND:</span>
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)] mr-2">FIND:</span>
                             <input
                                 type="text"
                                 placeholder="ค้นหาชื่อเมนูหรือหมวดหมู่..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-transparent font-mono text-xs text-[oklch(18%_0.012_28)] outline-none placeholder:text-[oklch(60%_0.010_28)]"
+                                className="w-full bg-transparent text-sm text-[oklch(18%_0.012_28)] outline-none placeholder:text-[oklch(60%_0.010_28)]"
                             />
                             {searchTerm && (
                                 <button
                                     onClick={() => setSearchTerm('')}
-                                    className="font-mono text-xs text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] ml-1"
+                                    className="tabular-nums text-xs text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] ml-1"
                                 >
                                     [×]
                                 </button>
@@ -567,7 +564,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                         <div className="flex flex-wrap items-center gap-1.5">
                             <button
                                 onClick={() => setFilterMode('all')}
-                                className={`px-2.5 py-1 text-xs font-mono border transition-colors ${
+                                className={`px-2.5 py-1 text-xs tabular-nums border transition-colors ${
                                     filterMode === 'all'
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
@@ -577,7 +574,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             </button>
                             <button
                                 onClick={() => setFilterMode('has_recipe')}
-                                className={`px-2.5 py-1 text-xs font-mono border transition-colors ${
+                                className={`px-2.5 py-1 text-xs tabular-nums border transition-colors ${
                                     filterMode === 'has_recipe'
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
@@ -587,7 +584,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             </button>
                             <button
                                 onClick={() => setFilterMode('missing_recipe')}
-                                className={`px-2.5 py-1 text-xs font-mono border transition-colors ${
+                                className={`px-2.5 py-1 text-xs tabular-nums border transition-colors ${
                                     filterMode === 'missing_recipe'
                                         ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] font-bold'
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(52%_0.16_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
@@ -597,7 +594,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             </button>
                             <button
                                 onClick={() => setFilterMode('high_cost')}
-                                className={`px-2.5 py-1 text-xs font-mono border transition-colors ${
+                                className={`px-2.5 py-1 text-xs tabular-nums border transition-colors ${
                                     filterMode === 'high_cost'
                                         ? 'bg-[oklch(45%_0.14_28)] text-[oklch(97%_0.008_28)] border-[oklch(45%_0.14_28)] font-bold'
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(45%_0.14_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
@@ -607,7 +604,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             </button>
                             <button
                                 onClick={() => setFilterMode('low_margin')}
-                                className={`px-2.5 py-1 text-xs font-mono border transition-colors ${
+                                className={`px-2.5 py-1 text-xs tabular-nums border transition-colors ${
                                     filterMode === 'low_margin'
                                         ? 'bg-[oklch(40%_0.10_70)] text-[oklch(97%_0.008_28)] border-[oklch(40%_0.10_70)] font-bold'
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(40%_0.10_70)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
@@ -620,8 +617,8 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
 
                     {/* Category Filter Horizontal Strip */}
                     {categories.length > 0 && (
-                        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-xs font-mono border-t border-[oklch(88%_0.012_28)]">
-                            <span className="text-[oklch(55%_0.010_28)] shrink-0 mr-1 text-[11px]">หมวดหมู่:</span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-xs tabular-nums border-t border-[oklch(88%_0.012_28)]">
+                            <span className="text-[oklch(55%_0.010_28)] shrink-0 mr-1 text-xs">หมวดหมู่:</span>
                             <button
                                 onClick={() => setSelectedCategory('ALL')}
                                 className={`px-2 py-0.5 shrink-0 border rounded-xs transition-colors ${
@@ -652,14 +649,14 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                 {/* Main List: Desktop Table + Mobile Cards */}
                 {loading ? (
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-12 text-center">
-                        <div className="font-mono text-sm text-[oklch(55%_0.010_28)] ">
-                            [กำลังโหลดและคำนวณต้นทุนเมนู...]
+                        <div className="tabular-nums text-sm text-[oklch(55%_0.010_28)] ">
+                            กำลังโหลดและคำนวณต้นทุนเมนู...
                         </div>
                     </div>
                 ) : processedItems.length === 0 ? (
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-12 text-center">
-                        <div className="font-mono text-sm text-[oklch(55%_0.010_28)]">
-                            [ไม่พบเมนูตามเงื่อนไขการค้นหา]
+                        <div className="tabular-nums text-sm text-[oklch(55%_0.010_28)]">
+                            ไม่พบเมนูตามเงื่อนไขการค้นหา
                         </div>
                         <button
                             onClick={() => {
@@ -667,9 +664,9 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                 setSelectedCategory('ALL');
                                 setFilterMode('all');
                             }}
-                            className="mt-3 px-3 py-1 text-xs font-mono border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(90%_0.012_28)]"
+                            className="admin-btn h-9 mt-3"
                         >
-                            [ล้างตัวกรองทั้งหมด]
+                            ล้างตัวกรองทั้งหมด
                         </button>
                     </div>
                 ) : (
@@ -677,16 +674,16 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                         {/* Tabular Grid */}
                         {(viewLayout === 'table' || viewLayout === 'auto') && (
                             <div className={`${viewLayout === 'auto' ? 'hidden lg:block' : 'block'} border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-x-auto `}>
-                                <table className="w-full min-w-[760px] text-left border-collapse">
+                                <table className="text-[13px] w-full min-w-[760px] text-left border-collapse">
                                     <thead>
-                                        <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(92%_0.010_28)] font-mono text-xs uppercase text-[oklch(42%_0.010_28)] select-none">
+                                        <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(92%_0.010_28)] tabular-nums text-xs text-[oklch(42%_0.010_28)] select-none">
                                             <th
                                                 className="p-3.5 cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-[34%] min-w-[220px]"
                                                 onClick={() => handleSort('name')}
                                             >
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="font-bold">รายการเมนู</span>
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                         {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
@@ -697,7 +694,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <span>ราคาขาย</span>
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                         {sortConfig.key === 'price' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
@@ -708,7 +705,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <span>ต้นทุนวัตถุดิบ</span>
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                         {sortConfig.key === 'cost' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
@@ -719,7 +716,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <span>กำไรต่อแก้ว</span>
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                         {sortConfig.key === 'profit' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
@@ -730,7 +727,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <span>ต้นทุน %</span>
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                         {sortConfig.key === 'costPercent' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
@@ -740,7 +737,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[oklch(88%_0.012_28)] font-mono text-xs">
+                                    <tbody className="divide-y divide-[oklch(88%_0.012_28)] tabular-nums text-[13px]">
                                         {processedItems.map(item => (
                                             <tr
                                                 key={item.id}
@@ -756,7 +753,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                                 className="w-9 h-9 object-cover rounded-xs border border-[oklch(85%_0.012_28)] shrink-0"
                                                             />
                                                         ) : (
-                                                            <div className="w-9 h-9 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[11px] text-[oklch(55%_0.010_28)] shrink-0 font-mono">
+                                                            <div className="w-9 h-9 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-xs text-[oklch(55%_0.010_28)] shrink-0 tabular-nums">
                                                                 N/A
                                                             </div>
                                                         )}
@@ -765,12 +762,12 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                             <div className="font-bold text-[oklch(18%_0.012_28)] text-sm leading-snug line-clamp-2 break-words font-sans" title={item.name}>
                                                                 {item.name}
                                                             </div>
-                                                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[oklch(55%_0.010_28)]">
+                                                            <div className="flex items-center gap-2 mt-0.5 text-xs text-[oklch(55%_0.010_28)]">
                                                                 <span className="px-1.5 py-0.2 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
                                                                     {item.category || 'ไม่ระบุหมวด'}
                                                                 </span>
                                                                 {item.hasRecipe && (
-                                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                                         {item.ingredientCount} วัตถุดิบ
                                                                     </span>
                                                                 )}
@@ -793,8 +790,8 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-[oklch(55%_0.010_28)] italic text-[11px]">
-                                                            [รอผูกสูตร]
+                                                        <span className="text-[oklch(55%_0.010_28)] italic text-xs">
+                                                            รอผูกสูตร
                                                         </span>
                                                     )}
                                                 </td>
@@ -825,7 +822,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                             }`}>
                                                                 {item.costPercent.toFixed(1)}%
                                                             </span>
-                                                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                            <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                                 มาร์จิ้น {item.margin.toFixed(0)}%
                                                             </span>
                                                         </div>
@@ -839,21 +836,21 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                     <div className="flex flex-col items-stretch gap-1.5">
                                                     <button
                                                         onClick={() => handleOpenRecipe(item)}
-                                                        className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
+                                                        className={`px-3 py-1.5 tabular-nums text-xs border transition-colors ${
                                                             item.hasRecipe
                                                                 ? 'border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)]'
                                                                 : 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
                                                         }`}
                                                     >
-                                                        {item.hasRecipe ? '[ปรุงสูตร]' : '[+ สร้างสูตร]'}
+                                                        {item.hasRecipe ? 'ปรุงสูตร' : '+ สร้างสูตร'}
                                                     </button>
                                                     {onOpenMethod && (
                                                         <button
                                                             onClick={() => onOpenMethod({ type: 'menu', id: item.id, name: item.name })}
                                                             title="วิธีทำ (SOP) ของเมนูนี้"
-                                                            className="px-3 py-1.5 font-mono text-xs border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] transition-colors"
+                                                            className="admin-btn h-9"
                                                         >
-                                                            [วิธีทำ]
+                                                            วิธีทำ
                                                         </button>
                                                     )}
                                                     </div>
@@ -883,7 +880,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                     className="w-10 h-10 object-cover rounded-xs border border-[oklch(85%_0.012_28)] shrink-0"
                                                 />
                                             ) : (
-                                                <div className="w-10 h-10 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[11px] text-[oklch(55%_0.010_28)] shrink-0 font-mono">
+                                                <div className="w-10 h-10 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-xs text-[oklch(55%_0.010_28)] shrink-0 tabular-nums">
                                                     N/A
                                                 </div>
                                             )}
@@ -891,13 +888,13 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                 <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
                                                     {item.name}
                                                 </div>
-                                                <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                                                <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                                                     {item.category || 'ไม่ระบุหมวด'}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <span className={`font-mono text-[11px] px-1.5 py-0.5 border rounded-xs font-bold ${
+                                        <span className={`tabular-nums text-[11px] px-1.5 py-0.5 border rounded-xs font-bold ${
                                             !item.hasRecipe
                                                 ? 'bg-[oklch(92%_0.05_28)] text-[oklch(45%_0.14_28)] border-[oklch(85%_0.08_28)]'
                                                 : item.costPercent > 35
@@ -909,27 +906,27 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                     </div>
 
                                     {/* 2x2 Numeric Grid */}
-                                    <div className="grid grid-cols-2 gap-2 border-t border-b border-[oklch(88%_0.012_28)] py-2 font-mono text-xs">
+                                    <div className="grid grid-cols-2 gap-2 border-t border-b border-[oklch(88%_0.012_28)] py-2 tabular-nums text-xs">
                                         <div>
-                                            <div className="text-[11px] text-[oklch(55%_0.010_28)]">ราคาขาย:</div>
+                                            <div className="text-xs text-[oklch(55%_0.010_28)]">ราคาขาย:</div>
                                             <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
                                                 ฿{item.price.toLocaleString('th-TH')}
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-[11px] text-[oklch(55%_0.010_28)]">ต้นทุนวัตถุดิบ:</div>
+                                            <div className="text-xs text-[oklch(55%_0.010_28)]">ต้นทุนวัตถุดิบ:</div>
                                             <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
                                                 {item.hasRecipe ? `฿${item.cost.toFixed(2)}` : '-'}
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-[11px] text-[oklch(55%_0.010_28)]">กำไรต่อแก้ว:</div>
+                                            <div className="text-xs text-[oklch(55%_0.010_28)]">กำไรต่อแก้ว:</div>
                                             <div className={`font-bold ${item.hasRecipe && item.profit > 0 ? 'text-[oklch(38%_0.08_140)]' : 'text-[oklch(55%_0.010_28)]'}`}>
                                                 {item.hasRecipe ? `฿${item.profit.toFixed(0)}` : '-'}
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-[11px] text-[oklch(55%_0.010_28)]">Gross Margin:</div>
+                                            <div className="text-xs text-[oklch(55%_0.010_28)]">Gross Margin:</div>
                                             <div className="font-bold text-[oklch(18%_0.012_28)]">
                                                 {item.hasRecipe ? `${item.margin.toFixed(1)}%` : '-'}
                                             </div>
@@ -939,18 +936,18 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                     {/* Action Button */}
                                     <button
                                         onClick={() => handleOpenRecipe(item)}
-                                        className={`w-full py-2 font-mono text-xs border text-center transition-colors ${
+                                        className={`w-full py-2 tabular-nums text-xs border text-center transition-colors ${
                                             item.hasRecipe
                                                 ? 'border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold'
                                                 : 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
                                         }`}
                                     >
-                                        {item.hasRecipe ? '[ปรุงสูตร (RECIPE)]' : '[+ ผูกสูตรใหม่]'}
+                                        {item.hasRecipe ? 'ปรุงสูตร' : '+ ผูกสูตรใหม่'}
                                     </button>
                                     {onOpenMethod && (
                                         <button
                                             onClick={() => onOpenMethod({ type: 'menu', id: item.id, name: item.name })}
-                                            className="w-full mt-1.5 py-2 font-mono text-xs border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-center transition-colors"
+                                            className="admin-btn h-9 w-full mt-1.5"
                                         >
                                             [วิธีทำ (SOP)]
                                         </button>

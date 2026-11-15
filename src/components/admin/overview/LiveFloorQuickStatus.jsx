@@ -276,18 +276,18 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                 <div>
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
-                        <h2 className="font-mono text-sm md:text-base font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                        <h2 className="tabular-nums text-sm md:text-base font-bold text-[oklch(18%_0.012_28)]">
                             LIVE FLOOR & 1-TAP TABLE BLOCK
                         </h2>
                     </div>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
                         Tap empty table to block 2h for walk-in • Tap occupied table to release
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     {/* Legend badges */}
-                    <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-[oklch(42%_0.010_28)]">
+                    <div className="hidden sm:flex items-center gap-2 tabular-nums text-xs text-[oklch(42%_0.010_28)]">
                         <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" /> FREE
                         </span>
@@ -304,7 +304,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
                     <Link 
                         to="/admin/tables" 
-                        className="inline-flex items-center gap-1 font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-sm transition-colors"
+                        className="inline-flex items-center gap-1 tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-sm transition-colors"
                     >
                         FULL FLOORPLAN ➔
                     </Link>
@@ -313,11 +313,11 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
             {/* Table Matrix Grid */}
             {loading ? (
-                <div className="py-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] ">
+                <div className="py-12 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)] ">
                     LOADING LIVE FLOOR STATUS...
                 </div>
             ) : tables.length === 0 ? (
-                <div className="py-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)]">
+                <div className="py-12 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                     NO TABLES CONFIGURED IN SYSTEM
                 </div>
             ) : (
@@ -371,21 +371,21 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                                 }`}
                             >
                                 <div className="flex items-center justify-between">
-                                    <span className="font-mono text-xs md:text-sm font-bold tracking-tight">
+                                    <span className="tabular-nums text-xs md:text-sm font-bold tracking-tight">
                                         {table.table_name}
                                     </span>
                                     <div className="flex items-center gap-1">
                                         {transfer.isMergedTarget && (
-                                            <span className="bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-[11px] font-mono font-bold px-1 rounded-xs">
+                                            <span className="bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
                                                 +{transfer.mergedFromTables.join(',')}
                                             </span>
                                         )}
                                         {transfer.isMoved && (
-                                            <span className="bg-[oklch(45%_0.08_220)] text-[oklch(97%_0.008_28)] text-[11px] font-mono font-bold px-1 rounded-xs">
+                                            <span className="bg-[oklch(45%_0.08_220)] text-[oklch(97%_0.008_28)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
                                                 ย้าย
                                             </span>
                                         )}
-                                        <span className="font-mono tabular-nums text-[11px] opacity-70">
+                                        <span className=" tabular-nums text-xs opacity-70">
                                             {table.capacity}P
                                         </span>
                                     </div>
@@ -393,13 +393,13 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
                                 {hasCallStaff || hasCallBill ? (
                                     <div className="mt-2">
-                                        <span className="font-mono text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs uppercase tracking-wider block text-center truncate bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)]">
+                                        <span className="tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs block text-center truncate bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)]">
                                             {hasCallBill ? 'CALL BILL' : 'CALL STAFF'}
                                         </span>
                                     </div>
                                 ) : (
                                     <div className="mt-2">
-                                        <span className={`font-mono tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs uppercase tracking-wider block text-center truncate ${tagStyle}`}>
+                                        <span className={` tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs block text-center truncate ${tagStyle}`}>
                                             {statusTag}
                                         </span>
                                     </div>
@@ -416,16 +416,16 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                     <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)]">
                             <div>
-                                <span className="font-mono text-[11px] uppercase font-bold text-[oklch(55%_0.010_28)]">
+                                <span className="tabular-nums text-xs font-bold text-[oklch(55%_0.010_28)]">
                                     TABLE INSPECTION
                                 </span>
-                                <h3 className="font-mono text-lg font-bold text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-lg font-bold text-[oklch(18%_0.012_28)]">
                                     {selectedTableData.table.table_name} ({selectedTableData.table.capacity} Pax)
                                 </h3>
                             </div>
                             <button 
                                 onClick={() => setSelectedTableData(null)}
-                                className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1"
+                                className="tabular-nums text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1"
                             >
                                 ✕ CLOSE
                             </button>
@@ -434,7 +434,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                         {selectedTableData.state.booking && (() => {
                             const modalTransfer = parseTableTransferInfo(selectedTableData.state.booking, bookings)
                             return (
-                                <div className="my-4 space-y-3 font-mono text-xs">
+                                <div className="my-4 space-y-3 tabular-nums text-xs">
                                     {modalTransfer.isMergedTarget && (
                                         <div className="bg-[oklch(94%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] p-2 rounded-sm font-bold flex items-center gap-1.5">
                                             <span>COMBINED BILL:</span>
@@ -456,7 +456,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-[oklch(55%_0.010_28)]">TYPE</span>
-                                            <span className="font-bold uppercase text-[oklch(52%_0.16_28)]">
+                                            <span className="font-bold text-[oklch(52%_0.16_28)]">
                                                 {selectedTableData.state.booking.booking_type}
                                             </span>
                                         </div>
@@ -468,17 +468,17 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-[oklch(55%_0.010_28)]">ELAPSED (เวลาที่ใช้บริการ)</span>
-                                            <span className="font-bold font-mono text-[oklch(52%_0.16_28)]">
+                                            <span className="font-bold tabular-nums text-[oklch(52%_0.16_28)]">
                                                 {formatThaiDuration(calculateDurationMinutes(selectedTableData.state.booking.booking_time, currentTime))}
                                             </span>
                                         </div>
                                         {selectedTableData.state.booking.customer_note && (
-                                            <div className="pt-1 text-[11px] text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
+                                            <div className="pt-1 text-xs text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
                                                 Note: "{selectedTableData.state.booking.customer_note}"
                                             </div>
                                         )}
                                         {modalTransfer.cleanRemark && (
-                                            <div className="pt-1 text-[11px] text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
+                                            <div className="pt-1 text-xs text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
                                                 Remark: "{modalTransfer.cleanRemark}"
                                             </div>
                                         )}
@@ -488,13 +488,13 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                         })()}
 
                         {!selectedTableData.state.booking && (
-                            <div className="my-6 py-4 text-center font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] rounded-xs border border-[oklch(88%_0.010_28)]">
+                            <div className="my-6 py-4 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] rounded-xs border border-[oklch(88%_0.010_28)]">
                                 โต๊ะว่าง พร้อมเปิดบริการที่หน้าเครื่อง POS
                             </div>
                         )}
 
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
-                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                                 [INFO] การเปิดโต๊ะ เช็คบิล และเคลียร์โต๊ะ ดำเนินการผ่านเครื่อง POS หน้าร้าน
                             </span>
                             <button

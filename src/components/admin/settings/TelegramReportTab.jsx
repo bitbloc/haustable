@@ -20,7 +20,7 @@ function Toggle({ checked, onChange, label, desc }) {
         }`}>
             <div className="min-w-0">
                 <span className="block font-bold text-xs text-[var(--color-ink)]">{label}</span>
-                <span className="block text-[11px] text-[var(--color-neutral)] leading-snug">{desc}</span>
+                <span className="block text-xs text-[var(--color-neutral)] leading-snug">{desc}</span>
             </div>
             <div className={`w-9 h-5 shrink-0 rounded-full p-0.5 transition-colors duration-200 ${checked ? 'bg-[var(--color-ink)]' : 'bg-[var(--color-rule)]'}`}>
                 <div className={`w-4 h-4 rounded-full bg-[var(--color-paper)] transform transition-transform duration-200 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -88,10 +88,10 @@ export default function TelegramReportTab({ settings, handleSave }) {
             {/* Connection */}
             <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-4">
                 <div className="border-b border-[var(--color-rule)] pb-3">
-                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                    <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                         Telegram Reports
                     </h2>
-                    <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
+                    <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
                         ส่งรายงานการขายเข้ากลุ่ม Telegram ของเจ้าของร้านแบบเรียลไทม์
                     </p>
                 </div>
@@ -121,7 +121,7 @@ export default function TelegramReportTab({ settings, handleSave }) {
                             value={chatId}
                             onChange={(e) => setChatIdDraft(e.target.value)}
                             onBlur={saveChatId}
-                            className="flex-1 min-w-0 bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="flex-1 min-w-0 bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                             placeholder="-1001234567890"
                         />
                         <button type="button" onClick={findChats} disabled={!!busy} className={btnGhost}>
@@ -143,7 +143,7 @@ export default function TelegramReportTab({ settings, handleSave }) {
                                     className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left hover:bg-[var(--color-paper-2)] cursor-pointer"
                                 >
                                     <span className="text-xs text-[var(--color-ink)] truncate">{c.title}</span>
-                                    <span className="text-[11px] font-mono text-[var(--color-neutral)] shrink-0">{c.type} · {c.id}</span>
+                                    <span className="text-xs tabular-nums text-[var(--color-neutral)] shrink-0">{c.type} · {c.id}</span>
                                 </button>
                             ))}
                         </div>
@@ -163,7 +163,7 @@ export default function TelegramReportTab({ settings, handleSave }) {
                 </div>
 
                 <ol className="text-xs text-[var(--color-muted)] leading-relaxed space-y-1 list-decimal pl-4 border-t border-[var(--color-rule)] pt-3">
-                    <li>สร้างบอทกับ <span className="font-mono">@BotFather</span> แล้วตั้ง secret <span className="font-mono">TELEGRAM_BOT_TOKEN</span> ใน Supabase</li>
+                    <li>สร้างบอทกับ <span className="tabular-nums">@BotFather</span> แล้วตั้ง secret <span className="tabular-nums">TELEGRAM_BOT_TOKEN</span> ใน Supabase</li>
                     <li>เพิ่มบอทเข้ากลุ่มเจ้าของร้าน แล้วพิมพ์ข้อความในกลุ่ม <span className="whitespace-nowrap">1 ครั้ง</span></li>
                     <li>กด “ค้นหา” เพื่อเลือกกลุ่ม แล้วกด “ส่งข้อความทดสอบ”</li>
                 </ol>
@@ -172,10 +172,10 @@ export default function TelegramReportTab({ settings, handleSave }) {
             {/* What to send */}
             <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-4">
                 <div className="border-b border-[var(--color-rule)] pb-3">
-                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                    <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                         Events
                     </h2>
-                    <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
+                    <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
                         เลือกเหตุการณ์ที่ต้องการให้แจ้งเตือน
                     </p>
                 </div>
@@ -201,9 +201,9 @@ export default function TelegramReportTab({ settings, handleSave }) {
                         type="time"
                         value={settings.telegram_daily_summary_time || '03:00'}
                         onChange={(e) => e.target.value && handleSave('telegram_daily_summary_time', e.target.value)}
-                        className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                        className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                     />
-                    <p className="mt-1 text-[11px] text-[var(--color-neutral)] leading-snug">
+                    <p className="mt-1 text-[13px] text-[var(--color-neutral)] leading-snug">
                         สรุปครอบคลุม 24 ชม. ก่อนเวลานี้ — ตั้งหลังร้านปิด เช่น 03:00 เพื่อรวมบิลหลังเที่ยงคืน
                     </p>
                 </div>

@@ -162,7 +162,7 @@ export default function StockReconciliationPage() {
     };
 
     const cellHead = 'px-3 py-2 text-right font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)] whitespace-nowrap';
-    const cell = 'px-3 py-2 text-right font-mono text-[13px] tabular-nums whitespace-nowrap';
+    const cell = 'px-3 py-2 text-right text-[13px] tabular-nums whitespace-nowrap';
     const btn = 'px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans font-bold text-[13px] leading-5 text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 cursor-pointer whitespace-nowrap';
 
     return (
@@ -170,7 +170,6 @@ export default function StockReconciliationPage() {
             {/* Controls */}
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK RECONCILIATION</span>
                     <h2 className="font-sans font-bold text-xl leading-8">{view === 'day' ? 'กระทบยอดสต๊อกรายวัน' : `อันดับผลต่างสะสม ${view} วัน`}</h2>
                     <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] max-w-prose">
                         {view === 'day'
@@ -191,7 +190,7 @@ export default function StockReconciliationPage() {
                         <button type="button" onClick={() => setDay(d => addDays(d, -1))} aria-label="วันก่อนหน้า"
                             className="px-3 py-2 font-sans font-bold text-[13px] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">ก่อนหน้า</button>
                         <input type="date" value={day} max={today} onChange={e => e.target.value && setDay(e.target.value)}
-                            aria-label="วันทำการ" className="px-2 py-2 font-mono text-[13px] bg-[oklch(99%_0.004_28)] outline-none" />
+                            aria-label="วันทำการ" className="px-2 py-2 text-[13px] bg-[oklch(99%_0.004_28)] outline-none" />
                         <button type="button" onClick={() => setDay(d => addDays(d, 1))} disabled={day >= today} aria-label="วันถัดไป"
                             className="px-3 py-2 font-sans font-bold text-[13px] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-40 cursor-pointer">ถัดไป</button>
                     </div>
@@ -216,16 +215,16 @@ export default function StockReconciliationPage() {
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">รายการที่เคยผิดปกติ</span>
-                            <span className={`font-mono font-bold text-xl tabular-nums ${rankSummary.withAbnormal ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{rankSummary.withAbnormal}</span>
+                            <span className={` font-bold text-xl tabular-nums ${rankSummary.withAbnormal ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{rankSummary.withAbnormal}</span>
                             <span className="font-sans text-[12px] text-[oklch(55%_0.010_28)]"> / {rankSummary.items}</span>
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">ขาดสะสม (มูลค่า)</span>
-                            <span className={`font-mono font-bold text-xl tabular-nums ${rankSummary.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{baht(rankSummary.shortValue)}</span>
+                            <span className={` font-bold text-xl tabular-nums ${rankSummary.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{baht(rankSummary.shortValue)}</span>
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">สุทธิ (ขาด + เกิน)</span>
-                            <span className="font-mono font-bold text-xl tabular-nums">{baht(rankSummary.netValue)}</span>
+                            <span className=" font-bold text-xl tabular-nums">{baht(rankSummary.netValue)}</span>
                         </div>
                     </div>
                     {ranking.loading ? (
@@ -236,7 +235,7 @@ export default function StockReconciliationPage() {
                         <p className="p-6 font-sans text-[14px] leading-6 text-[oklch(42%_0.010_28)]">ยังไม่มีวันที่นับปิดร้านในช่วงนี้ จึงยังจัดอันดับผลต่างไม่ได้</p>
                     ) : (
                         <div className="overflow-x-auto" data-export-unclip>
-                            <table className="w-full min-w-[720px] border-collapse">
+                            <table className="text-[13px] w-full min-w-[720px] border-collapse">
                                 <thead className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
                                     <tr>
                                         <th className={`${cellHead} w-10`}>#</th>
@@ -257,13 +256,13 @@ export default function StockReconciliationPage() {
                                                     className="font-sans font-bold text-[13px] leading-5 text-left underline decoration-[oklch(85%_0.012_28)] underline-offset-2 hover:decoration-[oklch(18%_0.012_28)] cursor-pointer">
                                                     {r.name}
                                                 </button>
-                                                <span className="font-sans text-[11px] leading-4 text-[oklch(55%_0.010_28)] block">{displayUnit(r.unit)}</span>
+                                                <span className="font-sans text-xs leading-4 text-[oklch(55%_0.010_28)] block">{displayUnit(r.unit)}</span>
                                             </td>
                                             <td className={cell}>{r.daysCounted}</td>
                                             <td className={`${cell} font-bold ${r.abnormalDays ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{r.abnormalDays}</td>
                                             <td className={`${cell} ${r.variance < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{`${r.variance > 0 ? '+' : ''}${num(r.variance, 3)}`}</td>
                                             <td className={`${cell} font-bold ${r.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
-                                                {r.priced ? baht(r.shortValue) : <span className="font-sans text-[11px] text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}
+                                                {r.priced ? baht(r.shortValue) : <span className="font-sans text-xs text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}
                                             </td>
                                             <td className={cell}>{r.priced ? baht(r.value) : '—'}</td>
                                         </tr>
@@ -276,7 +275,7 @@ export default function StockReconciliationPage() {
                         <div className="border-t border-[oklch(85%_0.012_28)]">
                             <h3 className="px-3 pt-3 pb-1 font-sans font-bold text-[13px] leading-5">ตามผู้นับปิดร้าน</h3>
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[480px] border-collapse">
+                                <table className="text-[13px] w-full min-w-[480px] border-collapse">
                                     <thead className="bg-[oklch(94%_0.010_28)] border-y border-[oklch(85%_0.012_28)]">
                                         <tr>
                                             <th className="px-3 py-2 text-left font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)]">ผู้นับ</th>
@@ -301,7 +300,7 @@ export default function StockReconciliationPage() {
                             </div>
                         </div>
                     )}
-                    <p className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)]">
+                    <p className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[13px] leading-5 text-[oklch(55%_0.010_28)]">
                         นับเฉพาะวันที่มีนับปิดร้าน · เรียงจากขาดมากสุด · รายการที่ขาดซ้ำทุกวันในสัดส่วนเดิม มักแปลว่าสูตรตักน้อยกว่าที่ทำจริง · กดชื่อเพื่อดูความเคลื่อนไหว
                     </p>
                 </div>
@@ -315,21 +314,21 @@ export default function StockReconciliationPage() {
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">นับปิดร้านแล้ว</span>
-                            <span className="font-mono font-bold text-xl tabular-nums">{summary.counted}</span>
+                            <span className=" font-bold text-xl tabular-nums">{summary.counted}</span>
                             <span className="font-sans text-[12px] text-[oklch(55%_0.010_28)]"> / {summary.items} รายการ</span>
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">ผิดปกติ</span>
-                            <span className={`font-mono font-bold text-xl tabular-nums ${summary.abnormal ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{summary.abnormal}</span>
+                            <span className={` font-bold text-xl tabular-nums ${summary.abnormal ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{summary.abnormal}</span>
                             <span className="font-sans text-[12px] text-[oklch(55%_0.010_28)]"> รายการ</span>
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">ขาด (มูลค่า)</span>
-                            <span className={`font-mono font-bold text-xl tabular-nums ${summary.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{baht(summary.shortValue)}</span>
+                            <span className={` font-bold text-xl tabular-nums ${summary.shortValue < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{baht(summary.shortValue)}</span>
                         </div>
                         <div className="p-3">
                             <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)] block">เกิน (มูลค่า)</span>
-                            <span className="font-mono font-bold text-xl tabular-nums">{baht(summary.overValue)}</span>
+                            <span className=" font-bold text-xl tabular-nums">{baht(summary.overValue)}</span>
                         </div>
                     </div>
 
@@ -340,7 +339,7 @@ export default function StockReconciliationPage() {
                         ) : sessions.map(s => (
                             <span key={s.id} className="whitespace-nowrap">
                                 <span className="font-bold text-[oklch(18%_0.012_28)]">{COUNT_KINDS[s.kind]?.label}</span>{' '}
-                                <span className="font-mono">{timeOf(s.created_at)}</span> · {s.line_count} รายการ · {s.performed_by}
+                                <span className="tabular-nums">{timeOf(s.created_at)}</span> · {s.line_count} รายการ · {s.performed_by}
                                 {s.blind ? ' · ไม่เห็นยอดระบบ' : ''}
                             </span>
                         ))}
@@ -351,7 +350,7 @@ export default function StockReconciliationPage() {
                         {[['abnormal', 'ผิดปกติ', summary.abnormal], ['counted', 'นับแล้ว', summary.counted], ['all', 'ทั้งหมด', summary.items]].map(([v, label, n]) => (
                             <button key={v} type="button" role="tab" aria-selected={filter === v} onClick={() => setFilter(v)}
                                 className={`flex-1 sm:flex-none px-4 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${filter === v ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
-                                {label} <span className="font-mono text-[11px]">{n}</span>
+                                {label} <span className="tabular-nums text-xs">{n}</span>
                             </button>
                         ))}
                     </div>
@@ -369,7 +368,7 @@ export default function StockReconciliationPage() {
                         </p>
                     ) : (
                         <div className="overflow-x-auto" data-export-unclip>
-                            <table className="w-full min-w-[960px] border-collapse">
+                            <table className="text-[13px] w-full min-w-[960px] border-collapse">
                                 <thead className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
                                     <tr>
                                         <th className="px-3 py-2 text-left font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)] whitespace-nowrap sticky left-0 bg-[oklch(94%_0.010_28)]">รายการ</th>
@@ -397,7 +396,7 @@ export default function StockReconciliationPage() {
                                                         {bad && <span className="inline-block w-1.5 h-1.5 mr-1.5 align-middle bg-[oklch(52%_0.16_28)]" aria-label="ผิดปกติ" />}
                                                         {r.name}
                                                     </button>
-                                                    <span className="font-sans text-[11px] leading-4 text-[oklch(55%_0.010_28)]">
+                                                    <span className="font-sans text-xs leading-4 text-[oklch(55%_0.010_28)]">
                                                         {displayUnit(r.unit)}{r.opening_source === 'ledger' ? ' · ยอดเปิดจากระบบ' : ''}
                                                         {r.closing_counted_at ? ` · นับ ${timeOf(r.closing_counted_at)}` : ''}
                                                     </span>
@@ -414,7 +413,7 @@ export default function StockReconciliationPage() {
                                                     {r.variance === null ? '—' : `${v > 0 ? '+' : ''}${num(v)}`}
                                                 </td>
                                                 <td className={`${cell} ${Number(r.variance_value) < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
-                                                    {Number(r.unit_cost) > 0 ? baht(r.variance_value) : <span className="font-sans text-[11px] text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}
+                                                    {Number(r.unit_cost) > 0 ? baht(r.variance_value) : <span className="font-sans text-xs text-[oklch(55%_0.010_28)]">ไม่มีราคา</span>}
                                                 </td>
                                             </tr>
                                         );
@@ -424,15 +423,15 @@ export default function StockReconciliationPage() {
                         </div>
                     )}
 
-                    <div className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-[11px] leading-5 text-[oklch(55%_0.010_28)] flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <div className="px-3 py-2 border-t border-[oklch(85%_0.012_28)] font-sans text-xs leading-5 text-[oklch(55%_0.010_28)] flex flex-wrap items-center gap-x-3 gap-y-1">
                         {thDraft ? (
                             <span className="flex flex-wrap items-center gap-1.5" data-export-hide>
                                 ผิดปกติเมื่อต่างเกิน
                                 <input type="text" inputMode="decimal" value={thDraft.percent} onChange={e => setThDraft(d => ({ ...d, percent: e.target.value }))} aria-label="เปอร์เซ็นต์"
-                                    className="w-12 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
+                                    className="w-12 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm text-right text-[oklch(18%_0.012_28)] tabular-nums" />
                                 % และเกิน ฿
                                 <input type="text" inputMode="decimal" value={thDraft.baht} onChange={e => setThDraft(d => ({ ...d, baht: e.target.value }))} aria-label="บาท"
-                                    className="w-16 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-[12px] text-right text-[oklch(18%_0.012_28)]" />
+                                    className="w-16 px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm text-right text-[oklch(18%_0.012_28)] tabular-nums" />
                                 <button type="button" onClick={saveThresholds} className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold cursor-pointer">บันทึก</button>
                                 <button type="button" onClick={() => setThDraft(null)} className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-bold cursor-pointer">ยกเลิก</button>
                             </span>

@@ -95,7 +95,6 @@ export default function MoveRecipeToMenuModal({ item, onClose, onMoved }) {
                 className={`w-full sm:max-w-md max-h-[88dvh] flex flex-col bg-[oklch(97%_0.008_28)] border ${RULE} text-[oklch(18%_0.012_28)] font-sans`}
                 onClick={e => e.stopPropagation()}>
                 <div className={`shrink-0 px-4 pt-4 pb-3 border-b ${RULE}`}>
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">MOVE TO MENU</span>
                     <h2 id="move-recipe-title" className="font-bold text-base leading-7 break-words">ย้าย "{item.name}" ไปเป็นสูตรของเมนู</h2>
                     <p className={`text-[12px] leading-5 ${MUTED}`}>
                         ส่วนผสมจะไปอยู่ที่สูตรของเมนูที่เลือก ใช้ทั้งคิดต้นทุนและตัดสต๊อก แล้วลบสูตรต่อแก้วนี้ออก

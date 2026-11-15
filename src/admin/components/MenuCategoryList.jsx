@@ -12,20 +12,20 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
-                <h3 className="font-mono text-sm font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
-                <p className="text-xs text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
+                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
                 <div className="flex gap-2 mt-5">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="flex-1 px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-bold uppercase rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="admin-btn h-9 flex-1"
                     >
                         {cancelText}
                     </button>
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className={`flex-1 px-3 py-2 text-xs font-mono font-bold uppercase rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             isDanger
                                 ? 'bg-red-700 hover:bg-red-800'
                                 : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
@@ -258,29 +258,16 @@ export default function MenuCategoryList() {
     return (
         <div className="text-[oklch(18%_0.012_28)] pb-12 animate-fade-in font-sans">
             {/* Header Toolbar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)]">
-                            Menu Categories
-                        </h2>
-                        <span className="font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)] tabular-nums">
-                            {categories.length} หมวดหมู่
-                        </span>
-                        {isSaving && (
-                            <span className="text-xs font-mono text-[oklch(52%_0.16_28)] font-bold">
-                                กำลังบันทึกลำดับ...
-                            </span>
-                        )}
-                    </div>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                        จัดลำดับหมวดหมู่แสดงผลบน POS, Customer Menu และตั้งค่าเครื่องดื่มสะสมแก้ว 10 แถม 1
-                    </p>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <p className="text-[13px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">
+                    <span className="text-[oklch(18%_0.012_28)] font-medium tabular-nums">{categories.length} หมวดหมู่</span>
+                    <span> · จัดลำดับหมวดหมู่แสดงผลบน POS, Customer Menu และตั้งค่าเครื่องดื่มสะสมแก้ว 10 แถม 1</span>
+                    {isSaving && <span className="ml-2 text-[oklch(52%_0.16_28)]">กำลังบันทึกลำดับ...</span>}
+                </p>
 
                 <button 
                     onClick={handleCreate} 
-                    className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    className="admin-btn is-primary h-9"
                 >
                     <Plus size={15} /> เพิ่มหมวดหมู่
                 </button>
@@ -294,7 +281,7 @@ export default function MenuCategoryList() {
                     ))}
                 </div>
             ) : categories.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] font-mono text-xs">
+                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] tabular-nums text-xs">
                     ยังไม่มีหมวดหมู่เมนู คลิก "เพิ่มหมวดหมู่" เพื่อเริ่มต้น
                 </div>
             ) : (
@@ -319,10 +306,10 @@ export default function MenuCategoryList() {
                     <div className="bg-[oklch(98%_0.004_28)] w-full max-w-md rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl p-6 font-sans">
                         <div className="flex justify-between items-center mb-5 pb-3 border-b border-[oklch(85%_0.012_28)]">
                             <div>
-                                <h3 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                     {editingCategory ? 'แก้ไขหมวดหมู่' : 'สร้างหมวดหมู่ใหม่'}
                                 </h3>
-                                <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
                                     กำหนดชื่อและสิทธิ์ร่วมรายการสะสมแต้ม
                                 </p>
                             </div>
@@ -336,7 +323,7 @@ export default function MenuCategoryList() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1.5">
+                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1.5">
                                     ชื่อหมวดหมู่ (Category Name) *
                                 </label>
                                 <input
@@ -344,7 +331,7 @@ export default function MenuCategoryList() {
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="เช่น Coffee, Signature Drinks, Pasta, Bakery"
-                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] font-bold focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                                     autoFocus
                                     required
                                 />
@@ -354,14 +341,14 @@ export default function MenuCategoryList() {
                             <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
+                                        <span className="tabular-nums text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
                                             10 FREE 1
                                         </span>
-                                        <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                                             ร่วมรายการเครื่องดื่ม 10 แถม 1
                                         </span>
                                     </div>
-                                    <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono leading-relaxed">
+                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums leading-relaxed">
                                         เปิดสิทธิ์ให้เมนูในหมวดนี้สะสมแก้วอัตโนมัติเมื่อลูกค้าสั่งซื้อ
                                     </p>
                                 </div>
@@ -377,14 +364,14 @@ export default function MenuCategoryList() {
                             <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                                        <span className="tabular-nums text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
                                             KITCHEN CUTOFF
                                         </span>
-                                        <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                                             ซ่อนหมวดหมู่นี้เมื่อครัวปิด
                                         </span>
                                     </div>
-                                    <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono leading-relaxed">
+                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums leading-relaxed">
                                         เมื่อถึงเวลาปิดรับออเดอร์ครัว จะซ่อนหมวดหมู่นี้และเมนูทั้งหมดในหมวดไม่ให้สั่งผ่าน QR
                                     </p>
                                 </div>
@@ -401,13 +388,13 @@ export default function MenuCategoryList() {
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                    className="admin-btn h-9 flex-1"
                                 >
                                     ยกเลิก
                                 </button>
                                 <button 
                                     type="submit" 
-                                    className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                    className="admin-btn is-primary h-9 flex-1"
                                 >
                                     บันทึกหมวดหมู่
                                 </button>
@@ -463,24 +450,24 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
 
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)] tabular-nums">
+                        <span className=" text-xs font-bold text-[oklch(55%_0.010_28)] tabular-nums">
                             #{index + 1}
                         </span>
                         <h4 className="font-bold text-base text-[oklch(18%_0.012_28)] truncate">
                             {category.name}
                         </h4>
                         {category.is_drink_stamp_eligible && (
-                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
+                            <span className="tabular-nums text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
                                 10 FREE 1
                             </span>
                         )}
                         {category.hide_on_kitchen_close && (
-                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                            <span className="tabular-nums text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
                                 ซ่อนเมื่อครัวปิด
                             </span>
                         )}
                     </div>
-                    <p className="text-xs font-mono text-[oklch(55%_0.010_28)] mt-0.5 tabular-nums">
+                    <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5 tabular-nums">
                         {itemCount} เมนูในหมวดนี้
                     </p>
                 </div>

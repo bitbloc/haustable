@@ -111,13 +111,33 @@ export default function AdminLayout() {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [sidebarOpen, toggleCollapse])
 
+    // Auth gate. Only a definite answer sends the user away: no session -> login,
+    // a profile without a backoffice role -> home. A network hiccup, an aborted
+    // request or a slow server shows a retry screen instead (it used to log the
+    // owner out, or bounce them to the home page, on any thrown error).
+    const [authAttempt, setAuthAttempt] = useState(0)
     useEffect(() => {
+        let cancelled = false
+        const isDefiniteAuthError = (err) => [401, 403].includes(Number(err?.status)) || /jwt|session|token/i.test(err?.message || '')
         const checkUser = async () => {
             try {
-                const { data: { user }, error } = await supabase.auth.getUser()
-                if (error || !user) {
-                    setAuthStatus('unauthenticated')
+                const { data: { session } } = await supabase.auth.getSession()
+                if (!session?.user) {
+                    if (!cancelled) setAuthStatus('unauthenticated')
                     return
+                }
+
+                // Verify the token with the server; fall back to the local session only on transient failures.
+                let user = session.user
+                try {
+                    const { data, error } = await supabase.auth.getUser()
+                    if (error && isDefiniteAuthError(error)) {
+                        if (!cancelled) setAuthStatus('unauthenticated')
+                        return
+                    }
+                    if (data?.user) user = data.user
+                } catch {
+                    // transient: keep the local session user
                 }
 
                 const { data: profile, error: profileError } = await supabase
@@ -126,25 +146,33 @@ export default function AdminLayout() {
                     .eq('id', user.id)
                     .single()
 
+                if (profileError && !profile) {
+                    if (!cancelled) setAuthStatus('error')
+                    return
+                }
+
                 const role = (profile?.role || '').toLowerCase()
                 // Owner & Admin have full master access; other staff/custom roles also authorized
                 const hasCustomPerms = Array.isArray(profile?.admin_permissions) && profile.admin_permissions.length > 0
                 const isStaffOrAdmin = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen', 'custom'].includes(role) || hasCustomPerms
 
-                if (profileError || !profile || !isStaffOrAdmin) {
-                    console.warn("Backoffice Auth Blocked:", { profileError, profile, role, isStaffOrAdmin })
-                    setAuthStatus('unauthorized')
+                if (!profile || !isStaffOrAdmin) {
+                    console.warn("Backoffice Auth Blocked:", { profile, role, isStaffOrAdmin })
+                    if (!cancelled) setAuthStatus('unauthorized')
                     return
                 }
 
-                setUserProfile(profile)
-                setAuthStatus('authorized')
+                if (!cancelled) {
+                    setUserProfile(profile)
+                    setAuthStatus('authorized')
+                }
             } catch {
-                setAuthStatus('unauthenticated')
+                if (!cancelled) setAuthStatus('error')
             }
         }
         checkUser()
-    }, [])
+        return () => { cancelled = true }
+    }, [authAttempt])
 
     // Real-time Pending Inbox Counter
     useEffect(() => {
@@ -309,6 +337,24 @@ export default function AdminLayout() {
             <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] flex flex-col items-center justify-center text-[13px] gap-3">
                 <div className="w-5 h-5 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
                 <span>กำลังเปิด Backoffice</span>
+            </div>
+        )
+    }
+
+    if (authStatus === 'error') {
+        return (
+            <div className="min-h-screen bg-[oklch(97%_0.008_28)] flex items-center justify-center p-6">
+                <div className="max-w-sm space-y-3 text-center">
+                    <h1 className="text-lg font-semibold text-[oklch(18%_0.012_28)]">เชื่อมต่อ Backoffice ไม่สำเร็จ</h1>
+                    <p className="text-sm leading-6 text-[oklch(42%_0.010_28)]">ตรวจสิทธิ์ผู้ใช้ไม่ได้ในตอนนี้ อาจเป็นเพราะอินเทอร์เน็ตหรือเซิร์ฟเวอร์ช้า คุณยังล็อกอินอยู่</p>
+                    <button
+                        type="button"
+                        onClick={() => { setAuthStatus('loading'); setAuthAttempt((n) => n + 1) }}
+                        className="h-10 px-4 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-medium cursor-pointer"
+                    >
+                        ลองอีกครั้ง
+                    </button>
+                </div>
             </div>
         )
     }

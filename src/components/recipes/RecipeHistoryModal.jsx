@@ -42,13 +42,13 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                 onClick={e => e.stopPropagation()}>
                 <div className={`shrink-0 grid grid-cols-[1fr_auto] border-b ${RULE}`}>
                     <div className="px-4 pt-4 pb-3">
-                        <span className={`font-mono text-[10px] font-bold uppercase tracking-wider ${ACCENT} block`}>RECIPE HISTORY</span>
+                        <span className={`tabular-nums text-xs font-bold   ${ACCENT} block`}>RECIPE HISTORY</span>
                         <h2 id="recipe-history-title" className="font-bold text-base leading-7">ประวัติการแก้สูตร</h2>
                         <p className={`text-[12px] leading-5 ${MUTED}`}>เก็บทุกครั้งที่กดบันทึก "ใช้เวอร์ชันนี้" จะโหลดกลับเข้าตัวแก้ ต้องกดบันทึกอีกครั้งถึงจะมีผล</p>
                     </div>
                     <button type="button" onClick={onClose} className={`px-4 border-l ${RULE} font-bold text-[13px] ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>ปิด</button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-y-auto bg-white">
+                <div className="flex-1 min-h-0 overflow-y-auto bg-[oklch(99%_0.004_28)]">
                     {loading ? (
                         <p className={`p-6 text-[14px] ${NEUTRAL}`}>กำลังโหลด...</p>
                     ) : missing ? (
@@ -64,8 +64,8 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                                 return (
                                     <li key={v.id} className="px-4 py-3">
                                         <div className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline">
-                                            <span className="font-bold text-[14px] leading-6">{when(v.created_at)}{i === 0 && <span className={`ml-2 font-mono text-[10px] ${ACCENT}`}>ล่าสุด</span>}</span>
-                                            <span className="font-mono text-[13px] tabular-nums">{v.total_cost !== null ? `฿${Number(v.total_cost).toFixed(2)}` : ''}</span>
+                                            <span className="font-bold text-[14px] leading-6">{when(v.created_at)}{i === 0 && <span className={`ml-2 tabular-nums text-xs ${ACCENT}`}>ล่าสุด</span>}</span>
+                                            <span className=" text-[13px] tabular-nums">{v.total_cost !== null ? `฿${Number(v.total_cost).toFixed(2)}` : ''}</span>
                                             <span className={`text-[12px] leading-5 ${NEUTRAL}`}>{v.saved_by || 'Staff'} · {(v.rows || []).length} รายการ</span>
                                         </div>
                                         {d && (
@@ -93,7 +93,7 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                                                 {(v.rows || []).map((r, j) => (
                                                     <li key={j} className="grid grid-cols-[1fr_auto] gap-3 px-2.5 py-1.5 text-[13px] leading-5">
                                                         <span className="break-words min-w-0">{r.name}</span>
-                                                        <span className="font-mono tabular-nums">{q(r.quantity)} {r.unit}</span>
+                                                        <span className=" tabular-nums">{q(r.quantity)} {r.unit}</span>
                                                     </li>
                                                 ))}
                                             </ul>

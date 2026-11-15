@@ -232,13 +232,13 @@ export default function AdminStaffLogsPage() {
                     ) : logs.length === 0 ? (
                         <div className="p-12 text-center text-sm text-[oklch(50%_0.010_28)]">
                             <p className="font-medium text-base text-[oklch(35%_0.012_28)]">ไม่พบประวัติกิจกรรมตามเงื่อนไขที่เลือก</p>
-                            <p className="text-xs text-[oklch(55%_0.010_28)] mt-1">ลองเปลี่ยนช่วงเวลา หรือเลือกหมวดหมู่อื่นเพื่อดูข้อมูล</p>
+                            <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-1">ลองเปลี่ยนช่วงเวลา หรือเลือกหมวดหมู่อื่นเพื่อดูข้อมูล</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
+                            <table className="w-full text-left text-[13px] border-collapse">
                                 <thead>
-                                    <tr className="bg-[oklch(95%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(40%_0.010_28)] font-mono uppercase tracking-wider">
+                                    <tr className="bg-[oklch(95%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(40%_0.010_28)] tabular-nums  ">
                                         <th className="py-3 px-4 font-semibold w-40">วัน / เวลา</th>
                                         <th className="py-3 px-4 font-semibold w-36">พนักงาน</th>
                                         <th className="py-3 px-4 font-semibold w-28">หมวดหมู่</th>
@@ -257,15 +257,15 @@ export default function AdminStaffLogsPage() {
                                         return (
                                             <tr key={log.id} className="hover:bg-[oklch(97%_0.008_28)] transition-colors">
                                                 {/* Date & Time */}
-                                                <td className="py-3 px-4 font-mono text-[oklch(35%_0.012_28)] whitespace-nowrap">
+                                                <td className="py-3 px-4 tabular-nums text-[oklch(35%_0.012_28)] whitespace-nowrap">
                                                     <div className="font-semibold">{formattedTime}</div>
-                                                    <div className="text-[11px] text-[oklch(55%_0.010_28)]">{formattedDate}</div>
+                                                    <div className="text-xs text-[oklch(55%_0.010_28)]">{formattedDate}</div>
                                                 </td>
 
                                                 {/* Staff Name */}
                                                 <td className="py-3 px-4 font-medium text-[oklch(18%_0.012_28)] whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
-                                                        <div className="w-6 h-6 rounded-full bg-[oklch(92%_0.02_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[11px] font-mono font-bold text-[oklch(35%_0.012_28)]">
+                                                        <div className="w-6 h-6 rounded-full bg-[oklch(92%_0.02_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-xs tabular-nums font-bold text-[oklch(35%_0.012_28)]">
                                                             {log.staff_name.charAt(0).toUpperCase()}
                                                         </div>
                                                         <span className="truncate max-w-[110px]" title={log.staff_name}>
@@ -276,7 +276,7 @@ export default function AdminStaffLogsPage() {
 
                                                 {/* Module Badge */}
                                                 <td className="py-3 px-4 whitespace-nowrap">
-                                                    <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-mono font-semibold border ${badge.bg}`}>
+                                                    <span className={`inline-block px-2 py-0.5 rounded text-[11px] tabular-nums font-semibold border ${badge.bg}`}>
                                                         {badge.label}
                                                     </span>
                                                 </td>
@@ -287,14 +287,14 @@ export default function AdminStaffLogsPage() {
                                                         {log.title}
                                                     </div>
                                                     {log.description && (
-                                                        <div className="text-[11px] text-[oklch(45%_0.010_28)] mt-0.5 line-clamp-1">
+                                                        <div className="text-xs text-[oklch(45%_0.010_28)] mt-0.5 line-clamp-1">
                                                             {log.description}
                                                         </div>
                                                     )}
                                                 </td>
 
                                                 {/* Amount / Impact */}
-                                                <td className="py-3 px-4 text-right font-mono font-semibold whitespace-nowrap">
+                                                <td className="py-3 px-4 text-right tabular-nums font-semibold whitespace-nowrap">
                                                     {log.amount > 0 ? (
                                                         <span className="text-[oklch(18%_0.012_28)]">
                                                             ฿{Number(log.amount).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -304,7 +304,7 @@ export default function AdminStaffLogsPage() {
                                                             {log.metadata.quantity_change > 0 ? '+' : ''}{log.metadata.quantity_change} {log.metadata.unit || ''}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[oklch(60%_0.010_28)] text-[11px] font-normal">-</span>
+                                                        <span className="text-[oklch(60%_0.010_28)] text-xs font-normal">-</span>
                                                     )}
                                                 </td>
 
@@ -312,7 +312,7 @@ export default function AdminStaffLogsPage() {
                                                 <td className="py-3 px-4 text-center whitespace-nowrap">
                                                     <button
                                                         onClick={() => setInspectLog(log)}
-                                                        className="px-2.5 py-1 text-[11px] font-medium text-[oklch(35%_0.012_28)] bg-[oklch(95%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded transition-colors cursor-pointer"
+                                                        className="px-2.5 py-1 text-xs font-medium text-[oklch(35%_0.012_28)] bg-[oklch(95%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded transition-colors cursor-pointer"
                                                     >
                                                         ดูเจาะลึก
                                                     </button>
@@ -328,7 +328,7 @@ export default function AdminStaffLogsPage() {
 
                 {/* Footer Insight */}
                 <div className="text-xs text-[oklch(50%_0.010_28)] text-center py-2">
-                    <span>💡 ข้อมูลบันทึกประวัติการทำงาน (Audit Trail) ทั้งหมดจัดเก็บอย่างปลอดภัยบน Supabase Pro Plan พร้อมระบบตรวจสอบย้อนหลัง 7 วัน</span>
+                    <span>ข้อมูลบันทึกประวัติการทำงาน (Audit Trail) ทั้งหมดจัดเก็บอย่างปลอดภัยบน Supabase Pro Plan พร้อมระบบตรวจสอบย้อนหลัง 7 วัน</span>
                 </div>
 
             </div>
@@ -340,7 +340,7 @@ export default function AdminStaffLogsPage() {
                         {/* Modal Header */}
                         <div className="p-4 border-b border-[oklch(88%_0.012_28)] flex items-center justify-between bg-[oklch(96%_0.008_28)]">
                             <div>
-                                <span className="text-[11px] font-mono uppercase tracking-wider text-[oklch(52%_0.16_28)] font-semibold">
+                                <span className="text-xs tabular-nums text-[oklch(52%_0.16_28)] font-semibold">
                                     Audit Detail Inspection
                                 </span>
                                 <h3 className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
@@ -358,33 +358,33 @@ export default function AdminStaffLogsPage() {
                         {/* Modal Content */}
                         <div className="p-5 space-y-4 overflow-y-auto text-xs">
                             {/* Metadata Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[oklch(96%_0.008_28)] p-3 rounded-lg border border-[oklch(88%_0.012_28)] font-mono">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[oklch(96%_0.008_28)] p-3 rounded-lg border border-[oklch(88%_0.012_28)] tabular-nums">
                                 <div>
-                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">วัน-เวลา</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] block">วัน-เวลา</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">
                                         {new Date(inspectLog.created_at).toLocaleString('th-TH')}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">พนักงานผู้ปฏิบัติการ</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] block">พนักงานผู้ปฏิบัติการ</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.staff_name}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">หมวดหมู่ระบบ</span>
-                                    <span className="font-semibold uppercase text-[oklch(20%_0.012_28)]">{inspectLog.module}</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] block">หมวดหมู่ระบบ</span>
+                                    <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.module}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">Action Type</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] block">Action Type</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.action_type}</span>
                                 </div>
                                 <div>
-                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">ยอดเงิน / การเปลี่ยนแปลง</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] block">ยอดเงิน / การเปลี่ยนแปลง</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">
                                         {inspectLog.amount ? `฿${inspectLog.amount}` : '-'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[11px] text-[oklch(50%_0.010_28)] uppercase block">Source Table</span>
+                                    <span className="text-xs text-[oklch(50%_0.010_28)] block">Source Table</span>
                                     <span className="font-semibold text-[oklch(20%_0.012_28)]">{inspectLog.source}</span>
                                 </div>
                             </div>
@@ -401,10 +401,10 @@ export default function AdminStaffLogsPage() {
 
                             {/* Raw Metadata JSON */}
                             <div>
-                                <span className="font-semibold text-[oklch(25%_0.012_28)] block mb-1 font-mono">
+                                <span className="font-semibold text-[oklch(25%_0.012_28)] block mb-1 tabular-nums">
                                     Raw Structured Context (JSON Metadata):
                                 </span>
-                                <pre className="p-3.5 bg-[oklch(15%_0.012_28)] text-[oklch(92%_0.015_28)] rounded-lg font-mono text-[11px] overflow-x-auto leading-relaxed border border-[oklch(30%_0.012_28)]">
+                                <pre className="p-3.5 bg-[oklch(15%_0.012_28)] text-[oklch(92%_0.015_28)] rounded-lg font-mono text-xs overflow-x-auto leading-relaxed border border-[oklch(30%_0.012_28)]">
                                     {JSON.stringify(inspectLog.metadata, null, 2)}
                                 </pre>
                             </div>

@@ -785,7 +785,7 @@ const decodeHTMLEntities = (text) => {
             <div className="flex items-center justify-between pb-4 border-b border-gray-150">
                 <div>
                     <h2 className="text-xl font-bold text-ink">📸 Check-in Wall Stream</h2>
-                    <p className="text-xs text-subInk mt-0.5">จัดการรูปภาพเช็กอิน โพสต์โซเชียลมีเดีย และรีวิวที่แสดงหน้าบอร์ด</p>
+                    <p className="text-[13px] text-subInk mt-0.5">จัดการรูปภาพเช็กอิน โพสต์โซเชียลมีเดีย และรีวิวที่แสดงหน้าบอร์ด</p>
                 </div>
             </div>
 
@@ -793,13 +793,13 @@ const decodeHTMLEntities = (text) => {
             {!showForm && (
                 <div className="bg-paper border border-[oklch(90%_0.008_28)] rounded-3xl p-5 flex flex-col md:flex-row items-stretch md:items-end gap-3 animate-fade-in">
                     <div className="flex-1 min-w-0">
-                        <label className="block text-[11px] font-bold text-subInk uppercase mb-1">⚡ วางลิงก์เพื่อเพิ่มออโต้ทันที (Instagram / Facebook / Google Maps)</label>
+                        <label className="block text-xs font-bold text-subInk mb-1">⚡ วางลิงก์เพื่อเพิ่มออโต้ทันที (Instagram / Facebook / Google Maps)</label>
                         <input
                             type="text"
                             value={quickAddUrl}
                             onChange={(e) => setQuickAddUrl(e.target.value)}
                             placeholder="วางลิงก์โพสต์ เช่น https://www.instagram.com/p/..."
-                            className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono h-[42px]"
+                            className="w-full bg-canvas border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand tabular-nums h-[42px]"
                         />
                     </div>
                     <div className="flex gap-2 items-center justify-end">
@@ -836,7 +836,7 @@ const decodeHTMLEntities = (text) => {
             {showForm && (
                 <div className="bg-paper border border-gray-250 rounded-3xl p-6 animate-fade-in space-y-4">
                     <div className="flex justify-between items-center pb-2 border-b border-gray-150">
-                        <h3 className="font-bold text-sm text-ink uppercase tracking-wide">
+                        <h3 className="font-bold text-sm text-ink  ">
                             {editingId ? '✍️ แก้ไขข้อมูลเช็กอิน' : '📸 เพิ่มโพสต์รีวิว/เช็กอินใหม่'}
                         </h3>
                         <button 
@@ -851,13 +851,13 @@ const decodeHTMLEntities = (text) => {
                     {!editingId && (
                         <div className="bg-canvas border border-[oklch(90%_0.008_28)] p-4 rounded-2xl flex flex-col md:flex-row md:items-end gap-3 mb-2">
                             <div className="flex-1">
-                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">🔗 ดึงข้อมูลอัตโนมัติจากลิงก์ (Instagram / Facebook / Google Maps)</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">🔗 ดึงข้อมูลอัตโนมัติจากลิงก์ (Instagram / Facebook / Google Maps)</label>
                                 <input
                                     type="text"
                                     value={urlToFetch}
                                     onChange={(e) => setUrlToFetch(e.target.value)}
                                     placeholder="วางลิงก์โพสต์หรือรีวิว เช่น https://www.instagram.com/p/..."
-                                    className="w-full bg-paper border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono"
+                                    className="w-full bg-paper border border-[oklch(90%_0.008_28)] p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand tabular-nums"
                                 />
                             </div>
                             <button
@@ -884,7 +884,7 @@ const decodeHTMLEntities = (text) => {
                         
                         {/* Source Selector */}
                         <div>
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Source / แพลตฟอร์ม</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">Source / แพลตฟอร์ม</label>
                             <select
                                 value={formData.source}
                                 onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
@@ -899,7 +899,7 @@ const decodeHTMLEntities = (text) => {
 
                         {/* Location */}
                         <div>
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Location / สถานที่</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">Location / สถานที่</label>
                             <input
                                 type="text"
                                 value={formData.location}
@@ -911,7 +911,7 @@ const decodeHTMLEntities = (text) => {
 
                         {/* User Name */}
                         <div>
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">User Display Name / ชื่อผู้รีวิว</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">User Display Name / ชื่อผู้รีวิว</label>
                             <input
                                 type="text"
                                 value={formData.user_name}
@@ -924,7 +924,7 @@ const decodeHTMLEntities = (text) => {
 
                         {/* User Handle / Description */}
                         <div>
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">User Handle / รายละเอียดบัญชี</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">User Handle / รายละเอียดบัญชี</label>
                             <input
                                 type="text"
                                 value={formData.user_handle}
@@ -938,7 +938,7 @@ const decodeHTMLEntities = (text) => {
                         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                             
                             <div className="md:col-span-2">
-                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Image URL / ลิงก์รูปภาพ</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Image URL / ลิงก์รูปภาพ</label>
                                 <input
                                     type="text"
                                     value={formData.image_url}
@@ -950,7 +950,7 @@ const decodeHTMLEntities = (text) => {
                             </div>
 
                             <div>
-                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Upload Photo / อัปโหลดรูป</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Upload Photo / อัปโหลดรูป</label>
                                 <label className="flex items-center justify-center gap-2 bg-canvas border border-[oklch(90%_0.008_28)] border-dashed p-2 rounded-xl text-subInk hover:text-ink cursor-pointer hover:border-brand transition-all text-xs font-bold h-[40px]">
                                     {uploadingImage ? (
                                         <>
@@ -976,7 +976,7 @@ const decodeHTMLEntities = (text) => {
 
                         {/* Avatar Image URL */}
                         <div>
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">User Avatar URL / ลิงก์รูปโปรไฟล์</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">User Avatar URL / ลิงก์รูปโปรไฟล์</label>
                             <input
                                 type="text"
                                 value={formData.user_avatar}
@@ -988,7 +988,7 @@ const decodeHTMLEntities = (text) => {
 
                         {/* Post Link / URL */}
                         <div>
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Social Post URL / ลิงก์ตรงโพสต์รีวิว</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">Social Post URL / ลิงก์ตรงโพสต์รีวิว</label>
                             <input
                                 type="text"
                                 value={formData.post_url}
@@ -1000,7 +1000,7 @@ const decodeHTMLEntities = (text) => {
 
                         {/* Review text */}
                         <div className="md:col-span-2">
-                            <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Review text / คำบรรยายโพสต์</label>
+                            <label className="block text-xs font-bold text-subInk mb-1">Review text / คำบรรยายโพสต์</label>
                             <textarea
                                 value={formData.text}
                                 onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
@@ -1014,7 +1014,7 @@ const decodeHTMLEntities = (text) => {
                         {/* Stars (Google) */}
                         {formData.source === 'google' && (
                             <div>
-                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Rating / คะแนนรีวิว</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Rating / คะแนนรีวิว</label>
                                 <select
                                     value={formData.rating}
                                     onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) }))}
@@ -1032,7 +1032,7 @@ const decodeHTMLEntities = (text) => {
                         {/* Likes (FB/IG) */}
                         {formData.source !== 'google' && (
                             <div>
-                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Likes Count / จำนวนไลก์</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Likes Count / จำนวนไลก์</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -1046,7 +1046,7 @@ const decodeHTMLEntities = (text) => {
                         {/* Comments (IG) */}
                         {formData.source === 'instagram' && (
                             <div>
-                                <label className="block text-[11px] font-bold text-subInk uppercase mb-1">Comments Count / จำนวนความเห็น</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Comments Count / จำนวนความเห็น</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -1087,12 +1087,12 @@ const decodeHTMLEntities = (text) => {
                         <Loader2 className="animate-spin text-subInk" size={24} />
                     </div>
                 ) : checkins.length === 0 ? (
-                    <div className="p-12 text-center text-subInk font-mono text-xs uppercase tracking-wider">
+                    <div className="p-12 text-center text-subInk tabular-nums text-xs  ">
                         📭 ยังไม่มีข้อมูลเช็กอินในระบบหลังบ้าน
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-left text-xs text-ink font-medium">
+                        <table className="w-full border-collapse text-left text-[13px] text-ink font-medium">
                             <thead className="bg-canvas border-b border-gray-150 font-bold text-subInk">
                                 <tr>
                                     <th className="p-4 w-[40px] text-center">✅</th>
@@ -1127,7 +1127,7 @@ const decodeHTMLEntities = (text) => {
                                             )}
                                         </td>
                                         <td className="p-4">
-                                            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-[oklch(97%_0.008_28)] flex items-center justify-center font-mono p-1.5 text-center text-[11px] leading-tight select-none">
+                                            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-[oklch(97%_0.008_28)] flex items-center justify-center tabular-nums p-1.5 text-center text-xs leading-tight select-none">
                                                 {item.image_url === 'text_only' ? (
                                                     <span className="text-[oklch(50%_0.010_28)] font-bold">📝 POST-IT</span>
                                                 ) : (
@@ -1143,9 +1143,9 @@ const decodeHTMLEntities = (text) => {
                                         <td className="p-4 space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-ink text-sm">{item.user_name}</span>
-                                                <span className="text-[11px] font-mono text-subInk">{item.user_handle}</span>
+                                                <span className="text-xs tabular-nums text-subInk">{item.user_handle}</span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-[11px] text-subInk">
+                                            <div className="flex items-center gap-1.5 text-xs text-subInk">
                                                 {item.source === 'instagram' && (
                                                     <span className="inline-flex items-center gap-1 text-[#E1306C] font-semibold"><Instagram size={10} /> Instagram</span>
                                                 )}
@@ -1162,12 +1162,12 @@ const decodeHTMLEntities = (text) => {
                                                     <span className="bg-yellow-100 text-yellow-800 font-bold px-1 rounded-sm">⭐{item.rating}</span>
                                                 )}
                                             </div>
-                                            <div className="text-[11px] text-subInk flex items-center gap-1">
+                                            <div className="text-xs text-subInk flex items-center gap-1">
                                                 <MapPin size={9} /> {item.location}
                                             </div>
                                         </td>
                                         <td className="p-4 max-w-xs truncate hidden md:table-cell">
-                                            <p className="text-xs text-subInk line-clamp-3 leading-relaxed whitespace-pre-line">{item.text}</p>
+                                            <p className="text-[13px] text-subInk line-clamp-3 leading-relaxed whitespace-pre-line">{item.text}</p>
                                         </td>
                                         <td className="p-4 text-center">
                                             <button
@@ -1206,7 +1206,7 @@ const decodeHTMLEntities = (text) => {
             {selectedForCollage.length > 0 && (
                 <div className="fixed top-28 left-1/2 -translate-x-1/2 bg-[#23201D] text-[oklch(97%_0.008_28)] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-top-10 fade-in border border-gray-700">
                     <div className="flex flex-col">
-                        <span className="font-mono text-xs font-bold text-[#E9F344] uppercase tracking-wider">Collage Generator</span>
+                        <span className="tabular-nums text-xs font-bold text-[#E9F344]  ">Collage Generator</span>
                         <span className="text-sm font-bold">{selectedForCollage.length} Photos Selected (Max 6)</span>
                     </div>
                     <div className="flex gap-2">

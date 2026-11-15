@@ -238,11 +238,11 @@ export default function OnlineAdvanceOrdersHub({
                     <h3 className="font-semibold text-base text-[oklch(18%_0.012_28)] tracking-tight">
                         ออเดอร์ออนไลน์และจองล่วงหน้า
                     </h3>
-                    <span className="font-mono text-xs font-medium text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] px-2.5 py-0.5 rounded-full tabular-nums">
+                    <span className=" text-xs font-medium text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] px-2.5 py-0.5 rounded-full tabular-nums">
                         {metrics.total} รายการ
                     </span>
                     {metrics.urgentCount > 0 && (
-                        <span className="font-mono text-xs font-semibold text-[oklch(97%_0.008_28)] bg-[oklch(52%_0.16_28)] px-2.5 py-0.5 rounded-full tabular-nums">
+                        <span className=" text-xs font-semibold text-[oklch(97%_0.008_28)] bg-[oklch(52%_0.16_28)] px-2.5 py-0.5 rounded-full tabular-nums">
                             ต้องจัดการ {metrics.urgentCount}
                         </span>
                     )}
@@ -276,7 +276,7 @@ export default function OnlineAdvanceOrdersHub({
                     <div className="px-4 md:px-5 py-2.5 bg-[oklch(95.5%_0.008_28)] border-b border-[oklch(88%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
                         {/* Horizon Selector (Date Horizons) */}
                         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                            <span className="text-[11px] text-[oklch(50%_0.010_28)] font-medium mr-0.5 shrink-0">
+                            <span className="text-xs text-[oklch(50%_0.010_28)] font-medium mr-0.5 shrink-0">
                                 ช่วงวัน:
                             </span>
                             {[
@@ -292,7 +292,7 @@ export default function OnlineAdvanceOrdersHub({
                                         key={item.key}
                                         type="button"
                                         onClick={() => setHorizonFilter(item.key)}
-                                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-[11px] border ${
+                                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-xs border ${
                                             isActive
                                                 ? item.isUrgent
                                                     ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
@@ -301,7 +301,7 @@ export default function OnlineAdvanceOrdersHub({
                                         }`}
                                     >
                                         <span>{item.label}</span>
-                                        <span className="ml-1 font-mono opacity-75 tabular-nums">{item.count}</span>
+                                        <span className="ml-1 opacity-75 tabular-nums">{item.count}</span>
                                     </button>
                                 )
                             })}
@@ -309,7 +309,7 @@ export default function OnlineAdvanceOrdersHub({
 
                         {/* Channel / Type Selector */}
                         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                            <span className="text-[11px] text-[oklch(50%_0.010_28)] font-medium mr-0.5 shrink-0">
+                            <span className="text-xs text-[oklch(50%_0.010_28)] font-medium mr-0.5 shrink-0">
                                 ช่องทาง:
                             </span>
                             {[
@@ -324,14 +324,14 @@ export default function OnlineAdvanceOrdersHub({
                                         key={item.key}
                                         type="button"
                                         onClick={() => setChannelFilter(item.key)}
-                                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-[11px] border ${
+                                        className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-xs border ${
                                             isActive
                                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
                                                 : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:border-[oklch(75%_0.012_28)]'
                                         }`}
                                     >
                                         <span>{item.label}</span>
-                                        <span className="ml-1 font-mono opacity-75 tabular-nums">{item.count}</span>
+                                        <span className="ml-1 opacity-75 tabular-nums">{item.count}</span>
                                     </button>
                                 )
                             })}
@@ -373,7 +373,7 @@ export default function OnlineAdvanceOrdersHub({
                                         {/* Left Side: Timing, Customer & Channel */}
                                         <div className="space-y-1.5 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-md ${
+                                                <span className={`tabular-nums text-xs font-semibold px-2 py-0.5 rounded-md ${
                                                     horizon === 'today'
                                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                                         : horizon === 'tomorrow'
@@ -383,7 +383,7 @@ export default function OnlineAdvanceOrdersHub({
                                                     {scheduleLabel}
                                                 </span>
 
-                                                <span className={`font-mono text-[11px] font-medium px-2 py-0.5 rounded-md border ${classified.tagClass}`}>
+                                                <span className={`tabular-nums text-[11px] font-medium px-2 py-0.5 rounded-md border ${classified.tagClass}`}>
                                                     {classified.shortTag}
                                                 </span>
 
@@ -412,12 +412,12 @@ export default function OnlineAdvanceOrdersHub({
                                                     {customerName}
                                                 </span>
                                                 {classified.type === 'dine_in' && (
-                                                    <span className="font-mono text-xs text-[oklch(50%_0.010_28)]">
+                                                    <span className="tabular-nums text-xs text-[oklch(50%_0.010_28)]">
                                                         {guestCount} ท่าน {order.tables_layout?.table_name ? `· โต๊ะ ${order.tables_layout.table_name}` : ''}
                                                     </span>
                                                 )}
                                                 {contactPhone && (
-                                                    <span className="font-mono text-xs text-[oklch(50%_0.010_28)]">
+                                                    <span className="tabular-nums text-xs text-[oklch(50%_0.010_28)]">
                                                         · {contactPhone}
                                                     </span>
                                                 )}
@@ -432,10 +432,10 @@ export default function OnlineAdvanceOrdersHub({
                                         {/* Right Side: Total Amount & Action Buttons */}
                                         <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[oklch(90%_0.010_28)]">
                                             <div className="text-left md:text-right">
-                                                <div className="font-mono font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)] tabular-nums">
+                                                <div className=" font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)] tabular-nums">
                                                     ฿{amount.toLocaleString()}
                                                 </div>
-                                                <div className="font-mono text-[11px] text-[oklch(50%_0.010_28)] tabular-nums">
+                                                <div className=" text-xs text-[oklch(50%_0.010_28)] tabular-nums">
                                                     {itemCount > 0 ? `${itemCount} รายการ` : 'ยังไม่มีรายการ'}
                                                 </div>
                                             </div>
@@ -507,7 +507,7 @@ export default function OnlineAdvanceOrdersHub({
                             <span>·</span>
                             <span>7 วันหน้า <strong className="text-[oklch(18%_0.012_28)]">{metrics.upcomingCount}</strong></span>
                         </div>
-                        <span className="font-mono text-[11px] text-[oklch(50%_0.010_28)]">
+                        <span className="tabular-nums text-xs text-[oklch(50%_0.010_28)]">
                             ซิงก์ข้อมูลเรียลไทม์
                         </span>
                     </div>

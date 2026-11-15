@@ -41,19 +41,19 @@ export default function CasualDiningInsights({ data }) {
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
                                 INSIGHTS // OPERATIONS
                             </span>
                             <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
                                 สถิติการดำเนินงานร้านอาหาร (Casual Dining Insights)
                             </h3>
                         </div>
-                        <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-0.5">
+                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
                             วิเคราะห์สัดส่วนหมวดสินค้า พฤติกรรมกลุ่มลูกค้า และรอบการหมุนเวียนโต๊ะ
                         </p>
                     </div>
 
-                    <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                         รอบหมุนเวียน: {casualMetrics.tableTurnsPerDay} TURNS/TABLE
                     </div>
                 </div>
@@ -64,7 +64,7 @@ export default function CasualDiningInsights({ data }) {
                 
                 {/* Category Revenue Split (6 cols) */}
                 <div className="lg:col-span-6 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                         CATEGORIES // สัดส่วนรายได้ 6 หมวดหมู่
                     </div>
 
@@ -82,7 +82,7 @@ export default function CasualDiningInsights({ data }) {
                         </div>
 
                         {/* Category Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 font-mono text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 tabular-nums text-xs">
                             {catList.map((cat) => (
                                 <div key={cat.key} className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
                                     <div className="flex items-center gap-1.5 font-bold text-[oklch(18%_0.012_28)] font-sans">
@@ -92,7 +92,7 @@ export default function CasualDiningInsights({ data }) {
                                     <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                         ฿{(cat.data?.revenue || 0).toLocaleString()}
                                     </div>
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">
+                                    <div className="text-xs text-[oklch(42%_0.010_28)]">
                                         {cat.data?.percent || 0}%
                                     </div>
                                 </div>
@@ -103,16 +103,16 @@ export default function CasualDiningInsights({ data }) {
 
                 {/* Party Size Dynamics (6 cols) */}
                 <div className="lg:col-span-6 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                         PARTY SIZE // สถิติตามขนาดกลุ่มลูกค้า
                     </div>
 
                     <div className="divide-y divide-[oklch(85%_0.012_28)]">
                         {partySizeBreakdown.map((ps, idx) => (
-                            <div key={idx} className="p-3.5 bg-[oklch(97%_0.008_28)] flex items-center justify-between font-mono text-xs">
+                            <div key={idx} className="p-3.5 bg-[oklch(97%_0.008_28)] flex items-center justify-between tabular-nums text-xs">
                                 <div>
                                     <div className="font-bold text-[oklch(18%_0.012_28)] font-sans">{ps.size}</div>
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">
+                                    <div className="text-xs text-[oklch(42%_0.010_28)] mt-0.5">
                                         ยอดเฉลี่ย ฿{ps.avgSpend.toLocaleString()} / บิล ({ps.note})
                                     </div>
                                 </div>
@@ -120,7 +120,7 @@ export default function CasualDiningInsights({ data }) {
                                     <div className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
                                         {ps.share}%
                                     </div>
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">
+                                    <div className="text-xs text-[oklch(42%_0.010_28)]">
                                         {ps.count} บิล
                                     </div>
                                 </div>

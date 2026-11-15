@@ -75,11 +75,11 @@ export default function StockCardPanel({ itemId, itemName, unit, onClose }) {
                 onClick={e => e.stopPropagation()}>
                 <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
                     <div className="px-4 py-3 min-w-0">
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK CARD · {DAYS} DAYS</span>
+                        <span className="tabular-nums text-xs font-bold text-[oklch(52%_0.16_28)] block">STOCK CARD · {DAYS} DAYS</span>
                         <h2 id="stock-card-title" className="font-bold text-lg leading-7 break-words">{itemName}</h2>
                         <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
-                            คงเหลือในระบบ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{data.item ? qty(data.item.current_quantity) : '—'}</span> {u}
-                            {totalSales > 0 && <> · ใช้ตามยอดขาย {DAYS} วัน <span className="font-mono">{qty(totalSales)}</span> {u}</>}
+                            คงเหลือในระบบ <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">{data.item ? qty(data.item.current_quantity) : '—'}</span> {u}
+                            {totalSales > 0 && <> · ใช้ตามยอดขาย {DAYS} วัน <span className="tabular-nums">{qty(totalSales)}</span> {u}</>}
                         </p>
                     </div>
                     <button type="button" onClick={onClose} className="px-4 font-bold text-[13px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
@@ -99,13 +99,13 @@ export default function StockCardPanel({ itemId, itemName, unit, onClose }) {
                             <div className="sticky top-0 grid grid-cols-[1fr_auto] px-4 py-1.5 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
                                 <span className="font-bold text-[13px] leading-5">{dayLabel(d.day)}</span>
                                 {d.ledger.length > 0 && (
-                                    <span className="font-mono text-[12px] leading-5 text-[oklch(42%_0.010_28)] tabular-nums">สุทธิ {signed(d.netLedger)}</span>
+                                    <span className=" text-[12px] leading-5 text-[oklch(42%_0.010_28)] tabular-nums">สุทธิ {signed(d.netLedger)}</span>
                                 )}
                             </div>
                             <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]">
                                 {d.ledger.map((r, i) => (
                                     <li key={`${r.at}-${i}`} className="grid grid-cols-[3rem_1fr_auto] gap-x-3 px-4 py-2 items-baseline">
-                                        <span className="font-mono text-[12px] text-[oklch(55%_0.010_28)]">{timeOf(r.at)}</span>
+                                        <span className="tabular-nums text-[12px] text-[oklch(55%_0.010_28)]">{timeOf(r.at)}</span>
                                         <span className="min-w-0">
                                             <span className="font-bold text-[14px] leading-6">{r.label}</span>
                                             {(r.by || r.note) && (
@@ -114,20 +114,20 @@ export default function StockCardPanel({ itemId, itemName, unit, onClose }) {
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="text-right font-mono tabular-nums">
+                                        <span className="text-right tabular-nums">
                                             <span className={`block text-[14px] font-bold ${r.change < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{signed(r.change)}</span>
-                                            {r.balance !== null && <span className="block text-[11px] text-[oklch(55%_0.010_28)]">เหลือ {qty(r.balance)}</span>}
+                                            {r.balance !== null && <span className="block text-xs text-[oklch(55%_0.010_28)]">เหลือ {qty(r.balance)}</span>}
                                         </span>
                                     </li>
                                 ))}
                                 {d.computed.map(r => (
                                     <li key={r.kind} className="grid grid-cols-[3rem_1fr_auto] gap-x-3 px-4 py-2 items-baseline bg-[oklch(98%_0.004_28)]">
-                                        <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">ทั้งวัน</span>
+                                        <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">ทั้งวัน</span>
                                         <span className="min-w-0">
                                             <span className="text-[14px] leading-6">{r.label}</span>
                                             {r.lines > 0 && <span className="block text-[12px] leading-5 text-[oklch(55%_0.010_28)]">จาก {r.lines} รายการในบิล · ยังไม่ได้ตัดสต๊อกจริง</span>}
                                         </span>
-                                        <span className="text-right font-mono text-[14px] tabular-nums text-[oklch(42%_0.010_28)]">{signed(r.change)}</span>
+                                        <span className="text-right text-[14px] tabular-nums text-[oklch(42%_0.010_28)]">{signed(r.change)}</span>
                                     </li>
                                 ))}
                             </ul>

@@ -47,10 +47,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
                 <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
                     <div>
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
-                            FORMULA CREATION
-                        </span>
-                        <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)]">
+                        <h3 className="text-base font-bold tabular-nums text-[oklch(18%_0.012_28)]">
                             สร้างเบส / ของเตรียม
                         </h3>
                     </div>
@@ -68,7 +65,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                     </p>
 
                     <div>
-                        <label className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                        <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block mb-1">
                             ชื่อ *
                         </label>
                         <input
@@ -76,18 +73,18 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                             value={name}
                             onChange={e => setName(e.target.value)}
                             placeholder="เช่น ซอสคาราเมลโฮมเมด V1, หัวเชื้อชาไทยเข้มข้น"
-                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-sm font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
+                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-sm text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
                         />
                     </div>
 
                     <div>
-                        <label className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                        <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block mb-1">
                             โฟลเดอร์จัดเก็บ (FOLDER / CATEGORY)
                         </label>
                         <select
                             value={selectedFolder}
                             onChange={e => setSelectedFolder(e.target.value)}
-                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer"
+                            className="w-full p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer"
                         >
                             <option value="uncategorized">ทั่วไป (Uncategorized)</option>
                             {folders.filter(f => f !== 'all' && f !== 'uncategorized').map(f => (
@@ -96,18 +93,18 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
                         </select>
                     </div>
 
-                    <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
+                    <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                            className="admin-btn h-9 flex-1"
                         >
                             ยกเลิก (Cancel)
                         </button>
                         <button
                             type="submit"
                             disabled={!name.trim()}
-                            className="flex-1 py-2.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40 transition-colors cursor-pointer"
+                            className="admin-btn is-primary h-9 flex-1 disabled:opacity-40"
                         >
                             สร้างและเปิดตัวปรุงสูตร →
                         </button>
@@ -128,14 +125,14 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
         <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 font-sans backdrop-blur-xs">
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
                 <div className="flex items-start gap-3 border-b border-[oklch(85%_0.012_28)] pb-3">
-                    <div className="w-8 h-8 bg-red-100 text-red-700 flex items-center justify-center font-mono font-bold text-xs flex-shrink-0">
+                    <div className="w-8 h-8 bg-red-100 text-red-700 flex items-center justify-center tabular-nums font-bold text-xs flex-shrink-0">
                         !
                     </div>
                     <div className="flex-1 min-w-0">
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-red-700 block">
+                        <span className="tabular-nums text-xs font-bold text-red-700 block">
                             DELETE CONFIRMATION
                         </span>
-                        <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)] truncate">
+                        <h3 className="text-base font-bold tabular-nums text-[oklch(18%_0.012_28)] truncate">
                             ยืนยันการลบสูตรกลาง
                         </h3>
                     </div>
@@ -147,36 +144,36 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
                     </p>
 
                     {hasUsages ? (
-                        <div className="p-3 bg-red-50/80 border border-red-200 text-red-800 space-y-2 font-mono text-[11px]">
-                            <div className="flex items-center gap-1.5 font-bold uppercase text-red-900">
+                        <div className="p-3 bg-red-50/80 border border-red-200 text-red-800 space-y-2 tabular-nums text-xs">
+                            <div className="flex items-center gap-1.5 font-bold text-red-900">
                                 <AlertCircle size={14} />
                                 <span>คำเตือน: สูตรนี้กำลังถูกใช้งานอยู่ ({item.usedInCount} เมนู)</span>
                             </div>
-                            <p className="text-[11px] text-red-700">
+                            <p className="text-[13px] text-red-700">
                                 เมนูต่อไปนี้พึ่งพาสูตรกลางนี้เป็นวัตถุดิบ หากลบจะส่งผลกระทบต่อการคิดต้นทุนและสต็อก:
                             </p>
-                            <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1 max-h-24 overflow-y-auto">
+                            <ul className="list-disc list-inside space-y-0.5 text-xs pl-1 max-h-24 overflow-y-auto">
                                 {(item.usedInNames || []).map((menuName, idx) => (
                                     <li key={idx} className="font-sans font-bold">{menuName}</li>
                                 ))}
                             </ul>
                         </div>
                     ) : (
-                        <p className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                        <p className="tabular-nums text-[13px] text-[oklch(55%_0.010_28)]">
                             สูตรนี้เป็นสูตรเดี่ยว (Standalone) ยังไม่ได้ถูกเชื่อมโยงกับเมนูขายหน้าร้าน สามารถลบได้อย่างปลอดภัย
                         </p>
                     )}
 
-                    <p className="text-[11px] text-[oklch(55%_0.010_28)] italic">
+                    <p className="text-[13px] text-[oklch(55%_0.010_28)] italic">
                         การลบสูตรจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่ว่าต้องการดำเนินการต่อ?
                     </p>
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
+                <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                        className="admin-btn h-9 flex-1"
                     >
                         ยกเลิก (Cancel)
                     </button>
@@ -186,7 +183,7 @@ function DeleteFormulaModal({ isOpen, onClose, onConfirm, item }) {
                             onConfirm(item.id);
                             onClose();
                         }}
-                        className="flex-1 py-2.5 bg-red-700 text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-red-800 transition-colors cursor-pointer"
+                        className="flex-1 py-2.5 bg-red-700 text-[oklch(97%_0.008_28)] font-bold hover:bg-red-800 transition-colors cursor-pointer"
                     >
                         ยืนยันลบสูตร (Delete)
                     </button>
@@ -257,9 +254,6 @@ function ProduceModal({ item, onClose, onDone }) {
         <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 font-sans backdrop-blur-xs">
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md shadow-2xl rounded-xs">
                 <div className="p-4 border-b border-[oklch(85%_0.012_28)]">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
-                        PRODUCTION
-                    </span>
                     <h3 className="text-base font-bold font-sans leading-7 text-[oklch(18%_0.012_28)] break-words">
                         ผลิต {item.name}
                     </h3>
@@ -271,7 +265,7 @@ function ProduceModal({ item, onClose, onDone }) {
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-2 divide-x divide-[oklch(85%_0.012_28)] border-b border-[oklch(85%_0.012_28)]">
                         <div className="p-4 space-y-1.5">
-                            <label htmlFor="produce-portions" className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">
+                            <label htmlFor="produce-portions" className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block">
                                 ทำกี่ portion
                             </label>
                             <input
@@ -283,11 +277,11 @@ function ProduceModal({ item, onClose, onDone }) {
                                 autoFocus
                                 value={portions}
                                 onChange={e => setPortions(e.target.value)}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono font-bold text-base text-right outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-base text-right outline-none focus:border-[oklch(18%_0.012_28)] tabular-nums"
                             />
                         </div>
                         <div className="p-4 space-y-1.5">
-                            <label htmlFor="produce-actual" className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block">
+                            <label htmlFor="produce-actual" className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block">
                                 ได้จริง ({item.usage_unit})
                             </label>
                             <input
@@ -299,7 +293,7 @@ function ProduceModal({ item, onClose, onDone }) {
                                 value={actualYield}
                                 onChange={e => setActualYield(e.target.value)}
                                 placeholder={expected ? String(Number(expected.toFixed(2))) : ''}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono font-bold text-base text-right outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-base text-right outline-none focus:border-[oklch(18%_0.012_28)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -308,12 +302,12 @@ function ProduceModal({ item, onClose, onDone }) {
                         <p>ตัดวัตถุดิบตามสูตร {validPortions ? portionsNum : 0} portion</p>
                         <p>
                             เพิ่มสต๊อก {item.name}{' '}
-                            <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">+{Number(added.toFixed(4))} portion</span>
+                            <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">+{Number(added.toFixed(4))} portion</span>
                         </p>
                         <p className="text-[oklch(55%_0.010_28)]">เว้นช่อง "ได้จริง" ไว้ถ้าได้ตามสูตร</p>
                     </div>
 
-                    <div className="grid grid-cols-2 font-mono text-xs">
+                    <div className="grid grid-cols-2 tabular-nums text-xs">
                         <button
                             type="button"
                             onClick={onClose}
@@ -361,23 +355,24 @@ function InlineFolderInput({ onSave, onCancel }) {
                 onChange={e => setName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="ชื่อโฟลเดอร์..."
-                className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-xs font-mono font-bold outline-none focus:border-[oklch(18%_0.012_28)]"
+                className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
             />
-            <div className="flex gap-1.5 font-mono text-[11px]">
+            <div className="flex gap-1.5 tabular-nums text-xs">
                 <button
                     type="button"
                     onClick={() => { if (name.trim()) onSave(name.trim()); }}
                     disabled={!name.trim()}
-                    className="flex-1 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40 cursor-pointer text-center"
+                    className="flex-1 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-[oklch(18%_0.012_28)] disabled:opacity-40 cursor-pointer text-center"
                 >
-                    [สร้าง]
+                    สร้าง
                 </button>
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-2 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
+                    className="admin-btn h-8 px-3"
+                    aria-label="ปิด"
                 >
-                    [✕]
+                    ปิด
                 </button>
             </div>
         </div>
@@ -783,36 +778,31 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                         {!isEmbedded && (
                             <button 
                                 onClick={() => navigate('/admin')} 
-                                className="p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                                className="admin-btn is-icon h-9 w-9"
                                 title="กลับสู่แผงควบคุม"
                             >
                                 <ArrowLeft size={16} />
                             </button>
                         )}
                         <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
-                                    BASES &amp; PREP
-                                </span>
-                            </div>
-                            <h1 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-0.5">
+                            <h2 className="text-base font-semibold text-[oklch(18%_0.012_28)]">
                                 เบส / ของเตรียม
-                            </h1>
-                            <p className="text-xs text-[oklch(55%_0.010_28)] font-mono">
+                            </h2>
+                            <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums">
                                 ทำเป็น portion แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ สูตรของแต่ละเมนูอยู่ที่แท็บ "เมนู"
                             </p>
                         </div>
                     </div>
 
                     {/* Action Controls */}
-                    <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto font-mono text-xs">
+                    <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto tabular-nums text-xs">
                         {/* Search Input */}
-                        <div className="relative flex-1 sm:flex-none">
+                        <div className="relative w-full sm:w-auto">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[oklch(55%_0.010_28)]" />
                             <input
                                 type="text"
                                 placeholder="ค้นหาชื่อ..."
-                                className="w-full sm:w-48 lg:w-56 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
+                                className="w-full sm:w-48 lg:w-56 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-sm text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                             />
@@ -828,7 +818,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
 
                         <button 
                             onClick={loadData} 
-                            className="p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                            className="admin-btn is-icon h-9 w-9"
                             title="รีเฟรชข้อมูล"
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -845,7 +835,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
 
                         <button
                             onClick={() => setIsCreateOpen(true)}
-                            className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 py-2 font-bold uppercase flex items-center gap-1.5 hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                            className="admin-btn is-primary h-9"
                         >
                             <Plus size={14} />
                             <span className="font-sans">สร้างเบสใหม่</span>
@@ -857,7 +847,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
             {/* Main Workbench Body */}
             <div className={`${isEmbedded ? '' : 'max-w-7xl mx-auto p-4'} space-y-4 pb-20`}>
                 {/* Mobile Folder Strip (Horizontal Monospace Scroll) */}
-                <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-[oklch(85%_0.012_28)] font-mono text-xs">
+                <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-[oklch(85%_0.012_28)] tabular-nums text-xs">
                     {allFolders.map(folder => {
                         const count = getFolderCount(folder);
                         const isActive = activeCategory === folder;
@@ -866,7 +856,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                             <button
                                 key={folder}
                                 onClick={() => setActiveCategory(folder)}
-                                className={`px-3 py-1.5 border font-bold uppercase whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+                                className={`px-3 py-1.5 border font-bold whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
                                     isActive
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
                                         : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:border-[oklch(18%_0.012_28)]'
@@ -881,7 +871,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                     })}
                     <button
                         onClick={() => setIsCreatingFolder(true)}
-                        className="px-2.5 py-1.5 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold uppercase whitespace-nowrap hover:border-[oklch(18%_0.012_28)] cursor-pointer"
+                        className="admin-btn h-9"
                     >
                         + FOLDER
                     </button>
@@ -889,20 +879,20 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
 
                 <div className="flex flex-col md:flex-row gap-5 items-start">
                     {/* Desktop Folders Sidebar (Cellular Division) */}
-                    <aside className="hidden md:block w-60 flex-shrink-0 space-y-3 font-mono text-xs">
+                    <aside className="hidden md:block w-60 flex-shrink-0 space-y-3 tabular-nums text-xs">
                         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] divide-y divide-[oklch(85%_0.012_28)] rounded-xs">
                             {/* Sidebar Header */}
                             <div className="p-3 bg-[oklch(94%_0.010_28)] flex justify-between items-center">
-                                <span className="font-bold text-[11px] uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">
                                     โฟลเดอร์
                                 </span>
                                 {!isCreatingFolder && (
                                     <button
                                         onClick={() => setIsCreatingFolder(true)}
-                                        className="text-[11px] text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] font-bold uppercase cursor-pointer"
+                                        className="text-xs text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] font-bold cursor-pointer"
                                         title="สร้างโฟลเดอร์ใหม่"
                                     >
-                                        [+ ใหม่]
+                                        + ใหม่
                                     </button>
                                 )}
                             </div>
@@ -937,11 +927,11 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                             }`}
                                         >
-                                            <span className="truncate pr-2 uppercase">
+                                            <span className="truncate pr-2 ">
                                                 {folder !== 'all' && folder !== 'uncategorized' && <span className="text-[oklch(52%_0.16_28)] mr-1.5">#</span>}
                                                 {label}
                                             </span>
-                                            <span className={`text-[11px] px-1.5 py-0.5 font-mono ${
+                                            <span className={`text-[11px] px-1.5 py-0.5 tabular-nums ${
                                                 isActive 
                                                     ? 'bg-[oklch(35%_0.015_28)] text-[oklch(97%_0.008_28)]' 
                                                     : 'bg-[oklch(92%_0.010_28)] text-[oklch(18%_0.012_28)]'
@@ -955,7 +945,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                         </div>
 
                         {/* Quick Stats Box */}
-                        <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1.5 text-[11px] text-[oklch(42%_0.010_28)]">
+                        <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1.5 text-xs text-[oklch(42%_0.010_28)]">
                             <div className="flex justify-between">
                                 <span>ทั้งหมด:</span>
                                 <span className="font-bold text-[oklch(18%_0.012_28)]">{labItems.length} สูตร</span>
@@ -989,28 +979,28 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                         }`}
                                     >
                                         <span className="font-sans font-bold text-[13px] leading-6">{label}</span>
-                                        <span className={`font-mono text-[11px] font-bold tabular-nums ${warn ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{count}</span>
+                                        <span className={` text-xs font-bold tabular-nums ${warn ? 'text-[oklch(52%_0.16_28)]' : ''}`}>{count}</span>
                                     </button>
                                 );
                             })}
                         </div>
 
                         {loading ? (
-                            <div className="text-center py-20 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-mono text-xs text-[oklch(55%_0.010_28)] space-y-2">
+                            <div className="text-center py-20 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] tabular-nums text-xs text-[oklch(55%_0.010_28)] space-y-2">
                                 <RefreshCw size={20} className="animate-spin mx-auto text-[oklch(42%_0.010_28)]" />
                                 <div>กำลังโหลดข้อมูล Recipe Lab...</div>
                             </div>
                         ) : filteredRecipes.length === 0 ? (
-                            <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-6 font-mono text-xs space-y-3">
-                                <div className="text-[oklch(55%_0.010_28)] font-bold uppercase tracking-wider">
-                                    [NO FORMULAS FOUND]
+                            <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-6 tabular-nums text-xs space-y-3">
+                                <div className="text-[oklch(55%_0.010_28)] font-bold  ">
+                                    NO FORMULAS FOUND
                                 </div>
                                 <p className="text-[oklch(42%_0.010_28)]">
                                     ไม่พบสูตรที่ตรงกับเงื่อนไขในหมวดหมู่นี้
                                 </p>
                                 <button
                                     onClick={() => setIsCreateOpen(true)}
-                                    className="px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] cursor-pointer"
+                                    className="admin-btn is-primary h-9"
                                 >
                                     + สร้างเบสใหม่
                                 </button>
@@ -1043,15 +1033,15 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     {/* Usages Badge */}
                                                     {hasUsages ? (
                                                         <span 
-                                                            className="font-mono text-[11px] font-bold uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap"
+                                                            className="tabular-nums text-[11px] font-bold px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap"
                                                             title={`ใช้งานใน: ${item.usedInNames.join(', ')}`}
                                                         >
                                                             <LinkIcon size={10} />
                                                             <span>USED IN: {item.usedInCount}</span>
                                                         </span>
                                                     ) : (
-                                                        <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
-                                                            [STANDALONE]
+                                                        <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
+                                                            STANDALONE
                                                         </span>
                                                     )}
                                                 </div>
@@ -1063,7 +1053,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                             <input
                                                                 value={editingName}
                                                                 onChange={e => setEditingName(e.target.value)}
-                                                                className="flex-1 border border-[oklch(18%_0.012_28)] p-1 text-xs font-bold font-sans bg-[oklch(99%_0.004_28)] outline-none"
+                                                                className="flex-1 border border-[oklch(18%_0.012_28)] p-1 text-sm font-sans bg-[oklch(99%_0.004_28)] outline-none"
                                                                 autoFocus
                                                                 onKeyDown={e => {
                                                                     if (e.key === 'Enter') handleRename(item.id);
@@ -1072,14 +1062,14 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                             />
                                                             <button 
                                                                 onClick={() => handleRename(item.id)}
-                                                                className="p-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold"
+                                                                className="p-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs tabular-nums font-bold"
                                                                 title="บันทึก"
                                                             >
                                                                 <Check size={13} />
                                                             </button>
                                                             <button 
                                                                 onClick={() => setEditingItemId(null)}
-                                                                className="p-1 border border-[oklch(85%_0.012_28)] text-xs font-mono"
+                                                                className="p-1 border border-[oklch(85%_0.012_28)] text-xs tabular-nums"
                                                                 title="ยกเลิก"
                                                             >
                                                                 <X size={13} />
@@ -1102,10 +1092,10 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                             </button>
                                                         </div>
                                                     )}
-                                                    <div className="text-[11px] font-sans leading-5 text-[oklch(55%_0.010_28)] mt-0.5">
+                                                    <div className="text-xs font-sans leading-5 text-[oklch(55%_0.010_28)] mt-0.5">
                                                         ส่วนผสม {item.ingredientCount} รายการ
                                                         {isPrepItem && isStockedItem(item) && (
-                                                            <> · <span className="whitespace-nowrap">คงเหลือ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{Number(Number(item.current_quantity || 0).toFixed(2))}</span> portion</span></>
+                                                            <> · <span className="whitespace-nowrap">คงเหลือ <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">{Number(Number(item.current_quantity || 0).toFixed(2))}</span> portion</span></>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1115,17 +1105,17 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                             <div className="p-3.5 space-y-2">
                                                 <div className="border border-[oklch(90%_0.008_28)] bg-[oklch(98%_0.004_28)] p-2.5 flex flex-wrap justify-between items-center gap-x-2">
                                                     <div className="min-w-0">
-                                                        <span className="font-sans text-[11px] font-bold leading-5 text-[oklch(55%_0.010_28)] block whitespace-nowrap">
+                                                        <span className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block whitespace-nowrap">
                                                             {isPrepItem ? 'ต้นทุนต่อ portion' : 'ต้นทุนต่อแก้ว/จาน'}
                                                         </span>
                                                         {isPrepItem && yieldKnown && (
-                                                            <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] block">
+                                                            <span className="text-xs tabular-nums text-[oklch(42%_0.010_28)] block">
                                                                 1 portion = {usagePerPortion(item).toLocaleString()} {item.usage_unit} · ฿{item.unitCost.toFixed(4)}/{item.usage_unit}
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="text-right flex-shrink-0 ml-auto">
-                                                        <span className="font-mono font-bold text-lg tabular-nums text-[oklch(18%_0.012_28)]">
+                                                        <span className=" font-bold text-lg tabular-nums text-[oklch(18%_0.012_28)]">
                                                             ฿{item.cost?.toFixed(2)}
                                                         </span>
                                                     </div>
@@ -1133,7 +1123,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
 
                                                 {item.issues.length > 0 && (
                                                     <div
-                                                        className="border-l-2 border-[oklch(52%_0.16_28)] pl-2 font-sans text-[11px] leading-5 text-[oklch(42%_0.010_28)]"
+                                                        className="border-l-2 border-[oklch(52%_0.16_28)] pl-2 font-sans text-xs leading-5 text-[oklch(42%_0.010_28)]"
                                                         title={item.issues.map(i => i.message).join('\n')}
                                                     >
                                                         <span className="font-bold text-[oklch(52%_0.16_28)]">ต้องแก้ {item.issues.length} จุด</span>
@@ -1145,10 +1135,10 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                 <div className="relative">
                                                     <button
                                                         onClick={() => setActiveDropdownId(activeDropdownId === item.id ? null : item.id)}
-                                                        className="w-full flex items-center justify-between p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
+                                                        className="admin-btn h-9 w-full justify-between"
                                                     >
                                                         <span className="truncate">
-                                                            โฟลเดอร์: [{folderName === 'uncategorized' ? 'ทั่วไป' : folderName}]
+                                                            โฟลเดอร์: {folderName === 'uncategorized' ? 'ทั่วไป' : folderName}
                                                         </span>
                                                         <ChevronDown size={11} />
                                                     </button>
@@ -1159,8 +1149,8 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                                 className="fixed inset-0 z-40" 
                                                                 onClick={() => setActiveDropdownId(null)}
                                                             />
-                                                            <div className="absolute left-0 right-0 top-full mt-1 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] shadow-2xl z-50 py-1 font-mono text-xs max-h-56 overflow-y-auto animate-in fade-in duration-100 divide-y divide-[oklch(90%_0.008_28)] rounded-xs">
-                                                                <div className="px-2.5 py-1 text-[11px] font-bold uppercase text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)]">
+                                                            <div className="absolute left-0 right-0 top-full mt-1 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] shadow-2xl z-50 py-1 tabular-nums text-xs max-h-56 overflow-y-auto animate-in fade-in duration-100 divide-y divide-[oklch(90%_0.008_28)] rounded-xs">
+                                                                <div className="px-2.5 py-1 text-xs font-bold text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)]">
                                                                     ย้ายไปที่โฟลเดอร์
                                                                 </div>
                                                                 <button
@@ -1168,9 +1158,9 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                                         handleMoveFolder(item.id, 'uncategorized');
                                                                         setActiveDropdownId(null);
                                                                     }}
-                                                                    className="w-full text-left px-2.5 py-1.5 hover:bg-[oklch(94%_0.010_28)] transition-colors font-bold text-[11px]"
+                                                                    className="w-full text-left px-2.5 py-1.5 hover:bg-[oklch(94%_0.010_28)] transition-colors font-bold text-xs"
                                                                 >
-                                                                    [ทั่วไป / Uncategorized]
+                                                                    ทั่วไป / Uncategorized
                                                                 </button>
                                                                 {allFolders
                                                                     .filter(f => f !== 'all' && f !== 'uncategorized' && folderName !== f)
@@ -1181,7 +1171,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                                                 handleMoveFolder(item.id, folder);
                                                                                 setActiveDropdownId(null);
                                                                             }}
-                                                                            className="w-full text-left px-2.5 py-1.5 hover:bg-[oklch(94%_0.010_28)] transition-colors font-bold text-[11px] truncate"
+                                                                            className="w-full text-left px-2.5 py-1.5 hover:bg-[oklch(94%_0.010_28)] transition-colors font-bold text-xs truncate"
                                                                         >
                                                                             [{folder}]
                                                                         </button>
@@ -1194,10 +1184,10 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                             </div>
 
                                             {/* Cell 3: Action Buttons */}
-                                            <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-1.5 font-mono text-xs rounded-b-xs">
+                                            <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-1.5 tabular-nums text-xs rounded-b-xs">
                                                 <button 
                                                     onClick={() => { setRecipeTarget(item); setIsRecipeOpen(true); }}
-                                                    className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                                                    className="admin-btn is-primary h-9 flex-1 justify-center"
                                                 >
                                                     <span className="font-sans">แก้สูตร</span>
                                                 </button>
@@ -1205,7 +1195,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     <button
                                                         onClick={() => onOpenMethod({ type: 'stock', id: item.id, name: item.name })}
                                                         title="วิธีทำ (SOP) ของเบสนี้"
-                                                        className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                                                        className="admin-btn h-9 flex-1"
                                                     >
                                                         วิธีทำ
                                                     </button>
@@ -1214,7 +1204,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     <button
                                                         onClick={() => setMovingItem(item)}
                                                         title="ย้ายส่วนผสมไปเป็นสูตรของเมนู แล้วลบสูตรต่อแก้วนี้"
-                                                        className="flex-1 py-2 border border-[oklch(52%_0.16_28)] bg-[oklch(99%_0.004_28)] text-[oklch(52%_0.16_28)] font-sans font-bold hover:bg-[oklch(97%_0.02_28)] transition-colors cursor-pointer"
+                                                        className="admin-btn h-9 flex-1"
                                                     >
                                                         ย้ายไปเมนู
                                                     </button>
@@ -1222,14 +1212,14 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                 {canProduce && (
                                                     <button
                                                         onClick={() => setProducingItem(item)}
-                                                        className="flex-1 py-2 border border-[oklch(18%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] font-sans font-bold hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                                                        className="admin-btn h-9 flex-1"
                                                     >
                                                         ผลิต
                                                     </button>
                                                 )}
                                                 <button 
                                                     onClick={() => setDeletingItem(item)}
-                                                    className="px-2.5 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(55%_0.010_28)] hover:text-red-700 hover:border-red-400 transition-colors cursor-pointer"
+                                                    className="admin-btn h-9"
                                                     title="ลบสูตรกลาง"
                                                 >
                                                     <Trash2 size={13} />

@@ -127,10 +127,10 @@ export default function GeneralBookingSettingsTab({
                                     <Power size={18} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                    <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                         Shop Service Modes
                                     </h2>
-                                    <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                    <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                                         สถานะเปิด-ปิด 3 บริการหลักของร้าน
                                     </p>
                                 </div>
@@ -140,14 +140,11 @@ export default function GeneralBookingSettingsTab({
                         {/* Table Booking Mode */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-mono font-bold text-[var(--color-ink)] uppercase tracking-wider">
+                                <label className="text-xs tabular-nums font-bold text-[var(--color-ink)]  ">
                                     Table Booking (จองโต๊ะทานที่ร้าน)
                                 </label>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
-                                    {settings.shop_mode_table || 'auto'}
-                                </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5 font-mono text-xs">
+                            <div className="grid grid-cols-3 gap-1.5 tabular-nums text-xs">
                                 {[
                                     { mode: 'auto', label: 'Auto (ตามเวลา)' },
                                     { mode: 'manual_open', label: 'Manual Open' },
@@ -175,14 +172,11 @@ export default function GeneralBookingSettingsTab({
                         {/* Pickup Mode */}
                         <div className="space-y-2 pt-3 border-t border-[var(--color-rule)]">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-mono font-bold text-[var(--color-ink)] uppercase tracking-wider">
+                                <label className="text-xs tabular-nums font-bold text-[var(--color-ink)]  ">
                                     Pickup Online (สั่งรับกลับบ้าน)
                                 </label>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
-                                    {settings.shop_mode_pickup || 'auto'}
-                                </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5 font-mono text-xs">
+                            <div className="grid grid-cols-3 gap-1.5 tabular-nums text-xs">
                                 {[
                                     { mode: 'auto', label: 'Auto (ตามเวลา)' },
                                     { mode: 'manual_open', label: 'Manual Open' },
@@ -210,14 +204,11 @@ export default function GeneralBookingSettingsTab({
                         {/* HAUSMADE Shop Mode */}
                         <div className="space-y-2 pt-3 border-t border-[var(--color-rule)]">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-mono font-bold text-[var(--color-ink)] uppercase tracking-wider">
+                                <label className="text-xs tabular-nums font-bold text-[var(--color-ink)]  ">
                                     HAUSMADE Shop (สินค้าออนไลน์)
                                 </label>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
-                                    {settings.shop_mode_hausmade || 'manual_close'}
-                                </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5 font-mono text-xs">
+                            <div className="grid grid-cols-3 gap-1.5 tabular-nums text-xs">
                                 {[
                                     { mode: 'auto', label: 'Auto (ตามเวลา)' },
                                     { mode: 'manual_open', label: 'Manual Open' },
@@ -244,30 +235,30 @@ export default function GeneralBookingSettingsTab({
 
                         {/* Operating Hours for Auto Mode */}
                         <div className="pt-3 border-t border-[var(--color-rule)]">
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mb-2">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mb-2">
                                 กำหนดเวลาเปิด-ปิดร้านสำหรับโหมด Auto
                             </p>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                         เวลาเปิดร้าน (Opens)
                                     </label>
                                     <input
                                         type="time"
                                         value={settings.opening_time || '11:00'}
                                         onChange={(e) => handleSave('opening_time', e.target.value)}
-                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2 rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                         เวลาปิดร้าน (Closes)
                                     </label>
                                     <input
                                         type="time"
                                         value={settings.closing_time || '21:30'}
                                         onChange={(e) => handleSave('closing_time', e.target.value)}
-                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2 rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                 </div>
                             </div>
@@ -285,10 +276,10 @@ export default function GeneralBookingSettingsTab({
                                         <TrendingUp size={16} />
                                     </div>
                                     <div>
-                                        <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                        <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                             Default VAT 7%
                                         </span>
-                                        <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                        <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                             ภาษีมูลค่าเพิ่ม 7% เริ่มต้นของร้าน
                                         </span>
                                     </div>
@@ -335,17 +326,17 @@ export default function GeneralBookingSettingsTab({
             <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
                     <div>
-                        <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                        <h2 className="text-sm tabular-nums font-bold text-[var(--color-ink)]">
                             Announcement & Store Policies
                         </h2>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                             จัดการข้อความประกาศ เงื่อนไขการสั่ง และรอบเวลาบริการ
                         </p>
                     </div>
                     <button
                         type="button"
                         onClick={handleSavePolicies}
-                        className="flex items-center justify-center gap-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] px-5 py-2.5 rounded-xl font-mono font-bold text-xs transition-colors cursor-pointer "
+                        className="flex items-center justify-center gap-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] px-5 py-2.5 rounded-xl tabular-nums font-bold text-xs transition-colors cursor-pointer "
                     >
                         <Save size={15} /> บันทึกการตั้งค่า
                     </button>
@@ -353,7 +344,7 @@ export default function GeneralBookingSettingsTab({
 
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             Headline (หัวข้อข่าวประกาศ)
                         </label>
                         <input
@@ -365,7 +356,7 @@ export default function GeneralBookingSettingsTab({
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             Detail (ข้อความวิ่ง Marquee)
                         </label>
                         <input
@@ -380,7 +371,7 @@ export default function GeneralBookingSettingsTab({
 
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             เบอร์โทรติดต่อร้าน (Contact Phone)
                         </label>
                         <input
@@ -388,11 +379,11 @@ export default function GeneralBookingSettingsTab({
                             value={settings.contact_phone || ''}
                             onChange={(e) => handleSave('contact_phone', e.target.value)}
                             placeholder="เช่น 0812345678"
-                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             Google Maps URL
                         </label>
                         <input
@@ -403,7 +394,7 @@ export default function GeneralBookingSettingsTab({
                                 handleSave('link_url_4', e.target.value);
                             }}
                             placeholder="https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7"
-                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
                 </div>
@@ -411,7 +402,7 @@ export default function GeneralBookingSettingsTab({
                 {/* Policy Numerical Parameters */}
                 <div className="pt-4 border-t border-[var(--color-rule)] grid md:grid-cols-4 gap-4">
                     <div>
-                        <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             ขั้นต่ำต่อท่าน (บาท)
                         </label>
                         <input
@@ -419,12 +410,12 @@ export default function GeneralBookingSettingsTab({
                             value={settings.booking_min_spend || ''}
                             onChange={(e) => handleSave('booking_min_spend', e.target.value)}
                             placeholder="150"
-                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             จองล่วงหน้าขั้นต่ำ (ชั่วโมง)
                         </label>
                         <input
@@ -432,12 +423,12 @@ export default function GeneralBookingSettingsTab({
                             value={settings.booking_min_advance_hours || ''}
                             onChange={(e) => handleSave('booking_min_advance_hours', e.target.value)}
                             placeholder="2"
-                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             เวลา Hold โต๊ะจอง (นาที)
                         </label>
                         <input
@@ -445,12 +436,12 @@ export default function GeneralBookingSettingsTab({
                             value={settings.booking_hold_minutes || '30'}
                             onChange={(e) => handleSave('booking_hold_minutes', e.target.value)}
                             placeholder="30"
-                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             Pickup ล่วงหน้าขั้นต่ำ (ชั่วโมง)
                         </label>
                         <input
@@ -458,7 +449,7 @@ export default function GeneralBookingSettingsTab({
                             value={settings.pickup_min_advance_hours || ''}
                             onChange={(e) => handleSave('pickup_min_advance_hours', e.target.value)}
                             placeholder="1"
-                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
                 </div>
@@ -467,10 +458,10 @@ export default function GeneralBookingSettingsTab({
                 <div className="grid md:grid-cols-2 gap-4 pt-2">
                     <label className="bg-[var(--color-paper)] p-3.5 rounded-xl border border-[var(--color-rule)] flex items-center justify-between cursor-pointer">
                         <div>
-                            <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                            <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                 จองโต๊ะฟรี · โทรยืนยัน (ไม่บังคับโอนมัดจำ)
                             </span>
-                            <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                            <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                 เปิดให้ลูกค้าจองโต๊ะโดยไม่ต้องโอนมัดจำ (เก็บโต๊ะ {settings.booking_hold_minutes || 30} นาทีหลังเวลานัด)
                             </span>
                         </div>
@@ -484,10 +475,10 @@ export default function GeneralBookingSettingsTab({
 
                     <label className="bg-[var(--color-paper)] p-3.5 rounded-xl border border-[var(--color-rule)] flex items-center justify-between cursor-pointer">
                         <div>
-                            <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                            <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                 สั่งกลับบ้าน · จ่ายที่ร้านตอนรับ (Pay at Store)
                             </span>
-                            <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                            <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                 เปิดตัวเลือกชำระเงินที่หน้าร้านสำหรับ Pickup (พนักงานโทรยืนยันแล้วส่งพิมพ์ใบครัวทันที)
                             </span>
                         </div>
@@ -512,11 +503,11 @@ export default function GeneralBookingSettingsTab({
 
                 {/* System Default Active Policies Reference */}
                 <div className="bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] space-y-3">
-                    <div className="flex items-center gap-2 text-[var(--color-ink)] font-mono font-bold text-xs">
+                    <div className="flex items-center gap-2 text-[var(--color-ink)] tabular-nums font-bold text-xs">
                         <ShieldCheck size={16} />
                         System Default Active Policies (เงื่อนไขการจองในระบบ)
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4 text-xs text-[var(--color-muted)] font-mono">
+                    <div className="grid md:grid-cols-2 gap-4 text-xs text-[var(--color-muted)] tabular-nums">
                         <div className="bg-[var(--color-paper-2)] p-3 rounded-lg border border-[var(--color-rule)] space-y-1">
                             <span className="font-bold text-[var(--color-ink)] block mb-1">Dine-in Policy (การจองโต๊ะทานที่ร้าน):</span>
                             <p>• สั่งอาหารขั้นต่ำ 150 บาทต่อท่าน</p>
@@ -541,14 +532,14 @@ export default function GeneralBookingSettingsTab({
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                <h2 className="text-sm tabular-nums font-bold text-[var(--color-ink)]">
                                     ระบบตรวจสลิปอัตโนมัติ (EasySlip API v2)
                                 </h2>
-                                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                <span className="px-2 py-0.5 rounded-md text-[11px] tabular-nums font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                                     Bank + TrueMoney
                                 </span>
                             </div>
-                            <p className="text-xs font-mono text-[var(--color-neutral)] mt-0.5">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-0.5">
                                 ตรวจสอบสลิปธนาคารและทรูมันนี่วอลเล็ททันที ตรวจสอบยอดเงิน และป้องกันสลิปซ้ำ 100%
                             </p>
                         </div>
@@ -558,7 +549,7 @@ export default function GeneralBookingSettingsTab({
                         <button
                             type="button"
                             onClick={() => setIsTestSandboxOpen(true)}
-                            className="px-3.5 py-2 bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                            className="px-3.5 py-2 bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] rounded-lg text-xs tabular-nums font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                             title="เปิดศูนย์ทดสอบจำลองระบบ POS"
                         >
                             <span>🧪 TEST SANDBOX</span>
@@ -567,7 +558,7 @@ export default function GeneralBookingSettingsTab({
                             type="button"
                             onClick={handleTestEasySlip}
                             disabled={testingEasySlip}
-                            className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[oklch(18%_0.012_28)] rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                            className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[oklch(18%_0.012_28)] rounded-lg text-xs tabular-nums font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
                         >
                             <RefreshCw size={13} className={testingEasySlip ? 'animate-spin' : ''} />
                             <span>{testingEasySlip ? 'กำลังตรวจสอบ...' : 'ทดสอบการเชื่อมต่อ API'}</span>
@@ -576,7 +567,7 @@ export default function GeneralBookingSettingsTab({
                 </div>
 
                 {easySlipQuota && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs tabular-nums">
                         <div className="flex items-center gap-2 text-emerald-800 font-bold">
                             <CheckCircle2 size={15} />
                             <span>เชื่อมต่อ EasySlip สำเร็จ (App: {easySlipQuota.application?.name || 'haustable'})</span>
@@ -590,27 +581,27 @@ export default function GeneralBookingSettingsTab({
 
                 <div className="grid md:grid-cols-3 gap-4 pt-1">
                     <div className="md:col-span-2 space-y-1.5">
-                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)]">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)]">
                             EasySlip Secret API Key (v2)
                         </label>
                         <input
                             type="text"
                             value={settings.easyslip_api_key || 'e0650eb6-a4c8-4e25-b109-54bf3a10256e'}
                             onChange={(e) => handleSave('easyslip_api_key', e.target.value)}
-                            className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                             placeholder="e0650eb6-a4c8-4e25-b109-..."
                         />
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                             คีย์ API สำหรับเรียกตรวจสอบสลิปผ่าน EasySlip v2
                         </p>
                     </div>
 
                     <div className="bg-[var(--color-paper)] p-3 rounded-xl border border-[var(--color-rule)] space-y-2.5">
-                        <span className="text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] block">
+                        <span className="text-xs tabular-nums font-bold text-[var(--color-ink)] block">
                             เปิดใช้งานตรวจสลิปอัตโนมัติ
                         </span>
                         
-                        <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
+                        <label className="flex items-center justify-between text-xs tabular-nums text-[var(--color-ink)] cursor-pointer">
                             <span>HAUSMADE Shop:</span>
                             <input
                                 type="checkbox"
@@ -620,7 +611,7 @@ export default function GeneralBookingSettingsTab({
                             />
                         </label>
 
-                        <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
+                        <label className="flex items-center justify-between text-xs tabular-nums text-[var(--color-ink)] cursor-pointer">
                             <span>Pickup Online:</span>
                             <input
                                 type="checkbox"
@@ -630,7 +621,7 @@ export default function GeneralBookingSettingsTab({
                             />
                         </label>
 
-                        <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
+                        <label className="flex items-center justify-between text-xs tabular-nums text-[var(--color-ink)] cursor-pointer">
                             <span>จองโต๊ะ Online:</span>
                             <input
                                 type="checkbox"
@@ -649,10 +640,10 @@ export default function GeneralBookingSettingsTab({
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] flex flex-col justify-between space-y-4">
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 1. พร้อมเพย์ (PromptPay)
                             </h2>
-                            <span className="text-[11px] font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">QR / ธนาคาร</span>
+                            <span className="text-[11px] tabular-nums bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">QR / ธนาคาร</span>
                         </div>
                         <div className="mb-4 flex justify-center bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
                             {settings.payment_qr_url ? (
@@ -662,7 +653,7 @@ export default function GeneralBookingSettingsTab({
                                     className="w-32 h-32 object-cover rounded-lg border border-[var(--color-rule)]"
                                 />
                             ) : (
-                                <div className="w-32 h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs font-mono">
+                                <div className="w-32 h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs tabular-nums">
                                     No QR Image
                                 </div>
                             )}
@@ -672,7 +663,7 @@ export default function GeneralBookingSettingsTab({
                     <div>
                         <label className="block w-full cursor-pointer group">
                             <div className="bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-xl p-3 text-center group-hover:border-[var(--color-ink)] transition-colors">
-                                <span className="text-[var(--color-neutral)] text-xs font-mono group-hover:text-[var(--color-ink)]">
+                                <span className="text-[var(--color-neutral)] text-xs tabular-nums group-hover:text-[var(--color-ink)]">
                                     {uploadingQr ? 'กำลังอัปโหลด...' : 'เลือกรูป QR พร้อมเพย์'}
                                 </span>
                             </div>
@@ -683,32 +674,32 @@ export default function GeneralBookingSettingsTab({
                                 onChange={(e) => handleUpload(e.target.files[0], 'payment_qr_url', setUploadingQr)}
                             />
                         </label>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1.5 text-center">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1.5 text-center">
                             สัดส่วน 1:1, ขนาดไม่เกิน 500KB
                         </p>
 
                         <div className="mt-3 pt-3 border-t border-[var(--color-rule)] space-y-2.5">
                             <div>
-                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                     ชื่อบัญชีพร้อมเพย์
                                 </label>
                                 <input
                                     type="text"
                                     value={settings.promptpay_name || ''}
                                     onChange={(e) => handleSave('promptpay_name', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     placeholder="เช่น อิน เดอะ เฮ้าส์"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                     เบอร์ / รหัสพร้อมเพย์รับเงิน
                                 </label>
                                 <input
                                     type="text"
                                     value={settings.promptpay_id || ''}
                                     onChange={(e) => handleSave('promptpay_id', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     placeholder="เช่น 0985284217 หรือ เลขประจำตัว 13 หลัก"
                                 />
                             </div>
@@ -720,10 +711,10 @@ export default function GeneralBookingSettingsTab({
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] flex flex-col justify-between space-y-4">
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 2. TrueMoney Wallet
                             </h2>
-                            <span className="text-[11px] font-mono bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">วอลเล็ท</span>
+                            <span className="text-[11px] tabular-nums bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">วอลเล็ท</span>
                         </div>
                         <div className="mb-4 flex justify-center bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
                             {settings.truewallet_qr_url ? (
@@ -733,7 +724,7 @@ export default function GeneralBookingSettingsTab({
                                     className="w-32 h-32 object-cover rounded-lg border border-[var(--color-rule)]"
                                 />
                             ) : (
-                                <div className="w-32 h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs font-mono text-center px-2">
+                                <div className="w-32 h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs tabular-nums text-center px-2">
                                     ใช้รูปพร้อมเพย์หรืออัปโหลด QR ทรูวอลเล็ท
                                 </div>
                             )}
@@ -743,7 +734,7 @@ export default function GeneralBookingSettingsTab({
                     <div>
                         <label className="block w-full cursor-pointer group">
                             <div className="bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-xl p-3 text-center group-hover:border-[var(--color-ink)] transition-colors">
-                                <span className="text-[var(--color-neutral)] text-xs font-mono group-hover:text-[var(--color-ink)]">
+                                <span className="text-[var(--color-neutral)] text-xs tabular-nums group-hover:text-[var(--color-ink)]">
                                     {uploadingTrueWalletQr ? 'กำลังอัปโหลด...' : 'เลือกรูป QR TrueMoney'}
                                 </span>
                             </div>
@@ -754,32 +745,32 @@ export default function GeneralBookingSettingsTab({
                                 onChange={(e) => handleUpload(e.target.files[0], 'truewallet_qr_url', setUploadingTrueWalletQr)}
                             />
                         </label>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1.5 text-center">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1.5 text-center">
                             สัดส่วน 1:1, ขนาดไม่เกิน 500KB
                         </p>
 
                         <div className="mt-3 pt-3 border-t border-[var(--color-rule)] space-y-2.5">
                             <div>
-                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                     เบอร์ TrueMoney Wallet (ID)
                                 </label>
                                 <input
                                     type="text"
                                     value={settings.truewallet_phone || ''}
                                     onChange={(e) => handleSave('truewallet_phone', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     placeholder="เช่น 089xxxxxxx"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                     ชื่อบัญชี TrueMoney Wallet
                                 </label>
                                 <input
                                     type="text"
                                     value={settings.truewallet_account_name || ''}
                                     onChange={(e) => handleSave('truewallet_account_name', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     placeholder="เช่น นาย รัชชานนท์..."
                                 />
                             </div>
@@ -790,7 +781,7 @@ export default function GeneralBookingSettingsTab({
                 {/* Floor Plan Card */}
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] flex flex-col justify-between space-y-4">
                     <div>
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-3">
+                        <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)] mb-3">
                             Floor Plan (ผังโต๊ะร้าน)
                         </h2>
                         <div className="mb-4 flex justify-center bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
@@ -801,7 +792,7 @@ export default function GeneralBookingSettingsTab({
                                     className="w-full h-32 object-cover rounded-lg border border-[var(--color-rule)]"
                                 />
                             ) : (
-                                <div className="w-full h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs font-mono">
+                                <div className="w-full h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs tabular-nums">
                                     No Floor Plan Image
                                 </div>
                             )}
@@ -811,7 +802,7 @@ export default function GeneralBookingSettingsTab({
                     <div>
                         <label className="block w-full cursor-pointer group">
                             <div className="bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-xl p-3 text-center group-hover:border-[var(--color-ink)] transition-colors">
-                                <span className="text-[var(--color-neutral)] text-xs font-mono group-hover:text-[var(--color-ink)]">
+                                <span className="text-[var(--color-neutral)] text-xs tabular-nums group-hover:text-[var(--color-ink)]">
                                     {uploadingFloor ? 'กำลังอัปโหลด...' : 'เลือกรูปผังโต๊ะเพื่อเปลี่ยน'}
                                 </span>
                             </div>
@@ -822,7 +813,7 @@ export default function GeneralBookingSettingsTab({
                                 onChange={(e) => handleUpload(e.target.files[0], 'floorplan_url', setUploadingFloor)}
                             />
                         </label>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-2 text-center">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-2 text-center">
                             สัดส่วน 16:9 แนวนอน, ไม่เกิน 2MB
                         </p>
                     </div>
@@ -831,7 +822,7 @@ export default function GeneralBookingSettingsTab({
                 {/* Home Background Card */}
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] flex flex-col justify-between space-y-4">
                     <div>
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-3">
+                        <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)] mb-3">
                             Home Background (ภาพพื้นหลัง)
                         </h2>
                         <div className="mb-4 flex justify-center bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
@@ -842,7 +833,7 @@ export default function GeneralBookingSettingsTab({
                                     className="w-full h-32 object-cover rounded-lg border border-[var(--color-rule)]"
                                 />
                             ) : (
-                                <div className="w-full h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs font-mono">
+                                <div className="w-full h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs tabular-nums">
                                     Default Background
                                 </div>
                             )}
@@ -852,7 +843,7 @@ export default function GeneralBookingSettingsTab({
                     <div>
                         <label className="block w-full cursor-pointer group">
                             <div className="bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-xl p-3 text-center group-hover:border-[var(--color-ink)] transition-colors">
-                                <span className="text-[var(--color-neutral)] text-xs font-mono group-hover:text-[var(--color-ink)]">
+                                <span className="text-[var(--color-neutral)] text-xs tabular-nums group-hover:text-[var(--color-ink)]">
                                     {uploadingHomeBg ? 'กำลังอัปโหลด...' : 'เปลี่ยนภาพพื้นหลัง'}
                                 </span>
                             </div>
@@ -864,12 +855,12 @@ export default function GeneralBookingSettingsTab({
                             />
                         </label>
                         <div className="flex justify-between items-center mt-2 px-1">
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)]">1920x1080, ไม่เกิน 2MB</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">1920x1080, ไม่เกิน 2MB</p>
                             {settings.home_background_url && (
                                 <button
                                     type="button"
                                     onClick={() => handleSave('home_background_url', '')}
-                                    className="text-[11px] font-mono text-[var(--color-accent)] hover:underline cursor-pointer"
+                                    className="text-xs tabular-nums text-[var(--color-accent)] hover:underline cursor-pointer"
                                 >
                                     Reset Default
                                 </button>
@@ -883,17 +874,17 @@ export default function GeneralBookingSettingsTab({
             <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-4">
                 <div className="flex items-center gap-2 border-b border-[var(--color-rule)] pb-3">
                     <Trash2 size={18} className="text-[var(--color-ink)]" />
-                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                    <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                         Data Maintenance & Storage Optimization
                     </h2>
                 </div>
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border border-[var(--color-rule)] rounded-xl bg-[var(--color-paper)] gap-4">
                     <div>
-                        <h3 className="font-mono font-bold text-[var(--color-ink)] text-xs uppercase tracking-wide">
+                        <h3 className="tabular-nums font-bold text-[var(--color-ink)] text-xs  ">
                             Clean Old Slips (&gt; 180 Days)
                         </h3>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-0.5 leading-relaxed">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-0.5 leading-relaxed">
                             ลบรูปสลิปที่เก่ากว่า 180 วัน (6 เดือน) ออกจาก Storage เพื่อประหยัดพื้นที่ (ข้อมูลการจองและบิลหลักยังคงอยู่ครบถ้วน)
                         </p>
                     </div>
@@ -901,7 +892,7 @@ export default function GeneralBookingSettingsTab({
                         type="button"
                         onClick={handleCleanOldSlips}
                         disabled={cleaningSlips}
-                        className="px-5 py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-xl font-mono text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                        className="px-5 py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-xl tabular-nums text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
                     >
                         {cleaningSlips ? 'กำลังประมวลผล...' : 'ล้างสลิปเก่า (> 180 วัน)'}
                     </button>

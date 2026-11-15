@@ -27,7 +27,7 @@ export default function BarSOPPage() {
     } = useBarSOP({ department: 'bar', staffMode: true });
 
     return (
-        <div className="sop-rams-page min-h-screen bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] font-[var(--font-body)] selection:bg-[var(--color-brand)] selection:text-white">
+        <div className="sop-rams-page min-h-screen bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] font-[var(--font-body)] selection:bg-[var(--color-brand)] selection:text-[oklch(97%_0.008_28)]">
             {/* ── Header ── */}
             <header className="sticky top-0 z-30 bg-[var(--color-hallmark-paper)]/95 backdrop-blur-md border-b border-[var(--color-hallmark-rule)]">
                 <div className="px-4 pt-3 pb-2 safe-area-inset-top">
@@ -36,16 +36,16 @@ export default function BarSOPPage() {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => navigate('/staff')}
-                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[var(--color-hallmark-paper-dark)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[var(--color-hallmark-paper-dark)] hover:bg-[oklch(90%_0.008_28)] border border-[var(--color-hallmark-rule)] transition-colors"
                             >
                                 <ArrowLeft className="w-5 h-5 text-[var(--color-hallmark-ink)]" />
                             </button>
                             <div>
-                                <h1 className="text-lg font-mono font-bold tracking-tight flex items-center gap-2">
+                                <h1 className="text-lg tabular-nums font-bold tracking-tight flex items-center gap-2">
                                     <BookOpen className="w-5 h-5 text-[var(--color-brand)]" />
                                     <span>BAR SOP</span>
                                 </h1>
-                                <p className="text-[10px] text-[var(--color-hallmark-ink-muted)] uppercase tracking-widest font-bold">
+                                <p className="text-[13px] text-[var(--color-hallmark-ink-muted)] font-bold">
                                     สูตรเครื่องดื่ม
                                 </p>
                             </div>
@@ -55,15 +55,15 @@ export default function BarSOPPage() {
                                 onClick={() => setShowSearch(!showSearch)}
                                 className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors border ${
                                     showSearch 
-                                        ? 'bg-[var(--color-brand)] border-[var(--color-brand)] text-white'
-                                        : 'bg-[var(--color-hallmark-paper-dark)] border-[var(--color-hallmark-rule)] hover:bg-neutral-200 text-[var(--color-hallmark-ink)]'
+                                        ? 'bg-[var(--color-brand)] border-[var(--color-brand)] text-[oklch(97%_0.008_28)]'
+                                        : 'bg-[var(--color-hallmark-paper-dark)] border-[var(--color-hallmark-rule)] hover:bg-[oklch(90%_0.008_28)] text-[var(--color-hallmark-ink)]'
                                 }`}
                             >
                                 {showSearch ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
                             </button>
                             <button
                                 onClick={refresh}
-                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[var(--color-hallmark-paper-dark)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] text-[var(--color-hallmark-ink)] transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[var(--color-hallmark-paper-dark)] hover:bg-[oklch(90%_0.008_28)] border border-[var(--color-hallmark-rule)] text-[var(--color-hallmark-ink)] transition-colors"
                             >
                                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                             </button>
@@ -111,7 +111,7 @@ export default function BarSOPPage() {
                         onClick={() => setActiveCategory(null)}
                         className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition-all border ${
                             activeCategory === null
-                                ? 'bg-[var(--color-brand)] text-white border-[var(--color-brand)] shadow-sm'
+                                ? 'bg-[var(--color-brand)] text-[oklch(97%_0.008_28)] border-[var(--color-brand)] '
                                 : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] border-[var(--color-hallmark-rule)]'
                         }`}
                     >
@@ -123,7 +123,7 @@ export default function BarSOPPage() {
                             onClick={() => setActiveCategory(cat.id)}
                             className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 border ${
                                 activeCategory === cat.id
-                                    ? 'bg-[var(--color-brand)] text-white border-[var(--color-brand)] shadow-sm'
+                                    ? 'bg-[var(--color-brand)] text-[oklch(97%_0.008_28)] border-[var(--color-brand)] '
                                     : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] border-[var(--color-hallmark-rule)]'
                             }`}
                         >
@@ -139,13 +139,13 @@ export default function BarSOPPage() {
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-20 bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-lg animate-pulse" />
+                            <div key={i} className="h-20 bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-lg " />
                         ))}
                     </div>
                 ) : recipes.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-[var(--color-hallmark-ink-muted)]">
                         <BookOpen className="w-16 h-16 mb-4 opacity-30" />
-                        <p className="text-lg font-mono font-bold mb-1">
+                        <p className="text-lg tabular-nums font-bold mb-1">
                             {searchQuery ? 'ไม่พบเมนูที่ค้นหา' : 'ยังไม่มี SOP ในหมวดนี้'}
                         </p>
                         <p className="text-sm">
@@ -156,7 +156,7 @@ export default function BarSOPPage() {
                     <div className="space-y-4">
                         {/* Count */}
                         <div className="flex items-center justify-between px-1">
-                            <span className="text-xs text-[var(--color-hallmark-ink-muted)] font-mono font-bold uppercase tracking-wider">
+                            <span className="text-xs text-[var(--color-hallmark-ink-muted)] tabular-nums font-bold  ">
                                 {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
                             </span>
                             {searchQuery && (

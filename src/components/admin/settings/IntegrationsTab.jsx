@@ -124,17 +124,17 @@ export default function IntegrationsTab({
                     <div className="flex items-center gap-2 border-b border-[var(--color-rule)] pb-3">
                         <TrendingUp size={18} className="text-[var(--color-ink)]" />
                         <div>
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 Pricing Strategy (เป้าหมาย Food Cost %)
                             </h2>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                                 ใช้สำหรับคำนวณราคาขายแนะนำในระบบ Recipe Lab และ Costing
                             </p>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                             Target Food Cost %
                         </label>
                         <div className="flex items-center gap-3">
@@ -144,10 +144,10 @@ export default function IntegrationsTab({
                                 max="100"
                                 value={targetFoodCost}
                                 onChange={(e) => handleSaveStoreSetting('target_food_cost_pct', parseFloat(e.target.value))}
-                                className="w-24 bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-[var(--color-ink)] font-bold text-base outline-none focus:border-[var(--color-ink)] font-mono text-center"
+                                className="w-24 bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-[var(--color-ink)] font-bold text-base outline-none focus:border-[var(--color-ink)] tabular-nums text-center"
                             />
-                            <span className="text-[var(--color-ink)] font-bold font-mono text-sm">%</span>
-                            <div className="text-[11px] font-mono text-[var(--color-neutral)] leading-tight">
+                            <span className="text-[var(--color-ink)] font-bold tabular-nums text-sm">%</span>
+                            <div className="text-xs tabular-nums text-[var(--color-neutral)] leading-tight">
                                 ตัวอย่าง: ต้นทุน 30 บาท ÷ 30% = ราคาขายแนะนำ 100 บาท
                             </div>
                         </div>
@@ -159,10 +159,10 @@ export default function IntegrationsTab({
                     <div className="flex items-center gap-2 border-b border-[var(--color-rule)] pb-3">
                         <Radio size={18} className="text-[var(--color-ink)]" />
                         <div>
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 Spotify Song Requests API
                             </h2>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                                 ระบบรับคำขอเพลงอัตโนมัติจากลูกค้าผ่าน Spotify Web API
                             </p>
                         </div>
@@ -170,43 +170,43 @@ export default function IntegrationsTab({
 
                     <div className="space-y-3">
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Spotify Client ID
                             </label>
                             <input
                                 type="text"
                                 value={settings.spotify_client_id || ''}
                                 onChange={(e) => handleSave('spotify_client_id', e.target.value)}
-                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 placeholder="ป้อน Spotify Client ID"
                             />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Spotify Client Secret
                             </label>
                             <input
                                 type="password"
                                 value={settings.spotify_client_secret || ''}
                                 onChange={(e) => handleSave('spotify_client_secret', e.target.value)}
-                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 placeholder="ป้อน Spotify Client Secret"
                             />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Spotify Playlist URL or ID
                             </label>
                             <input
                                 type="text"
                                 value={settings.spotify_playlist_id || ''}
                                 onChange={(e) => handleSave('spotify_playlist_id', e.target.value)}
-                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 placeholder="เช่น 37i9dQZF1DXcBWIGg3m31s หรือ URL เต็ม"
                             />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 กฎและแนวเพลงคุมโทนร้าน (Music Guidelines)
                             </label>
                             <textarea
@@ -226,10 +226,10 @@ export default function IntegrationsTab({
                 {/* QR Customer Ordering Settings Card */}
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-4">
                     <div className="border-b border-[var(--color-rule)] pb-3">
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                        <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                             QR Ordering & Location Geofencing
                         </h2>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                             ควบคุมการสั่งอาหารด้วยตนเองของลูกค้าที่โต๊ะอาหาร
                         </p>
                     </div>
@@ -242,10 +242,10 @@ export default function IntegrationsTab({
                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)]'
                         }`}>
                             <div>
-                                <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                     Enable QR Ordering
                                 </span>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                     เปิดให้ลูกค้าสแกนสั่งอาหารและเครื่องดื่มที่โต๊ะ
                                 </span>
                             </div>
@@ -271,10 +271,10 @@ export default function IntegrationsTab({
                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)]'
                         }`}>
                             <div>
-                                <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                     Enable Song Request Page
                                 </span>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                     เปิดหน้าขอเพลงให้ลูกค้าเลือกส่งเพลงเข้าคิว
                                 </span>
                             </div>
@@ -300,10 +300,10 @@ export default function IntegrationsTab({
                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)]'
                         }`}>
                             <div>
-                                <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                     Enable GPS Geofencing (จำกัดพิกัดสั่งในร้าน)
                                 </span>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                     ป้องกันการสั่งจากนอกบริเวณร้าน
                                 </span>
                             </div>
@@ -326,26 +326,26 @@ export default function IntegrationsTab({
                             <div className="space-y-3 bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                             Latitude
                                         </label>
                                         <input
                                             type="text"
                                             value={settings.qr_latitude || ''}
                                             onChange={(e) => handleSave('qr_latitude', e.target.value)}
-                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                             placeholder="เช่น 17.390086"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                             Longitude
                                         </label>
                                         <input
                                             type="text"
                                             value={settings.qr_longitude || ''}
                                             onChange={(e) => handleSave('qr_longitude', e.target.value)}
-                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                             placeholder="เช่น 104.792934"
                                         />
                                     </div>
@@ -374,7 +374,7 @@ export default function IntegrationsTab({
                                                 { enableHighAccuracy: true, timeout: 10000 }
                                             );
                                         }}
-                                        className="px-3 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold text-[var(--color-ink)] flex items-center gap-1.5 cursor-pointer transition-colors"
+                                        className="px-3 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] flex items-center gap-1.5 cursor-pointer transition-colors"
                                     >
                                         <MapPin size={13} />
                                         <span>ดึงพิกัดปัจจุบันจากเครื่องนี้</span>
@@ -383,10 +383,10 @@ export default function IntegrationsTab({
 
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
-                                        <label className="block text-[11px] font-mono font-bold uppercase text-[var(--color-ink)]">
+                                        <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                             Allowed Radius (รัศมีเป็นเมตร)
                                         </label>
-                                        <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                        <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                             แนะนำ 150 - 250 เมตร สำหรับในอาคาร
                                         </span>
                                     </div>
@@ -394,7 +394,7 @@ export default function IntegrationsTab({
                                         type="number"
                                         value={settings.qr_radius || ''}
                                         onChange={(e) => handleSave('qr_radius', e.target.value)}
-                                        className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                        className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         placeholder="เช่น 250"
                                     />
                                 </div>
@@ -403,7 +403,7 @@ export default function IntegrationsTab({
 
                         {/* Google Review URL */}
                         <div className="pt-2">
-                            <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Google Review URL (ลิงก์รีวิว Google Maps)
                             </label>
                             <div className="flex gap-2">
@@ -411,7 +411,7 @@ export default function IntegrationsTab({
                                     type="text"
                                     value={settings.google_review_url || ''}
                                     onChange={(e) => handleSave('google_review_url', e.target.value)}
-                                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs tabular-nums text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     placeholder="https://g.page/r/.../review"
                                 />
                                 {settings.google_review_url && (
@@ -419,7 +419,7 @@ export default function IntegrationsTab({
                                         href={settings.google_review_url}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl text-xs font-mono text-[var(--color-ink)] flex items-center gap-1 shrink-0"
+                                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl text-xs tabular-nums text-[var(--color-ink)] flex items-center gap-1 shrink-0"
                                     >
                                         <ExternalLink size={13} />
                                     </a>
@@ -433,11 +433,11 @@ export default function IntegrationsTab({
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-4">
                     <div className="flex items-start justify-between border-b border-[var(--color-rule)] pb-3 gap-2">
                         <div>
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] flex items-center gap-2">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)] flex items-center gap-2">
                                 <Clock size={16} />
                                 Kitchen Cutoff Schedule (เวลาปิดครัว)
                             </h2>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-0.5">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-0.5">
                                 กำหนดเวลาปิดรับออเดอร์ครัว และเลือกหมวดหมู่ที่ต้องการซ่อนในหน้า QR ลูกค้า
                             </p>
                         </div>
@@ -447,7 +447,7 @@ export default function IntegrationsTab({
                             const isClosed = isKitchenCurrentlyClosed();
                             const closedCount = getKitchenClosedCategoryIds().length;
                             return (
-                                <div className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold shrink-0 ${
+                                <div className={`px-2.5 py-1 rounded-lg border text-xs tabular-nums font-bold shrink-0 ${
                                     isClosed
                                         ? 'bg-[var(--color-paper)] border-[var(--color-accent)] text-[var(--color-accent)]'
                                         : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
@@ -466,10 +466,10 @@ export default function IntegrationsTab({
                                 : 'bg-[var(--color-paper)] border-[var(--color-rule)]'
                         }`}>
                             <div>
-                                <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                     เปิดใช้งานระบบตัดรอบเวลาปิดครัว
                                 </span>
-                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                     เมื่อถึงเวลาปิดครัว จะซ่อนหมวดหมู่อาหารที่เลือกไว้โดยอัตโนมัติ
                                 </span>
                             </div>
@@ -490,7 +490,7 @@ export default function IntegrationsTab({
 
                         {/* Kitchen Status Mode Options */}
                         <div className="space-y-1.5 pt-1">
-                            <label className="text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase tracking-wider block">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-ink)] block">
                                 โหมดสถานะห้องครัว (Kitchen Status Mode)
                             </label>
                             <div className="grid grid-cols-3 gap-2">
@@ -505,7 +505,7 @@ export default function IntegrationsTab({
                                             key={mode}
                                             type="button"
                                             onClick={() => handleSave('qr_kitchen_mode', mode)}
-                                            className={`p-2 rounded-lg border text-[11px] font-mono font-bold transition-colors cursor-pointer text-center ${
+                                            className={`p-2 rounded-lg border text-xs tabular-nums font-bold transition-colors cursor-pointer text-center ${
                                                 isSelected
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] '
                                                     : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
@@ -523,7 +523,7 @@ export default function IntegrationsTab({
                             {/* Morning Open */}
                             <div className="bg-[var(--color-paper)] p-3 rounded-xl border border-[var(--color-rule)] space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase flex items-center gap-1">
+                                    <label className="text-xs tabular-nums font-bold text-[var(--color-ink)] flex items-center gap-1">
                                         <Sun size={13} /> เวลาเปิดครัว (Open)
                                     </label>
                                 </div>
@@ -532,7 +532,7 @@ export default function IntegrationsTab({
                                         type="time"
                                         value={settings.qr_kitchen_open_time || '11:00'}
                                         onChange={(e) => handleSave('qr_kitchen_open_time', e.target.value)}
-                                        className="w-24 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1.5 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                        className="w-24 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1.5 rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                     <div className="flex items-center gap-1 flex-wrap">
                                         {['08:00', '09:00', '10:00', '11:00'].map(t => (
@@ -540,7 +540,7 @@ export default function IntegrationsTab({
                                                 key={t}
                                                 type="button"
                                                 onClick={() => handleSave('qr_kitchen_open_time', t)}
-                                                className={`px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold cursor-pointer transition-colors ${
+                                                className={`px-1.5 py-0.5 rounded border text-[11px] tabular-nums font-bold cursor-pointer transition-colors ${
                                                     (settings.qr_kitchen_open_time || '11:00') === t
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                         : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
@@ -556,7 +556,7 @@ export default function IntegrationsTab({
                             {/* Night Cutoff */}
                             <div className="bg-[var(--color-paper)] p-3 rounded-xl border border-[var(--color-rule)] space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[11px] font-mono font-bold text-[var(--color-ink)] uppercase flex items-center gap-1">
+                                    <label className="text-xs tabular-nums font-bold text-[var(--color-ink)] flex items-center gap-1">
                                         <Moon size={13} /> เวลาปิดครัว (Cutoff)
                                     </label>
                                 </div>
@@ -565,7 +565,7 @@ export default function IntegrationsTab({
                                         type="time"
                                         value={settings.qr_kitchen_close_time || '20:45'}
                                         onChange={(e) => handleSave('qr_kitchen_close_time', e.target.value)}
-                                        className="w-24 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1.5 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                        className="w-24 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1.5 rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                     <div className="flex items-center gap-1 flex-wrap">
                                         {['20:45', '21:00', '21:30', '22:00'].map(t => (
@@ -573,7 +573,7 @@ export default function IntegrationsTab({
                                                 key={t}
                                                 type="button"
                                                 onClick={() => handleSave('qr_kitchen_close_time', t)}
-                                                className={`px-1.5 py-0.5 rounded border text-[11px] font-mono font-bold cursor-pointer transition-colors ${
+                                                className={`px-1.5 py-0.5 rounded border text-[11px] tabular-nums font-bold cursor-pointer transition-colors ${
                                                     (settings.qr_kitchen_close_time || '20:45') === t
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                         : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
@@ -591,7 +591,7 @@ export default function IntegrationsTab({
                         <div className="space-y-2 pt-2 border-t border-[var(--color-rule)]">
                             <div className="flex items-center justify-between gap-2">
                                 <div>
-                                    <span className="block font-mono font-bold text-[11px] text-[var(--color-ink)] uppercase tracking-wider">
+                                    <span className="block tabular-nums font-bold text-xs text-[var(--color-ink)]  ">
                                         Cutoff Categories (หมวดที่ซ่อนเมื่อครัวปิด)
                                     </span>
                                 </div>
@@ -599,21 +599,21 @@ export default function IntegrationsTab({
                                     <button
                                         type="button"
                                         onClick={handleSelectAllKitchenCategories}
-                                        className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                                        className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer"
                                     >
                                         เฉพาะครัว
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleSelectAllCategoriesForCutoff}
-                                        className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                                        className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer"
                                     >
                                         ทั้งหมด
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleClearAllCutoffCategories}
-                                        className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                                        className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer"
                                     >
                                         ล้าง
                                     </button>
@@ -644,7 +644,7 @@ export default function IntegrationsTab({
                                                 </div>
                                                 <span className="text-xs truncate">{cat.name}</span>
                                             </div>
-                                            <span className="text-[11px] font-mono uppercase text-[var(--color-neutral)] shrink-0">
+                                            <span className="text-xs tabular-nums text-[var(--color-neutral)] shrink-0">
                                                 {isBar ? 'Bar' : 'Kitchen'}
                                             </span>
                                         </div>

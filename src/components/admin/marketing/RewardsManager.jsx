@@ -183,7 +183,7 @@ export default function RewardsManager() {
     const activeCount = rewards.filter(r => r.is_active).length
 
     return (
-        <div className="space-y-6 font-mono">
+        <div className="space-y-6 tabular-nums">
             {/* Header Action Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
                 <div className="flex flex-wrap items-center gap-2">
@@ -192,7 +192,7 @@ export default function RewardsManager() {
                         <button
                             type="button"
                             onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                            className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 statusFilter === 'all'
                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
                                     : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
@@ -203,7 +203,7 @@ export default function RewardsManager() {
                         <button
                             type="button"
                             onClick={() => setStatusFilter('active')}
-                            className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                            className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 statusFilter === 'active'
                                     ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] '
                                     : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
@@ -214,7 +214,7 @@ export default function RewardsManager() {
                         <button
                             type="button"
                             onClick={() => setStatusFilter('inactive')}
-                            className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                            className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 statusFilter === 'inactive'
                                     ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] '
                                     : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
@@ -240,7 +240,7 @@ export default function RewardsManager() {
                 <button
                     type="button"
                     onClick={() => handleOpenModal()}
-                    className="bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer "
+                    className="bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-sm text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer "
                 >
                     <Plus size={14} />
                     <span>เพิ่มของรางวัลใหม่</span>
@@ -251,11 +251,11 @@ export default function RewardsManager() {
             {loading ? (
                 <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
-                    <p className="text-xs uppercase tracking-wider text-[oklch(55%_0.010_28)]">กำลังโหลดของรางวัล xhaus...</p>
+                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">กำลังโหลดของรางวัล xhaus...</p>
                 </div>
             ) : filteredRewards.length === 0 ? (
                 <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm">
-                    <p className="text-xs uppercase tracking-wider text-[oklch(55%_0.010_28)]">ไม่พบรายการของรางวัลตามเงื่อนไข</p>
+                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">ไม่พบรายการของรางวัลตามเงื่อนไข</p>
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -290,7 +290,7 @@ export default function RewardsManager() {
                                             </button>
                                         </div>
 
-                                        <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-xs border ${
+                                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-xs border ${
                                             reward.is_active
                                                 ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
                                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
@@ -304,7 +304,7 @@ export default function RewardsManager() {
                                         {reward.title}
                                     </h4>
                                     {reward.description && (
-                                        <p className="text-xs text-[oklch(42%_0.010_28)] line-clamp-2 mb-3">
+                                        <p className="text-[13px] text-[oklch(42%_0.010_28)] line-clamp-2 mb-3">
                                             {reward.description}
                                         </p>
                                     )}
@@ -312,24 +312,24 @@ export default function RewardsManager() {
                                     {/* Points & Auto-Inject Pill */}
                                     <div className="space-y-1.5 pt-2 border-t border-[oklch(85%_0.012_28)] text-xs">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[oklch(55%_0.010_28)] text-[11px]">ใช้แต้มสะสม:</span>
+                                            <span className="text-[oklch(55%_0.010_28)] text-xs">ใช้แต้มสะสม:</span>
                                             <span className="font-bold text-[oklch(52%_0.16_28)]">
                                                 {parseFloat(reward.xhaus_cost).toLocaleString()} xhaus 🪙
                                             </span>
                                         </div>
 
                                         {linkedItem ? (
-                                            <div className="flex items-center gap-1.5 text-[11px] text-[oklch(45%_0.08_140)] bg-[oklch(94%_0.02_140)] px-2 py-1 rounded-xs border border-[oklch(45%_0.08_140)]">
+                                            <div className="flex items-center gap-1.5 text-xs text-[oklch(45%_0.08_140)] bg-[oklch(94%_0.02_140)] px-2 py-1 rounded-xs border border-[oklch(45%_0.08_140)]">
                                                 <LinkIcon size={11} className="shrink-0" />
                                                 <span className="truncate">ผูกเมนู: <strong>{linkedItem.name}</strong> (Auto 0฿)</span>
                                             </div>
                                         ) : (
-                                            <div className="text-[11px] text-[oklch(55%_0.010_28)] italic">
+                                            <div className="text-xs text-[oklch(55%_0.010_28)] italic">
                                                 ไม่มีเมนูผูกอัตโนมัติ
                                             </div>
                                         )}
 
-                                        <div className="flex items-center gap-1.5 text-[11px] text-[oklch(55%_0.010_28)] pt-1">
+                                        <div className="flex items-center gap-1.5 text-xs text-[oklch(55%_0.010_28)] pt-1">
                                             <AlertCircle size={12} />
                                             <span>แลกแล้ว: <strong className="text-[oklch(18%_0.012_28)]">{reward.used_count || 0}</strong> {reward.usage_limit ? `/ ${reward.usage_limit} สิทธิ์` : '(ไม่จำกัด)'}</span>
                                         </div>
@@ -368,12 +368,12 @@ export default function RewardsManager() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[oklch(99%_0.004_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden font-mono max-h-[90vh] flex flex-col"
+                            className="bg-[oklch(99%_0.004_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden tabular-nums max-h-[90vh] flex flex-col"
                         >
                             <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex justify-between items-center">
                                 <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">xHAUS REWARDS CATALOG</span>
-                                    <h2 className="text-base font-bold uppercase text-[oklch(18%_0.012_28)]">
+                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">xHAUS REWARDS CATALOG</span>
+                                    <h2 className="text-base font-bold text-[oklch(18%_0.012_28)]">
                                         {editingReward ? 'แก้ไขของรางวัล' : 'สร้างของรางวัลใหม่'}
                                     </h2>
                                 </div>
@@ -384,7 +384,7 @@ export default function RewardsManager() {
 
                             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
                                 <div>
-                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
                                         ชื่อของรางวัล (Reward Title) *
                                     </label>
                                     <input
@@ -398,7 +398,7 @@ export default function RewardsManager() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
                                         คำอธิบาย / เงื่อนไขการรับ (Description)
                                     </label>
                                     <textarea
@@ -412,7 +412,7 @@ export default function RewardsManager() {
 
                                 <div className="grid grid-cols-3 gap-3">
                                     <div>
-                                        <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
                                             แต้มที่ใช้ (Coins) *
                                         </label>
                                         <input
@@ -426,7 +426,7 @@ export default function RewardsManager() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
                                             รหัสแลก (Code) *
                                         </label>
                                         <input
@@ -435,11 +435,11 @@ export default function RewardsManager() {
                                             placeholder="IHGLASS50"
                                             value={formData.claim_code}
                                             onChange={e => setFormData({ ...formData, claim_code: e.target.value.toUpperCase() })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] uppercase outline-none focus:border-[oklch(18%_0.012_28)] font-bold"
+                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] font-bold"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
                                             จำกัดสิทธิ์ (Limit)
                                         </label>
                                         <input
@@ -454,7 +454,7 @@ export default function RewardsManager() {
                                 </div>
 
                                 <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-1.5">
-                                    <label className="block text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase flex items-center gap-1.5">
+                                    <label className="block text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
                                         <LinkIcon size={12} className="text-[oklch(45%_0.08_140)]" />
                                         <span>Linked Menu Item (ผูกเมนูอัตโนมัติ 0.00 บาท ใน POS)</span>
                                     </label>
@@ -470,7 +470,7 @@ export default function RewardsManager() {
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">
                                         เมื่อพนักงานนำรหัสนี้ไปใส่ในหน้าจอ POS เมนูที่เลือกจะถูกเพิ่มลงตะกร้าอัตโนมัติด้วยราคา 0.00 บาท
                                     </p>
                                 </div>

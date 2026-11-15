@@ -75,7 +75,6 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
     return (
         <section className={`border ${RULE} bg-[oklch(99%_0.004_28)] font-sans text-[oklch(18%_0.012_28)]`} aria-labelledby="recipe-unit-check">
             <div className={`px-3 py-2.5 border-b ${RULE} bg-[oklch(98%_0.004_28)]`}>
-                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">UNIT CHECK</span>
                 <h2 id="recipe-unit-check" className="font-bold text-[15px] leading-6">หน่วยในสูตรไม่ตรง {issues.length} แถว</h2>
                 <p className={`text-[12px] leading-5 ${MUTED}`}>
                     ต้นทุนและการตัดสต๊อกอ่านตัวเลขเป็นหน่วยใช้ของวัตถุดิบ แถวเหล่านี้จึงคิดผิดจนกว่าจะแก้
@@ -92,16 +91,16 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
                                 {i.ingredientName}
                             </p>
                             <p className={`text-[12px] leading-5 ${MUTED}`}>
-                                สูตรเขียน <span className="font-mono">{fmt(i.quantity)} {i.from}</span> แต่หน่วยใช้คือ <span className="font-mono">{i.to}</span>
-                                {i.fix.kind === 'convert' && <> · ควรเป็น <span className="font-mono font-bold">{fmt(i.fix.quantity)} {i.to}</span></>}
-                                {i.fix.kind === 'liquid' && <> · ถ้าเป็นของเหลว ≈ <span className="font-mono font-bold">{fmt(i.fix.quantity)} {i.to}</span></>}
+                                สูตรเขียน <span className="tabular-nums">{fmt(i.quantity)} {i.from}</span> แต่หน่วยใช้คือ <span className="tabular-nums">{i.to}</span>
+                                {i.fix.kind === 'convert' && <> · ควรเป็น <span className="tabular-nums font-bold">{fmt(i.fix.quantity)} {i.to}</span></>}
+                                {i.fix.kind === 'liquid' && <> · ถ้าเป็นของเหลว ≈ <span className="tabular-nums font-bold">{fmt(i.fix.quantity)} {i.to}</span></>}
                                 {i.fix.kind === 'manual' && <> · คนละประเภทหน่วย ต้องแก้ในสูตรเอง</>}
                             </p>
                         </div>
                         <div className="flex gap-2 sm:justify-end">
                             {i.fix.kind !== 'manual' && (
                                 <button type="button" onClick={() => applyFix(i)} disabled={busy === i.rowId}
-                                    className="px-3 py-1.5 border border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[13px] font-bold cursor-pointer disabled:opacity-40 whitespace-nowrap">
+                                    className="admin-btn is-primary h-9 disabled:opacity-40">
                                     {busy === i.rowId ? 'กำลังแก้...' : i.fix.kind === 'liquid' ? 'ใช้ 1 ml = 1 g' : 'แปลงหน่วย'}
                                 </button>
                             )}

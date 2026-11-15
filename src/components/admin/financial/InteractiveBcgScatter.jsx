@@ -108,20 +108,20 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
             <div className="p-4 bg-[oklch(94%_0.010_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
                             SCATTER // BCG MATRIX
                         </span>
                         <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
                             เมทริกซ์วิเคราะห์เมนูแบบโต้ตอบ (Interactive Menu Engineering Scatter Plot)
                         </h3>
                     </div>
-                    <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
                         แกน X = จำนวนยอดขาย (Volume) // แกน Y = ราคาต่อจานและกำไร (Margin) // ขนาด Bubble = รายได้รวม
                     </p>
                 </div>
 
                 {/* Filter and Search Bar */}
-                <div className="flex items-center gap-2 font-mono text-xs">
+                <div className="flex items-center gap-2 tabular-nums text-xs">
                     <input
                         type="text"
                         placeholder="ค้นหาเมนู..."
@@ -133,7 +133,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
             </div>
 
             {/* Quadrant Quick Tabs */}
-            <div className="p-2 bg-[oklch(97%_0.008_28)] flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs border-b border-[oklch(85%_0.012_28)]">
+            <div className="p-2 bg-[oklch(97%_0.008_28)] flex items-center gap-1.5 overflow-x-auto no-scrollbar tabular-nums text-xs border-b border-[oklch(85%_0.012_28)]">
                 {[
                     { id: 'all', label: 'ทั้งหมด [ALL]', count: scatterItems.length },
                     { id: 'stars', label: '[STARS] เมนูดาวเด่น', count: scatterItems.filter(i => i.quadrant === 'stars').length },
@@ -151,7 +151,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                         }`}
                     >
                         <span>{tab.label}</span>
-                        <span className="ml-1.5 opacity-80 text-[11px]">({tab.count})</span>
+                        <span className="ml-1.5 opacity-80 text-xs">({tab.count})</span>
                     </button>
                 ))}
             </div>
@@ -177,7 +177,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             x={svgWidth - pad.right - 10}
                             y={pad.top + 18}
                             textAnchor="end"
-                            className="font-mono text-[11px] font-bold fill-[oklch(52%_0.16_28)] uppercase"
+                            className="tabular-nums text-xs font-bold fill-[oklch(52%_0.16_28)] "
                         >
                             [STARS] (ยอดขายสูง / ราคาสูง)
                         </text>
@@ -195,7 +195,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             x={pad.left + 10}
                             y={pad.top + 18}
                             textAnchor="start"
-                            className="font-mono text-[11px] font-bold fill-[oklch(35%_0.06_250)] uppercase"
+                            className="tabular-nums text-xs font-bold fill-[oklch(35%_0.06_250)] "
                         >
                             [PUZZLES] (ยอดขายน้อย / ราคาสูง)
                         </text>
@@ -213,7 +213,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             x={svgWidth - pad.right - 10}
                             y={svgHeight - pad.bottom - 10}
                             textAnchor="end"
-                            className="font-mono text-[11px] font-bold fill-[oklch(45%_0.08_140)] uppercase"
+                            className="tabular-nums text-xs font-bold fill-[oklch(45%_0.08_140)] "
                         >
                             [PLOWHORSES] (ยอดขายสูง / ราคาประหยัด)
                         </text>
@@ -231,7 +231,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             x={pad.left + 10}
                             y={svgHeight - pad.bottom - 10}
                             textAnchor="start"
-                            className="font-mono text-[11px] font-bold fill-[oklch(55%_0.010_28)] uppercase"
+                            className="tabular-nums text-xs font-bold fill-[oklch(55%_0.010_28)] "
                         >
                             [DOGS] (ยอดขายน้อย / ราคาต่ำ)
                         </text>
@@ -274,7 +274,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             return (
                                 <g key={ratio}>
                                     <line x1={x} y1={svgHeight - pad.bottom} x2={x} y2={svgHeight - pad.bottom + 4} stroke="oklch(55% 0.010 28)" />
-                                    <text x={x} y={svgHeight - pad.bottom + 16} textAnchor="middle" className="font-mono text-[11px] fill-[oklch(55%_0.010_28)]">
+                                    <text x={x} y={svgHeight - pad.bottom + 16} textAnchor="middle" className="tabular-nums text-xs fill-[oklch(55%_0.010_28)]">
                                         {val} จาน
                                     </text>
                                 </g>
@@ -288,7 +288,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             return (
                                 <g key={ratio}>
                                     <line x1={pad.left - 4} y1={y} x2={pad.left} y2={y} stroke="oklch(55% 0.010 28)" />
-                                    <text x={pad.left - 8} y={y + 3.5} textAnchor="end" className="font-mono text-[11px] fill-[oklch(55%_0.010_28)]">
+                                    <text x={pad.left - 8} y={y + 3.5} textAnchor="end" className="tabular-nums text-xs fill-[oklch(55%_0.010_28)]">
                                         ฿{val}
                                     </text>
                                 </g>
@@ -300,7 +300,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             x={pad.left + plotW / 2}
                             y={svgHeight - 10}
                             textAnchor="middle"
-                            className="font-mono text-[11px] font-bold fill-[oklch(18%_0.012_28)] uppercase"
+                            className="tabular-nums text-xs font-bold fill-[oklch(18%_0.012_28)] "
                         >
                             ยอดขายเชิงปริมาณ (UNITS SOLD) -&gt;
                         </text>
@@ -335,7 +335,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                                             x={cx}
                                             y={cy - radius - 4}
                                             textAnchor="middle"
-                                            className="font-sans text-[11px] font-bold fill-[oklch(18%_0.012_28)] pointer-events-none"
+                                            className="font-sans text-xs font-bold fill-[oklch(18%_0.012_28)] pointer-events-none"
                                         >
                                             {item.name}
                                         </text>
@@ -348,12 +348,12 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
 
                 {/* Hover Details Popover */}
                 {hoveredItem && (
-                    <div className="absolute top-6 right-6 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-3 rounded-sm font-mono text-xs shadow-lg border border-[oklch(35%_0.012_28)] max-w-xs pointer-events-none z-10">
+                    <div className="absolute top-6 right-6 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-3 rounded-sm tabular-nums text-xs shadow-lg border border-[oklch(35%_0.012_28)] max-w-xs pointer-events-none z-10">
                         <div className="flex items-center justify-between border-b border-[oklch(35%_0.012_28)] pb-1.5 mb-2">
                             <span className="font-bold text-sm text-[oklch(97%_0.008_28)] font-sans truncate">{hoveredItem.name}</span>
-                            <span className="text-[11px] px-1.5 py-0.2 bg-[oklch(35%_0.012_28)] uppercase">{hoveredItem.quadrant}</span>
+                            <span className="text-[11px] px-1.5 py-0.2 bg-[oklch(35%_0.012_28)] ">{hoveredItem.quadrant}</span>
                         </div>
-                        <div className="space-y-1 text-[11px]">
+                        <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
                                 <span className="text-[oklch(75%_0.010_28)]">ราคาขาย:</span>
                                 <span className="font-bold">฿{hoveredItem.price}</span>
@@ -370,7 +370,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                                 <span className="text-[oklch(75%_0.010_28)]">กำไรประเมิน:</span>
                                 <span className="font-bold text-[oklch(45%_0.08_140)]">~{hoveredItem.estMarginPct}%</span>
                             </div>
-                            <div className="pt-2 mt-1 border-t border-[oklch(35%_0.012_28)] text-[11px] text-[oklch(85%_0.012_28)]">
+                            <div className="pt-2 mt-1 border-t border-[oklch(35%_0.012_28)] text-xs text-[oklch(85%_0.012_28)]">
                                 <span className="font-bold text-[oklch(52%_0.16_28)]">คำแนะนำ:</span> {hoveredItem.action}
                             </div>
                         </div>

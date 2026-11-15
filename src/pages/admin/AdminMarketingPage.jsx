@@ -126,7 +126,7 @@ export default function AdminMarketingPage({ defaultTab = 'members' }) {
             </AdminPageHeader>
 
             {/* Content Display Area */}
-            <div className="flex-1 bg-[oklch(98%_0.006_28)] rounded-sm border border-[oklch(85%_0.012_28)] p-4 md:p-6 overflow-hidden">
+            <div className="flex-1 min-w-0">
                 <AdminTabPanel id={activeTab}>
                         {activeTab === 'members' && <AdminMembers />}
                         {activeTab === 'ads_landing' && <AdLandingAnalyticsTab />}

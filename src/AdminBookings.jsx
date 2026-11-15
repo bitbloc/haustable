@@ -671,7 +671,7 @@ export default function AdminBookings() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto pb-24 font-mono text-xs">
+        <div className="max-w-7xl mx-auto pb-24 tabular-nums text-xs">
             <AdminPageHeader
                 title="Bookings & Orders"
                 meta={<>{bookings.length} รายการ · ช่วง {getDateLabel()}</>}
@@ -804,14 +804,14 @@ export default function AdminBookings() {
                         const validDeletable = bookings.filter(b => selectedIds.includes(b.id) && (b.status === 'completed' || b.status === 'cancelled' || b.status === 'void'))
                         
                         if (validDeletable.length === 0) return (
-                            <div className="text-[11px] text-[var(--color-neutral)]">
+                            <div className="text-xs text-[var(--color-neutral)]">
                                 Only Completed/Cancelled orders can be deleted
                             </div>
                         )
 
                         return (
                             <div className="flex items-center gap-2">
-                                <span className="text-[11px] uppercase text-[var(--color-accent)] font-bold tracking-wider">
+                                <span className="text-xs text-[var(--color-accent)] font-bold ">
                                     Hold 5s to Delete ({validDeletable.length})
                                 </span>
                                 <HoldToDeleteButton 
@@ -827,9 +827,9 @@ export default function AdminBookings() {
             {/* 5. Main Tabular Grid */}
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse font-mono text-xs">
+                    <table className="w-full text-left border-collapse tabular-nums text-[13px]">
                         <thead>
-                            <tr className="bg-[var(--color-paper-2)] text-[11px] uppercase text-[var(--color-muted)] font-bold tracking-wider border-b border-[var(--color-rule)]">
+                            <tr className="bg-[var(--color-paper-2)] text-xs text-[var(--color-muted)] font-bold border-b border-[var(--color-rule)]">
                                 <th className="p-3 w-10 text-center border-r border-[var(--color-rule)]">
                                     <input 
                                         type="checkbox" 
@@ -841,7 +841,7 @@ export default function AdminBookings() {
                                 <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('booking_time')}>
                                     <div className="flex items-center gap-1">
                                         <span>DATE & TIME</span>
-                                        <span className="text-[11px] text-[var(--color-accent)]">
+                                        <span className="text-xs text-[var(--color-accent)]">
                                             {sortConfig.key === 'booking_time' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '·'}
                                         </span>
                                     </div>
@@ -850,7 +850,7 @@ export default function AdminBookings() {
                                 <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('customer')}>
                                     <div className="flex items-center gap-1">
                                         <span>CUSTOMER</span>
-                                        <span className="text-[11px] text-[var(--color-accent)]">
+                                        <span className="text-xs text-[var(--color-accent)]">
                                             {sortConfig.key === 'customer' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '·'}
                                         </span>
                                     </div>
@@ -858,7 +858,7 @@ export default function AdminBookings() {
                                 <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('total')}>
                                     <div className="flex items-center gap-1">
                                         <span>ORDER & VALUE</span>
-                                        <span className="text-[11px] text-[var(--color-accent)]">
+                                        <span className="text-xs text-[var(--color-accent)]">
                                             {sortConfig.key === 'total' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '·'}
                                         </span>
                                     </div>
@@ -927,11 +927,11 @@ export default function AdminBookings() {
                                                             {formatThaiTimeOnly(booking.booking_time || booking.created_at)}
                                                         </span>
                                                     </div>
-                                                    <div className="text-[11px] text-[var(--color-neutral)]">
+                                                    <div className="text-xs text-[var(--color-neutral)]">
                                                         {formatThaiDateOnly(booking.booking_time || booking.created_at)}
                                                     </div>
                                                     {booking.created_at && (
-                                                        <div className="text-[11px] text-[var(--color-neutral)]">
+                                                        <div className="text-xs text-[var(--color-neutral)]">
                                                             ORDERED: {formatThaiTimeOnly(booking.created_at)}
                                                         </div>
                                                     )}
@@ -942,11 +942,11 @@ export default function AdminBookings() {
                                             <td className="p-3 border-r border-[var(--color-rule)]">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className={`px-1.5 py-0.2 text-[11px] font-bold uppercase border ${origin.badgeClass}`}>
+                                                        <span className={`px-1.5 py-0.2 text-[11px] font-bold border ${origin.badgeClass}`}>
                                                             {origin.shortTag}
                                                         </span>
                                                         {isDineIn && (
-                                                            <span className="text-[11px] font-bold text-[var(--color-ink)]">
+                                                            <span className="text-xs font-bold text-[var(--color-ink)]">
                                                                 {booking.tables_layout?.table_name || 'UNASSIGNED'} · {booking.pax || 2}P
                                                             </span>
                                                         )}
@@ -955,29 +955,29 @@ export default function AdminBookings() {
                                                     {/* Merged & Transferred Table Indicator Badges */}
                                                     {transfer.isMergedSource && (
                                                         <div className="flex items-center gap-1">
-                                                            <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[11px] font-mono font-bold rounded-xs">
-                                                                โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                            <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[11px] tabular-nums font-bold rounded-xs">
+                                                                รวมเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                             </span>
                                                         </div>
                                                     )}
                                                     {transfer.isMergedTarget && (
                                                         <div className="flex items-center gap-1">
-                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] text-[11px] font-mono font-bold rounded-xs">
+                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] text-[11px] tabular-nums font-bold rounded-xs">
                                                                 โต๊ะรวม (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})
                                                             </span>
                                                         </div>
                                                     )}
                                                     {transfer.isMoved && (
                                                         <div className="flex items-center gap-1">
-                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] text-[11px] font-mono font-bold rounded-xs">
+                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] text-[11px] tabular-nums font-bold rounded-xs">
                                                                 ย้ายจาก โต๊ะ {transfer.movedFromTable}
                                                             </span>
                                                         </div>
                                                     )}
 
                                                     {booking.source && (
-                                                        <span className="text-[11px] text-[var(--color-neutral)] uppercase tracking-wider">
-                                                            VIA: {booking.source}
+                                                        <span className="text-xs text-[var(--color-neutral)]">
+                                                            ผ่าน <span className="capitalize">{booking.source}</span>
                                                         </span>
                                                     )}
                                                 </div>
@@ -989,11 +989,11 @@ export default function AdminBookings() {
                                                     <span className="font-bold text-xs text-[var(--color-ink)] truncate max-w-[160px]">
                                                         {customerName}
                                                     </span>
-                                                    <div className="text-[11px] text-[var(--color-muted)]">
+                                                    <div className="text-xs text-[var(--color-muted)]">
                                                         {customerPhone}
                                                     </div>
                                                     {booking.customer_note && (
-                                                        <span className="text-[11px] text-[var(--color-accent)] italic truncate max-w-[160px]">
+                                                        <span className="text-xs text-[var(--color-accent)] italic truncate max-w-[160px]">
                                                             “{booking.customer_note}”
                                                         </span>
                                                     )}
@@ -1007,7 +1007,7 @@ export default function AdminBookings() {
                                                         ฿{formatCurrency(booking.total_amount)}
                                                     </div>
 
-                                                    <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
+                                                    <div className="flex items-center gap-1.5 text-xs flex-wrap">
                                                         <span className="text-[var(--color-neutral)]">
                                                             {itemCount > 0 ? `${itemCount} items` : 'Reservation only'}
                                                         </span>
@@ -1019,7 +1019,7 @@ export default function AdminBookings() {
                                                         )}
 
                                                         {booking.discount_amount > 0 && (
-                                                            <span className="text-[var(--color-accent-2)] text-[11px] font-bold">
+                                                            <span className="text-[var(--color-accent-2)] text-xs font-bold">
                                                                 -฿{formatCurrency(booking.discount_amount)}
                                                             </span>
                                                         )}
@@ -1042,11 +1042,11 @@ export default function AdminBookings() {
                                             <td className="p-3 border-r border-[var(--color-rule)]">
                                                 <div className="flex flex-col gap-1 items-start">
                                                     {transfer.isMergedSource ? (
-                                                        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
+                                                        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-bold border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
                                                             MERGED (โต๊ะรวม)
                                                         </span>
                                                     ) : (
-                                                        <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-bold uppercase border ${getStatusBadgeClass(booking.status)}`}>
+                                                        <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold capitalize border ${getStatusBadgeClass(booking.status)}`}>
                                                             {booking.status}
                                                         </span>
                                                     )}
@@ -1054,15 +1054,15 @@ export default function AdminBookings() {
                                                     {/* Payment Status Indicator */}
                                                     {!isCancelledOrVoid && (
                                                         isFullyPaid ? (
-                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[11px] font-mono font-bold uppercase border bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border-[oklch(45%_0.08_140)]">
+                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[11px] tabular-nums font-bold border bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border-[oklch(45%_0.08_140)]">
                                                                 PAID (จ่ายแล้ว)
                                                             </span>
                                                         ) : isPartialPaid ? (
-                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[11px] font-mono font-bold uppercase border bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(60%_0.12_28)]">
+                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[11px] tabular-nums font-bold border bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(60%_0.12_28)]">
                                                                 มัดจำแล้ว (ค้าง ฿{formatCurrency(remainingDue)})
                                                             </span>
                                                         ) : isUnpaid ? (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-mono font-bold uppercase border-2 bg-[oklch(96%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]">
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] tabular-nums font-bold border-2 bg-[oklch(96%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]">
                                                                 ยังไม่ได้จ่ายเงิน (UNPAID)
                                                             </span>
                                                         ) : null
@@ -1077,7 +1077,7 @@ export default function AdminBookings() {
                                                     <button 
                                                         type="button"
                                                         onClick={() => toggleExpand(booking.id)}
-                                                        className={`px-2 py-1 border text-[11px] font-bold transition-colors ${
+                                                        className={`px-2 py-1 border text-xs font-bold transition-colors ${
                                                             isExpanded 
                                                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' 
                                                                 : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
@@ -1091,7 +1091,7 @@ export default function AdminBookings() {
                                                     <button 
                                                         type="button"
                                                         onClick={() => setEditingBooking(booking)}
-                                                        className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-[11px] font-bold transition-colors"
+                                                        className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-xs font-bold transition-colors"
                                                         title="Edit Booking"
                                                     >
                                                         [EDIT]
@@ -1101,7 +1101,7 @@ export default function AdminBookings() {
                                                     <button 
                                                         type="button"
                                                         onClick={() => handlePrint(booking, booking.status === 'completed' ? 'receipt' : 'billing')} 
-                                                        className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-[11px] font-bold transition-colors cursor-pointer" 
+                                                        className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-xs font-bold transition-colors cursor-pointer" 
                                                         title="Open Slip / Receipt Modal"
                                                     >
                                                         [BILL]
@@ -1112,7 +1112,7 @@ export default function AdminBookings() {
                                                         <button 
                                                             type="button"
                                                             onClick={() => setViewSlipUrl(booking.payment_slip_url)} 
-                                                            className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-accent)] text-[11px] font-bold transition-colors" 
+                                                            className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-accent)] text-xs font-bold transition-colors" 
                                                             title="View Payment Slip Image"
                                                         >
                                                             [SLIP]
@@ -1124,7 +1124,7 @@ export default function AdminBookings() {
                                                         <button 
                                                             type="button"
                                                             onClick={() => updateStatus(booking, 'confirmed')}
-                                                            className="px-2.5 py-1 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] text-[11px] font-bold uppercase transition-opacity"
+                                                            className="px-2.5 py-1 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] text-xs font-bold transition-opacity"
                                                             title="Accept Order"
                                                         >
                                                             [ACCEPT]
@@ -1135,7 +1135,7 @@ export default function AdminBookings() {
                                                         <button 
                                                             type="button"
                                                             onClick={() => updateStatus(booking, 'seated')}
-                                                            className="px-2.5 py-1 bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-ink)] text-[11px] font-bold uppercase hover:bg-[var(--color-paper)] transition-colors"
+                                                            className="px-2.5 py-1 bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-ink)] text-xs font-bold hover:bg-[var(--color-paper)] transition-colors"
                                                             title="Mark Seated"
                                                         >
                                                             [SEAT]
@@ -1146,7 +1146,7 @@ export default function AdminBookings() {
                                                         <button 
                                                             type="button"
                                                             onClick={() => updateStatus(booking, 'completed')}
-                                                            className="px-2.5 py-1 bg-[var(--color-accent-2)] text-[oklch(97%_0.008_28)] border border-[var(--color-accent-2)] text-[11px] font-bold uppercase hover:opacity-90 transition-opacity"
+                                                            className="px-2.5 py-1 bg-[var(--color-accent-2)] text-[oklch(97%_0.008_28)] border border-[var(--color-accent-2)] text-xs font-bold hover:opacity-90 transition-opacity"
                                                             title="Check Out / Complete"
                                                         >
                                                             [COMPLETE]
@@ -1175,10 +1175,10 @@ export default function AdminBookings() {
                     <div key={id} className="mt-2 p-4 bg-[var(--color-paper)] border border-[var(--color-rule)] space-y-4">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-[var(--color-rule)] pb-3">
                             <div className="flex items-center gap-3">
-                                <span className="font-bold text-xs uppercase text-[var(--color-ink)]">
+                                <span className="font-bold text-xs text-[var(--color-ink)]">
                                     ORDER BREAKDOWN · #{getShortBookingId(booking)}
                                 </span>
-                                <span className="text-[11px] text-[var(--color-neutral)]">
+                                <span className="text-xs text-[var(--color-neutral)]">
                                     ORDERED: {formatThaiTime(booking.created_at)} | APPOINTMENT: {formatThaiTime(booking.booking_time)}
                                 </span>
                             </div>
@@ -1194,15 +1194,15 @@ export default function AdminBookings() {
 
                         {/* Table Transfer Banner Strip */}
                         {transfer.isMergedSource && (
-                            <div className="p-3 bg-[oklch(94%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-mono font-bold space-y-1">
+                            <div className="p-3 bg-[oklch(94%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs tabular-nums font-bold space-y-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] uppercase font-black">
+                                    <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] font-black">
                                         MERGED TABLE (โต๊ะรวม)
                                     </span>
                                     <span>บิลนี้ถูกรวมรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</span>
                                 </div>
                                 {transfer.originalTotal > 0 && (
-                                    <div className="text-[11px] text-[oklch(45%_0.10_28)] pl-1">
+                                    <div className="text-xs text-[oklch(45%_0.10_28)] pl-1">
                                         ยอดเงินเดิมก่อนรวมบิล: ฿{formatCurrency(transfer.originalTotal)}
                                     </div>
                                 )}
@@ -1210,8 +1210,8 @@ export default function AdminBookings() {
                         )}
 
                         {transfer.isMergedTarget && (
-                            <div className="p-3 bg-[oklch(92%_0.02_140)] border-2 border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs font-mono font-bold flex items-center gap-2">
-                                <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-[11px] uppercase font-black">
+                            <div className="p-3 bg-[oklch(92%_0.02_140)] border-2 border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs tabular-nums font-bold flex items-center gap-2">
+                                <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-[11px] font-black">
                                     COMBINED TABLE (โต๊ะรวม)
                                 </span>
                                 <span>บิลนี้เป็นโต๊ะรวมที่รับการรวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong></span>
@@ -1219,8 +1219,8 @@ export default function AdminBookings() {
                         )}
 
                         {transfer.isMoved && (
-                            <div className="p-3 bg-[oklch(92%_0.02_220)] border-2 border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs font-mono font-bold flex items-center gap-2">
-                                <span className="px-1.5 py-0.2 bg-[oklch(40%_0.12_220)] text-[oklch(97%_0.008_28)] text-[11px] uppercase font-black">
+                            <div className="p-3 bg-[oklch(92%_0.02_220)] border-2 border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs tabular-nums font-bold flex items-center gap-2">
+                                <span className="px-1.5 py-0.2 bg-[oklch(40%_0.12_220)] text-[oklch(97%_0.008_28)] text-[11px] font-black">
                                     MOVED TABLE (ย้ายโต๊ะ)
                                 </span>
                                 <span>ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong> {transfer.moveTimestamp && `(${transfer.moveTimestamp})`}</span>
@@ -1230,7 +1230,7 @@ export default function AdminBookings() {
                         {/* Items Table */}
                         {booking.order_items && booking.order_items.length > 0 ? (
                             <div className="space-y-2">
-                                <div className="grid grid-cols-12 text-[11px] uppercase font-bold text-[var(--color-neutral)] border-b border-[var(--color-rule)] pb-1">
+                                <div className="grid grid-cols-12 text-xs font-bold text-[var(--color-neutral)] border-b border-[var(--color-rule)] pb-1">
                                     <div className="col-span-6">ITEM / OPTIONS</div>
                                     <div className="col-span-2 text-center">QTY</div>
                                     <div className="col-span-2 text-right">UNIT PRICE</div>
@@ -1282,7 +1282,7 @@ export default function AdminBookings() {
                             <div className="space-y-2">
                                 {booking.customer_note && (
                                     <div className="p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
-                                        <span className="font-bold text-[11px] text-[var(--color-accent)] uppercase block mb-0.5">
+                                        <span className="font-bold text-xs text-[var(--color-accent)] block mb-0.5">
                                             CUSTOMER NOTE:
                                         </span>
                                         <p className="text-[var(--color-ink)]">{booking.customer_note}</p>
@@ -1291,7 +1291,7 @@ export default function AdminBookings() {
 
                                 {booking.staff_remark && (
                                     <div className="p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
-                                        <span className="font-bold text-[11px] text-[var(--color-muted)] uppercase block mb-0.5">
+                                        <span className="font-bold text-xs text-[var(--color-muted)] block mb-0.5">
                                             STAFF INTERNAL REMARK:
                                         </span>
                                         <p className="text-[var(--color-ink)]">{booking.staff_remark}</p>
@@ -1299,7 +1299,7 @@ export default function AdminBookings() {
                                 )}
                             </div>
 
-                            <div className="bg-[var(--color-paper-2)] p-3 border border-[var(--color-rule)] space-y-1.5 text-xs font-mono tabular-nums">
+                            <div className="bg-[var(--color-paper-2)] p-3 border border-[var(--color-rule)] space-y-1.5 text-xs tabular-nums">
                                 <div className="flex justify-between text-[var(--color-muted)]">
                                     <span>SUBTOTAL:</span>
                                     <span>฿{formatCurrency(Number(booking.total_amount || 0) + Number(booking.discount_amount || 0))}</span>
@@ -1323,21 +1323,21 @@ export default function AdminBookings() {
 
                                 {/* Payment Status Row */}
                                 <div className="flex justify-between items-center pt-2 border-t border-[var(--color-rule)]">
-                                    <span className="font-bold text-[11px] text-[var(--color-muted)] uppercase">สถานะการชำระเงิน:</span>
+                                    <span className="font-bold text-xs text-[var(--color-muted)] ">สถานะการชำระเงิน:</span>
                                     {isCancelledOrVoid ? (
-                                        <span className="px-2 py-0.5 bg-[var(--color-paper)] text-[var(--color-muted)] border border-[var(--color-rule)] font-mono font-bold text-[11px] uppercase">
+                                        <span className="px-2 py-0.5 bg-[var(--color-paper)] text-[var(--color-muted)] border border-[var(--color-rule)] tabular-nums font-bold text-[11px] ">
                                             ยกเลิก (CANCELLED)
                                         </span>
                                     ) : isFullyPaid ? (
-                                        <span className="px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(45%_0.08_140)] font-mono font-bold text-[11px] uppercase">
+                                        <span className="px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(45%_0.08_140)] tabular-nums font-bold text-[11px] ">
                                             ชำระครบแล้ว (PAID)
                                         </span>
                                     ) : isPartialPaid ? (
-                                        <span className="px-2 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-mono font-bold text-[11px] uppercase">
+                                        <span className="px-2 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] tabular-nums font-bold text-[11px] ">
                                             มัดจำแล้ว ฿{formatCurrency(paymentInfo.depAmt)} (รอเก็บ ฿{formatCurrency(remainingDue)})
                                         </span>
                                     ) : isUnpaid ? (
-                                        <span className="px-2.5 py-1 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] font-mono font-bold text-[11px] uppercase tracking-wider">
+                                        <span className="px-2.5 py-1 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] tabular-nums font-bold text-xs  ">
                                             ยังไม่ได้จ่ายเงิน (UNPAID)
                                         </span>
                                     ) : null}
@@ -1487,39 +1487,40 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-rule)] max-w-xl w-full p-6 font-mono text-xs shadow-2xl">
+            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-rule)] max-w-xl w-full p-6 tabular-nums text-xs shadow-2xl">
                 {/* Header */}
                 <div className="flex justify-between items-center pb-4 mb-4 border-b border-[var(--color-rule)]">
                     <div>
-                        <span className="text-[11px] font-bold text-[var(--color-accent)] uppercase tracking-wider block">
+                        <span className="text-xs font-bold text-[var(--color-accent)] block">
                             EDIT RECORD · #{getShortBookingId(booking)}
                         </span>
-                        <h2 className="text-base font-bold text-[var(--color-ink)] uppercase mt-0.5">
+                        <h2 className="text-base font-bold text-[var(--color-ink)] mt-0.5">
                             Modify Reservation & Order
                         </h2>
                     </div>
                     <button 
                         type="button" 
                         onClick={onClose} 
-                        className="px-2 py-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper-2)] font-bold text-xs"
+                        className="admin-btn h-8 px-3"
+                        aria-label="ปิดหน้าต่าง"
                     >
-                        [✕]
+                        ปิด
                     </button>
                 </div>
 
                 {/* Transfer Info Banner if Merged / Moved */}
                 {transfer.isMergedSource && (
-                    <div className="mb-4 p-2.5 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-mono font-bold">
+                    <div className="mb-4 p-2.5 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs tabular-nums font-bold">
                         [MERGED] โต๊ะรวม: บิลนี้โอนรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว
                     </div>
                 )}
                 {transfer.isMergedTarget && (
-                    <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_140)] border border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs font-mono font-bold">
+                    <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_140)] border border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs tabular-nums font-bold">
                         [COMBINED] โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
                     </div>
                 )}
                 {transfer.isMoved && (
-                    <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_220)] border border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs font-mono font-bold">
+                    <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_220)] border border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs tabular-nums font-bold">
                         [MOVED] ย้ายโต๊ะ: ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong>
                     </div>
                 )}
@@ -1528,13 +1529,13 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Grid: Table & Pax */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 ASSIGNED TABLE
                             </label>
                             <select
                                 value={tableName}
                                 onChange={(e) => setTableName(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             >
                                 <option value="">— UNASSIGNED —</option>
                                 {tablesList.map(t => (
@@ -1546,7 +1547,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 GUESTS (PAX)
                             </label>
                             <input
@@ -1555,7 +1556,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 max="50"
                                 value={pax}
                                 onChange={(e) => setPax(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1563,7 +1564,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Grid: Date & Time */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 SERVICE DATE
                             </label>
                             <input
@@ -1571,12 +1572,12 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 required
                                 value={bookingDate}
                                 onChange={(e) => setBookingDate(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 SERVICE TIME (HH:MM)
                             </label>
                             <input
@@ -1585,7 +1586,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 placeholder="18:00"
                                 value={bookingTime}
                                 onChange={(e) => setBookingTime(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1593,26 +1594,26 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Grid: Customer Contact */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 CUSTOMER NAME
                             </label>
                             <input
                                 type="text"
                                 value={contactName}
                                 onChange={(e) => setContactName(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 PHONE NUMBER
                             </label>
                             <input
                                 type="text"
                                 value={contactPhone}
                                 onChange={(e) => setContactPhone(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1620,7 +1621,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Status & Financial Adjustments */}
                     <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] space-y-3">
                         <div className="flex justify-between items-center">
-                            <span className="text-[11px] font-bold text-[var(--color-muted)] uppercase">
+                            <span className="text-xs font-bold text-[var(--color-muted)] ">
                                 STATUS & FINANCIAL ADJUSTMENTS
                             </span>
                             <div className="flex items-center gap-1">
@@ -1651,13 +1652,13 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                             {/* Status */}
                             <div className="sm:col-span-3">
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     STATUS
                                 </label>
                                 <select
                                     value={status}
                                     onChange={(e) => setStatus(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)] "
                                 >
                                     <option value="pending">PENDING</option>
                                     <option value="confirmed">CONFIRMED</option>
@@ -1672,7 +1673,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
 
                             {/* Subtotal */}
                             <div className="sm:col-span-3">
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     SUBTOTAL (฿)
                                 </label>
                                 <input
@@ -1681,21 +1682,21 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                     step="0.01"
                                     value={subtotalAmount}
                                     onChange={(e) => setSubtotalAmount(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                 />
                             </div>
 
                             {/* Discount */}
                             <div className="sm:col-span-3">
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase">
+                                    <label className="text-xs font-bold text-[var(--color-muted)] ">
                                         DISCOUNT
                                     </label>
                                     <div className="inline-flex border border-[var(--color-rule)] bg-[var(--color-paper)] p-0.5">
                                         <button
                                             type="button"
                                             onClick={() => setDiscountType('percent')}
-                                            className={`px-1.5 py-0.5 text-[11px] font-bold font-mono cursor-pointer ${
+                                            className={`px-1.5 py-0.5 text-[11px] font-bold tabular-nums cursor-pointer ${
                                                 discountType === 'percent'
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                                     : 'text-[var(--color-neutral)]'
@@ -1706,7 +1707,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                         <button
                                             type="button"
                                             onClick={() => setDiscountType('amount')}
-                                            className={`px-1.5 py-0.5 text-[11px] font-bold font-mono cursor-pointer ${
+                                            className={`px-1.5 py-0.5 text-[11px] font-bold tabular-nums cursor-pointer ${
                                                 discountType === 'amount'
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                                     : 'text-[var(--color-neutral)]'
@@ -1724,20 +1725,20 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                     placeholder={discountType === 'percent' ? '10%' : '100฿'}
                                     value={discountValue}
                                     onChange={(e) => setDiscountValue(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                 />
                             </div>
 
                             {/* Net Total */}
                             <div className="sm:col-span-3 p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between">
-                                <span className="text-[11px] font-bold text-[var(--color-muted)] uppercase block">
+                                <span className="text-xs font-bold text-[var(--color-muted)] block">
                                     NET TOTAL (฿)
                                 </span>
-                                <span className="text-sm font-bold font-mono text-[var(--color-ink)] tabular-nums block">
+                                <span className="text-sm font-bold text-[var(--color-ink)] tabular-nums block">
                                     ฿{financials.netTotal.toFixed(2)}
                                 </span>
                                 {financials.discountAmount > 0 && (
-                                    <span className="text-[11px] font-mono text-[var(--color-accent-2)]">
+                                    <span className="text-xs tabular-nums text-[var(--color-accent-2)]">
                                         -฿{financials.discountAmount.toFixed(2)}
                                     </span>
                                 )}
@@ -1746,7 +1747,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-[var(--color-rule)]">
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     DEPOSIT PAID (฿)
                                 </label>
                                 <input
@@ -1755,18 +1756,18 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                     step="0.01"
                                     value={depositAmount}
                                     onChange={(e) => setDepositAmount(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     PAYMENT METHOD (ช่องทางชำระ)
                                 </label>
                                 <select
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)] "
                                 >
                                     <option value="transfer">โอนเงิน / สแกน QR (TRANSFER)</option>
                                     <option value="cash">เงินสด (CASH)</option>
@@ -1776,10 +1777,10 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                             </div>
 
                             <div className="p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between">
-                                <span className="text-[11px] font-bold text-[var(--color-muted)] uppercase block">
+                                <span className="text-xs font-bold text-[var(--color-muted)] block">
                                     REMAINING DUE (ยอดคงเหลือ)
                                 </span>
-                                <span className="text-sm font-bold font-mono text-[var(--color-ink)] tabular-nums block">
+                                <span className="text-sm font-bold text-[var(--color-ink)] tabular-nums block">
                                     ฿{financials.remainingDue.toFixed(2)}
                                 </span>
                             </div>
@@ -1789,7 +1790,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Notes */}
                     <div className="space-y-2">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 CUSTOMER NOTE
                             </label>
                             <input
@@ -1797,12 +1798,12 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 placeholder="Customer's dietary or seating requests"
                                 value={customerNote}
                                 onChange={(e) => setCustomerNote(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 STAFF INTERNAL REMARK
                             </label>
                             <textarea
@@ -1810,7 +1811,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 placeholder="Internal instructions for kitchen / cashier"
                                 value={staffRemark}
                                 onChange={(e) => setStaffRemark(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
                     </div>
@@ -1820,14 +1821,14 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-bold text-xs uppercase transition-colors"
+                            className="px-4 py-2 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-bold text-xs transition-colors"
                         >
                             CANCEL
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="px-5 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold text-xs uppercase transition-opacity flex items-center gap-1.5"
+                            className="px-5 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold text-xs transition-opacity flex items-center gap-1.5"
                         >
                             {saving ? 'SAVING…' : 'SAVE CHANGES'}
                         </button>

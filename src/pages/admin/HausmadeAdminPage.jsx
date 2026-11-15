@@ -349,7 +349,7 @@ export default function HausmadeAdminPage() {
     })
 
     return (
-        <div className="bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-mono flex flex-col gap-6 selection:bg-[oklch(52%_0.16_28)] selection:text-[oklch(97%_0.008_28)]">
+        <div className="bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] tabular-nums flex flex-col gap-6 selection:bg-[oklch(52%_0.16_28)] selection:text-[oklch(97%_0.008_28)]">
             <AdminPageHeader
                 className=""
                 title="HAUSMADE Retail"
@@ -414,7 +414,7 @@ export default function HausmadeAdminPage() {
                     {statusFilter === 'preorder' && (
                         <div className="p-4 bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)] flex flex-wrap items-center justify-between gap-3 text-xs rounded-xs">
                             <div>
-                                <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block">
+                                <span className="font-bold text-[oklch(52%_0.16_28)] block">
                                     BATCH PRE-ORDER MANAGEMENT · จัดการรอบพรีออเดอร์
                                 </span>
                                 <span className="text-[oklch(42%_0.010_28)]">
@@ -424,7 +424,7 @@ export default function HausmadeAdminPage() {
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => selectAllOrders(filteredOrders)}
-                                    className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold uppercase hover:bg-[oklch(28%_0.012_28)] transition-colors cursor-pointer rounded-xs"
+                                    className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold hover:bg-[oklch(28%_0.012_28)] transition-colors cursor-pointer rounded-xs"
                                 >
                                     เลือกพรีออเดอร์ทั้งหมดในรอบนี้
                                 </button>
@@ -433,17 +433,17 @@ export default function HausmadeAdminPage() {
                     )}
 
                     {loading ? (
-                        <div className="py-16 text-center text-xs text-[oklch(55%_0.010_28)] uppercase tracking-widest ">
+                        <div className="py-16 text-center text-xs text-[oklch(55%_0.010_28)]   ">
                             LOADING FULFILLMENT ORDERS...
                         </div>
                     ) : filteredOrders.length === 0 ? (
-                        <div className="py-16 text-center border-2 border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.006_28)] text-xs text-[oklch(55%_0.010_28)] uppercase rounded-xs">
+                        <div className="py-16 text-center border-2 border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.006_28)] text-xs text-[oklch(55%_0.010_28)] rounded-xs">
                             NO ORDERS FOUND IN QUEUE
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4">
                             {/* Batch Actions & Courier Export Bar */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs rounded-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] tabular-nums text-xs rounded-xs">
                                 <div className="flex items-center gap-3">
                                     <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
                                         <input
@@ -458,7 +458,7 @@ export default function HausmadeAdminPage() {
                                     {selectedOrderIds.size > 0 && (
                                         <button
                                             onClick={clearSelectedOrders}
-                                            className="text-[11px] text-[oklch(52%_0.16_28)] hover:underline cursor-pointer"
+                                            className="text-xs text-[oklch(52%_0.16_28)] hover:underline cursor-pointer"
                                         >
                                             ล้างที่เลือก
                                         </button>
@@ -468,7 +468,7 @@ export default function HausmadeAdminPage() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {/* Batch Status Changer Dropdown */}
                                     <div className="flex items-center gap-1.5 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] px-2 py-1 rounded-xs ">
-                                        <span className="text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] ">
                                             {isBatchUpdating ? 'กำลังอัปเดต...' : 'เปลี่ยนสถานะชุด:'}
                                         </span>
                                         <select
@@ -500,7 +500,7 @@ export default function HausmadeAdminPage() {
                                             setPrintDocType('a4_stickers')
                                             setSelectedOrderForPrint(toPrint[0])
                                         }}
-                                        className={`px-3 py-1.5 font-bold uppercase transition-all flex items-center gap-1.5 whitespace-nowrap rounded-xs ${
+                                        className={`px-3 py-1.5 font-bold transition-all flex items-center gap-1.5 whitespace-nowrap rounded-xs ${
                                             selectedOrderIds.size > 0
                                                 ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] hover:opacity-90 cursor-pointer '
                                                 : 'bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] cursor-not-allowed'
@@ -520,7 +520,7 @@ export default function HausmadeAdminPage() {
                                             setPrintDocType('thermal_100x150')
                                             setSelectedOrderForPrint(toPrint[0])
                                         }}
-                                        className={`px-3 py-1.5 font-bold uppercase transition-all flex items-center gap-1.5 whitespace-nowrap rounded-xs ${
+                                        className={`px-3 py-1.5 font-bold transition-all flex items-center gap-1.5 whitespace-nowrap rounded-xs ${
                                             selectedOrderIds.size > 0
                                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] cursor-pointer '
                                                 : 'bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] cursor-not-allowed'
@@ -538,7 +538,7 @@ export default function HausmadeAdminPage() {
                                             const toExport = filteredOrders.filter(o => selectedOrderIds.has(o.id))
                                             exportFlashExpressCSV(toExport)
                                         }}
-                                        className={`px-2.5 py-1.5 font-bold uppercase border transition-all rounded-xs whitespace-nowrap ${
+                                        className={`px-2.5 py-1.5 font-bold border transition-all rounded-xs whitespace-nowrap ${
                                             selectedOrderIds.size > 0
                                                 ? 'bg-[oklch(92%_0.08_75)] text-[oklch(22%_0.08_75)] border-[oklch(80%_0.10_75)] hover:bg-[oklch(88%_0.10_75)] cursor-pointer '
                                                 : 'bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] cursor-not-allowed'
@@ -555,7 +555,7 @@ export default function HausmadeAdminPage() {
                                             const toExport = filteredOrders.filter(o => selectedOrderIds.has(o.id))
                                             exportKexCSV(toExport)
                                         }}
-                                        className={`px-2.5 py-1.5 font-bold uppercase border transition-all rounded-xs whitespace-nowrap ${
+                                        className={`px-2.5 py-1.5 font-bold border transition-all rounded-xs whitespace-nowrap ${
                                             selectedOrderIds.size > 0
                                                 ? 'bg-[oklch(90%_0.08_45)] text-[oklch(25%_0.08_45)] border-[oklch(78%_0.10_45)] hover:bg-[oklch(85%_0.10_45)] cursor-pointer '
                                                 : 'bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] cursor-not-allowed'
@@ -572,7 +572,7 @@ export default function HausmadeAdminPage() {
                                             const toExport = filteredOrders.filter(o => selectedOrderIds.has(o.id))
                                             exportThailandPostCSV(toExport)
                                         }}
-                                        className={`px-2.5 py-1.5 font-bold uppercase border transition-all rounded-xs whitespace-nowrap ${
+                                        className={`px-2.5 py-1.5 font-bold border transition-all rounded-xs whitespace-nowrap ${
                                             selectedOrderIds.size > 0
                                                 ? 'bg-[oklch(90%_0.08_25)] text-[oklch(25%_0.08_25)] border-[oklch(78%_0.10_25)] hover:bg-[oklch(85%_0.10_25)] cursor-pointer '
                                                 : 'bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] cursor-not-allowed'
@@ -613,18 +613,18 @@ export default function HausmadeAdminPage() {
 
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 {(order.is_preorder || (order.customer_note && order.customer_note.includes('PRE-ORDER'))) && (
-                                                    <span className="px-2.5 py-1 text-[11px] font-bold uppercase border bg-[oklch(45%_0.08_140)]/15 text-[oklch(35%_0.08_140)] border-[oklch(45%_0.08_140)] rounded-xs">
+                                                    <span className="px-2.5 py-1 text-xs font-bold border bg-[oklch(45%_0.08_140)]/15 text-[oklch(35%_0.08_140)] border-[oklch(45%_0.08_140)] rounded-xs">
                                                         PRE-ORDER
                                                     </span>
                                                 )}
-                                                <span className={`px-2.5 py-1 text-[11px] font-bold uppercase border rounded-xs ${
+                                                <span className={`px-2.5 py-1 text-xs font-bold border rounded-xs ${
                                                     order.status === 'confirmed' || order.status === 'shipped'
                                                         ? 'bg-[oklch(45%_0.08_140)]/10 text-[oklch(35%_0.08_140)] border-[oklch(45%_0.08_140)]'
                                                         : 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
                                                 }`}>
                                                     STATUS: {order.status?.toUpperCase()}
                                                 </span>
-                                                <span className="px-2.5 py-1 text-[11px] font-bold uppercase border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] rounded-xs">
+                                                <span className="px-2.5 py-1 text-xs font-bold border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] rounded-xs">
                                                     {order.order_type === 'hausmade_shipping' ? 'จัดส่งพัสดุ' : 'รับหน้าร้าน'}
                                                 </span>
                                             </div>
@@ -633,11 +633,11 @@ export default function HausmadeAdminPage() {
                                         {/* Customer & Address Details */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                             <div className="flex flex-col gap-1 border-b md:border-b-0 md:border-r border-[oklch(85%_0.012_28)] pb-3 md:pb-0 md:pr-4">
-                                                <span className="text-[oklch(55%_0.010_28)] text-[11px] uppercase">CUSTOMER INFORMATION</span>
+                                                <span className="text-[oklch(55%_0.010_28)] text-xs ">CUSTOMER INFORMATION</span>
                                                 <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">{order.pickup_contact_name || order.guest_name || 'ลูกค้า HAUSMADE'}</span>
                                                 <span className="tabular-nums">TEL: {order.pickup_contact_phone || order.phone_number || '-'}</span>
                                                 {order.customer_note && (
-                                                    <span className="text-[11px] text-[oklch(52%_0.16_28)] mt-1 font-bold">
+                                                    <span className="text-xs text-[oklch(52%_0.16_28)] mt-1 font-bold">
                                                         NOTE: {order.customer_note}
                                                     </span>
                                                 )}
@@ -652,9 +652,9 @@ export default function HausmadeAdminPage() {
                                             </div>
 
                                             <div className="flex flex-col gap-1">
-                                                <span className="text-[oklch(55%_0.010_28)] text-[11px] uppercase">DESTINATION ADDRESS</span>
+                                                <span className="text-[oklch(55%_0.010_28)] text-xs ">DESTINATION ADDRESS</span>
                                                 <span className="font-bold text-xs leading-relaxed">{order.shipping_address || 'รับหน้าร้าน IN THE HAUS'}</span>
-                                                <span className="text-[oklch(55%_0.010_28)] mt-1 tabular-nums font-mono">
+                                                <span className="text-[oklch(55%_0.010_28)] mt-1 tabular-nums ">
                                                     TOTAL: ฿{order.total_amount?.toLocaleString()}.- (SHIPPING: ฿{order.shipping_fee || 0}.-)
                                                 </span>
                                             </div>
@@ -662,7 +662,7 @@ export default function HausmadeAdminPage() {
 
                                         {/* Items Checklist Table */}
                                         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 text-xs rounded-xs">
-                                            <span className="text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase block mb-2">
+                                            <span className="text-xs font-bold text-[oklch(55%_0.010_28)] block mb-2">
                                                 ORDER ITEMS CHECKLIST
                                             </span>
                                             <div className="flex flex-col gap-1">
@@ -679,22 +679,22 @@ export default function HausmadeAdminPage() {
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-bold text-[oklch(18%_0.012_28)]">{itemName}</span>
                                                                     {is3dKeychain && (
-                                                                        <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono text-[11px] font-bold uppercase rounded-2xs">
+                                                                        <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tabular-nums text-[11px] font-bold rounded-2xs">
                                                                             🖨️ 3D PRINT
                                                                         </span>
                                                                     )}
                                                                 </div>
                                                                 {item.selected_options && (
-                                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)] mt-0.5">({item.selected_options})</span>
+                                                                    <span className="text-xs text-[oklch(55%_0.010_28)] mt-0.5">({item.selected_options})</span>
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-2 self-end sm:self-center">
                                                                 {is3dKeychain && (
-                                                                    <div className="flex items-center gap-1 font-mono">
+                                                                    <div className="flex items-center gap-1 tabular-nums">
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => handleAdminExport3D(item, 'stl')}
-                                                                            className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold uppercase hover:bg-[oklch(52%_0.16_28)] cursor-pointer rounded-2xs"
+                                                                            className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold hover:bg-[oklch(52%_0.16_28)] cursor-pointer rounded-2xs"
                                                                             title="ดาวน์โหลดไฟล์ 3D STL สำหรับเปิดใน Bambu Studio หรือ PrusaSlicer"
                                                                         >
                                                                             STL
@@ -702,7 +702,7 @@ export default function HausmadeAdminPage() {
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => handleAdminExport3D(item, 'step')}
-                                                                            className="px-2 py-0.5 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold uppercase hover:bg-[oklch(94%_0.010_28)] cursor-pointer rounded-2xs"
+                                                                            className="px-2 py-0.5 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold hover:bg-[oklch(94%_0.010_28)] cursor-pointer rounded-2xs"
                                                                             title="ดาวน์โหลดไฟล์ CAD STEP สำหรับเปิดในโปรแกรม CAD"
                                                                         >
                                                                             STEP
@@ -719,28 +719,28 @@ export default function HausmadeAdminPage() {
 
                                         {/* Status Action Buttons */}
                                         <div className="flex items-center gap-2 flex-wrap border-t border-[oklch(85%_0.012_28)] pt-3">
-                                            <span className="text-[11px] text-[oklch(55%_0.010_28)] uppercase">QUICK ACTIONS:</span>
+                                            <span className="text-xs text-[oklch(55%_0.010_28)] ">QUICK ACTIONS:</span>
                                             <button
                                                 onClick={() => handleStatusChange(order.id, 'confirmed')}
-                                                className={`px-2.5 py-1 text-[11px] font-bold uppercase border whitespace-nowrap rounded-xs cursor-pointer transition-colors ${order.status === 'confirmed' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(96%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.010_28)]'}`}
+                                                className={`px-2.5 py-1 text-xs font-bold border whitespace-nowrap rounded-xs cursor-pointer transition-colors ${order.status === 'confirmed' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(96%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.010_28)]'}`}
                                             >
                                                 ยืนยันชำระ
                                             </button>
                                             <button
                                                 onClick={() => handleStatusChange(order.id, 'packing')}
-                                                className={`px-2.5 py-1 text-[11px] font-bold uppercase border whitespace-nowrap rounded-xs cursor-pointer transition-colors ${order.status === 'packing' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(96%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.010_28)]'}`}
+                                                className={`px-2.5 py-1 text-xs font-bold border whitespace-nowrap rounded-xs cursor-pointer transition-colors ${order.status === 'packing' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(96%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.010_28)]'}`}
                                             >
                                                 กำลังแพ็ค
                                             </button>
                                             <button
                                                 onClick={() => handleStatusChange(order.id, 'shipped')}
-                                                className={`px-2.5 py-1 text-[11px] font-bold uppercase border whitespace-nowrap rounded-xs cursor-pointer transition-colors ${order.status === 'shipped' ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(96%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.010_28)]'}`}
+                                                className={`px-2.5 py-1 text-xs font-bold border whitespace-nowrap rounded-xs cursor-pointer transition-colors ${order.status === 'shipped' ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(96%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.010_28)]'}`}
                                             >
                                                 จัดส่งแล้ว
                                             </button>
                                             <button
                                                 onClick={() => handleStatusChange(order.id, 'cancelled')}
-                                                className="px-2.5 py-1 text-[11px] font-bold uppercase border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-[oklch(96%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] transition-colors ml-auto whitespace-nowrap rounded-xs cursor-pointer"
+                                                className="px-2.5 py-1 text-xs font-bold border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-[oklch(96%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] transition-colors ml-auto whitespace-nowrap rounded-xs cursor-pointer"
                                             >
                                                 ยกเลิก
                                             </button>
@@ -774,7 +774,7 @@ export default function HausmadeAdminPage() {
 
                                                 <button
                                                     onClick={() => handleSaveTracking(order.id, order.status)}
-                                                    className="px-3.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold uppercase hover:bg-[oklch(52%_0.16_28)] transition-colors whitespace-nowrap rounded-xs cursor-pointer"
+                                                    className="px-3.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold hover:bg-[oklch(52%_0.16_28)] transition-colors whitespace-nowrap rounded-xs cursor-pointer"
                                                 >
                                                     SAVE TRACKING
                                                 </button>
@@ -784,7 +784,7 @@ export default function HausmadeAdminPage() {
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <button
                                                     onClick={() => setSelectedOrderForPngBill(order)}
-                                                    className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-xs font-bold uppercase hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer flex items-center gap-1 rounded-xs"
+                                                    className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-xs font-bold hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer flex items-center gap-1 rounded-xs"
                                                     title="ออกบิลรูปภาพ PNG คมชัดสูง ปรับค่าส่งได้ ส่งทาง LINE/IG"
                                                 >
                                                     <span>ออกบิล PNG</span>
@@ -794,7 +794,7 @@ export default function HausmadeAdminPage() {
                                                         setSelectedOrderForPrint(order)
                                                         setPrintDocType('label')
                                                     }}
-                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors whitespace-nowrap cursor-pointer rounded-xs"
+                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors whitespace-nowrap cursor-pointer rounded-xs"
                                                 >
                                                     พิมพ์ใบจ่าหน้า
                                                 </button>
@@ -803,7 +803,7 @@ export default function HausmadeAdminPage() {
                                                         setSelectedOrderForPrint(order)
                                                         setPrintDocType('receipt')
                                                     }}
-                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors whitespace-nowrap cursor-pointer rounded-xs"
+                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors whitespace-nowrap cursor-pointer rounded-xs"
                                                 >
                                                     พิมพ์ใบเสร็จ
                                                 </button>
@@ -822,17 +822,17 @@ export default function HausmadeAdminPage() {
                 /* TAB 3: SHIPPING & SENDER SETTINGS */
                 <form onSubmit={handleSaveSettingsSubmit} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-6 flex flex-col gap-6 rounded-xs">
                     <div className="border-b border-[oklch(85%_0.012_28)] pb-3">
-                        <span className="text-[11px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest block">
+                        <span className="text-xs font-bold text-[oklch(52%_0.16_28)] block">
                             // CONFIGURATION PANEL
                         </span>
-                        <h2 className="text-lg font-bold uppercase text-[oklch(18%_0.012_28)]">
+                        <h2 className="text-lg font-bold text-[oklch(18%_0.012_28)]">
                             [ ตั้งค่าสถานะร้านค้า, ค่าจัดส่ง & ข้อมูลผู้ส่งบนใบจ่าหน้า ]
                         </h2>
                     </div>
 
                     {/* Section 0: Shop Operational Status */}
                     <div className="flex flex-col gap-3 border-b border-[oklch(85%_0.012_28)] pb-6">
-                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
+                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] ">
                             0. SHOP OPERATIONAL STATUS · เปิด-ปิดระบบร้านค้า HAUSMADE
                         </span>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -845,14 +845,14 @@ export default function HausmadeAdminPage() {
                                     key={mode}
                                     type="button"
                                     onClick={() => setFormSettings({ ...formSettings, shopModeHausmade: mode })}
-                                    className={`p-3.5 text-left border font-mono text-xs transition-all flex flex-col gap-1 cursor-pointer rounded-xs ${
+                                    className={`p-3.5 text-left border tabular-nums text-xs transition-all flex flex-col gap-1 cursor-pointer rounded-xs ${
                                         formSettings.shopModeHausmade === mode
                                             ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 font-bold text-[oklch(18%_0.012_28)] '
                                             : 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                                     }`}
                                 >
                                     <span className="font-bold text-[oklch(18%_0.012_28)]">{label}</span>
-                                    <span className="text-[11px] text-[oklch(55%_0.010_28)] leading-tight">{desc}</span>
+                                    <span className="text-xs text-[oklch(55%_0.010_28)] leading-tight">{desc}</span>
                                 </button>
                             ))}
                         </div>
@@ -860,13 +860,13 @@ export default function HausmadeAdminPage() {
 
                     {/* Section 1: Sender Info */}
                     <div className="flex flex-col gap-4 border-b border-[oklch(85%_0.012_28)] pb-6">
-                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
+                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] ">
                             1. SENDER INFORMATION · ข้อมูลผู้ส่งพัสดุ
                         </span>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ชื่อผู้ส่ง (Sender Name) *
                                 </label>
                                 <input
@@ -878,7 +878,7 @@ export default function HausmadeAdminPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     เบอร์โทรศัพท์ผู้ส่ง (Sender Phone) *
                                 </label>
                                 <input
@@ -892,7 +892,7 @@ export default function HausmadeAdminPage() {
                         </div>
 
                         <div>
-                            <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                 ที่อยู่ผู้ส่ง / ที่อยู่ตีกลับพัสดุ (Sender Address) *
                             </label>
                             <textarea
@@ -905,7 +905,7 @@ export default function HausmadeAdminPage() {
                         </div>
 
                         <div>
-                            <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                 เลขประจำตัวผู้เสียภาษี (Tax ID for Receipts)
                             </label>
                             <input
@@ -919,13 +919,13 @@ export default function HausmadeAdminPage() {
 
                     {/* Section 2: Shipping Fee Rules */}
                     <div className="flex flex-col gap-4">
-                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
+                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] ">
                             2. SHIPPING FEE & PROMOTION RULES · กฎค่าจัดส่ง
                         </span>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ค่าจัดส่งเหมาจ่าย (Flat Rate Shipping Fee - THB)
                                 </label>
                                 <input
@@ -938,7 +938,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ซื้อครบกี่ชิ้นจัดส่งฟรี (Min Items for Free Shipping)
                                 </label>
                                 <input
@@ -951,7 +951,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     หรือซื้อครบกี่บาทจัดส่งฟรี (Min Amount for Free Shipping)
                                 </label>
                                 <input
@@ -968,17 +968,17 @@ export default function HausmadeAdminPage() {
                     {/* Section 3: 3D Keychain Dynamic Pricing & Boundaries */}
                     <div className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)]  ">
                                 3. 3D KEYCHAIN PRICING & BOUNDARIES · โครงสร้างราคาและขอบเขตการผลิต
                             </span>
-                            <span className="text-[11px] text-[oklch(42%_0.010_28)]">
+                            <span className="text-xs text-[oklch(42%_0.010_28)]">
                                 คำนวณอัตโนมัติที่หน้า Canvas ตามสูตรที่กำหนด
                             </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ราคาตั้งต้น (Base Price - THB)
                                 </label>
                                 <input
@@ -994,7 +994,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     จำนวนตัวอักษรฟรีในราคาตั้งต้น (Included Characters)
                                 </label>
                                 <input
@@ -1011,7 +1011,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ราคาตัวอักษรส่วนเกิน (Extra Char Price - THB/ตัว)
                                 </label>
                                 <input
@@ -1027,7 +1027,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ขีดจำกัดตัวอักษรสูงสุด (Max Physical Characters Limit)
                                 </label>
                                 <input
@@ -1044,7 +1044,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ขีดจำกัดชาร์ม/องค์ประกอบ (Max Elements Limit)
                                 </label>
                                 <input
@@ -1061,7 +1061,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ค่าบริการพิมพ์สองสี (Dual-Tone Palette - THB)
                                 </label>
                                 <input
@@ -1077,7 +1077,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ค่าสลักข้อความด้านหลัง (Reverse Engraving - THB)
                                 </label>
                                 <input
@@ -1093,7 +1093,7 @@ export default function HausmadeAdminPage() {
                             </div>
 
                             <div>
-                                <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                     ค่าความหนาพิเศษ 5.0mm (Heavy-Duty Thickness - THB)
                                 </label>
                                 <input
@@ -1113,19 +1113,19 @@ export default function HausmadeAdminPage() {
                     {/* Section 4: Brand STL Charm Library Manager */}
                     <div className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)]  ">
                                 4. BRAND STL CHARMS & 3D LIBRARY · คลังชาร์มและไฟล์ 3D โมเดลแบรนด์
                             </span>
-                            <span className="text-[11px] text-[oklch(42%_0.010_28)]">
+                            <span className="text-xs text-[oklch(42%_0.010_28)]">
                                 ลูกค้าเลือกได้สูงสุด {formSettings.keychainPricing?.maxElements || 2} ชิ้น
                             </span>
                         </div>
 
                         {/* List of active charms */}
                         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] rounded-xs overflow-hidden">
-                            <table className="w-full text-left text-xs border-collapse">
+                            <table className="w-full text-left text-[13px] border-collapse">
                                 <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[11px] uppercase text-[oklch(42%_0.010_28)]">
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-xs text-[oklch(42%_0.010_28)]">
                                         <th className="p-2.5 w-12 text-center">สัญลักษณ์</th>
                                         <th className="p-2.5">ชื่อชาร์ม / โมเดล 3D</th>
                                         <th className="p-2.5 w-24">ราคาบวกเพิ่ม</th>
@@ -1140,13 +1140,13 @@ export default function HausmadeAdminPage() {
                                             <td className="p-2.5 font-bold">
                                                 {charm.name}
                                                 {charm.is_default && (
-                                                    <span className="ml-2 text-[11px] px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] uppercase rounded-xs">
+                                                    <span className="ml-2 text-[11px] px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-xs">
                                                         BRAND SIGNATURE
                                                     </span>
                                                 )}
                                             </td>
                                             <td className="p-2.5 tabular-nums font-bold">+{charm.price} ฿</td>
-                                            <td className="p-2.5 text-[11px]">
+                                            <td className="p-2.5 text-[13px]">
                                                 {charm.stl_url ? (
                                                     <a
                                                         href={charm.stl_url}
@@ -1166,12 +1166,12 @@ export default function HausmadeAdminPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveBrandCharm(charm.id)}
-                                                        className="text-[11px] text-red-600 hover:text-red-800 underline uppercase cursor-pointer"
+                                                        className="text-xs text-red-600 hover:text-red-800 underline cursor-pointer"
                                                     >
                                                         ลบ
                                                     </button>
                                                 ) : (
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">หลัก</span>
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">หลัก</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -1182,13 +1182,13 @@ export default function HausmadeAdminPage() {
 
                         {/* Add New Charm Upload Box */}
                         <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-3 rounded-xs">
-                            <span className="text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]  ">
                                 + อัปโหลดชาร์ม / ไฟล์โมเดล 3D (.STL) ใหม่เข้าระบบแบรนด์
                             </span>
 
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                                 <div className="sm:col-span-1">
-                                    <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                         ชื่อชาร์ม *
                                     </label>
                                     <input
@@ -1201,7 +1201,7 @@ export default function HausmadeAdminPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                         สัญลักษณ์ย่อ / Emoji
                                     </label>
                                     <input
@@ -1214,7 +1214,7 @@ export default function HausmadeAdminPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                         ราคาบวกเพิ่ม (THB)
                                     </label>
                                     <input
@@ -1227,14 +1227,14 @@ export default function HausmadeAdminPage() {
                                 </div>
 
                                 <div>
-                                    <label className="text-[11px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    <label className="text-xs text-[oklch(42%_0.010_28)] block mb-1">
                                         ไฟล์โมเดล 3D (.STL)
                                     </label>
                                     <input
                                         type="file"
                                         accept=".stl"
                                         onChange={(e) => setNewCharmFile(e.target.files[0] || null)}
-                                        className="w-full text-[11px] text-[oklch(42%_0.010_28)] file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[11px] file:bg-[oklch(18%_0.012_28)] file:text-[oklch(97%_0.008_28)] file:rounded-xs cursor-pointer"
+                                        className="w-full text-xs text-[oklch(42%_0.010_28)] file:mr-2 file:py-1 file:px-2 file:border-0 file:text-xs file:bg-[oklch(18%_0.012_28)] file:text-[oklch(97%_0.008_28)] file:rounded-xs cursor-pointer"
                                     />
                                 </div>
                             </div>
@@ -1244,7 +1244,7 @@ export default function HausmadeAdminPage() {
                                     type="button"
                                     disabled={isUploadingCharm}
                                     onClick={handleAddBrandCharm}
-                                    className="py-1.5 px-4 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer rounded-xs disabled:opacity-50"
+                                    className="py-1.5 px-4 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-xs font-bold hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer rounded-xs disabled:opacity-50"
                                 >
                                     {isUploadingCharm ? 'กำลังอัปโหลด...' : '+ เพิ่มชาร์มลงแคตตาล็อก'}
                                 </button>
@@ -1260,7 +1260,7 @@ export default function HausmadeAdminPage() {
 
                     <button
                         type="submit"
-                        className="py-3 px-6 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold uppercase hover:bg-[oklch(52%_0.16_28)] transition-colors self-start cursor-pointer rounded-xs"
+                        className="py-3 px-6 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold hover:bg-[oklch(52%_0.16_28)] transition-colors self-start cursor-pointer rounded-xs"
                     >
                         SAVE SETTINGS · บันทึกการตั้งค่า
                     </button>
@@ -1274,7 +1274,7 @@ export default function HausmadeAdminPage() {
                         <img src={slipModalUrl} alt="Slip" className="max-h-[70vh] object-contain border border-[oklch(85%_0.012_28)] rounded-xs" />
                         <button
                             onClick={() => setSlipModalUrl(null)}
-                            className="mt-4 px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-xs uppercase hover:bg-[oklch(52%_0.16_28)] transition-colors rounded-xs cursor-pointer"
+                            className="mt-4 px-4 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-xs hover:bg-[oklch(52%_0.16_28)] transition-colors rounded-xs cursor-pointer"
                         >
                             CLOSE
                         </button>

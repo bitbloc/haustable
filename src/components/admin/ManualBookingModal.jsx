@@ -403,19 +403,19 @@ export default function ManualBookingModal({
 
     return (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-rule)] max-w-2xl w-full max-h-[92vh] flex flex-col font-mono text-xs shadow-2xl my-auto">
+            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-rule)] max-w-2xl w-full max-h-[92vh] flex flex-col tabular-nums text-xs shadow-2xl my-auto">
                 {/* 1. Minimalist Tabular Header */}
                 <div className="flex justify-between items-center p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold text-[var(--color-accent)] uppercase tracking-wider bg-[var(--color-paper)] px-2 py-0.5 border border-[var(--color-rule)]">
+                            <span className="text-[11px] font-bold text-[var(--color-accent)] bg-[var(--color-paper)] px-2 py-0.5 border border-[var(--color-rule)]">
                                 SYS.ADMIN · MANUAL ENTRY
                             </span>
-                            <span className="text-[11px] text-[var(--color-neutral)] uppercase">
+                            <span className="text-xs text-[var(--color-neutral)] ">
                                 POSTGRESQL · 2026
                             </span>
                         </div>
-                        <h2 className="text-base sm:text-lg font-bold text-[var(--color-ink)] uppercase mt-1 tracking-tight">
+                        <h2 className="text-base sm:text-lg font-bold text-[var(--color-ink)] mt-1 tracking-tight">
                             Create New Booking & Order
                         </h2>
                     </div>
@@ -434,7 +434,7 @@ export default function ManualBookingModal({
                     {/* Section 1: Service Type & Source Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-[var(--color-rule)]">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 SERVICE TYPE (ประเภทบริการ)
                             </label>
                             <div className="grid grid-cols-3 gap-1">
@@ -447,7 +447,7 @@ export default function ManualBookingModal({
                                         key={t.key}
                                         type="button"
                                         onClick={() => setBookingType(t.key)}
-                                        className={`py-1.5 border text-center font-bold text-[11px] cursor-pointer transition-colors ${
+                                        className={`py-1.5 border text-center font-bold text-xs cursor-pointer transition-colors ${
                                             bookingType === t.key
                                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                 : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper)]'
@@ -460,7 +460,7 @@ export default function ManualBookingModal({
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 BOOKING SOURCE (ช่องทางที่ติดต่อ)
                             </label>
                             <div className="grid grid-cols-5 gap-1">
@@ -475,7 +475,7 @@ export default function ManualBookingModal({
                                         key={s.key}
                                         type="button"
                                         onClick={() => setSource(s.key)}
-                                        className={`py-1.5 border text-center font-bold text-[11px] cursor-pointer transition-colors ${
+                                        className={`py-1.5 border text-center font-bold text-xs cursor-pointer transition-colors ${
                                             source === s.key
                                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                 : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper)]'
@@ -492,7 +492,7 @@ export default function ManualBookingModal({
                     <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] space-y-2">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     SERVICE DATE (วันที่)
                                 </label>
                                 <input
@@ -500,12 +500,12 @@ export default function ManualBookingModal({
                                     required
                                     value={serviceDate}
                                     onChange={e => setServiceDate(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)]"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     SERVICE TIME (เวลาจัดบริการ)
                                 </label>
                                 <input
@@ -514,12 +514,12 @@ export default function ManualBookingModal({
                                     placeholder="18:00"
                                     value={serviceTime}
                                     onChange={e => setServiceTime(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     DURATION (ระยะเวลาโต๊ะ)
                                 </label>
                                 <div className="grid grid-cols-4 gap-1">
@@ -528,7 +528,7 @@ export default function ManualBookingModal({
                                             key={h}
                                             type="button"
                                             onClick={() => setDurationHours(h)}
-                                            className={`py-2 border text-center font-bold text-[11px] cursor-pointer transition-colors ${
+                                            className={`py-2 border text-center font-bold text-xs cursor-pointer transition-colors ${
                                                 durationHours === h
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                     : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)]'
@@ -543,7 +543,7 @@ export default function ManualBookingModal({
 
                         {/* Quick Time Slot Buttons */}
                         <div>
-                            <span className="text-[11px] font-bold text-[var(--color-neutral)] uppercase block mb-1">
+                            <span className="text-xs font-bold text-[var(--color-neutral)] block mb-1">
                                 QUICK TIME PRESETS:
                             </span>
                             <div className="flex flex-wrap gap-1">
@@ -552,7 +552,7 @@ export default function ManualBookingModal({
                                         key={t}
                                         type="button"
                                         onClick={() => setServiceTime(t)}
-                                        className={`px-2 py-1 border text-[11px] font-bold tabular-nums cursor-pointer transition-colors ${
+                                        className={`px-2 py-1 border text-xs font-bold tabular-nums cursor-pointer transition-colors ${
                                             serviceTime === t
                                                 ? 'bg-[var(--color-accent)] text-[oklch(97%_0.008_28)] border-[var(--color-accent)]'
                                                 : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
@@ -569,13 +569,13 @@ export default function ManualBookingModal({
                     {bookingType === 'dine_in' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     ASSIGNED TABLE (จัดสรรโต๊ะ)
                                 </label>
                                 <select
                                     value={tableId}
                                     onChange={e => setTableId(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
+                                    className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)]"
                                 >
                                     <option value="">— ไม่ระบุโต๊ะ / รอกำหนดหน้าร้าน (UNASSIGNED) —</option>
                                     {tables.map(t => (
@@ -585,14 +585,14 @@ export default function ManualBookingModal({
                                     ))}
                                 </select>
                                 {tableConflict && (
-                                    <div className="mt-1.5 p-2 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-[11px] font-bold">
+                                    <div className="mt-1.5 p-2 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-bold">
                                         ⚠️ {tableConflict.message}
                                     </div>
                                 )}
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     GUESTS (จำนวนท่าน / PAX)
                                 </label>
                                 <div className="flex items-center gap-1.5">
@@ -616,7 +616,7 @@ export default function ManualBookingModal({
                                         max="50"
                                         value={pax}
                                         onChange={e => setPax(e.target.value)}
-                                        className="w-16 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-center text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                        className="w-16 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-center text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                     />
                                 </div>
                             </div>
@@ -626,7 +626,7 @@ export default function ManualBookingModal({
                     {/* Section 4: Customer Details */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 CUSTOMER NAME (ชื่อผู้จอง) *
                             </label>
                             <input
@@ -635,12 +635,12 @@ export default function ManualBookingModal({
                                 placeholder="เช่น น.ส. ชิดชนก, คุณสมชาย"
                                 value={customerName}
                                 onChange={e => setCustomerName(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 CONTACT PHONE (เบอร์โทรศัพท์)
                             </label>
                             <input
@@ -648,7 +648,7 @@ export default function ManualBookingModal({
                                 placeholder="08X-XXX-XXXX"
                                 value={customerPhone}
                                 onChange={e => setCustomerPhone(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -657,17 +657,17 @@ export default function ManualBookingModal({
                     <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] space-y-3">
                         <div className="flex flex-wrap justify-between items-center gap-2">
                             <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-[var(--color-ink)] uppercase">
+                                <span className="text-xs font-bold text-[var(--color-ink)] ">
                                     FINANCIALS & DISCOUNTS (การเงินและส่วนลด)
                                 </span>
                                 {preOrderItems.length > 0 && (
-                                    <span className="text-[11px] font-mono px-1.5 py-0.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-neutral)]">
+                                    <span className="text-[11px] tabular-nums px-1.5 py-0.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-neutral)]">
                                         เมนูสั่งล่วงหน้า {preOrderItems.length} รายการ
                                     </span>
                                 )}
                             </div>
                             <div className="flex items-center gap-1">
-                                <span className="text-[11px] text-[var(--color-muted)] mr-1">ตั้งยอดมัดจำ:</span>
+                                <span className="text-xs text-[var(--color-muted)] mr-1">ตั้งยอดมัดจำ:</span>
                                 <button
                                     type="button"
                                     onClick={handleSetHalfDeposit}
@@ -696,7 +696,7 @@ export default function ManualBookingModal({
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                             {/* 1. Subtotal */}
                             <div className="sm:col-span-4">
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     SUBTOTAL (ยอดก่อนลด ฿)
                                 </label>
                                 <input
@@ -706,21 +706,21 @@ export default function ManualBookingModal({
                                     placeholder="0.00"
                                     value={subtotalAmount}
                                     onChange={e => setSubtotalAmount(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                 />
                             </div>
 
                             {/* 2. Discount: Segmented toggle (% vs ฿) + input + quick chips */}
                             <div className="sm:col-span-5">
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase">
+                                    <label className="text-xs font-bold text-[var(--color-muted)] ">
                                         DISCOUNT (ส่วนลด)
                                     </label>
                                     <div className="inline-flex border border-[var(--color-rule)] bg-[var(--color-paper)] p-0.5">
                                         <button
                                             type="button"
                                             onClick={() => setDiscountType('percent')}
-                                            className={`px-2 py-0.5 text-[11px] font-bold font-mono transition-colors cursor-pointer ${
+                                            className={`px-2 py-0.5 text-[11px] font-bold tabular-nums transition-colors cursor-pointer ${
                                                 discountType === 'percent'
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                                     : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
@@ -731,7 +731,7 @@ export default function ManualBookingModal({
                                         <button
                                             type="button"
                                             onClick={() => setDiscountType('amount')}
-                                            className={`px-2 py-0.5 text-[11px] font-bold font-mono transition-colors cursor-pointer ${
+                                            className={`px-2 py-0.5 text-[11px] font-bold tabular-nums transition-colors cursor-pointer ${
                                                 discountType === 'amount'
                                                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                                     : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
@@ -743,7 +743,7 @@ export default function ManualBookingModal({
                                 </div>
 
                                 <div className="relative">
-                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono font-bold text-[11px] text-[var(--color-muted)] pointer-events-none">
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 tabular-nums font-bold text-xs text-[var(--color-muted)] pointer-events-none">
                                         {discountType === 'percent' ? '%' : '฿'}
                                     </span>
                                     <input
@@ -754,7 +754,7 @@ export default function ManualBookingModal({
                                         placeholder={discountType === 'percent' ? 'เช่น 10 (ลด 10%)' : 'เช่น 100 (ลด 100 บาท)'}
                                         value={discountValue}
                                         onChange={e => setDiscountValue(e.target.value)}
-                                        className="w-full pl-7 pr-2 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                        className="w-full pl-7 pr-2 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                     />
                                 </div>
 
@@ -766,7 +766,7 @@ export default function ManualBookingModal({
                                                 key={pct}
                                                 type="button"
                                                 onClick={() => setDiscountValue(pct)}
-                                                className={`px-1.5 py-0.5 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                                className={`px-1.5 py-0.5 text-[11px] tabular-nums font-bold border transition-colors cursor-pointer ${
                                                     Number(discountValue) === pct
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                         : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
@@ -781,7 +781,7 @@ export default function ManualBookingModal({
                                                 key={amt}
                                                 type="button"
                                                 onClick={() => setDiscountValue(amt)}
-                                                className={`px-1.5 py-0.5 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                                className={`px-1.5 py-0.5 text-[11px] tabular-nums font-bold border transition-colors cursor-pointer ${
                                                     Number(discountValue) === amt
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
                                                         : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
@@ -795,7 +795,7 @@ export default function ManualBookingModal({
                                         <button
                                             type="button"
                                             onClick={() => setDiscountValue('')}
-                                            className="px-1.5 py-0.5 text-[11px] font-mono font-bold text-[var(--color-accent)] hover:text-red-700 cursor-pointer ml-auto"
+                                            className="px-1.5 py-0.5 text-[11px] tabular-nums font-bold text-[var(--color-accent)] hover:text-red-700 cursor-pointer ml-auto"
                                         >
                                             [✕ ล้าง]
                                         </button>
@@ -806,20 +806,20 @@ export default function ManualBookingModal({
                             {/* 3. Net Total Box */}
                             <div className="sm:col-span-3 flex flex-col justify-between p-2.5 bg-[var(--color-paper)] border border-[var(--color-rule)]">
                                 <div>
-                                    <span className="text-[11px] font-bold text-[var(--color-muted)] uppercase block">
+                                    <span className="text-xs font-bold text-[var(--color-muted)] block">
                                         NET TOTAL (ยอดสุทธิ ฿)
                                     </span>
-                                    <span className="text-base font-bold font-mono text-[var(--color-ink)] tabular-nums block mt-1">
+                                    <span className="text-base font-bold text-[var(--color-ink)] tabular-nums block mt-1">
                                         ฿{financials.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="mt-1">
                                     {financials.discountAmount > 0 ? (
-                                        <span className="text-[11px] font-bold font-mono text-[var(--color-accent-2)] block truncate">
+                                        <span className="text-xs font-bold tabular-nums text-[var(--color-accent-2)] block truncate">
                                             ลดไป -฿{financials.discountAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     ) : (
-                                        <span className="text-[11px] font-mono text-[var(--color-neutral)] block">
+                                        <span className="text-xs tabular-nums text-[var(--color-neutral)] block">
                                             ไม่มีส่วนลด
                                         </span>
                                     )}
@@ -830,7 +830,7 @@ export default function ManualBookingModal({
                         {/* Row 2: Deposit, Payment Method, Remaining Balance */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-[var(--color-rule)]">
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     DEPOSIT PAID (ยอดมัดจำ ฿)
                                 </label>
                                 <input
@@ -840,18 +840,18 @@ export default function ManualBookingModal({
                                     placeholder="0.00"
                                     value={depositAmount}
                                     onChange={e => setDepositAmount(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums text-[var(--color-accent)]"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums text-[var(--color-accent)]"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                     PAYMENT METHOD (ช่องทางชำระ)
                                 </label>
                                 <select
                                     value={paymentMethod}
                                     onChange={e => setPaymentMethod(e.target.value)}
-                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)] "
                                 >
                                     <option value="transfer">โอนเงิน / สลิป (TRANSFER)</option>
                                     <option value="cash">เงินสด (CASH)</option>
@@ -861,13 +861,13 @@ export default function ManualBookingModal({
                             </div>
 
                             <div className="p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between">
-                                <span className="text-[11px] font-bold text-[var(--color-muted)] uppercase block">
+                                <span className="text-xs font-bold text-[var(--color-muted)] block">
                                     REMAINING DUE (ยอดคงเหลือหน้าร้าน)
                                 </span>
-                                <span className="text-sm font-bold font-mono text-[var(--color-ink)] tabular-nums block mt-1">
+                                <span className="text-sm font-bold text-[var(--color-ink)] tabular-nums block mt-1">
                                     ฿{financials.remainingDue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
-                                <span className="text-[11px] text-[var(--color-neutral)] block">
+                                <span className="text-xs text-[var(--color-neutral)] block">
                                     (ชำระ ณ จุดเช็คอิน)
                                 </span>
                             </div>
@@ -875,24 +875,24 @@ export default function ManualBookingModal({
 
                         {/* Slip Upload & Thumbnail Preview */}
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 PAYMENT SLIP ATTACHMENT (แนบหลักฐานสลิปโอนเงิน - อุปกรณ์เสริม)
                             </label>
                             {slipPreview ? (
                                 <div className="flex items-center gap-3 p-2 bg-[var(--color-paper)] border border-[var(--color-rule)]">
                                     <img src={slipPreview} alt="Slip Preview" className="w-12 h-12 object-cover border border-[var(--color-rule)]" />
                                     <div className="flex-1 min-w-0">
-                                        <span className="text-[11px] font-bold text-[var(--color-ink)] truncate block">
+                                        <span className="text-xs font-bold text-[var(--color-ink)] truncate block">
                                             {slipFile?.name || 'slip.jpg'}
                                         </span>
-                                        <span className="text-[11px] text-[var(--color-neutral)]">
+                                        <span className="text-xs text-[var(--color-neutral)]">
                                             {(slipFile?.size ? (slipFile.size / 1024).toFixed(1) + ' KB' : '')}
                                         </span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={handleRemoveSlip}
-                                        className="px-2.5 py-1 text-[var(--color-accent)] hover:text-red-700 text-[11px] font-bold border border-[var(--color-rule)] cursor-pointer"
+                                        className="px-2.5 py-1 text-[var(--color-accent)] hover:text-red-700 text-xs font-bold border border-[var(--color-rule)] cursor-pointer"
                                     >
                                         [REMOVE]
                                     </button>
@@ -902,7 +902,7 @@ export default function ManualBookingModal({
                                     type="file"
                                     accept="image/*"
                                     onChange={handleFileChange}
-                                    className="w-full p-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[11px] file:mr-3 file:py-1 file:px-2 file:border file:border-[var(--color-rule)] file:bg-[var(--color-paper-2)] file:text-xs file:font-mono file:font-bold file:cursor-pointer"
+                                    className="w-full p-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs file:mr-3 file:py-1 file:px-2 file:border file:border-[var(--color-rule)] file:bg-[var(--color-paper-2)] file:text-xs file:tabular-nums file:font-bold file:cursor-pointer"
                                 />
                             )}
                         </div>
@@ -915,10 +915,10 @@ export default function ManualBookingModal({
                             onClick={() => setIsMenuPickerOpen(!isMenuPickerOpen)}
                             className="w-full flex justify-between items-center p-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-left cursor-pointer transition-colors"
                         >
-                            <span className="text-[11px] font-bold text-[var(--color-ink)] uppercase">
+                            <span className="text-xs font-bold text-[var(--color-ink)] ">
                                 PRE-ORDER MENU ITEMS (สั่งอาหารล่วงหน้า · {preOrderItems.length} รายการ)
                             </span>
-                            <span className="text-[11px] font-bold text-[var(--color-neutral)]">
+                            <span className="text-xs font-bold text-[var(--color-neutral)]">
                                 {isMenuPickerOpen ? '[COLLAPSE ▲]' : '[EXPAND +]'}
                             </span>
                         </button>
@@ -928,17 +928,17 @@ export default function ManualBookingModal({
                                 {/* Selected Items List */}
                                 {preOrderItems.length > 0 && (
                                     <div className="space-y-1.5">
-                                        <span className="text-[11px] font-bold text-[var(--color-muted)] uppercase block">
+                                        <span className="text-xs font-bold text-[var(--color-muted)] block">
                                             SELECTED DISHES (อาหารที่เลือก):
                                         </span>
                                         <div className="divide-y divide-[var(--color-rule)] border border-[var(--color-rule)] bg-[var(--color-paper-2)]">
                                             {preOrderItems.map(item => (
                                                 <div key={item.id} className="p-2 flex items-center justify-between gap-2">
                                                     <div className="flex-1 min-w-0">
-                                                        <span className="font-bold text-[11px] text-[var(--color-ink)] truncate block">
+                                                        <span className="font-bold text-xs text-[var(--color-ink)] truncate block">
                                                             {item.name}
                                                         </span>
-                                                        <span className="text-[11px] text-[var(--color-neutral)] tabular-nums">
+                                                        <span className="text-xs text-[var(--color-neutral)] tabular-nums">
                                                             ฿{Number(item.price).toFixed(2)} x {item.quantity} = ฿{(item.price * item.quantity).toFixed(2)}
                                                         </span>
                                                     </div>
@@ -982,12 +982,12 @@ export default function ManualBookingModal({
                                             placeholder="ค้นหาเมนูอาหาร..."
                                             value={menuSearch}
                                             onChange={e => setMenuSearch(e.target.value)}
-                                            className="flex-1 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                                            className="flex-1 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums focus:outline-none focus:border-[var(--color-accent)]"
                                         />
                                         <select
                                             value={selectedCategory}
                                             onChange={e => setSelectedCategory(e.target.value)}
-                                            className="p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold uppercase"
+                                            className="p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold "
                                         >
                                             <option value="ALL">ALL CATEGORIES</option>
                                             {menuCategories.map(cat => (
@@ -1006,17 +1006,17 @@ export default function ManualBookingModal({
                                                 className="p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] flex items-center justify-between gap-1.5"
                                             >
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="font-bold text-[11px] text-[var(--color-ink)] truncate">
+                                                    <div className="font-bold text-xs text-[var(--color-ink)] truncate">
                                                         {item.name}
                                                     </div>
-                                                    <div className="text-[11px] text-[var(--color-neutral)] tabular-nums">
+                                                    <div className="text-xs text-[var(--color-neutral)] tabular-nums">
                                                         ฿{Number(item.price || 0).toFixed(2)}
                                                     </div>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleAddPreOrderItem(item)}
-                                                    className="px-2 py-1 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] text-[11px] font-bold uppercase cursor-pointer"
+                                                    className="px-2 py-1 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] text-xs font-bold cursor-pointer"
                                                 >
                                                     + ADD
                                                 </button>
@@ -1031,13 +1031,13 @@ export default function ManualBookingModal({
                     {/* Section 7: Status, Notes & Remarks */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 INITIAL STATUS (สถานะเริ่มต้น)
                             </label>
                             <select
                                 value={status}
                                 onChange={e => setStatus(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-bold focus:outline-none focus:border-[var(--color-accent)] "
                             >
                                 <option value="confirmed">CONFIRMED (ยืนยันแล้ว)</option>
                                 <option value="pending">PENDING (รอตรวจสอบ)</option>
@@ -1046,7 +1046,7 @@ export default function ManualBookingModal({
                         </div>
 
                         <div className="sm:col-span-2">
-                            <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                            <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                                 CUSTOMER NOTE (ข้อความพิเศษจากลูกค้า)
                             </label>
                             <input
@@ -1054,13 +1054,13 @@ export default function ManualBookingModal({
                                 placeholder="เช่น ขอโต๊ะริมหน้าต่าง / เก้าอี้เด็ก / วันเกิด"
                                 value={customerNote}
                                 onChange={e => setCustomerNote(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-[11px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                        <label className="text-xs font-bold text-[var(--color-muted)] block mb-1">
                             STAFF INTERNAL REMARK (บันทึกภายในสำหรับพนักงาน)
                         </label>
                         <input
@@ -1068,7 +1068,7 @@ export default function ManualBookingModal({
                             placeholder="เช่น รับโอน SCB 503 บาท จากคุณชิดชนก"
                             value={staffRemark}
                             onChange={e => setStaffRemark(e.target.value)}
-                            className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                            className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums focus:outline-none focus:border-[var(--color-accent)]"
                         />
                     </div>
 
@@ -1078,14 +1078,14 @@ export default function ManualBookingModal({
                             type="button"
                             onClick={onClose}
                             disabled={isSubmitting}
-                            className="px-4 py-2 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-bold text-xs uppercase cursor-pointer transition-colors"
+                            className="px-4 py-2 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-bold text-xs cursor-pointer transition-colors"
                         >
                             CANCEL
                         </button>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="px-6 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold text-xs uppercase cursor-pointer transition-opacity flex items-center gap-2"
+                            className="px-6 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold text-xs cursor-pointer transition-opacity flex items-center gap-2"
                         >
                             <span>{isSubmitting ? 'CREATING BOOKING…' : 'CONFIRM & CREATE BOOKING'}</span>
                         </button>

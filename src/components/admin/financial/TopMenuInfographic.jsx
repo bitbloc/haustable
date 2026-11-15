@@ -34,19 +34,19 @@ export default function TopMenuInfographic({ data }) {
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
                                 RANKING // POS
                             </span>
                             <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
                                 อันดับเมนูขายดี (Top Menu Revenue & Volume)
                             </h3>
                         </div>
-                        <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-0.5">
+                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
                             จัดอันดับตามยอดขายรวมและจำนวนหน่วยที่สั่งซื้อจากระบบ POS จริง
                         </p>
                     </div>
 
-                    <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                         {activeCategory === 'all' ? (
                             <span>ยอดขายเมนูรวม: ฿{totalMenuRevenue.toLocaleString()}</span>
                         ) : (
@@ -58,7 +58,7 @@ export default function TopMenuInfographic({ data }) {
                 </div>
 
                 {/* Category Navigation Strip */}
-                <div className="p-3 bg-[oklch(97%_0.008_28)] flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs">
+                <div className="p-3 bg-[oklch(97%_0.008_28)] flex items-center gap-1.5 overflow-x-auto no-scrollbar tabular-nums text-xs">
                     {categories.map((cat) => {
                         const isSelected = activeCategory === cat.id
                         const countInCat = cat.id === 'all' 
@@ -76,7 +76,7 @@ export default function TopMenuInfographic({ data }) {
                                 }`}
                             >
                                 <span>{cat.label}</span>
-                                <span className="ml-1.5 text-[11px] opacity-80">({countInCat})</span>
+                                <span className="ml-1.5 text-xs opacity-80">({countInCat})</span>
                             </button>
                         )
                     })}
@@ -85,7 +85,7 @@ export default function TopMenuInfographic({ data }) {
 
             {/* 2. Zero State Alert */}
             {filteredItems.length === 0 && (
-                <div className="p-8 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-center space-y-1 font-mono text-xs">
+                <div className="p-8 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-center space-y-1 tabular-nums text-xs">
                     <p className="font-bold text-sm text-[oklch(18%_0.012_28)]">ไม่มีข้อมูลการขายเมนูในหมวดนี้</p>
                     <p className="text-[oklch(42%_0.010_28)]">ข้อมูลจะอัปเดตอัตโนมัติเมื่อมีการสั่งอาหารและชำระเงินผ่านระบบ POS</p>
                 </div>
@@ -105,20 +105,20 @@ export default function TopMenuInfographic({ data }) {
                             className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 space-y-3 relative"
                         >
                             {idx === 0 && (
-                                <span className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] font-mono font-bold px-2 py-0.5 uppercase tracking-wider">
+                                <span className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] tabular-nums font-bold px-2 py-0.5  ">
                                     RANK #1
                                 </span>
                             )}
 
                             <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 flex items-center justify-center font-mono font-bold text-sm border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] shrink-0">
+                                <div className="w-8 h-8 flex items-center justify-center tabular-nums font-bold text-sm border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] shrink-0">
                                     {String(categoryRank).padStart(2, '0')}
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)] leading-snug">
                                         {item.name}
                                     </h4>
-                                    <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(42%_0.010_28)]">
+                                    <div className="flex items-center gap-2 tabular-nums text-xs text-[oklch(42%_0.010_28)]">
                                         <span className="px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-[oklch(18%_0.012_28)]">
                                             {item.categoryLabel}
                                         </span>
@@ -128,21 +128,21 @@ export default function TopMenuInfographic({ data }) {
                             </div>
 
                             {/* Key Stats Bar */}
-                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
+                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
                                 <div>
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">ยอดขายรวม</div>
+                                    <div className="text-xs text-[oklch(42%_0.010_28)]">ยอดขายรวม</div>
                                     <div className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
                                         ฿{item.revenue.toLocaleString()}
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">จำนวนที่ขาย</div>
+                                    <div className="text-xs text-[oklch(42%_0.010_28)]">จำนวนที่ขาย</div>
                                     <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                         {item.units} ที่
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-[11px] text-[oklch(42%_0.010_28)]">เฉลี่ย/หน่วย</div>
+                                    <div className="text-xs text-[oklch(42%_0.010_28)]">เฉลี่ย/หน่วย</div>
                                     <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                         ฿{item.units > 0 ? Math.round(item.revenue / item.units) : 0}
                                     </div>
@@ -151,7 +151,7 @@ export default function TopMenuInfographic({ data }) {
 
                             {/* Relative Progress Rule */}
                             <div className="space-y-1 pt-1">
-                                <div className="flex justify-between font-mono text-[11px] text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between tabular-nums text-xs text-[oklch(42%_0.010_28)]">
                                     <span>ความนิยมเทียบอันดับ 1</span>
                                     <span className="font-bold text-[oklch(52%_0.16_28)]">{pctOfMax}%</span>
                                 </div>

@@ -1,6 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { AdminFilterChips, AdminSearch, AdminToolbar } from '../../components/admin/AdminKit'
 import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, X, Image as ImageIcon, GripVertical, Search, Copy, LayoutGrid, List } from 'lucide-react'
 import { DndContext, closestCorners, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
@@ -15,20 +16,20 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
-                <h3 className="font-mono text-sm font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
-                <p className="text-xs text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
+                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
                 <div className="flex gap-2 mt-5">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="flex-1 px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-bold uppercase rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="admin-btn h-9 flex-1"
                     >
                         {cancelText}
                     </button>
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className={`flex-1 px-3 py-2 text-xs font-mono font-bold uppercase rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             isDanger
                                 ? 'bg-red-700 hover:bg-red-800'
                                 : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
@@ -95,7 +96,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <h4 className="font-bold truncate text-sm text-[oklch(18%_0.012_28)]">{item.name}</h4>
-                    <div className="text-[oklch(52%_0.16_28)] font-mono font-bold text-sm mt-0.5 tabular-nums">฿{item.price}</div>
+                    <div className="text-[oklch(52%_0.16_28)] font-bold text-sm mt-0.5 tabular-nums">฿{item.price}</div>
                 </div>
             </div>
         )
@@ -105,10 +106,10 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`bg-[oklch(98%_0.004_28)] border rounded-sm p-3 flex justify-between gap-3 items-stretch relative select-none group transition-colors duration-150 ${
+            className={`bg-[oklch(98.5%_0.005_28)] border rounded-lg p-3 flex flex-col gap-3 relative select-none group transition-colors duration-150 cursor-pointer ${
                 isOutOfStock 
                     ? 'border-[oklch(88%_0.010_28)] bg-[oklch(95%_0.008_28)]/70 opacity-75' 
-                    : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
+                    : 'border-[oklch(88%_0.012_28)] hover:border-[oklch(70%_0.012_28)]'
             }`}
             onClick={() => {
                 if (!isDragging) handleEdit(item)
@@ -127,7 +128,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     )}
                     {isOutOfStock && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-[11px] font-mono font-bold text-[oklch(97%_0.008_28)] uppercase tracking-wider bg-red-700 px-1 py-0.5 rounded-xs">
+                            <span className="text-[11px] tabular-nums font-bold text-[oklch(97%_0.008_28)] bg-red-700 px-1 py-0.5 rounded-xs">
                                 หมด
                             </span>
                         </div>
@@ -138,11 +139,11 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                     <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="font-bold truncate text-sm sm:text-base text-[oklch(18%_0.012_28)] leading-normal" title={item.name}>
+                            <h4 className="font-semibold line-clamp-2 text-sm leading-5 text-[oklch(18%_0.012_28)]" title={item.name}>
                                 {item.name}
                             </h4>
                         </div>
-                        <div className="font-mono font-bold text-[oklch(52%_0.16_28)] text-sm mt-0.5 tabular-nums">
+                        <div className="font-semibold text-[oklch(18%_0.012_28)] text-sm mt-1 tabular-nums">
                             ฿{item.price}
                         </div>
                         <div className="text-xs text-[oklch(55%_0.010_28)] line-clamp-1 mt-0.5 font-sans" title={item.description}>
@@ -151,11 +152,11 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     </div>
 
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded-xs">
+                        <span className="text-[11px] tabular-nums text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded-xs">
                             {item.menu_categories?.name || item.category || 'ทั่วไป'}
                         </span>
                         {item.remaining_stock !== null && item.remaining_stock !== undefined && (
-                            <span className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
+                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
                                 item.remaining_stock <= 0
                                     ? 'bg-red-50 text-red-700 border-red-300'
                                     : item.remaining_stock <= 5
@@ -166,8 +167,8 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             </span>
                         )}
                         {item.is_drink_stamp_eligible && (
-                            <span className="text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-xs">
-                                10 FREE 1
+                            <span className="text-[11px] tabular-nums font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-xs">
+                                10 ฟรี 1
                             </span>
                         )}
                     </div>
@@ -175,7 +176,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
             </div>
 
             {/* Right Action Column */}
-            <div className="flex flex-col justify-between items-end shrink-0 pl-2.5 border-l border-[oklch(85%_0.012_28)]">
+            <div className="flex flex-row-reverse items-center justify-between gap-2 pt-2.5 border-t border-[oklch(92%_0.008_28)]">
                 {/* Top Action Icons */}
                 <div 
                     className="flex items-center gap-1"
@@ -236,33 +237,33 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     <button
                         onClick={(e) => handleToggleRecommended(e, item)}
                         aria-pressed={isRecommended === true}
-                        className={`px-2 py-1 rounded-xs text-[11px] font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-xs font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             isRecommended
                                 ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] hover:bg-[oklch(47%_0.16_28)]'
                                 : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
                         }`}
                         title={isRecommended ? 'คลิกเพื่อนำออกจากเมนูแนะนำ' : 'คลิกเพื่อเพิ่มเป็นเมนูแนะนำ'}
                     >
-                        {isRecommended ? '★ แนะนำ' : '☆ แนะนำ'}
+                        {isRecommended ? 'แนะนำอยู่' : 'แนะนำ'}
                     </button>
 
                     {/* Quick Stock Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleToggleStock(e, item)}
-                        className={`px-2 py-1 rounded-xs text-[11px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-xs tabular-nums font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             item.is_available !== false 
-                                ? 'bg-green-50 text-green-800 border-green-300 hover:bg-green-100' 
-                                : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
+                                ? 'bg-[oklch(95%_0.03_150)] text-[oklch(32%_0.08_150)] border-[oklch(85%_0.05_150)] hover:bg-[oklch(92%_0.04_150)]' 
+                                : 'bg-[oklch(95%_0.03_25)] text-[oklch(42%_0.14_25)] border-[oklch(85%_0.06_25)] hover:bg-[oklch(92%_0.04_25)]'
                         }`}
                         title={item.is_available !== false ? 'คลิกเพื่อตั้งเป็นของหมด' : 'คลิกเพื่อเปิดขาย'}
                     >
-                        {item.is_available !== false ? '● มีของ' : '○ หมด'}
+                        {item.is_available !== false ? 'มีของ' : 'หมด'}
                     </button>
 
                     {/* Quick Pickup Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleTogglePickup(e, item)}
-                        className={`px-2 py-1 rounded-xs text-[11px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-xs tabular-nums font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             item.is_pickup_available !== false 
                                 ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]' 
                                 : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
@@ -309,7 +310,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             ref={setNodeRef}
             style={style}
             onClick={() => handleEdit(item)}
-            className={`border-b border-[oklch(85%_0.012_28)] text-xs font-mono hover:bg-[oklch(95%_0.008_28)] transition-colors duration-150 cursor-pointer ${
+            className={`border-b border-[oklch(85%_0.012_28)] text-xs tabular-nums hover:bg-[oklch(95%_0.008_28)] transition-colors duration-150 cursor-pointer ${
                 isOutOfStock ? 'bg-[oklch(96%_0.006_28)]/60 text-[oklch(55%_0.010_28)]' : 'bg-[oklch(98%_0.004_28)] text-[oklch(18%_0.012_28)]'
             }`}
         >
@@ -342,12 +343,12 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                 <div className="flex items-center gap-2">
                     <span className="font-bold font-sans text-sm text-[oklch(18%_0.012_28)] leading-normal">{item.name}</span>
                     {item.is_drink_stamp_eligible && (
-                        <span className="text-[11px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
+                        <span className="text-[11px] tabular-nums font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
                             10 FREE 1
                         </span>
                     )}
                 </div>
-                <div className="text-[11px] text-[oklch(55%_0.010_28)] font-sans truncate max-w-xs">
+                <div className="text-xs text-[oklch(55%_0.010_28)] font-sans truncate max-w-xs">
                     {item.menu_categories?.name || item.category || 'ทั่วไป'} {item.description && `• ${item.description}`}
                 </div>
             </td>
@@ -370,7 +371,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                         {item.remaining_stock}
                     </span>
                 ) : (
-                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
+                    <span className="text-xs text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
                 )}
             </td>
 
@@ -379,14 +380,14 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                 <button
                     onClick={(e) => handleToggleRecommended(e, item)}
                     aria-pressed={item.is_recommended === true}
-                    className={`px-2 py-1 rounded-xs text-[11px] font-bold font-sans border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                    className={`px-2 py-1 rounded-xs text-xs font-bold font-sans border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                         item.is_recommended
                             ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
                             : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                     title={item.is_recommended ? 'นำออกจากเมนูแนะนำ' : 'เพิ่มเป็นเมนูแนะนำ'}
                 >
-                    {item.is_recommended ? '★ แนะนำ' : '☆'}
+                    {item.is_recommended ? 'แนะนำอยู่' : 'แนะนำ'}
                 </button>
             </td>
 
@@ -394,7 +395,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={(e) => handleToggleStock(e, item)}
-                    className={`px-2 py-1 rounded-xs text-[11px] font-bold border transition-colors duration-150 cursor-pointer ${
+                    className={`px-2 py-1 rounded-xs text-xs font-bold border transition-colors duration-150 cursor-pointer ${
                         item.is_available !== false
                             ? 'bg-green-50 text-green-800 border-green-300 hover:bg-green-100'
                             : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
@@ -408,7 +409,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={(e) => handleTogglePickup(e, item)}
-                    className={`px-2 py-1 rounded-xs text-[11px] font-bold border transition-colors duration-150 cursor-pointer ${
+                    className={`px-2 py-1 rounded-xs text-xs font-bold border transition-colors duration-150 cursor-pointer ${
                         item.is_pickup_available !== false
                             ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
                             : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
@@ -1214,159 +1215,70 @@ export default function MenuItemList() {
 
     return (
         <div className="text-[oklch(18%_0.012_28)] pb-12 animate-fade-in font-sans">
-            {/* Header Toolbar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)]">
-                            Catalog Menu Items
-                        </h2>
-                        <span className="font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)] tabular-nums">
-                            {filteredMenuItems.length} / {menuItems.length} รายการ
-                        </span>
-                        {isSavingOrder && (
-                            <span className="text-xs font-mono text-[oklch(52%_0.16_28)] font-bold">
-                                กำลังบันทึกลำดับ...
-                            </span>
-                        )}
-                    </div>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                        จัดการรายการอาหาร เครื่องดื่ม รูปภาพ ต้นทุนวัตถุดิบ และตัวเลือกเสริม
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
-                    {/* View Switcher (Grid vs Dense Tabular List) */}
-                    <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden">
-                        <button
-                            type="button"
-                            onClick={() => toggleViewMode('grid')}
-                            className={`p-1.5 transition-colors duration-150 cursor-pointer ${
-                                viewMode === 'grid'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
-                            }`}
-                            title="มุมมองการ์ด (Card Grid)"
-                        >
-                            <LayoutGrid size={15} />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => toggleViewMode('table')}
-                            className={`p-1.5 transition-colors duration-150 cursor-pointer ${
-                                viewMode === 'table'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
-                            }`}
-                            title="มุมมองตารางหนาแน่น (Dense Table)"
-                        >
-                            <List size={15} />
-                        </button>
-                    </div>
-
+            {/* Count, view switch and the main action. The tab above already names this view. */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <p className="text-[13px] text-[oklch(42%_0.010_28)] tabular-nums">
+                    แสดง {filteredMenuItems.length} จาก {menuItems.length} เมนู
+                    {isSavingOrder && <span className="ml-2 text-[oklch(52%_0.16_28)]">กำลังบันทึกลำดับ...</span>}
+                </p>
+                <div className="flex items-center gap-2">
+                    <AdminFilterChips
+                        label="มุมมองรายการเมนู"
+                        layoutId="menu-view-mode"
+                        options={[{ key: 'grid', label: 'การ์ด' }, { key: 'table', label: 'ตาราง' }]}
+                        value={viewMode}
+                        onChange={toggleViewMode}
+                    />
                     <button 
                         onClick={handleCreate} 
-                        className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="admin-btn is-primary h-9"
                     >
                         <Plus size={15} /> สร้างเมนูใหม่
                     </button>
                 </div>
             </div>
 
-            {/* Search & Filter Bar (Rams Tabular Style) */}
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-3 mb-5 space-y-3 ">
-                <div className="flex flex-col sm:flex-row gap-2.5">
-                    {/* Search Input */}
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(55%_0.010_28)]" />
-                        <input
-                            type="text"
-                            placeholder="ค้นหาชื่อเมนู, คำอธิบาย หรือหมวดหมู่..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-8 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs font-mono focus:bg-[oklch(98%_0.004_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer">
-                                <X size={14} />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Status Filter Chips */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-                        {[
-                            { id: 'all', label: 'ทั้งหมด' },
-                            { id: 'in_stock', label: 'มีของ' },
-                            { id: 'out_of_stock', label: 'ของหมด' },
-                            { id: 'pickup', label: 'Pick-up' },
-                            { id: 'stamp', label: '10 ฟรี 1' }
-                        ].map(chip => (
-                            <button
-                                key={chip.id}
-                                onClick={() => setStatusFilter(chip.id)}
-                                className={`px-2.5 py-1.5 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
-                                    statusFilter === chip.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] '
-                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                }`}
-                            >
-                                {chip.label}
-                            </button>
-                        ))}
-                    </div>
+            {/* Search, stock status and category */}
+            <AdminToolbar className="mb-5">
+                <div className="p-3 flex flex-col lg:flex-row gap-3 lg:items-center">
+                    <AdminSearch
+                        className="flex-1"
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="ค้นหาชื่อเมนู คำอธิบาย หรือหมวดหมู่"
+                    />
+                    <AdminFilterChips
+                        label="สถานะเมนู"
+                        layoutId="menu-status-chip"
+                        options={[
+                            { key: 'all', label: 'ทั้งหมด' },
+                            { key: 'in_stock', label: 'มีของ' },
+                            { key: 'out_of_stock', label: 'ของหมด' },
+                            { key: 'pickup', label: 'Pick-up' },
+                            { key: 'stamp', label: '10 ฟรี 1' }
+                        ]}
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                    />
                 </div>
-
-                {/* Category Navigation (Horizontal Tabular Strip) */}
-                <div 
-                    className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[oklch(85%_0.012_28)] no-scrollbar"
-                    onWheel={e => {
-                        if (e.deltaY !== 0) {
-                            e.preventDefault()
-                            e.currentTarget.scrollLeft += e.deltaY * 0.8
-                        }
-                    }}
-                >
-                    <button
-                        onClick={() => setSelectedCategoryTab('all')}
-                        className={`px-3 py-1 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
-                            selectedCategoryTab === 'all'
-                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
-                                : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
-                        }`}
-                    >
-                        [ทุกหมวดหมู่ • {menuItems.length}]
-                    </button>
-
-                    <button
-                        onClick={() => setSelectedCategoryTab('recommended')}
-                        className={`px-3 py-1 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
-                            selectedCategoryTab === 'recommended'
-                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
-                                : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
-                        }`}
-                    >
-                        เมนูแนะนำ ({recommendedItems.length})
-                    </button>
-
-                    {categories.map(cat => {
-                        const count = menuItems.filter(i => i.category_id === cat.id || i.category === cat.name).length
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategoryTab(cat.id)}
-                                className={`px-3 py-1 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
-                                    selectedCategoryTab === cat.id
-                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
-                                        : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
-                                }`}
-                            >
-                                {cat.name} ({count})
-                            </button>
-                        )
-                    })}
+                <div className="p-3">
+                    <AdminFilterChips
+                        label="หมวดหมู่"
+                        layoutId="menu-category-chip"
+                        options={[
+                            { key: 'all', label: 'ทุกหมวด', count: menuItems.length },
+                            { key: 'recommended', label: 'เมนูแนะนำ', count: recommendedItems.length },
+                            ...categories.map(cat => ({
+                                key: cat.id,
+                                label: cat.name,
+                                count: menuItems.filter(i => i.category_id === cat.id || i.category === cat.name).length
+                            }))
+                        ]}
+                        value={selectedCategoryTab}
+                        onChange={setSelectedCategoryTab}
+                    />
                 </div>
-            </div>
+            </AdminToolbar>
 
             {/* Recommended Panel: what the customer table page shows in its showcase row, in that order */}
             {!loading && (
@@ -1375,11 +1287,11 @@ export default function MenuItemList() {
                         <div className="min-w-0">
                             <h3 id="rec-panel-title" className="text-sm font-bold text-[oklch(18%_0.012_28)] leading-normal">
                                 เมนูแนะนำ
-                                <span className="ml-2 font-mono text-xs font-normal text-[oklch(55%_0.010_28)] tabular-nums">
+                                <span className="ml-2 text-xs font-normal text-[oklch(55%_0.010_28)] tabular-nums">
                                     แสดง {recommendedShownIds.size} / {RECOMMENDED_SLOTS} ช่อง
                                 </span>
                             </h3>
-                            <p className="text-xs text-[oklch(55%_0.010_28)] leading-normal">
+                            <p className="text-[13px] text-[oklch(55%_0.010_28)] leading-normal">
                                 หน้าสั่งอาหารที่โต๊ะแสดง {RECOMMENDED_SLOTS} รายการแรกที่มีของ เรียงตามลำดับนี้
                             </p>
                         </div>
@@ -1395,8 +1307,8 @@ export default function MenuItemList() {
                     </div>
 
                     {recommendedItems.length === 0 ? (
-                        <p className="px-3 py-4 text-xs text-[oklch(55%_0.010_28)] leading-normal">
-                            ยังไม่มีเมนูแนะนำ กดปุ่ม ☆ แนะนำ ที่การ์ดเมนูด้านล่างเพื่อเพิ่ม
+                        <p className="px-3 py-4 text-[13px] text-[oklch(55%_0.010_28)] leading-normal">
+                            ยังไม่มีเมนูแนะนำ กดปุ่ม "แนะนำ" ที่การ์ดเมนูด้านล่างเพื่อเพิ่ม
                         </p>
                     ) : (
                         <ol>
@@ -1408,7 +1320,7 @@ export default function MenuItemList() {
                                         key={item.id}
                                         className={`px-3 py-2 flex items-center gap-3 border-b last:border-b-0 border-[oklch(90%_0.010_28)] ${isShown ? '' : 'bg-[oklch(96%_0.006_28)]'}`}
                                     >
-                                        <span className="w-5 shrink-0 font-mono text-xs text-[oklch(55%_0.010_28)] tabular-nums text-right">{index + 1}</span>
+                                        <span className="w-5 shrink-0 text-xs text-[oklch(55%_0.010_28)] tabular-nums text-right">{index + 1}</span>
                                         <div className={`w-10 h-10 shrink-0 bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden border border-[oklch(85%_0.012_28)] flex items-center justify-center ${isShown ? '' : 'opacity-60'}`}>
                                             {item.image_url ? (
                                                 <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
@@ -1421,7 +1333,7 @@ export default function MenuItemList() {
                                                 {item.name}
                                             </div>
                                             <div className="text-xs leading-normal text-[oklch(55%_0.010_28)]">
-                                                <span className="font-mono tabular-nums">฿{item.price}</span>
+                                                <span className=" tabular-nums">฿{item.price}</span>
                                                 {isOut ? (
                                                     <span className="ml-2 text-red-700">ของหมด · ไม่แสดง</span>
                                                 ) : !isShown ? (
@@ -1474,7 +1386,7 @@ export default function MenuItemList() {
                     ))}
                 </div>
             ) : filteredMenuItems.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] font-mono text-xs">
+                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] tabular-nums text-xs">
                     ไม่พบเมนูที่ตรงกับเงื่อนไขการค้นหา
                 </div>
             ) : viewMode === 'table' ? (
@@ -1486,9 +1398,9 @@ export default function MenuItemList() {
                     onDragEnd={handleDragEnd}
                 >
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] rounded-sm overflow-x-auto ">
-                        <table className="w-full border-collapse font-mono text-xs text-left min-w-[700px]">
+                        <table className="w-full border-collapse tabular-nums text-[13px] text-left min-w-[700px]">
                             <thead>
-                                <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase text-[11px]">
+                                <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-xs">
                                     <th className="py-2.5 px-3 w-8 text-center">#</th>
                                     <th className="py-2.5 px-3 w-12 text-center">รูป</th>
                                     <th className="py-2.5 px-3 font-bold">ชื่อเมนู / หมวดหมู่</th>
@@ -1557,10 +1469,10 @@ export default function MenuItemList() {
                         {/* Modal Header */}
                         <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-[oklch(98%_0.004_28)] z-10">
                             <div>
-                                <h3 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                     {editingItem ? 'แก้ไขเมนู' : 'สร้างเมนูใหม่'}
                                 </h3>
-                                <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
                                     {editingItem ? `รหัสเมนู #${editingItem.id}` : 'กรอกรายละเอียดและบันทึกเข้าแค็ตตาล็อก'}
                                 </p>
                             </div>
@@ -1576,7 +1488,7 @@ export default function MenuItemList() {
                         <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[oklch(98%_0.004_28)]">
                             {/* Section 1: Image Upload */}
                             <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-2">
+                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-2">
                                     รูปภาพเมนู (Menu Image)
                                 </label>
                                 <div className="flex items-center gap-4">
@@ -1596,16 +1508,16 @@ export default function MenuItemList() {
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] gap-1">
                                                 <ImageIcon size={20} />
-                                                <span className="text-[11px] font-mono">ไม่มีรูป</span>
+                                                <span className="text-xs tabular-nums">ไม่มีรูป</span>
                                             </div>
                                         )}
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="inline-block bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-xs font-mono font-bold text-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 ">
+                                        <label className="inline-block bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-xs tabular-nums font-bold text-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 ">
                                             <span>เลือกรูปภาพ</span>
                                             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                         </label>
-                                        <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono leading-tight">
+                                        <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums leading-tight">
                                             รองรับ JPG, PNG, WEBP (ระบบจะปรับขนาดและบีบอัดอัตโนมัติ)
                                         </p>
                                     </div>
@@ -1615,7 +1527,7 @@ export default function MenuItemList() {
                             {/* Section 2: Name & Category Inputs */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
                                         ชื่อเมนู *
                                     </label>
                                     <input
@@ -1623,19 +1535,19 @@ export default function MenuItemList() {
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="เช่น Iced Americano, Matcha Latte"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-xs font-bold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
                                         หมวดหมู่ *
                                     </label>
                                     <select
                                         value={formData.category_id}
                                         onChange={e => handleCategoryChangeInForm(e.target.value)}
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-xs font-bold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 cursor-pointer"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 cursor-pointer"
                                         required
                                     >
                                         {categories.map(c => (
@@ -1648,7 +1560,7 @@ export default function MenuItemList() {
                             {/* Section 3: Pricing, Stock & Food Cost Breakdown */}
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
                                         ราคาขาย (บาท) *
                                     </label>
                                     <input
@@ -1657,13 +1569,13 @@ export default function MenuItemList() {
                                         value={formData.price}
                                         onChange={e => setFormData({ ...formData, price: e.target.value })}
                                         placeholder="0.00"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] tabular-nums transition-colors duration-150"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-sm text-[oklch(18%_0.012_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 tabular-nums"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
                                         สต็อกคงเหลือ (ชิ้น)
                                     </label>
                                     <input
@@ -1673,24 +1585,24 @@ export default function MenuItemList() {
                                         value={formData.remaining_stock}
                                         onChange={e => setFormData({ ...formData, remaining_stock: e.target.value })}
                                         placeholder="ไม่จำกัด"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-xs font-mono font-bold text-[oklch(52%_0.16_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] tabular-nums transition-colors duration-150"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-sm text-[oklch(52%_0.16_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 tabular-nums"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] mb-1">
                                         ต้นทุน (Recipe Cost)
                                     </label>
-                                    <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs font-mono font-bold text-right text-[oklch(42%_0.010_28)] tabular-nums">
+                                    <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs font-bold text-right text-[oklch(42%_0.010_28)] tabular-nums">
                                         ฿{modalCost.toFixed(2)}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] mb-1">
                                         GP Margin (%)
                                     </label>
-                                    <div className={`p-2 border rounded-xs text-xs font-mono font-bold text-right tabular-nums ${
+                                    <div className={`p-2 border rounded-xs text-xs font-bold text-right tabular-nums ${
                                         modalMargin >= 65 ? 'bg-green-50 text-green-800 border-green-200' : 'bg-amber-50 text-amber-800 border-amber-200'
                                     }`}>
                                         {modalMargin}% (฿{modalProfit.toFixed(1)})
@@ -1700,7 +1612,7 @@ export default function MenuItemList() {
 
                             {/* Section 4: Description */}
                             <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
                                     คำอธิบายเมนู (Description)
                                 </label>
                                 <textarea
@@ -1708,7 +1620,7 @@ export default function MenuItemList() {
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                     rows={2}
                                     placeholder="เช่น เมล็ด House Blend คั่วกลาง โน้ตช็อกโกแลตและคาราเมล"
-                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-xs text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                                 />
                             </div>
 
@@ -1722,8 +1634,8 @@ export default function MenuItemList() {
                                         className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
                                     />
                                     <div>
-                                        <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">มีสินค้า (In Stock)</div>
-                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">เปิดให้สั่งซื้อได้</div>
+                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">มีสินค้า (In Stock)</div>
+                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">เปิดให้สั่งซื้อได้</div>
                                     </div>
                                 </label>
 
@@ -1735,8 +1647,8 @@ export default function MenuItemList() {
                                         className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
                                     />
                                     <div>
-                                        <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">เมนูแนะนำ (Recommended)</div>
-                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">แสดงแถบไฮไลต์ REC</div>
+                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">เมนูแนะนำ (Recommended)</div>
+                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">แสดงแถบไฮไลต์ REC</div>
                                     </div>
                                 </label>
 
@@ -1748,8 +1660,8 @@ export default function MenuItemList() {
                                         className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
                                     />
                                     <div>
-                                        <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">รับ Pick-up หน้าร้าน</div>
-                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">สั่งล่วงหน้าผ่านเว็บ</div>
+                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">รับ Pick-up หน้าร้าน</div>
+                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">สั่งล่วงหน้าผ่านเว็บ</div>
                                     </div>
                                 </label>
 
@@ -1761,8 +1673,8 @@ export default function MenuItemList() {
                                         className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
                                     />
                                     <div>
-                                        <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">สะสมแก้ว 10 ฟรี 1</div>
-                                        <div className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">สิทธิ์ Drink Stamp</div>
+                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">สะสมแก้ว 10 ฟรี 1</div>
+                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">สิทธิ์ Drink Stamp</div>
                                     </div>
                                 </label>
                             </div>
@@ -1771,17 +1683,17 @@ export default function MenuItemList() {
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <label className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block">
+                                        <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block">
                                             กลุ่มตัวเลือกเสริม (Option Groups)
                                         </label>
-                                        <span className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">
+                                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">
                                             เลือกกลุ่มตัวเลือกที่เมนูนี้รองรับ เช่น ความหวาน, นม, ท็อปปิ้ง
                                         </span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setIsOptionPickerOpen(!isOptionPickerOpen)}
-                                        className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-xs hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] transition-colors duration-150 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                        className="text-xs tabular-nums font-bold text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-xs hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] transition-colors duration-150 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                     >
                                         <Plus size={13} /> {isOptionPickerOpen ? 'ปิดหน้าต่างเลือก' : 'เลือกกลุ่มตัวเลือก'}
                                     </button>
@@ -1794,7 +1706,7 @@ export default function MenuItemList() {
                                             placeholder="ค้นหากลุ่มตัวเลือก..."
                                             value={optionPickerSearch}
                                             onChange={e => setOptionPickerSearch(e.target.value)}
-                                            className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2.5 py-1.5 text-xs font-mono focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                            className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2.5 py-1.5 text-sm focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                         />
 
                                         <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
@@ -1820,7 +1732,7 @@ export default function MenuItemList() {
                                                             />
                                                             <span>{og.name}</span>
                                                         </div>
-                                                        <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)] tabular-nums">
+                                                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">
                                                             {(og.option_choices || []).length} choices
                                                         </span>
                                                     </label>
@@ -1838,7 +1750,7 @@ export default function MenuItemList() {
                                         return (
                                             <span 
                                                 key={groupId}
-                                                className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-xs text-xs font-mono font-bold flex items-center gap-1.5 "
+                                                className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-xs text-xs tabular-nums font-bold flex items-center gap-1.5 "
                                             >
                                                 <span>{group.name}</span>
                                                 <button
@@ -1852,7 +1764,7 @@ export default function MenuItemList() {
                                         )
                                     })}
                                     {selectedOptionGroups.length === 0 && (
-                                        <span className="text-xs font-mono text-[oklch(55%_0.010_28)]">
+                                        <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)]">
                                             ยังไม่ได้เชื่อมโยงกลุ่มตัวเลือกเสริม
                                         </span>
                                     )}
@@ -1865,14 +1777,14 @@ export default function MenuItemList() {
                             <button 
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
-                                className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="admin-btn h-9 flex-1"
                             >
                                 ยกเลิก
                             </button>
                             <button 
                                 type="button"
                                 onClick={handleSubmit} 
-                                className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="admin-btn is-primary h-9 flex-1"
                             >
                                 บันทึกเมนู
                             </button>

@@ -42,7 +42,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                 {/* Header */}
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[oklch(94%_0.010_28)]">
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase">
+                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
                             VELOCITY // HOURLY
                         </span>
                         <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)]">
@@ -50,7 +50,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                         </h4>
                     </div>
                     {peakHourData && peakHourData.gross > 0 && (
-                        <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)]/40 px-2.5 py-0.5">
+                        <span className="tabular-nums text-xs font-bold text-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)]/40 px-2.5 py-0.5">
                             PEAK: {peakHourData.hour} (฿{peakHourData.gross.toLocaleString()})
                         </span>
                     )}
@@ -73,9 +73,9 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                 >
                                     {/* Tooltip on Hover */}
                                     {isHovered && (
-                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-20 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-mono px-2 py-1 border border-[oklch(85%_0.012_28)] whitespace-nowrap pointer-events-none text-center">
+                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-20 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs tabular-nums px-2 py-1 border border-[oklch(85%_0.012_28)] whitespace-nowrap pointer-events-none text-center">
                                             <div className="font-bold text-[oklch(97%_0.008_28)]">฿{h.gross.toLocaleString()}</div>
-                                            <div className="text-[oklch(85%_0.012_28)] text-[11px]">{h.bills} บิล // {h.hour}</div>
+                                            <div className="text-[oklch(85%_0.012_28)] text-xs">{h.bills} บิล // {h.hour}</div>
                                         </div>
                                     )}
 
@@ -94,7 +94,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     </div>
 
                                     {/* Hour Label */}
-                                    <span className={`text-[11px] font-mono mt-2 font-bold truncate max-w-full ${
+                                    <span className={`text-xs tabular-nums mt-2 font-bold truncate max-w-full ${
                                         isPeak ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'
                                     }`}>
                                         {String(h.hour ?? '').split(':')[0] || idx}
@@ -111,7 +111,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                 
                 {/* Payment Methods Breakdown (7 cols) */}
                 <div className="lg:col-span-7 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] flex items-center justify-between font-mono text-xs">
+                    <div className="p-4 bg-[oklch(94%_0.010_28)] flex items-center justify-between tabular-nums text-xs">
                         <span className="font-bold text-[oklch(18%_0.012_28)]">
                             PAYMENT METHODS // สรุปช่องทางชำระเงิน
                         </span>
@@ -123,18 +123,18 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]">
                         {paymentMethods.map((pm, idx) => (
                             <div key={idx} className="p-4 space-y-2 bg-[oklch(97%_0.008_28)]">
-                                <div className="flex items-center justify-between text-xs font-mono">
+                                <div className="flex items-center justify-between text-xs tabular-nums">
                                     <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">{pm.name}</span>
                                     <span className="px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold">
                                         {pm.percent}%
                                     </span>
                                 </div>
 
-                                <div className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                <div className=" text-xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                     ฿{Math.ceil(pm.amount || 0).toLocaleString()}
                                 </div>
 
-                                <div className="flex justify-between items-center text-[11px] font-mono text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between items-center text-xs tabular-nums text-[oklch(42%_0.010_28)]">
                                     <span>{pm.count || 0} รายการ</span>
                                     <span>เฉลี่ย ฿{pm.count > 0 ? Math.round(pm.amount/pm.count) : 0}</span>
                                 </div>
@@ -150,7 +150,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
 
                 {/* Dining Channels Share (5 cols) */}
                 <div className="lg:col-span-5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                         DINING CHANNELS // สัดส่วนช่องทางขาย
                     </div>
 
@@ -159,15 +159,15 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                             <div key={idx} className="p-4 flex items-center justify-between bg-[oklch(97%_0.008_28)]">
                                 <div>
                                     <div className="text-xs font-bold text-[oklch(18%_0.012_28)]">{ch.name}</div>
-                                    <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)] mt-0.5">
+                                    <div className="text-xs tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
                                         เฉลี่ย ฿{ch.avgPerTable || ch.avgPerOrder || 0} / ออเดอร์ ({ch.tables || ch.orders || 0} ครั้ง)
                                     </div>
                                 </div>
-                                <div className="text-right font-mono">
+                                <div className="text-right tabular-nums">
                                     <div className="text-base font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                         ฿{Math.ceil(ch.amount).toLocaleString()}
                                     </div>
-                                    <div className="text-[11px] text-[oklch(52%_0.16_28)] font-bold">
+                                    <div className="text-xs text-[oklch(52%_0.16_28)] font-bold">
                                         {ch.percent}% of total
                                     </div>
                                 </div>
@@ -182,11 +182,11 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                 
                 {/* Financial Reconciliation Statement (5 cols) */}
                 <div className="lg:col-span-5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                         STATEMENT // ตารางกระทบยอดรายได้และค่าใช้จ่ายจริง
                     </div>
 
-                    <div className="p-4 space-y-3 font-mono text-xs">
+                    <div className="p-4 space-y-3 tabular-nums text-xs">
                         <div className="flex justify-between items-baseline py-1">
                             <span className="text-[oklch(42%_0.010_28)] font-sans">ยอดขายรวมก่อนหักส่วนลด (Gross Sales)</span>
                             <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
@@ -217,7 +217,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
 
                         <div className="flex justify-between items-center p-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] mt-4">
                             <span className="font-bold font-sans">กำไรจากการดำเนินงาน (Operating Profit)</span>
-                            <span className="font-mono text-lg font-bold tabular-nums text-[oklch(97%_0.008_28)]">
+                            <span className=" text-lg font-bold tabular-nums text-[oklch(97%_0.008_28)]">
                                 ฿{Math.ceil(auditReconciliation.netOperatingIncome).toLocaleString()}
                             </span>
                         </div>
@@ -226,7 +226,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
 
                 {/* Hourly Velocity Table (7 cols) */}
                 <div className="lg:col-span-7 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] flex items-center justify-between font-mono text-xs">
+                    <div className="p-4 bg-[oklch(94%_0.010_28)] flex items-center justify-between tabular-nums text-xs">
                         <span className="font-bold text-[oklch(18%_0.012_28)]">
                             HOURLY LOG // สถิติรายชั่วโมง
                         </span>
@@ -236,9 +236,9 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left font-mono text-xs min-w-[500px]">
+                        <table className="w-full text-left tabular-nums text-[13px] min-w-[500px]">
                             <thead>
-                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[11px] font-bold uppercase">
+                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-xs font-bold ">
                                     <th className="p-3 border-r border-[oklch(85%_0.012_28)]">ช่วงเวลา</th>
                                     <th className="p-3 text-right border-r border-[oklch(85%_0.012_28)]">ยอดขาย (฿)</th>
                                     <th className="p-3 text-right border-r border-[oklch(85%_0.012_28)]">บิล</th>

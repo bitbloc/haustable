@@ -1224,7 +1224,7 @@ export default function AdminFinancialDashboard() {
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-y divide-[oklch(85%_0.012_28)]">
                 
                 {/* Filter Ribbon Row: Day / Month / Year Mode, Compare Mode, & Date Picker */}
-                <div className="p-3 bg-[oklch(97%_0.008_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                <div className="p-3 bg-[oklch(97%_0.008_28)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                     
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Period Switcher */}
@@ -1255,23 +1255,23 @@ export default function AdminFinancialDashboard() {
                                     type="button"
                                     onClick={() => stepDate(-1)}
                                     title="วันก่อนหน้า (D-1)"
-                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                                 >
-                                    [ ◀ ]
+                                    ◀
                                 </button>
                                 <input
                                     type="date"
                                     value={selectedDate}
                                     onChange={(e) => setSelectedDate(e.target.value)}
-                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none"
+                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] tabular-nums font-bold focus:outline-none"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => stepDate(1)}
                                     title="วันถัดไป (D+1)"
-                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                                 >
-                                    [ ▶ ]
+                                    ▶
                                 </button>
                             </div>
                         )}
@@ -1282,23 +1282,23 @@ export default function AdminFinancialDashboard() {
                                     type="button"
                                     onClick={() => stepMonth(-1)}
                                     title="เดือนก่อนหน้า (M-1)"
-                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                                 >
-                                    [ ◀ ]
+                                    ◀
                                 </button>
                                 <input
                                     type="month"
                                     value={selectedMonth}
                                     onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none"
+                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] tabular-nums font-bold focus:outline-none"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => stepMonth(1)}
                                     title="เดือนถัดไป (M+1)"
-                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                                 >
-                                    [ ▶ ]
+                                    ▶
                                 </button>
                             </div>
                         )}
@@ -1309,14 +1309,14 @@ export default function AdminFinancialDashboard() {
                                     type="button"
                                     onClick={() => setSelectedYear(prev => String(parseInt(prev, 10) - 1))}
                                     title="ปีก่อนหน้า (Y-1)"
-                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                                 >
-                                    [ ◀ ]
+                                    ◀
                                 </button>
                                 <select
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none cursor-pointer"
+                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] tabular-nums font-bold focus:outline-none cursor-pointer"
                                 >
                                     <option value="2027">ปี 2027</option>
                                     <option value="2026">ปี 2026</option>
@@ -1327,9 +1327,9 @@ export default function AdminFinancialDashboard() {
                                     type="button"
                                     onClick={() => setSelectedYear(prev => String(parseInt(prev, 10) + 1))}
                                     title="ปีถัดไป (Y+1)"
-                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1.5 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                                 >
-                                    [ ▶ ]
+                                    ▶
                                 </button>
                             </div>
                         )}
@@ -1337,14 +1337,14 @@ export default function AdminFinancialDashboard() {
                         <button
                             type="button"
                             onClick={() => { setFilterMode('day'); setSelectedDate(getThaiDate()); }}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px] cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-xs cursor-pointer"
                         >
                             วันนี้
                         </button>
                         <button
                             type="button"
                             onClick={() => { setFilterMode('month'); setSelectedMonth(getCurrentBangkokMonth()); }}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px] cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-xs cursor-pointer"
                         >
                             เดือนนี้
                         </button>
@@ -1379,7 +1379,7 @@ export default function AdminFinancialDashboard() {
                             </div>
                         )}
 
-                        <div className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] font-mono text-[11px]">
+                        <div className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] tabular-nums text-xs">
                             สาขา: <strong className="text-[oklch(18%_0.012_28)]">Main (ริมโขง)</strong>
                         </div>
                     </div>
@@ -1388,14 +1388,14 @@ export default function AdminFinancialDashboard() {
 
             {/* Zero State Alert (Clean Typography Enclosure) */}
             {!hasLiveData && !loading && (
-                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1 font-mono">
+                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1 tabular-nums">
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                            ZERO TRANSACTIONS RECORDED // {getTimeRangeLabel()}
+                        <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">
+                            ยังไม่มีธุรกรรม · {getTimeRangeLabel()}
                         </span>
                     </div>
-                    <p className="text-xs text-[oklch(42%_0.010_28)] font-sans">
+                    <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans">
                         ยังไม่มีรายการชำระเงินที่สมบูรณ์ในช่วงเวลานี้ ข้อมูลจะอัปเดตแบบเรียลไทม์ทันทีเมื่อมีการชำระเงินผ่านระบบ POS
                     </p>
                 </div>
@@ -1444,20 +1444,15 @@ export default function AdminFinancialDashboard() {
                     onClick={() => handleNavScroll('left')}
                     disabled={!canScrollNavLeft}
                     aria-label="เลื่อนแท็บไปทางซ้าย"
-                    title="เลื่อนแท็บไปทางซ้าย [SCROLL LEFT]"
-                    className={`flex-none px-3.5 flex items-center justify-center font-mono text-xs font-bold border-r border-[oklch(85%_0.012_28)] transition-all min-h-[42px] select-none ${
+                    title="เลื่อนแท็บไปทางซ้าย"
+                    className={`flex-none px-3.5 flex items-center justify-center tabular-nums text-xs font-bold border-r border-[oklch(85%_0.012_28)] transition-all min-h-[42px] select-none ${
                         canScrollNavLeft
                             ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] cursor-pointer active:scale-95'
                             : 'bg-[oklch(94%_0.010_28)] text-[oklch(70%_0.010_28)] opacity-40 cursor-not-allowed'
                     }`}
                 >
-                    [ ◀ ]
+                    ◀
                 </button>
-
-                {/* Left Fade Hint */}
-                {canScrollNavLeft && (
-                    <div className="absolute left-10 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-r from-[oklch(18%_0.012_28)]/10 to-transparent z-10" />
-                )}
 
                 {/* Scrollable Tabs Viewport */}
                 <div
@@ -1467,7 +1462,7 @@ export default function AdminFinancialDashboard() {
                     onMouseMove={handleNavMouseMove}
                     onMouseUp={handleNavMouseUpOrLeave}
                     onMouseLeave={handleNavMouseUpOrLeave}
-                    className={`flex-1 overflow-x-auto financial-nav-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs ${
+                    className={`flex-1 overflow-x-auto financial-nav-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] tabular-nums text-xs ${
                         isNavDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
                     }`}
                 >
@@ -1502,25 +1497,20 @@ export default function AdminFinancialDashboard() {
                     ))}
                 </div>
 
-                {/* Right Fade Hint */}
-                {canScrollNavRight && (
-                    <div className="absolute right-10 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-l from-[oklch(18%_0.012_28)]/10 to-transparent z-10" />
-                )}
-
                 {/* Desktop Right Scroll Stepper Button */}
                 <button
                     type="button"
                     onClick={() => handleNavScroll('right')}
                     disabled={!canScrollNavRight}
                     aria-label="เลื่อนแท็บไปทางขวา"
-                    title="เลื่อนแท็บไปทางขวา [SCROLL RIGHT]"
-                    className={`flex-none px-3.5 flex items-center justify-center font-mono text-xs font-bold border-l border-[oklch(85%_0.012_28)] transition-all min-h-[42px] select-none ${
+                    title="เลื่อนแท็บไปทางขวา"
+                    className={`flex-none px-3.5 flex items-center justify-center tabular-nums text-xs font-bold border-l border-[oklch(85%_0.012_28)] transition-all min-h-[42px] select-none ${
                         canScrollNavRight
                             ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] cursor-pointer active:scale-95'
                             : 'bg-[oklch(94%_0.010_28)] text-[oklch(70%_0.010_28)] opacity-40 cursor-not-allowed'
                     }`}
                 >
-                    [ ▶ ]
+                    ▶
                 </button>
             </div>
 
@@ -1592,27 +1582,27 @@ export default function AdminFinancialDashboard() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Dining Channels */}
                             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
-                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs">
+                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between tabular-nums text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="px-1.5 py-0.2 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                        <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                                             CHANNEL
                                         </span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                        <span className="font-bold text-[oklch(18%_0.012_28)]  ">
                                             DINING CHANNELS // สัดส่วนช่องทางจำหน่าย
                                         </span>
                                     </div>
-                                    <span className="text-[11px] text-[oklch(42%_0.010_28)] font-mono">
+                                    <span className="text-xs text-[oklch(42%_0.010_28)] tabular-nums">
                                         รวม ฿{liveMetrics.totalGrossRevenue.toLocaleString()}
                                     </span>
                                 </div>
-                                <div className="p-4 space-y-3 font-mono text-xs">
+                                <div className="p-4 space-y-3 tabular-nums text-xs">
                                     {diningChannelsData.map((channel, i) => (
                                         <div key={i} className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
                                             <div className="flex justify-between items-center">
                                                 <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">{channel.name}</span>
                                                 <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{channel.amount.toLocaleString()}</span>
                                             </div>
-                                            <div className="flex justify-between text-[11px] text-[oklch(42%_0.010_28)]">
+                                            <div className="flex justify-between text-xs text-[oklch(42%_0.010_28)]">
                                                 <span>{channel.tables ? `${channel.tables} โต๊ะ` : `${channel.orders || 0} บิล`}</span>
                                                 <span className="font-bold text-[oklch(52%_0.16_28)]">{channel.percent}%</span>
                                             </div>
@@ -1623,30 +1613,30 @@ export default function AdminFinancialDashboard() {
 
                             {/* Payment Methods */}
                             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
-                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs">
+                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between tabular-nums text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="px-1.5 py-0.2 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                        <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                                             PAYMENT
                                         </span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                        <span className="font-bold text-[oklch(18%_0.012_28)]  ">
                                             PAYMENT METHODS // รูปแบบการชำระเงิน
                                         </span>
                                     </div>
-                                    <span className="text-[11px] text-[oklch(42%_0.010_28)] font-mono">
+                                    <span className="text-xs text-[oklch(42%_0.010_28)] tabular-nums">
                                         รวม ฿{liveMetrics.totalGrossRevenue.toLocaleString()}
                                     </span>
                                 </div>
-                                <div className="p-4 grid grid-cols-2 gap-2 font-mono text-xs">
+                                <div className="p-4 grid grid-cols-2 gap-2 tabular-nums text-xs">
                                     {paymentMethodsData.map((pm, i) => (
                                         <div key={i} className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
-                                            <div className="flex justify-between items-center text-[11px] text-[oklch(42%_0.010_28)]">
-                                                <span className="font-bold uppercase">{pm.code}</span>
+                                            <div className="flex justify-between items-center text-xs text-[oklch(42%_0.010_28)]">
+                                                <span className="font-bold ">{pm.code}</span>
                                                 <span className="font-bold">{pm.percent}%</span>
                                             </div>
                                             <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                                 ฿{pm.amount.toLocaleString()}
                                             </div>
-                                            <div className="text-[11px] text-[oklch(55%_0.010_28)] truncate font-sans">
+                                            <div className="text-xs text-[oklch(55%_0.010_28)] truncate font-sans">
                                                 {pm.name} ({pm.count} รายการ)
                                             </div>
                                         </div>
@@ -1666,7 +1656,7 @@ export default function AdminFinancialDashboard() {
                         />
 
                         {/* Progressive Disclosure Jump Links (Deep Sub-tabs) */}
-                        <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                        <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                             <span className="text-[oklch(42%_0.010_28)] font-bold">
                                 รายงานเจาะลึกเฉพาะทาง (DEEP DIVE SUB-MODULES):
                             </span>
@@ -1769,29 +1759,30 @@ export default function AdminFinancialDashboard() {
             {/* Target Editing Modal Dialog (Daily, Monthly, Yearly) */}
             {isEditingTarget && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 space-y-4 font-mono shadow-2xl">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 space-y-4 tabular-nums shadow-2xl">
                         
                         {/* Modal Header */}
                         <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.2 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                                         TARGET CONFIG
                                     </span>
-                                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase tracking-wide">
+                                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)]  ">
                                         ตั้งเป้าหมายยอดขาย (Sales Targets)
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-[oklch(42%_0.010_28)] mt-1">
+                                <p className="text-[13px] text-[oklch(42%_0.010_28)] mt-1">
                                     กำหนดเป้าหมายแยกตามรอบเวลา (รายวัน / รายเดือน / รายปี)
                                 </p>
                             </div>
                             <button 
                                 type="button"
                                 onClick={() => setIsEditingTarget(false)} 
-                                className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer text-base px-1"
+                                className="admin-btn h-8 px-3"
+                                aria-label="ปิดการแก้ไขเป้าหมาย"
                             >
-                                ✕
+                                ปิด
                             </button>
                         </div>
 
@@ -1829,7 +1820,7 @@ export default function AdminFinancialDashboard() {
                                         : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
                                 }`}>
                                     <div className="flex items-center justify-between">
-                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] ">
                                             เป้าหมายรายวัน (Daily Target)
                                         </label>
                                         {filterMode === 'day' && (
@@ -1849,7 +1840,7 @@ export default function AdminFinancialDashboard() {
                                         />
                                         <span className="absolute right-3 top-2.5 text-xs text-[oklch(42%_0.010_28)] select-none">/ วัน</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-[11px] text-[oklch(42%_0.010_28)]">
+                                    <div className="flex justify-between items-center text-xs text-[oklch(42%_0.010_28)]">
                                         <span>ใช้คำนวณในรายงานประจำวัน & Run-rate รายชั่วโมง</span>
                                         <span className="text-[oklch(55%_0.010_28)]">ค่าเดิม: ฿{dailyTarget.toLocaleString()}</span>
                                     </div>
@@ -1864,7 +1855,7 @@ export default function AdminFinancialDashboard() {
                                         : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
                                 }`}>
                                     <div className="flex items-center justify-between">
-                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] ">
                                             เป้าหมายรายเดือน (Monthly Target)
                                         </label>
                                         {filterMode === 'month' && (
@@ -1884,7 +1875,7 @@ export default function AdminFinancialDashboard() {
                                         />
                                         <span className="absolute right-3 top-2.5 text-xs text-[oklch(42%_0.010_28)] select-none">/ เดือน</span>
                                     </div>
-                                    <div className="flex flex-wrap justify-between items-center gap-1 text-[11px] text-[oklch(42%_0.010_28)]">
+                                    <div className="flex flex-wrap justify-between items-center gap-1 text-xs text-[oklch(42%_0.010_28)]">
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -1908,7 +1899,7 @@ export default function AdminFinancialDashboard() {
                                         : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
                                 }`}>
                                     <div className="flex items-center justify-between">
-                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] ">
                                             เป้าหมายรายปี (Yearly Target)
                                         </label>
                                         {filterMode === 'year' && (
@@ -1928,7 +1919,7 @@ export default function AdminFinancialDashboard() {
                                         />
                                         <span className="absolute right-3 top-2.5 text-xs text-[oklch(42%_0.010_28)] select-none">/ ปี</span>
                                     </div>
-                                    <div className="flex flex-wrap justify-between items-center gap-1 text-[11px] text-[oklch(42%_0.010_28)]">
+                                    <div className="flex flex-wrap justify-between items-center gap-1 text-xs text-[oklch(42%_0.010_28)]">
                                         <button
                                             type="button"
                                             onClick={() => {

@@ -106,10 +106,7 @@ export default function SOPExportModal({
                 {/* Header */}
                 <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
                     <div>
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
-                            DOCUMENT EXPORT ENGINE
-                        </span>
-                        <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                        <h2 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                             ส่งออกคู่มือ SOP (A4 PDF)
                         </h2>
                     </div>
@@ -126,14 +123,14 @@ export default function SOPExportModal({
                 <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
                     {/* Scope Selector */}
                     <div>
-                        <label className="font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-2">
+                        <label className="tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-2">
                             ขอบเขตการส่งออก (EXPORT SCOPE)
                         </label>
-                        <div className="grid grid-cols-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono">
+                        <div className="grid grid-cols-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)] tabular-nums">
                             <button
                                 type="button"
                                 onClick={() => setScope('all')}
-                                className={`py-2 px-3 text-center font-bold uppercase transition-colors ${
+                                className={`py-2 px-3 text-center font-bold transition-colors ${
                                     scope === 'all' 
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
                                         : 'hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)]'
@@ -144,7 +141,7 @@ export default function SOPExportModal({
                             <button
                                 type="button"
                                 onClick={() => setScope('category')}
-                                className={`py-2 px-3 text-center font-bold uppercase transition-colors ${
+                                className={`py-2 px-3 text-center font-bold transition-colors ${
                                     scope === 'category' 
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
                                         : 'hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)]'
@@ -155,7 +152,7 @@ export default function SOPExportModal({
                             <button
                                 type="button"
                                 onClick={() => setScope('custom')}
-                                className={`py-2 px-3 text-center font-bold uppercase transition-colors ${
+                                className={`py-2 px-3 text-center font-bold transition-colors ${
                                     scope === 'custom' 
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
                                         : 'hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)]'
@@ -169,13 +166,13 @@ export default function SOPExportModal({
                     {/* Category Selector if category scope */}
                     {scope === 'category' && (
                         <div className="border border-[oklch(85%_0.012_28)] p-3 bg-[oklch(97%_0.008_28)] space-y-1.5">
-                            <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase block">
+                            <label className="tabular-nums text-xs font-bold text-[oklch(55%_0.010_28)] block">
                                 เลือกหมวดหมู่ที่ต้องการส่งออก
                             </label>
                             <select
                                 value={selectedCatId}
                                 onChange={e => setSelectedCatId(e.target.value)}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-mono font-bold outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
                             >
                                 {categories.map(cat => (
                                     <option key={cat.id} value={cat.id}>
@@ -188,9 +185,9 @@ export default function SOPExportModal({
 
                     {/* Custom Recipe Checklist if custom scope */}
                     {scope === 'custom' && (
-                        <div className="border border-[oklch(85%_0.012_28)] bg-white">
-                            <div className="p-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex justify-between items-center font-mono text-[10px]">
-                                <span className="font-bold uppercase text-[oklch(18%_0.012_28)]">
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
+                            <div className="p-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex justify-between items-center tabular-nums text-xs">
+                                <span className="font-bold text-[oklch(18%_0.012_28)]">
                                     รายการสูตร ({selectedIds.length} / {recipes.length} เลือกแล้ว)
                                 </span>
                                 <div className="flex gap-2">
@@ -199,14 +196,14 @@ export default function SOPExportModal({
                                         onClick={() => setSelectedIds(recipes.map(r => r.id))} 
                                         className="text-[oklch(52%_0.16_28)] hover:underline font-bold"
                                     >
-                                        [เลือกทั้งหมด]
+                                        เลือกทั้งหมด
                                     </button>
                                     <button 
                                         type="button" 
                                         onClick={() => setSelectedIds([])} 
                                         className="text-[oklch(55%_0.010_28)] hover:underline"
                                     >
-                                        [ล้างการเลือก]
+                                        ล้างการเลือก
                                     </button>
                                 </div>
                             </div>
@@ -223,11 +220,11 @@ export default function SOPExportModal({
                                                     type="checkbox" 
                                                     checked={isChecked} 
                                                     onChange={() => toggleRecipe(r.id)} 
-                                                    className="w-4 h-4 rounded text-black border-[oklch(85%_0.012_28)] focus:ring-0" 
+                                                    className="w-4 h-4 rounded text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0" 
                                                 />
                                                 <span className="font-bold text-xs text-[oklch(18%_0.012_28)] truncate">{r.name}</span>
                                             </div>
-                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
                                                 {r.category?.label || 'ทั่วไป'}
                                             </span>
                                         </label>
@@ -240,15 +237,15 @@ export default function SOPExportModal({
                     {/* Book Options */}
                     {!isSingleRecipe && scope !== 'single' ? (
                         <div className="border border-[oklch(85%_0.012_28)] p-3 bg-[oklch(97%_0.008_28)] space-y-2">
-                            <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase block">
+                            <span className="tabular-nums text-xs font-bold text-[oklch(55%_0.010_28)] block">
                                 ตัวเลือกโครงสร้างเล่ม (BOOK STRUCTURE)
                             </span>
-                            <label className="flex items-center gap-2 text-xs font-mono cursor-pointer select-none">
+                            <label className="flex items-center gap-2 text-xs tabular-nums cursor-pointer select-none">
                                 <input 
                                     type="checkbox" 
                                     checked={includeCover} 
                                     onChange={e => setIncludeCover(e.target.checked)} 
-                                    className="w-4 h-4 rounded text-black border-[oklch(85%_0.012_28)] focus:ring-0" 
+                                    className="w-4 h-4 rounded text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0" 
                                 />
                                 <span className="text-[oklch(18%_0.012_28)]">
                                     รวมหน้าปกและสารบัญพร้อมเลขหน้า (Cover & Table of Contents)
@@ -256,14 +253,14 @@ export default function SOPExportModal({
                             </label>
                         </div>
                     ) : (
-                        <div className="border border-[oklch(85%_0.012_28)] p-2.5 bg-[oklch(94%_0.010_28)] font-mono text-xs text-[oklch(42%_0.010_28)] flex items-center justify-between">
+                        <div className="border border-[oklch(85%_0.012_28)] p-2.5 bg-[oklch(94%_0.010_28)] tabular-nums text-xs text-[oklch(42%_0.010_28)] flex items-center justify-between">
                             <span>รูปแบบการพิมพ์:</span>
-                            <span className="font-bold text-[oklch(18%_0.012_28)]">[สูตรเดี่ยว 1 หน้าจบพอดี ไม่มีใบปะหน้า]</span>
+                            <span className="font-bold text-[oklch(18%_0.012_28)]">สูตรเดี่ยว 1 หน้าจบพอดี ไม่มีใบปะหน้า</span>
                         </div>
                     )}
 
                     {/* Summary Box */}
-                    <div className="border border-[oklch(85%_0.012_28)] p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs flex justify-between items-center">
+                    <div className="border border-[oklch(85%_0.012_28)] p-3 bg-[oklch(94%_0.010_28)] tabular-nums text-xs flex justify-between items-center">
                         <span className="text-[oklch(55%_0.010_28)]">ขนาดเอกสารประเมิน:</span>
                         <span className="font-bold text-[oklch(18%_0.012_28)]">
                             {targetRecipes.length} สูตร ({totalPages} หน้า A4 {isSingleRecipe ? '• 1 หน้าจบ' : ''})
@@ -272,23 +269,23 @@ export default function SOPExportModal({
 
                     {/* Progress indicator when generating */}
                     {isGenerating && (
-                        <div className="border border-[oklch(52%_0.16_28)] p-3 bg-[oklch(95%_0.02_45)]/20 font-mono text-xs text-center space-y-2 animate-pulse">
+                        <div className="border border-[oklch(52%_0.16_28)] p-3 bg-[oklch(95%_0.02_45)]/20 tabular-nums text-xs text-center space-y-2 ">
                             <div className="flex items-center justify-center gap-2 font-bold text-[oklch(52%_0.16_28)]">
                                 <Loader2 size={16} className="animate-spin" />
                                 <span>กำลังประมวลผล PDF หน้า {progress.current} จาก {progress.total}...</span>
                             </div>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)]">กรุณารอสักครู่ ระบบกำลังจัดหน้าเวกเตอร์และเรนเดอร์แบบความละเอียดสูง</p>
+                            <p className="text-[13px] text-[oklch(42%_0.010_28)]">กรุณารอสักครู่ ระบบกำลังจัดหน้าเวกเตอร์และเรนเดอร์แบบความละเอียดสูง</p>
                         </div>
                     )}
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-end gap-3 font-mono text-xs">
+                <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-end gap-3 tabular-nums text-xs">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={isGenerating}
-                        className="px-4 py-2 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(42%_0.010_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                        className="admin-btn h-9"
                     >
                         ยกเลิก
                     </button>
@@ -296,7 +293,7 @@ export default function SOPExportModal({
                         type="button"
                         onClick={handleGeneratePdf}
                         disabled={isGenerating || targetRecipes.length === 0}
-                        className="px-5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="admin-btn is-primary h-9 disabled:opacity-50"
                     >
                         {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                         <span>{isGenerating ? 'กำลังสร้างเอกสาร...' : `ดาวน์โหลด PDF (${totalPages} หน้า)`}</span>

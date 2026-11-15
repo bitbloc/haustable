@@ -91,15 +91,15 @@ export default function CrmCoinsTab({
                         <div className="flex items-center gap-2">
                             <Coins size={18} className="text-[var(--color-ink)]" />
                             <div>
-                                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                     xhaus Coins Configuration
                                 </h2>
-                                <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                                <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                                     กำหนดอัตราแลกเปลี่ยน โบนัสต้อนรับ และเงื่อนไขการสะสมเหรียญ
                                 </p>
                             </div>
                         </div>
-                        <span className="px-2 py-0.5 bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] text-[11px] font-mono font-bold rounded">
+                        <span className="px-2 py-0.5 bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] text-[11px] tabular-nums font-bold rounded">
                             REAL-TIME
                         </span>
                     </div>
@@ -107,7 +107,7 @@ export default function CrmCoinsTab({
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Welcome Coins */}
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Welcome Coins
                             </label>
                             <div className="relative">
@@ -117,18 +117,18 @@ export default function CrmCoinsTab({
                                     value={settings.crm_welcome_xhaus || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_welcome_xhaus: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_welcome_xhaus', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">
                                     xhaus
                                 </span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">รับฟรีเมื่อสมัคร</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">รับฟรีเมื่อสมัคร</p>
                         </div>
 
                         {/* Redeem Rate */}
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Redeem Rate
                             </label>
                             <div className="relative">
@@ -138,18 +138,18 @@ export default function CrmCoinsTab({
                                     value={settings.crm_redeem_rate_xhaus || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_redeem_rate_xhaus: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_redeem_rate_xhaus', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">
                                     ฿/coin
                                 </span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">มูลค่าบาทต่อ 1 xhaus</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">มูลค่าบาทต่อ 1 xhaus</p>
                         </div>
 
                         {/* Min Redeem */}
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Min Redeem
                             </label>
                             <div className="relative">
@@ -159,18 +159,18 @@ export default function CrmCoinsTab({
                                     value={settings.crm_min_redeem_xhaus || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_min_redeem_xhaus: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_min_redeem_xhaus', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">
                                     xhaus
                                 </span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">เหรียญขั้นต่ำที่แลกได้</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">เหรียญขั้นต่ำที่แลกได้</p>
                         </div>
 
                         {/* Base Spend Unit */}
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Base Spend Unit
                             </label>
                             <div className="relative">
@@ -180,20 +180,20 @@ export default function CrmCoinsTab({
                                     value={settings.crm_base_spend_amount || '100'}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_base_spend_amount: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_base_spend_amount', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">
                                     THB
                                 </span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">ทุกๆ X บาท = ตัวคูณเหรียญ</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">ทุกๆ X บาท = ตัวคูณเหรียญ</p>
                         </div>
                     </div>
 
                     {/* Granular Advanced Limits */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-[var(--color-rule)]">
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Max Redeem Per Bill (% ยอดบิล)
                             </label>
                             <div className="relative">
@@ -204,15 +204,15 @@ export default function CrmCoinsTab({
                                     value={settings.crm_max_redeem_percent || '100'}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_max_redeem_percent: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_max_redeem_percent', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">%</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">%</span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">จำกัดส่วนลดไม่เกิน X% ของบิล (100 = ไม่จำกัด)</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">จำกัดส่วนลดไม่เกิน X% ของบิล (100 = ไม่จำกัด)</p>
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Evaluation Period (รอบประเมิน)
                             </label>
                             <div className="relative">
@@ -223,15 +223,15 @@ export default function CrmCoinsTab({
                                     value={settings.crm_tier_eval_months || '12'}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_tier_eval_months: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_tier_eval_months', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">Months</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">Months</span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">รอบคำนวณยอดสะสมเพื่อจัดระดับ</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">รอบคำนวณยอดสะสมเพื่อจัดระดับ</p>
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                            <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                 Grace Period (ระยะผ่อนผัน)
                             </label>
                             <div className="relative">
@@ -242,11 +242,11 @@ export default function CrmCoinsTab({
                                     value={settings.crm_grace_period_days || '30'}
                                     onChange={(e) => setSettings(prev => ({ ...prev, crm_grace_period_days: e.target.value }))}
                                     onBlur={(e) => handleSave('crm_grace_period_days', e.target.value)}
-                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">Days</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">Days</span>
                             </div>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1">ผ่อนผันตรึงระดับสมาชิกรักษาระดับ</p>
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-1">ผ่อนผันตรึงระดับสมาชิกรักษาระดับ</p>
                         </div>
                     </div>
                 </div>
@@ -255,10 +255,10 @@ export default function CrmCoinsTab({
                 <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-6 rounded-2xl space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-2">
                         <div>
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 Relationship Levels Configuration (ระดับความสัมพันธ์)
                             </h2>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                                 ปรับแต่งยอดใช้จ่ายขั้นต่ำ ตัวคูณเหรียญ และธีมบัตรสมาชิก
                             </p>
                         </div>
@@ -266,14 +266,14 @@ export default function CrmCoinsTab({
                             <button
                                 type="button"
                                 onClick={handleResetTiers}
-                                className="px-3 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                                className="px-3 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer"
                             >
                                 <RotateCcw size={12} className="inline mr-1" /> คืนค่าเริ่มต้น
                             </button>
                             <button
                                 type="button"
                                 onClick={handleAddTier}
-                                className="px-3 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer"
+                                className="px-3 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer"
                             >
                                 <Plus size={12} className="inline mr-1" /> เพิ่มระดับ
                             </button>
@@ -281,7 +281,7 @@ export default function CrmCoinsTab({
                                 type="button"
                                 onClick={handleSaveTiers}
                                 disabled={isTiersSaving}
-                                className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] rounded-lg text-[11px] font-mono font-bold transition-colors cursor-pointer disabled:opacity-50"
+                                className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer disabled:opacity-50"
                             >
                                 <Save size={12} className="inline mr-1" /> {isTiersSaving ? 'กำลังบันทึก...' : 'บันทึกระดับสมาชิก'}
                             </button>
@@ -303,7 +303,7 @@ export default function CrmCoinsTab({
                                 >
                                     <div className="flex flex-wrap items-center justify-between border-b border-[var(--color-rule)] pb-2 gap-2">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)]">
+                                            <span className="tabular-nums text-[11px] font-bold px-2 py-0.5 rounded bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)]">
                                                 LV.{tier.level_code || String(idx + 1).padStart(2, '0')}
                                             </span>
                                             <input
@@ -317,11 +317,11 @@ export default function CrmCoinsTab({
 
                                         <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-1">
-                                                <span className="text-[11px] font-mono text-[var(--color-neutral)]">THEME:</span>
+                                                <span className="text-xs tabular-nums text-[var(--color-neutral)]">THEME:</span>
                                                 <select
                                                     value={tier.badge_theme || 'bronze'}
                                                     onChange={(e) => handleTierFieldChange(idx, 'badge_theme', e.target.value)}
-                                                    className="text-[11px] font-mono font-bold bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded px-2 py-1 outline-none cursor-pointer"
+                                                    className="text-xs tabular-nums font-bold bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded px-2 py-1 outline-none cursor-pointer"
                                                 >
                                                     <option value="bronze">Clay / Bronze</option>
                                                     <option value="silver">Silver / Slate</option>
@@ -346,7 +346,7 @@ export default function CrmCoinsTab({
                                     {/* Card Parameters Grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div>
-                                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1">
+                                            <label className="block text-xs tabular-nums font-bold text-[var(--color-neutral)] mb-1">
                                                 Min Spend (ยอดสะสมขั้นต่ำ)
                                             </label>
                                             <div className="relative">
@@ -355,14 +355,14 @@ export default function CrmCoinsTab({
                                                     step="100"
                                                     value={tier.min_spend}
                                                     onChange={(e) => handleTierFieldChange(idx, 'min_spend', e.target.value)}
-                                                    className="w-full px-2.5 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                                    className="w-full px-2.5 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                                 />
-                                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-[var(--color-neutral)]">THB</span>
+                                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs tabular-nums text-[var(--color-neutral)]">THB</span>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1">
+                                            <label className="block text-xs tabular-nums font-bold text-[var(--color-neutral)] mb-1">
                                                 Earn Multiplier (ตัวคูณแต้ม)
                                             </label>
                                             <div className="relative">
@@ -372,17 +372,17 @@ export default function CrmCoinsTab({
                                                     min="0.1"
                                                     value={tier.multiplier}
                                                     onChange={(e) => handleTierFieldChange(idx, 'multiplier', e.target.value)}
-                                                    className="w-full px-2.5 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                                    className="w-full px-2.5 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                                 />
-                                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-[var(--color-neutral)]">x</span>
+                                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs tabular-nums text-[var(--color-neutral)]">x</span>
                                             </div>
                                         </div>
 
-                                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded p-2 flex flex-col justify-center text-right font-mono">
-                                            <p className="text-[11px] font-bold text-[var(--color-ink)] tabular-nums">
+                                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded p-2 flex flex-col justify-center text-right tabular-nums">
+                                            <p className="text-[13px] font-bold text-[var(--color-ink)] tabular-nums">
                                                 ทุก {baseSpend} บ. = {coinsPerBase} xhaus
                                             </p>
-                                            <p className="text-[11px] text-[var(--color-neutral)] font-bold uppercase mt-0.5 tabular-nums">
+                                            <p className="text-[13px] text-[var(--color-neutral)] font-bold mt-0.5 tabular-nums">
                                                 มูลค่าคืน {returnPct}%
                                             </p>
                                         </div>
@@ -391,7 +391,7 @@ export default function CrmCoinsTab({
                                     {/* Tagline & Condition Texts */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                         <div>
-                                            <label className="block text-[11px] font-mono uppercase text-[var(--color-neutral)] mb-0.5">
+                                            <label className="block text-xs tabular-nums text-[var(--color-neutral)] mb-0.5">
                                                 Tagline (คำโปรยระดับสมาชิก)
                                             </label>
                                             <input
@@ -403,7 +403,7 @@ export default function CrmCoinsTab({
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[11px] font-mono uppercase text-[var(--color-neutral)] mb-0.5">
+                                            <label className="block text-xs tabular-nums text-[var(--color-neutral)] mb-0.5">
                                                 Condition Note (คำอธิบายเงื่อนไข)
                                             </label>
                                             <input
@@ -426,10 +426,10 @@ export default function CrmCoinsTab({
                     <div className="flex items-center gap-2 border-b border-[var(--color-rule)] pb-3">
                         <Calculator size={18} className="text-[var(--color-ink)]" />
                         <div>
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                            <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 Tier & Coins Live Simulator (เครื่องมือจำลองคำนวณ)
                             </h2>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)]">
+                            <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                                 ทดสอบกรอกยอดสะสมและยอดบิลเพื่อตรวจสอบระดับสมาชิกและจำนวนเหรียญที่จะได้รับ
                             </p>
                         </div>
@@ -438,7 +438,7 @@ export default function CrmCoinsTab({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                     Test 12M Accumulated Spend (ยอดสะสมย้อนหลัง)
                                 </label>
                                 <div className="relative">
@@ -446,14 +446,14 @@ export default function CrmCoinsTab({
                                         type="number"
                                         value={simAccumSpent}
                                         onChange={(e) => setSimAccumSpent(e.target.value)}
-                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-bold font-mono outline-none text-[var(--color-ink)]"
+                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-bold tabular-nums outline-none text-[var(--color-ink)]"
                                     />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">THB</span>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">THB</span>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-ink)] mb-1">
                                     Test Current Bill Total (ยอดบิลมื้อนี้)
                                 </label>
                                 <div className="relative">
@@ -461,9 +461,9 @@ export default function CrmCoinsTab({
                                         type="number"
                                         value={simSpendAmount}
                                         onChange={(e) => setSimSpendAmount(e.target.value)}
-                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-bold font-mono outline-none text-[var(--color-ink)]"
+                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-bold tabular-nums outline-none text-[var(--color-ink)]"
                                     />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono font-bold text-[var(--color-neutral)]">THB</span>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs tabular-nums font-bold text-[var(--color-neutral)]">THB</span>
                                 </div>
                             </div>
 
@@ -474,7 +474,7 @@ export default function CrmCoinsTab({
                                     onChange={(e) => setSimGracePeriod(e.target.checked)}
                                     className="w-3.5 h-3.5 rounded"
                                 />
-                                <span className="text-[11px] font-mono text-[var(--color-ink)]">
+                                <span className="text-xs tabular-nums text-[var(--color-ink)]">
                                     จำลองสถานะอยู่ในช่วงผ่อนผันรักษาระดับ (Grace Period)
                                 </span>
                             </label>
@@ -493,34 +493,34 @@ export default function CrmCoinsTab({
                             const theme = getTierVisualTheme(res.current_tier, res.tier_obj?.badge_theme);
 
                             return (
-                                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-4 flex flex-col justify-between space-y-3 font-mono text-[11px]">
+                                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-4 flex flex-col justify-between space-y-3 tabular-nums text-xs">
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
-                                            <span className="text-[11px] uppercase tracking-wider text-[var(--color-neutral)]">Calculated Tier:</span>
-                                            <span className={`px-2 py-0.5 border text-[11px] font-bold rounded uppercase ${theme.pillBg}`}>
+                                            <span className="text-xs text-[var(--color-neutral)]">Calculated Tier:</span>
+                                            <span className={`px-2 py-0.5 border text-[11px] font-bold rounded  ${theme.pillBg}`}>
                                                 {res.current_tier} ({res.multiplier}x)
                                             </span>
                                         </div>
 
-                                        <div className="flex justify-between items-center text-[11px]">
+                                        <div className="flex justify-between items-center text-xs">
                                             <span className="text-[var(--color-neutral)]">Coins Earned:</span>
                                             <span className="font-bold text-[var(--color-ink)] tabular-nums">+{coinsEarned.toFixed(2)} xhaus</span>
                                         </div>
 
-                                        <div className="flex justify-between items-center text-[11px]">
+                                        <div className="flex justify-between items-center text-xs">
                                             <span className="text-[var(--color-neutral)]">Next Tier Target:</span>
                                             <span className="font-bold text-[var(--color-ink)] tabular-nums">
                                                 {res.next_tier ? `อีก ${res.amount_to_next_tier.toLocaleString()} บ. (${res.progress_pct}%)` : 'สูงสุดแล้ว'}
                                             </span>
                                         </div>
 
-                                        <div className="flex justify-between items-center text-[11px]">
+                                        <div className="flex justify-between items-center text-xs">
                                             <span className="text-[var(--color-neutral)]">Max Discount:</span>
                                             <span className="font-bold text-[var(--color-ink)] tabular-nums">{((spendVal * maxPct) / 100).toLocaleString()} Baht</span>
                                         </div>
                                     </div>
 
-                                    <div className="bg-[var(--color-paper-2)] p-2 rounded border border-[var(--color-rule)] text-[11px] text-[var(--color-neutral)] tabular-nums">
+                                    <div className="bg-[var(--color-paper-2)] p-2 rounded border border-[var(--color-rule)] text-xs text-[var(--color-neutral)] tabular-nums">
                                         สูตร: (ยอดบิล {spendVal} ÷ {baseUnit}) × {res.multiplier}x = {coinsEarned.toFixed(2)} xhaus
                                     </div>
                                 </div>
@@ -535,12 +535,12 @@ export default function CrmCoinsTab({
                 <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-6 rounded-2xl flex flex-col items-center text-center space-y-4">
                     <div className="w-full flex items-center gap-2 border-b border-[var(--color-rule)] pb-3 text-left">
                         <QrCode size={18} className="text-[var(--color-ink)]" />
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                        <h2 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                             Member Registration QR
                         </h2>
                     </div>
 
-                    <p className="text-[11px] font-mono text-[var(--color-neutral)] leading-relaxed">
+                    <p className="text-[13px] tabular-nums text-[var(--color-neutral)] leading-relaxed">
                         ตั้งคิวอาร์โค้ดนี้ไว้ที่โต๊ะอาหารเพื่อให้ลูกค้าสแกนเปิดบัตรสมาชิกผ่านมือถือ
                     </p>
 
@@ -548,17 +548,17 @@ export default function CrmCoinsTab({
                         {crmQrUrl ? (
                             <img src={crmQrUrl} alt="CRM Member Registration QR" className="w-44 h-44" />
                         ) : (
-                            <div className="w-44 h-44 flex items-center justify-center text-[var(--color-neutral)] font-mono text-xs">
+                            <div className="w-44 h-44 flex items-center justify-center text-[var(--color-neutral)] tabular-nums text-xs">
                                 Generating QR...
                             </div>
                         )}
                     </div>
 
-                    <div className="w-full pt-2 space-y-2 font-mono">
+                    <div className="w-full pt-2 space-y-2 tabular-nums">
                         <a
                             href={crmQrUrl}
                             download="crm-member-registration-qr.png"
-                            className="w-full bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer "
+                            className="w-full bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer "
                         >
                             <Download size={13} /> Download QR Code Image
                         </a>
@@ -566,11 +566,11 @@ export default function CrmCoinsTab({
                             href={`${getAppOrigin()}/member-card`}
                             target="_blank"
                             rel="noreferrer"
-                            className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                             <ExternalLink size={12} /> Open Member Portal ↗
                         </a>
-                        <p className="text-[11px] text-[var(--color-neutral)] select-all truncate">
+                        <p className="text-[13px] text-[var(--color-neutral)] select-all truncate">
                             {getAppOrigin()}/member-card
                         </p>
                     </div>

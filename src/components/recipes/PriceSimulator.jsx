@@ -36,57 +36,54 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
     ].filter((v, i, a) => a.findIndex(x => x.value === v.value) === i);
 
     return (
-        <div className="bg-white border-t border-[oklch(85%_0.012_28)] overflow-hidden font-sans">
+        <div className="bg-[oklch(99%_0.004_28)] border-t border-[oklch(85%_0.012_28)] overflow-hidden font-sans">
             {/* Header Bar — Clickable toggle */}
             <button 
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full p-3 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] flex justify-between items-center gap-2 hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer select-none font-mono text-xs"
+                className="w-full p-3 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] flex justify-between items-center gap-2 hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer select-none tabular-nums text-xs"
             >
                 <div className="flex items-center gap-2">
-                    <span className="font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] text-[10px]">
-                        [PRICE SIMULATOR]
-                    </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)] text-xs">
-                        จำลองราคาขาย & กำไรขั้นต้น (GP Model)
+                    <span className="font-medium text-[oklch(18%_0.012_28)] text-[13px]">
+                        จำลองราคาขายและกำไรขั้นต้น
                     </span>
                 </div>
                 
                 <div className="flex items-center gap-2">
                     {hasPriceSet && (
-                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                        <div className="flex items-center gap-1.5 tabular-nums text-xs">
                             <span className={`px-1.5 py-0.2 font-bold ${
                                 profit > 0 
-                                    ? 'bg-emerald-100 text-emerald-800' 
+                                    ? 'bg-[oklch(94%_0.04_150)] text-[oklch(32%_0.08_150)]' 
                                     : 'bg-red-100 text-red-800'
                             }`}>
                                 กำไร ฿{profit.toFixed(0)}
                             </span>
                             <span className={`px-1.5 py-0.2 font-bold ${
                                 costPercent <= 30 
-                                    ? 'bg-emerald-100 text-emerald-800' 
+                                    ? 'bg-[oklch(94%_0.04_150)] text-[oklch(32%_0.08_150)]' 
                                     : costPercent <= 35 
                                         ? 'bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)]' 
-                                        : 'bg-amber-100 text-amber-800'
+                                        : 'bg-[oklch(95%_0.04_80)] text-[oklch(38%_0.08_60)]'
                             }`}>
                                 ต้นทุน {costPercent.toFixed(1)}%
                             </span>
                         </div>
                     )}
-                    <span className="text-[oklch(55%_0.010_28)] font-bold text-[10px]">
-                        {isExpanded ? '[ย่อ ▲]' : '[ขยาย ▼]'}
+                    <span className="text-[oklch(55%_0.010_28)] font-bold text-xs">
+                        {isExpanded ? 'ย่อ ▲' : 'ขยาย ▼'}
                     </span>
                 </div>
             </button>
 
             {/* Collapsible Body */}
             {isExpanded && (
-                <div className="p-4 bg-[oklch(98%_0.004_28)] border-t border-[oklch(85%_0.012_28)] space-y-4 font-mono">
+                <div className="p-4 bg-[oklch(98%_0.004_28)] border-t border-[oklch(85%_0.012_28)] space-y-4 tabular-nums">
                     
                     {/* 1. Dynamic Slider (Target Food Cost %) */}
-                    <div className="bg-white p-3 border border-[oklch(85%_0.012_28)] rounded-xs space-y-2">
+                    <div className="bg-[oklch(99%_0.004_28)] p-3 border border-[oklch(85%_0.012_28)] rounded-xs space-y-2">
                         <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider text-[11px]">
+                            <span className="font-bold text-[oklch(42%_0.010_28)] text-xs">
                                 TARGET FOOD COST (เป้าหมายสัดส่วนต้นทุน)
                             </span>
                             <span className="font-bold text-[oklch(52%_0.16_28)] text-sm">
@@ -111,7 +108,7 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
 
                         {/* Suggested price quick-set buttons */}
                         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[oklch(90%_0.008_28)] text-xs">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="text-xs text-[oklch(55%_0.010_28)]">
                                 ราคาแนะนำตามเป้าหมาย:
                             </span>
                             <div className="flex gap-1.5">
@@ -122,11 +119,11 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                                         onClick={() => handleSetPrice(qp.value)}
                                         className={`px-2 py-0.5 border text-xs font-bold transition-colors cursor-pointer ${
                                             sellingPrice === qp.value 
-                                                ? 'bg-[oklch(18%_0.012_28)] text-white border-black' 
-                                                : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:border-black'
+                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' 
+                                                : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:border-[oklch(18%_0.012_28)]'
                                         }`}
                                     >
-                                        {qp.label} <span className="text-[9px] opacity-70">({qp.sub})</span>
+                                        {qp.label} <span className="text-xs opacity-70">({qp.sub})</span>
                                     </button>
                                 ))}
                             </div>
@@ -136,8 +133,8 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                     {/* 2. Manual Selling Price Input & Financial Metrics Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {/* Selling Price Input */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-white p-3 rounded-xs">
-                            <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider mb-1">
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-3 rounded-xs">
+                            <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
                                 ราคาขายจริง (SELLING PRICE)
                             </label>
                             <div className="flex items-center">
@@ -145,7 +142,7 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                                 <input 
                                     type="number"
                                     inputMode="numeric"
-                                    className="w-full text-base font-bold text-[oklch(18%_0.012_28)] bg-transparent outline-none tabular-nums"
+                                    className="w-full text-base text-[oklch(18%_0.012_28)] bg-transparent outline-none tabular-nums"
                                     value={sellingPrice || ''}
                                     placeholder="0"
                                     onChange={(e) => handleSetPrice(e.target.value)}
@@ -156,10 +153,10 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                         {/* Profit per Item */}
                         <div className={`border p-3 rounded-xs ${
                             profit > 0 
-                                ? 'border-emerald-200 bg-emerald-50/60 text-emerald-900' 
+                                ? 'border-[oklch(85%_0.05_150)] bg-[oklch(96%_0.03_150)] text-[oklch(30%_0.08_150)]' 
                                 : 'border-red-200 bg-red-50/60 text-red-900'
                         }`}>
-                            <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                            <div className="text-xs font-bold opacity-70">
                                 กำไรต่อจาน (GROSS PROFIT)
                             </div>
                             <div className="text-base font-bold tabular-nums mt-1">
@@ -170,12 +167,12 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                         {/* Food Cost % */}
                         <div className={`border p-3 rounded-xs ${
                             costPercent <= 30 
-                                ? 'border-emerald-200 bg-emerald-50/60 text-emerald-900' 
+                                ? 'border-[oklch(85%_0.05_150)] bg-[oklch(96%_0.03_150)] text-[oklch(30%_0.08_150)]' 
                                 : costPercent <= 35 
-                                    ? 'border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)]' 
-                                    : 'border-amber-200 bg-amber-50/60 text-amber-900'
+                                    ? 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)]' 
+                                    : 'border-[oklch(88%_0.06_80)] bg-[oklch(96%_0.03_80)] text-[oklch(35%_0.08_60)]'
                         }`}>
-                            <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                            <div className="text-xs font-bold opacity-70">
                                 สัดส่วนต้นทุน (FOOD COST %)
                             </div>
                             <div className="text-base font-bold tabular-nums mt-1">
@@ -187,7 +184,7 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                     {/* 3. Cost Breakdown Visual Bar */}
                     {hasPriceSet && (
                         <div className="space-y-1 text-xs">
-                            <div className="flex justify-between text-[10px] text-[oklch(55%_0.010_28)]">
+                            <div className="flex justify-between text-xs text-[oklch(55%_0.010_28)]">
                                 <span>ต้นทุน: ฿{totalCost.toFixed(2)}</span>
                                 <span>ราคาขาย: ฿{sellingPrice}</span>
                             </div>
@@ -195,10 +192,10 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                                 <div 
                                     className={`h-full transition-all duration-300 ${
                                         costPercent <= 30 
-                                            ? 'bg-emerald-600' 
+                                            ? 'bg-[oklch(45%_0.08_140)]' 
                                             : costPercent <= 35 
                                                 ? 'bg-[oklch(52%_0.16_28)]' 
-                                                : 'bg-amber-600'
+                                                : 'bg-[oklch(60%_0.12_70)]'
                                     }`}
                                     style={{ width: `${Math.min(costPercent, 100)}%` }}
                                 />

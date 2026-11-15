@@ -84,22 +84,22 @@ export default function SmartAnomalyAlerts({
     return (
         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
             {/* Header */}
-            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs">
+            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between tabular-nums text-xs">
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] "></span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
                         OPERATIONAL ALERTS // ระบบเฝ้าระวังความผิดปกติ
                     </span>
                 </div>
-                <span className="text-[11px] text-[oklch(42%_0.010_28)] font-mono">
+                <span className="text-xs text-[oklch(42%_0.010_28)] tabular-nums">
                     {alerts.length === 0 ? 'STATUS: NORMAL' : `ตรวจพบ ${alerts.length} รายการ`}
                 </span>
             </div>
 
             {/* Content List */}
-            <div className="p-4 space-y-3 font-mono text-xs">
+            <div className="p-4 space-y-3 tabular-nums text-xs">
                 {alerts.length === 0 ? (
-                    <div className="py-6 text-center text-[oklch(45%_0.08_140)] font-mono font-bold text-xs">
+                    <div className="py-6 text-center text-[oklch(45%_0.08_140)] tabular-nums font-bold text-xs">
                         [ALL NORMAL] ตัวแปรการดำเนินงานทั้งหมดอยู่ในเกณฑ์ควบคุมปกติ
                     </div>
                 ) : (
@@ -110,14 +110,14 @@ export default function SmartAnomalyAlerts({
                         >
                             <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.2 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
                                         {item.code}
                                     </span>
                                     <span className="font-bold text-[oklch(18%_0.012_28)]">
                                         {item.title}
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-[oklch(42%_0.010_28)] font-sans">
+                                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans">
                                     → {item.suggestion}
                                 </p>
                             </div>
@@ -126,7 +126,7 @@ export default function SmartAnomalyAlerts({
                                 <div className="text-sm font-bold text-[oklch(52%_0.16_28)] tabular-nums">
                                     {item.metric}
                                 </div>
-                                <div className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                <div className="text-xs text-[oklch(55%_0.010_28)]">
                                     {item.diff}
                                 </div>
                             </div>

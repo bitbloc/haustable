@@ -507,17 +507,17 @@ export default function CashTaxLedgerTab({
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
                 <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider bg-[var(--color-ink)] text-[var(--color-paper)]">
+                        <span className="px-2 py-0.5 tabular-nums text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
                             REVENUE DEPT // FORM 161
                         </span>
-                        <span className="font-mono text-[11px] text-[var(--color-neutral)] uppercase tracking-wider">
+                        <span className="tabular-nums text-xs text-[var(--color-neutral)]  ">
                             [รายงานเงินสดรับ - จ่าย ตามประกาศอธิบดีกรมสรรพากร]
                         </span>
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-ink)] font-mono uppercase">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-ink)] tabular-nums ">
                         CASH &amp; TAX P&amp;L LEDGER (เปรียบเทียบรายรับ-รายจ่ายทางภาษี)
                     </h2>
-                    <div className="text-xs text-[var(--color-neutral)] font-mono flex items-center gap-2 flex-wrap">
+                    <div className="text-xs text-[var(--color-neutral)] tabular-nums flex items-center gap-2 flex-wrap">
                         <span>รอบระยะเวลา: <strong className="text-[var(--color-ink)]">{activePeriodLabel}</strong></span>
                         <span>•</span>
                         <span>ผู้มีเงินได้ / ร้านค้า: <strong className="text-[var(--color-ink)]">{companySettings.tax_company_name || companySettings.company_name || 'ร้านในบ้าน นครพนม'}</strong></span>
@@ -529,7 +529,7 @@ export default function CashTaxLedgerTab({
                 </div>
 
                 {/* Top Action CTAs */}
-                <div className="flex items-center gap-2 flex-wrap font-mono text-xs">
+                <div className="flex items-center gap-2 flex-wrap tabular-nums text-xs">
                     <button
                         onClick={() => loadExpenses(false)}
                         className="p-2 bg-[var(--color-paper)] hover:bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] border border-[var(--color-rule)] transition-colors cursor-pointer"
@@ -540,7 +540,7 @@ export default function CashTaxLedgerTab({
 
                     <button
                         onClick={() => setShowExcelModal(true)}
-                        className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer "
+                        className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                         title="ส่งออกรายงานเงินสดรับ-จ่าย เป็นไฟล์ Excel (.xlsx) ตามแบบฟอร์มสรรพากรบุคคลธรรมดา"
                     >
                         <FileSpreadsheet size={14} className="text-emerald-300" />
@@ -549,7 +549,7 @@ export default function CashTaxLedgerTab({
 
                     <button
                         onClick={handleExportCsv}
-                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                         <FileText size={14} className="text-[oklch(42%_0.010_28)]" />
                         <span>EXPORT CSV</span>
@@ -557,7 +557,7 @@ export default function CashTaxLedgerTab({
 
                     <button
                         onClick={() => setShowPrintModal(true)}
-                        className="px-4 py-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer "
+                        className="px-4 py-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                     >
                         <Printer size={14} />
                         <span>พิมพ์ฟอร์มสรรพากร (A4 / PDF)</span>
@@ -570,14 +570,14 @@ export default function CashTaxLedgerTab({
                 
                 {/* Total Cash In (Revenue) */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 ">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-neutral)] uppercase font-bold">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-neutral)] font-bold">
                         <span>TOTAL CASH IN (รายรับสุทธิ)</span>
                         <TrendingUp size={15} className="text-emerald-600" />
                     </div>
-                    <div className="text-2xl font-bold font-mono text-emerald-800">
+                    <div className="text-2xl font-bold tabular-nums text-emerald-800">
                         ฿{totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <div className="text-[11px] font-mono text-[var(--color-muted)] flex items-center justify-between">
+                    <div className="text-xs tabular-nums text-[var(--color-muted)] flex items-center justify-between">
                         <span>บิลขาย ({incomeItems.length} รายการ):</span>
                         {totals.totalCrmDiscounts > 0 ? (
                             <span className="font-bold text-emerald-700">หักส่วนลด CRM -฿{totals.totalCrmDiscounts.toLocaleString()}</span>
@@ -589,14 +589,14 @@ export default function CashTaxLedgerTab({
 
                 {/* Total Cash Out (Expenses) */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 ">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-neutral)] uppercase font-bold">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-neutral)] font-bold">
                         <span>TOTAL CASH OUT (รายจ่าย)</span>
                         <TrendingDown size={15} className="text-rose-600" />
                     </div>
-                    <div className="text-2xl font-bold font-mono text-rose-800">
+                    <div className="text-2xl font-bold tabular-nums text-rose-800">
                         ฿{totals.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <div className="text-[11px] font-mono text-[var(--color-muted)] flex items-center justify-between">
+                    <div className="text-xs tabular-nums text-[var(--color-muted)] flex items-center justify-between">
                         <span>หักภาษีได้ตามจริง:</span>
                         <span className="font-bold text-rose-700">฿{totals.deductibleExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
@@ -604,14 +604,14 @@ export default function CashTaxLedgerTab({
 
                 {/* Net Operating Profit */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 ">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-neutral)] uppercase font-bold">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-neutral)] font-bold">
                         <span>NET PROFIT (กำไรสุทธิก่อนภาษี)</span>
                         <Scale size={15} className="text-blue-600" />
                     </div>
-                    <div className={`text-2xl font-bold font-mono ${totals.netProfit >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-700'}`}>
+                    <div className={`text-2xl font-bold tabular-nums ${totals.netProfit >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-700'}`}>
                         ฿{totals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <div className="text-[11px] font-mono text-[var(--color-muted)] flex items-center justify-between">
+                    <div className="text-xs tabular-nums text-[var(--color-muted)] flex items-center justify-between">
                         <span>อัตรากำไร (Margin):</span>
                         <span className="font-bold text-[var(--color-ink)]">
                             {totals.totalRevenue > 0 ? ((totals.netProfit / totals.totalRevenue) * 100).toFixed(1) : 0}%
@@ -621,19 +621,19 @@ export default function CashTaxLedgerTab({
 
                 {/* Tax Optimization Advisor (ภ.ง.ด.90/94 ม.40(8)) */}
                 <div className="border-2 border-amber-400 bg-amber-50/70 p-4 space-y-1.5 ">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-amber-900 font-bold uppercase">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-amber-900 font-bold ">
                         <span className="flex items-center gap-1">
                             <Sparkles size={13} className="text-amber-600" />
                             <span>TAX ENGINE // คำแนะนำ</span>
                         </span>
-                        <span className="text-[11px] px-1.5 py-0.5 bg-amber-200 text-amber-900 font-mono font-bold">
+                        <span className="text-[11px] px-1.5 py-0.5 bg-amber-200 text-amber-900 tabular-nums font-bold">
                             ภ.ง.ด.90/94
                         </span>
                     </div>
-                    <div className="text-sm font-bold font-mono text-amber-950">
+                    <div className="text-sm font-bold tabular-nums text-amber-950">
                         {totals.actualIsBetter ? '✅ หักตามจริง ประหยัดกว่า' : '💡 หักเหมา 60% ประหยัดกว่า'}
                     </div>
-                    <div className="text-[11px] text-amber-900 font-mono leading-tight">
+                    <div className="text-xs text-amber-900 tabular-nums leading-tight">
                         {totals.actualIsBetter 
                             ? `รายจ่ายจริงสูงกว่าหักเหมา ฿${totals.difference.toLocaleString('en-US', { maximumFractionDigits: 0 })} ยื่นตามจริงจะลดหย่อนภาษีได้มากกว่า`
                             : `หักเหมา 60% (฿${totals.flat60Expense.toLocaleString('en-US', { maximumFractionDigits: 0 })}) สูงกว่ารายจ่ายจริง ฿${totals.difference.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
@@ -642,15 +642,15 @@ export default function CashTaxLedgerTab({
             </div>
 
             {/* 3. Secondary Metrics: VAT & Evidence Health Strip */}
-            <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)] font-mono text-xs">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)] tabular-nums text-xs">
                 {/* VAT Summary */}
                 <div className="px-3 py-1.5 flex items-center justify-between">
                     <div>
-                        <div className="text-[11px] text-[var(--color-neutral)] uppercase">ภาษีขาย (OUTPUT VAT 7%)</div>
+                        <div className="text-xs text-[var(--color-neutral)] ">ภาษีขาย (OUTPUT VAT 7%)</div>
                         <div className="text-sm font-bold text-[var(--color-ink)]">฿{totals.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                     </div>
                     <div className="text-right">
-                        <div className="text-[11px] text-[var(--color-neutral)] uppercase">ภาษีซื้อ (INPUT VAT 7%)</div>
+                        <div className="text-xs text-[var(--color-neutral)] ">ภาษีซื้อ (INPUT VAT 7%)</div>
                         <div className="text-sm font-bold text-[var(--color-ink)]">฿{totals.inputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                     </div>
                 </div>
@@ -658,7 +658,7 @@ export default function CashTaxLedgerTab({
                 {/* Net VAT Balance */}
                 <div className="px-3 py-1.5 flex items-center justify-between">
                     <div>
-                        <div className="text-[11px] text-[var(--color-neutral)] uppercase">ภ.พ.30 สุทธิ (ชำระ/ขอคืน)</div>
+                        <div className="text-xs text-[var(--color-neutral)] ">ภ.พ.30 สุทธิ (ชำระ/ขอคืน)</div>
                         <div className={`text-sm font-bold ${totals.netVat >= 0 ? 'text-amber-800' : 'text-emerald-700'}`}>
                             {totals.netVat >= 0 ? `ต้องชำระ: ฿${totals.netVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : `ขอคืนได้: ฿${Math.abs(totals.netVat).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                         </div>
@@ -671,7 +671,7 @@ export default function CashTaxLedgerTab({
                 {/* Evidence Completeness Health */}
                 <div className="px-3 py-1.5 flex items-center justify-between">
                     <div>
-                        <div className="text-[11px] text-[var(--color-neutral)] uppercase">ความสมบูรณ์ของหลักฐานภาษี</div>
+                        <div className="text-xs text-[var(--color-neutral)] ">ความสมบูรณ์ของหลักฐานภาษี</div>
                         <div className="text-sm font-bold text-emerald-800">
                             {totals.verifiedExpenseCount}/{totals.totalExpenseCount} รายจ่าย ({totals.proofHealthPercent}%)
                         </div>
@@ -686,7 +686,7 @@ export default function CashTaxLedgerTab({
             </div>
 
             {/* 4. Filter & Controls Bar */}
-            <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                 
                 {/* Granularity & Time Filter */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -739,7 +739,7 @@ export default function CashTaxLedgerTab({
                                 setSelectedDate(e.target.value);
                                 try { localStorage.setItem('onhaus_cash_ledger_selected_date', e.target.value); } catch {}
                             }}
-                            className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] font-mono font-bold focus:outline-hidden text-xs"
+                            className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] tabular-nums font-bold focus:outline-hidden text-xs"
                         />
                     )}
                     {periodMode === 'month' && (
@@ -750,14 +750,14 @@ export default function CashTaxLedgerTab({
                                 setSelectedMonth(e.target.value);
                                 try { localStorage.setItem('onhaus_cash_ledger_selected_month', e.target.value); } catch {}
                             }}
-                            className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] font-mono font-bold focus:outline-hidden text-xs"
+                            className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] tabular-nums font-bold focus:outline-hidden text-xs"
                         />
                     )}
                     {periodMode === 'year' && (
                         <select
                             value={selectedYear}
                             onChange={(e) => setSelectedYear(e.target.value)}
-                            className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] font-mono font-bold focus:outline-hidden text-xs cursor-pointer"
+                            className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] tabular-nums font-bold focus:outline-hidden text-xs cursor-pointer"
                         >
                             {[2024, 2025, 2026, 2027].map(y => (
                                 <option key={y} value={y}>ปีภาษี {y + 543} (ค.ศ. {y})</option>
@@ -803,7 +803,7 @@ export default function CashTaxLedgerTab({
                         placeholder="ค้นหาเลขที่บิล / เอกสาร / รายการ..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8 pr-3 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] font-mono text-xs w-64 focus:outline-hidden"
+                        className="pl-8 pr-3 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] tabular-nums text-xs w-64 focus:outline-hidden"
                     />
                 </div>
             </div>
@@ -811,8 +811,8 @@ export default function CashTaxLedgerTab({
             {/* 5. Official Cash Receipts and Payments Table (Form 161) */}
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden ">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left font-mono text-xs divide-y divide-[var(--color-rule)]">
-                        <thead className="bg-[var(--color-paper-2)] text-[var(--color-neutral)] font-bold uppercase tracking-wider text-[11px]">
+                    <table className="w-full text-left tabular-nums text-[13px] divide-y divide-[var(--color-rule)]">
+                        <thead className="bg-[var(--color-paper-2)] text-[var(--color-neutral)] font-bold text-xs">
                             <tr>
                                 <th className="p-3 w-10 text-center" rowSpan={2}>#</th>
                                 <th className="p-3 w-22" rowSpan={2}>วัน/เดือน/ปี</th>
@@ -826,7 +826,7 @@ export default function CashTaxLedgerTab({
                                 <th className="p-3 w-24 text-center border-l border-[var(--color-rule)]" rowSpan={2}>หลักฐาน</th>
                                 <th className="p-3 w-12 text-center" rowSpan={2}>ดูบิล</th>
                             </tr>
-                            <tr className="bg-rose-50/70 text-rose-900 border-t border-[var(--color-rule)] text-[11px]">
+                            <tr className="bg-rose-50/70 text-rose-900 border-t border-[var(--color-rule)] text-xs">
                                 <th className="p-1.5 w-24 text-right border-l border-[var(--color-rule)]">ซื้อสินค้า</th>
                                 <th className="p-1.5 w-24 text-right border-l border-[var(--color-rule)]">ค่าใช้จ่ายอื่นๆ</th>
                             </tr>
@@ -836,7 +836,7 @@ export default function CashTaxLedgerTab({
                                 <tr>
                                     <td colSpan={isVatRegistered ? 12 : 11} className="p-10 text-center text-[var(--color-neutral)]">
                                         <div className="space-y-1">
-                                            <div className="text-sm font-bold font-mono text-[var(--color-ink)]">ไม่พบรายการเงินสดรับ-จ่ายในรอบระยะเวลานี้</div>
+                                            <div className="text-sm font-bold tabular-nums text-[var(--color-ink)]">ไม่พบรายการเงินสดรับ-จ่ายในรอบระยะเวลานี้</div>
                                             <div className="text-xs text-[var(--color-muted)]">ลองปรับเลือกช่วงวันที่หรือเงื่อนไขการค้นหาใหม่</div>
                                         </div>
                                     </td>
@@ -844,13 +844,13 @@ export default function CashTaxLedgerTab({
                             ) : (
                                 ledgerWithRunningBalance.map((item, idx) => (
                                     <tr key={item.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
-                                        <td className="p-3 text-center text-[var(--color-muted)] font-mono text-[11px]">
+                                        <td className="p-3 text-center text-[var(--color-muted)] tabular-nums text-[13px]">
                                             {idx + 1}
                                         </td>
-                                        <td className="p-3 font-mono text-[var(--color-ink)]">
+                                        <td className="p-3 tabular-nums text-[var(--color-ink)]">
                                             {item.date}
                                         </td>
-                                        <td className="p-3 font-bold font-mono text-[var(--color-ink)]">
+                                        <td className="p-3 font-bold tabular-nums text-[var(--color-ink)]">
                                             {item.docNo}
                                         </td>
                                         <td className="p-3">
@@ -859,27 +859,27 @@ export default function CashTaxLedgerTab({
                                                 <span className="truncate max-w-sm">{item.title}</span>
                                             </div>
                                         </td>
-                                        <td className="p-3 text-[var(--color-neutral)] text-[11px] truncate max-w-[130px]">
+                                        <td className="p-3 text-[var(--color-neutral)] text-[13px] truncate max-w-[130px]">
                                             {item.category}
                                         </td>
-                                        <td className="p-3 text-right font-bold font-mono text-emerald-800 border-l border-[var(--color-rule)]">
+                                        <td className="p-3 text-right font-bold tabular-nums text-emerald-800 border-l border-[var(--color-rule)]">
                                             {item.inAmount > 0 ? item.inAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                         </td>
-                                        <td className="p-3 text-right font-mono text-rose-800 border-l border-[var(--color-rule)]">
+                                        <td className="p-3 text-right tabular-nums text-rose-800 border-l border-[var(--color-rule)]">
                                             {item.type === 'EXPENSE' && item.expenseClassification === 'goods' 
                                                 ? <span className="font-bold">{item.outAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                                 : '-'}
                                         </td>
-                                        <td className="p-3 text-right font-mono text-rose-800 border-l border-[var(--color-rule)]">
+                                        <td className="p-3 text-right tabular-nums text-rose-800 border-l border-[var(--color-rule)]">
                                             {item.type === 'EXPENSE' && item.expenseClassification === 'other' 
                                                 ? <span className="font-bold">{item.outAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                                 : '-'}
                                         </td>
-                                        <td className="p-3 text-right font-bold font-mono text-[var(--color-ink)] border-l border-[var(--color-rule)]">
+                                        <td className="p-3 text-right font-bold tabular-nums text-[var(--color-ink)] border-l border-[var(--color-rule)]">
                                             {item.runningBalance !== undefined ? Number(item.runningBalance).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                         </td>
                                         {isVatRegistered && (
-                                            <td className="p-3 text-right font-mono text-[var(--color-muted)] text-[11px] border-l border-[var(--color-rule)]">
+                                            <td className="p-3 text-right tabular-nums text-[var(--color-muted)] text-[13px] border-l border-[var(--color-rule)]">
                                                 {item.vatAmount > 0 ? item.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                             </td>
                                         )}
@@ -903,7 +903,7 @@ export default function CashTaxLedgerTab({
                                                     <span>{item.proofType || 'ใบเสร็จ POS'}</span>
                                                 </button>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border border-[oklch(90%_0.008_28)] text-[11px] font-mono">
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border border-[oklch(90%_0.008_28)] text-[11px] tabular-nums">
                                                     <span>{item.proofType || 'บิลเงินสด'}</span>
                                                 </span>
                                             )}
@@ -912,7 +912,7 @@ export default function CashTaxLedgerTab({
                                             {item.referenceType === 'POS_BILL' && item.rawBooking && (
                                                 <button
                                                     onClick={() => setSelectedBillForDetail(item.rawBooking)}
-                                                    className="p-1 hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-[11px] transition-colors cursor-pointer"
+                                                    className="p-1 hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-xs transition-colors cursor-pointer"
                                                     title="ดูรายละเอียดบิล POS"
                                                 >
                                                     <Eye size={13} />
@@ -927,23 +927,23 @@ export default function CashTaxLedgerTab({
                         {/* Table Footer Totals */}
                         <tfoot className="bg-[var(--color-paper-2)] font-bold text-xs border-t-2 border-[var(--color-rule)]">
                             <tr>
-                                <td colSpan={5} className="p-3 text-right text-[var(--color-ink)] font-mono">
+                                <td colSpan={5} className="p-3 text-right text-[var(--color-ink)] tabular-nums">
                                     รวมยอดทั้งสิ้น ({thaiBahtText(totals.netProfit)}):
                                 </td>
-                                <td className="p-3 text-right font-mono text-emerald-800 text-sm border-l border-[var(--color-rule)]">
+                                <td className="p-3 text-right tabular-nums text-emerald-800 text-sm border-l border-[var(--color-rule)]">
                                     ฿{totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3 text-right font-mono text-rose-800 text-sm border-l border-[var(--color-rule)]">
+                                <td className="p-3 text-right tabular-nums text-rose-800 text-sm border-l border-[var(--color-rule)]">
                                     ฿{totals.totalGoodsExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3 text-right font-mono text-rose-800 text-sm border-l border-[var(--color-rule)]">
+                                <td className="p-3 text-right tabular-nums text-rose-800 text-sm border-l border-[var(--color-rule)]">
                                     ฿{totals.totalOtherExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3 text-right font-mono text-[var(--color-ink)] text-sm border-l border-[var(--color-rule)]">
+                                <td className="p-3 text-right tabular-nums text-[var(--color-ink)] text-sm border-l border-[var(--color-rule)]">
                                     ฿{totals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
                                 {isVatRegistered && (
-                                    <td className="p-3 text-right font-mono text-[var(--color-ink)] text-xs border-l border-[var(--color-rule)]">
+                                    <td className="p-3 text-right tabular-nums text-[var(--color-ink)] text-[13px] border-l border-[var(--color-rule)]">
                                         ฿{totals.netVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
                                 )}
@@ -968,10 +968,10 @@ export default function CashTaxLedgerTab({
                             <div className="flex items-center gap-2">
                                 <FileSpreadsheet className="text-emerald-700" size={20} />
                                 <div>
-                                    <h3 className="font-mono font-bold text-sm text-[var(--color-ink)] uppercase">
+                                    <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)] ">
                                         ส่งออก EXCEL รายงานเงินสด รับ - จ่าย (ม.161)
                                     </h3>
-                                    <p className="text-[11px] text-[var(--color-neutral)] font-mono">
+                                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                                         แบบฟอร์มบุคคลธรรมดา กรมสรรพากร
                                     </p>
                                 </div>
@@ -985,7 +985,7 @@ export default function CashTaxLedgerTab({
                         </div>
 
                         {/* Metadata Preview Box */}
-                        <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs space-y-1 font-mono">
+                        <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs space-y-1 tabular-nums">
                             <div className="flex justify-between">
                                 <span className="text-[var(--color-neutral)]">รอบระยะเวลา:</span>
                                 <span className="font-bold text-[var(--color-ink)]">{activePeriodLabel}</span>
@@ -1006,7 +1006,7 @@ export default function CashTaxLedgerTab({
 
                         {/* Export Mode Selection */}
                         <div className="space-y-2">
-                            <label className="font-mono font-bold text-[11px] text-[var(--color-ink)] uppercase block">
+                            <label className="tabular-nums font-bold text-xs text-[var(--color-ink)] block">
                                 เลือกรูปแบบการสรุปข้อมูลในไฟล์ Excel:
                             </label>
                             
@@ -1022,9 +1022,9 @@ export default function CashTaxLedgerTab({
                                     <div className="space-y-0.5">
                                         <div className="font-bold text-xs text-[var(--color-ink)] flex items-center gap-2">
                                             <span>1. สรุปยอดรายวัน (Daily Summary)</span>
-                                            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[11px] font-mono font-bold">แนะนำสำหรับยื่นภาษี</span>
+                                            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[11px] tabular-nums font-bold">แนะนำสำหรับยื่นภาษี</span>
                                         </div>
-                                        <p className="text-[11px] text-[var(--color-neutral)] leading-relaxed">
+                                        <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
                                             รวมยอดขาย POS แต่ละวันเป็น 1 บรรทัดต่อวัน พร้อมแจกแจงรายการซื้อสินค้า/ค่าใช้จ่ายแต่ละบิล เรียงตามวัน ชัดเจน กระชับ ไม่ยาวเกินไป
                                         </p>
                                     </div>
@@ -1042,7 +1042,7 @@ export default function CashTaxLedgerTab({
                                         <div className="font-bold text-xs text-[var(--color-ink)]">
                                             2. แยกรายบิลละเอียด (Detailed Transactions)
                                         </div>
-                                        <p className="text-[11px] text-[var(--color-neutral)] leading-relaxed">
+                                        <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
                                             แสดงทุกบิล POS ทุกโต๊ะ ทุกออเดอร์ และทุกบิลรายจ่าย เหมาะสำหรับการตรวจสอบบัญชีภายในอย่างละเอียด
                                         </p>
                                     </div>
@@ -1051,17 +1051,17 @@ export default function CashTaxLedgerTab({
                         </div>
 
                         {/* Financial Snapshot */}
-                        <div className="grid grid-cols-3 gap-2 p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-center font-mono text-[11px]">
+                        <div className="grid grid-cols-3 gap-2 p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-center tabular-nums text-xs">
                             <div>
-                                <div className="text-[var(--color-neutral)] text-[11px]">รายรับรวม</div>
+                                <div className="text-[var(--color-neutral)] text-xs">รายรับรวม</div>
                                 <div className="font-bold text-emerald-800">฿{totals.totalRevenue.toLocaleString()}</div>
                             </div>
                             <div>
-                                <div className="text-[var(--color-neutral)] text-[11px]">ซื้อสินค้า</div>
+                                <div className="text-[var(--color-neutral)] text-xs">ซื้อสินค้า</div>
                                 <div className="font-bold text-rose-800">฿{totals.totalGoodsExpense.toLocaleString()}</div>
                             </div>
                             <div>
-                                <div className="text-[var(--color-neutral)] text-[11px]">ค่าใช้จ่ายอื่นๆ</div>
+                                <div className="text-[var(--color-neutral)] text-xs">ค่าใช้จ่ายอื่นๆ</div>
                                 <div className="font-bold text-rose-800">฿{totals.totalOtherExpense.toLocaleString()}</div>
                             </div>
                         </div>
@@ -1072,7 +1072,7 @@ export default function CashTaxLedgerTab({
                                 type="button"
                                 onClick={() => setShowExcelModal(false)}
                                 disabled={isExportingExcel}
-                                className="px-4 py-2 border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] font-mono text-xs font-bold cursor-pointer"
+                                className="px-4 py-2 border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] tabular-nums text-xs font-bold cursor-pointer"
                             >
                                 ยกเลิก
                             </button>
@@ -1080,7 +1080,7 @@ export default function CashTaxLedgerTab({
                                 type="button"
                                 onClick={() => handleExportExcel()}
                                 disabled={isExportingExcel}
-                                className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] font-mono text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                                className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] tabular-nums text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                             >
                                 <Download size={15} />
                                 <span>{isExportingExcel ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลดไฟล์ EXCEL (.xlsx)'}</span>
@@ -1124,7 +1124,7 @@ export default function CashTaxLedgerTab({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--color-rule)]">
-                            <span className="font-mono text-xs font-bold uppercase text-[var(--color-ink)]">หลักฐานการรับ-จ่ายเงิน</span>
+                            <span className="tabular-nums text-xs font-bold text-[var(--color-ink)]">หลักฐานการรับ-จ่ายเงิน</span>
                             <button
                                 onClick={() => setPreviewImage(null)}
                                 className="p-1 hover:bg-black/5 text-[var(--color-neutral)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"

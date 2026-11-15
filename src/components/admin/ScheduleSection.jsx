@@ -7,7 +7,7 @@ import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip }) {
     if (loading) {
         return (
-            <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] rounded-sm">
+            <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-12 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)] rounded-sm">
                 LOADING SERVICE SCHEDULE...
             </div>
         )
@@ -18,24 +18,24 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
             {/* Header */}
             <div className="p-4 md:p-5 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(96%_0.008_28)]">
                 <div>
-                    <h2 className="font-mono text-sm md:text-base font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] flex items-center gap-2">
+                    <h2 className="tabular-nums text-sm md:text-base font-bold text-[oklch(18%_0.012_28)] flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
                         TODAY'S SERVICE SCHEDULE
                     </h2>
-                    <p className="font-mono text-xs text-[oklch(55%_0.010_28)] mt-0.5">
+                    <p className="tabular-nums text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
                         Chronological queue of confirmed reservations and pickup orders
                     </p>
                 </div>
 
-                <div className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-3 py-1 rounded-sm border border-[oklch(85%_0.012_28)]">
+                <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-3 py-1 rounded-sm border border-[oklch(85%_0.012_28)]">
                     {bookings.length} CONFIRMED
                 </div>
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse font-mono text-xs">
-                    <thead className="bg-[oklch(94%_0.010_28)] text-[11px] uppercase text-[oklch(42%_0.010_28)] font-bold tracking-wider border-b border-[oklch(85%_0.012_28)]">
+                <table className="w-full text-left border-collapse tabular-nums text-[13px]">
+                    <thead className="bg-[oklch(94%_0.010_28)] text-xs text-[oklch(42%_0.010_28)] font-bold border-b border-[oklch(85%_0.012_28)]">
                         <tr>
                             <th className="p-3.5 pl-5">TIME</th>
                             <th className="p-3.5">TABLE / TYPE</th>
@@ -50,7 +50,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                             <tr>
                                 <td colSpan="6" className="p-12 text-center">
                                     <div className="flex flex-col items-center gap-2 text-[oklch(55%_0.010_28)]">
-                                        <div className="w-8 h-8 rounded-full border border-[oklch(80%_0.012_28)] flex items-center justify-center font-mono text-sm">
+                                        <div className="w-8 h-8 rounded-full border border-[oklch(80%_0.012_28)] flex items-center justify-center tabular-nums text-sm">
                                             ✓
                                         </div>
                                         <p className="font-bold text-[oklch(18%_0.012_28)]">No confirmed bookings scheduled for today.</p>
@@ -73,12 +73,12 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
 
                                         <td className="p-3.5">
                                             {transfer.isMergedSource ? (
-                                                <span className="bg-[oklch(94%_0.02_28)] text-[oklch(45%_0.14_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.04_28)]">
+                                                <span className="bg-[oklch(94%_0.02_28)] text-[oklch(45%_0.14_28)] px-2.5 py-1 rounded-sm text-xs font-bold border border-[oklch(85%_0.04_28)]">
                                                     โต๊ะ {booking.tables_layout?.table_name || '?'} ➔ รวมเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                 </span>
                                             ) : isDineIn ? (
                                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <span className="bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.012_28)]">
+                                                    <span className="bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-sm text-xs font-bold border border-[oklch(85%_0.012_28)]">
                                                         {booking.tables_layout?.table_name || 'Table ?'} ({booking.pax || 2}P)
                                                     </span>
                                                     {transfer.isMergedTarget && (
@@ -93,7 +93,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(82%_0.02_220)]">
+                                                <span className="bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-2.5 py-1 rounded-sm text-xs font-bold border border-[oklch(82%_0.02_220)]">
                                                     PICKUP
                                                 </span>
                                             )}
@@ -104,7 +104,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                                 {guestName}
                                             </div>
                                             {booking.customer_note && (
-                                                <div className="text-[11px] text-[oklch(42%_0.010_28)] truncate max-w-[180px]">
+                                                <div className="text-xs text-[oklch(42%_0.010_28)] truncate max-w-[180px]">
                                                     Note: {booking.customer_note}
                                                 </div>
                                             )}
@@ -117,20 +117,20 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                                         {booking.order_items.slice(0, 2).map((item, i) => {
                                                             const lineTotal = Number(item.price_at_time || 0) * (item.quantity || 1)
                                                             return (
-                                                                <div key={i} className="text-[11px] text-[oklch(42%_0.010_28)] flex justify-between gap-2">
+                                                                <div key={i} className="text-xs text-[oklch(42%_0.010_28)] flex justify-between gap-2">
                                                                     <span className="truncate max-w-[140px]">{item.quantity}x {item.custom_name || item.name || item.item_name || item.menu_items?.name || 'รายการสินค้า'}</span>
                                                                     <span className="font-bold text-[oklch(18%_0.012_28)]">฿{lineTotal.toLocaleString()}</span>
                                                                 </div>
                                                             )
                                                         })}
                                                         {booking.order_items.length > 2 && (
-                                                            <span className="text-[11px] text-[oklch(60%_0.010_28)]">
+                                                            <span className="text-xs text-[oklch(60%_0.010_28)]">
                                                                 +{booking.order_items.length - 2} more items
                                                             </span>
                                                         )}
                                                     </>
                                                 ) : (
-                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">Reservation Only</span>
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)]">Reservation Only</span>
                                                 )}
                                                 <div className="text-xs font-bold text-[oklch(18%_0.012_28)] pt-0.5 border-t border-[oklch(90%_0.008_28)] mt-0.5 flex justify-between">
                                                     <span>TOTAL:</span>
@@ -141,12 +141,12 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
 
                                         <td className="p-3.5">
                                             {transfer.isMergedSource ? (
-                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(85%_0.04_28)]">
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-bold border bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(85%_0.04_28)]">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
                                                     MERGED ➔ {transfer.targetTableDisplay || transfer.mergedToTable}
                                                 </span>
                                             ) : (
-                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-bold uppercase border ${
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[11px] font-bold border ${
                                                     booking.status === 'seated'
                                                         ? 'bg-[oklch(94%_0.02_220)] text-[oklch(35%_0.10_220)] border-[oklch(82%_0.02_220)]'
                                                         : (booking.status === 'completed'

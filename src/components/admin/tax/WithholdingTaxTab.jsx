@@ -255,7 +255,7 @@ export default function WithholdingTaxTab({
                         type="month"
                         value={selectedMonth}
                         onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono font-bold focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
+                        className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-lg text-xs tabular-nums font-bold focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
                     />
 
                     <div className="relative">
@@ -265,7 +265,7 @@ export default function WithholdingTaxTab({
                             placeholder="ค้นหาชื่อผู้รับ / Tax ID / เลขที่..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 pr-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono w-48 sm:w-64 focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
+                            className="pl-8 pr-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-lg text-xs tabular-nums w-48 sm:w-64 focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
                         />
                     </div>
                 </div>
@@ -273,7 +273,7 @@ export default function WithholdingTaxTab({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleExportCsv}
-                        className="px-3.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                        className="px-3.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                     >
                         <Download size={14} />
                         <span>Export CSV</span>
@@ -281,7 +281,7 @@ export default function WithholdingTaxTab({
 
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="px-4 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                        className="px-4 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
                     >
                         <Plus size={15} />
                         <span>บันทึกหัก ณ ที่จ่าย (ใบ 50 ทวิ)</span>
@@ -292,37 +292,37 @@ export default function WithholdingTaxTab({
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-xl p-4 ">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(50%_0.010_28)] block">
+                    <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
                         ยอดจ่ายค่าจ้าง / บริการทั้งหมด (Gross)
                     </span>
-                    <div className="font-mono font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
+                    <div className="tabular-nums font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
                         ฿{totals.gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <span className="text-[11px] text-[oklch(50%_0.010_28)] font-mono mt-0.5 block">
+                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
                         ประจำเดือน {selectedMonth} ({totals.count} รายการ)
                     </span>
                 </div>
 
                 <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-xl p-4 ">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(50%_0.010_28)] block">
+                    <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
                         ภาษีที่หักและต้องนำส่ง (Total Tax Withheld)
                     </span>
-                    <div className="font-mono font-black text-xl text-[oklch(52%_0.16_28)] mt-1">
+                    <div className="tabular-nums font-black text-xl text-[oklch(52%_0.16_28)] mt-1">
                         ฿{totals.tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <span className="text-[11px] text-[oklch(50%_0.010_28)] font-mono mt-0.5 block">
+                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
                         สำหรับยื่นแบบ ภ.ง.ด. 1/3/53 ภายในวันที่ 7-15
                     </span>
                 </div>
 
                 <div className="bg-[#1A1A1A] text-[oklch(97%_0.008_28)] rounded-xl p-4 ">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[oklch(50%_0.010_28)] block">
+                    <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
                         ยอดจ่ายสุทธิหลังหักภาษี (Net Paid)
                     </span>
-                    <div className="font-mono font-black text-xl text-emerald-400 mt-1">
+                    <div className="tabular-nums font-black text-xl text-emerald-400 mt-1">
                         ฿{totals.net.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <span className="text-[11px] text-[oklch(50%_0.010_28)] font-mono mt-0.5 block">
+                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
                         ยอดโอนเงินจริงให้ผู้รับจ้าง/คู่ค้า
                     </span>
                 </div>
@@ -331,15 +331,15 @@ export default function WithholdingTaxTab({
             {/* Records Ledger Table */}
             <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl overflow-hidden ">
                 <div className="px-5 py-4 border-b border-[oklch(90%_0.008_28)] bg-zinc-50/50">
-                    <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] font-mono">
+                    <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                         สมุดบันทึกรายการภาษีหัก ณ ที่จ่าย (Withholding Tax Ledger)
                     </h3>
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                    <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
-                            <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[11px] uppercase text-[oklch(42%_0.010_28)]">
+                            <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] tabular-nums text-xs text-[oklch(42%_0.010_28)]">
                                 <th className="p-3 w-10 text-center">No.</th>
                                 <th className="p-3 w-24">วันที่จ่าย</th>
                                 <th className="p-3 w-32">เลขที่ 50 ทวิ</th>
@@ -357,28 +357,28 @@ export default function WithholdingTaxTab({
                         <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
                             {filteredRecords.map((rec, idx) => (
                                 <tr key={rec.id || idx} className="hover:bg-[oklch(97%_0.008_28)] transition-colors">
-                                    <td className="p-3 text-center font-mono text-[oklch(50%_0.010_28)]">{idx + 1}</td>
-                                    <td className="p-3 font-mono">{rec.payment_date}</td>
-                                    <td className="p-3 font-mono font-bold text-[oklch(18%_0.012_28)]">{rec.doc_number}</td>
-                                    <td className="p-3 font-mono">
+                                    <td className="p-3 text-center tabular-nums text-[oklch(50%_0.010_28)]">{idx + 1}</td>
+                                    <td className="p-3 tabular-nums">{rec.payment_date}</td>
+                                    <td className="p-3 tabular-nums font-bold text-[oklch(18%_0.012_28)]">{rec.doc_number}</td>
+                                    <td className="p-3 tabular-nums">
                                         <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${rec.form_type === 'PND53' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
                                             {rec.form_type}
                                         </span>
                                     </td>
                                     <td className="p-3">
                                         <div className="font-semibold text-[oklch(18%_0.012_28)]">{rec.payee_name}</div>
-                                        {rec.notes && <div className="text-[11px] text-[oklch(50%_0.010_28)]">{rec.notes}</div>}
+                                        {rec.notes && <div className="text-xs text-[oklch(50%_0.010_28)]">{rec.notes}</div>}
                                     </td>
-                                    <td className="p-3 font-mono">{formatTaxId(rec.payee_tax_id)}</td>
+                                    <td className="p-3 tabular-nums">{formatTaxId(rec.payee_tax_id)}</td>
                                     <td className="p-3 font-medium text-[oklch(42%_0.010_28)]">{rec.income_type}</td>
-                                    <td className="p-3 text-right font-mono">{rec.tax_rate}%</td>
-                                    <td className="p-3 text-right font-mono font-semibold">
+                                    <td className="p-3 text-right tabular-nums">{rec.tax_rate}%</td>
+                                    <td className="p-3 text-right tabular-nums font-semibold">
                                         {Number(rec.gross_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
-                                    <td className="p-3 text-right font-mono font-bold text-[oklch(52%_0.16_28)]">
+                                    <td className="p-3 text-right tabular-nums font-bold text-[oklch(52%_0.16_28)]">
                                         {Number(rec.tax_withheld || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
-                                    <td className="p-3 text-right font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                    <td className="p-3 text-right tabular-nums font-bold text-[oklch(18%_0.012_28)]">
                                         {Number(rec.net_paid || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-3 text-center">
@@ -404,7 +404,7 @@ export default function WithholdingTaxTab({
 
                             {filteredRecords.length === 0 && (
                                 <tr>
-                                    <td colSpan={12} className="p-12 text-center text-[oklch(50%_0.010_28)] font-mono">
+                                    <td colSpan={12} className="p-12 text-center text-[oklch(50%_0.010_28)] tabular-nums">
                                         ไม่พบรายการภาษีหัก ณ ที่จ่ายในเดือนที่เลือก
                                     </td>
                                 </tr>
@@ -419,7 +419,7 @@ export default function WithholdingTaxTab({
                 <div className="fixed inset-0 z-[170] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-[#ECECE9] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-[#D1D1CD] font-sans text-xs">
                         <div className="bg-[#1A1A1A] text-[oklch(97%_0.008_28)] p-4 flex items-center justify-between">
-                            <h3 className="font-mono font-bold text-sm uppercase">
+                            <h3 className="tabular-nums font-bold text-sm ">
                                 บันทึกภาษีหัก ณ ที่จ่าย & ออกหนังสือรับรอง 50 ทวิ
                             </h3>
                             <button onClick={() => setShowCreateModal(false)} className="p-1 text-[oklch(97%_0.008_28)] hover:bg-white/10 rounded cursor-pointer">
@@ -452,7 +452,7 @@ export default function WithholdingTaxTab({
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                                 <div className="sm:col-span-2">
-                                    <label className="font-mono font-bold text-[11px] text-[oklch(50%_0.010_28)] uppercase block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
                                         ชื่อผู้รับเงิน / ผู้ถูกหักภาษี *
                                     </label>
                                     <input
@@ -465,7 +465,7 @@ export default function WithholdingTaxTab({
                                 </div>
 
                                 <div>
-                                    <label className="font-mono font-bold text-[11px] text-[oklch(50%_0.010_28)] uppercase block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
                                         เลขประจำตัวผู้เสียภาษี 13 หลัก
                                     </label>
                                     <input
@@ -474,24 +474,24 @@ export default function WithholdingTaxTab({
                                         onChange={(e) => setPayeeTaxId(e.target.value)}
                                         placeholder="01055xxxxxxxx"
                                         maxLength={17}
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none"
+                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="font-mono font-bold text-[11px] text-[oklch(50%_0.010_28)] uppercase block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
                                         วันที่จ่ายเงิน
                                     </label>
                                     <input
                                         type="date"
                                         value={paymentDate}
                                         onChange={(e) => setPaymentDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none"
+                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                                     />
                                 </div>
 
                                 <div className="sm:col-span-2">
-                                    <label className="font-mono font-bold text-[11px] text-[oklch(50%_0.010_28)] uppercase block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
                                         ที่อยู่ผู้ถูกหักภาษี
                                     </label>
                                     <input
@@ -504,7 +504,7 @@ export default function WithholdingTaxTab({
                                 </div>
 
                                 <div>
-                                    <label className="font-mono font-bold text-[11px] text-[oklch(50%_0.010_28)] uppercase block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
                                         ประเภทเงินได้ที่จ่าย
                                     </label>
                                     <select
@@ -521,7 +521,7 @@ export default function WithholdingTaxTab({
                                 </div>
 
                                 <div>
-                                    <label className="font-mono font-bold text-[11px] text-[oklch(50%_0.010_28)] uppercase block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
                                         จำนวนเงินที่จ่าย (บาท) *
                                     </label>
                                     <input
@@ -530,14 +530,14 @@ export default function WithholdingTaxTab({
                                         value={grossAmount}
                                         onChange={(e) => setGrossAmount(e.target.value)}
                                         placeholder="เช่น 10000"
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs font-bold focus:border-zinc-900 focus:outline-none"
+                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs font-bold focus:border-zinc-900 focus:outline-none"
                                     />
                                 </div>
                             </div>
 
                             {/* Live Calculation Preview */}
                             {grossAmount && Number(grossAmount) > 0 && (
-                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(90%_0.008_28)] rounded-xl p-3.5 space-y-1.5 font-mono text-xs">
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(90%_0.008_28)] rounded-xl p-3.5 space-y-1.5 tabular-nums text-xs">
                                     <div className="flex justify-between text-[oklch(42%_0.010_28)]">
                                         <span>จำนวนเงินจ่าย (Gross):</span>
                                         <span>฿{Number(grossAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
@@ -557,14 +557,14 @@ export default function WithholdingTaxTab({
                         <div className="p-4 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex justify-end gap-2">
                             <button
                                 onClick={() => setShowCreateModal(false)}
-                                className="px-4 py-2 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] rounded-lg font-mono font-bold text-xs hover:bg-[oklch(90%_0.008_28)] cursor-pointer"
+                                className="px-4 py-2 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] rounded-lg tabular-nums font-bold text-xs hover:bg-[oklch(90%_0.008_28)] cursor-pointer"
                             >
                                 ยกเลิก
                             </button>
                             <button
                                 disabled={saving}
                                 onClick={handleSaveWht}
-                                className="px-5 py-2 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                                className="px-5 py-2 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
                             >
                                 <Save size={14} />
                                 <span>{saving ? 'กำลังบันทึก...' : 'บันทึกรายการ'}</span>
@@ -577,7 +577,7 @@ export default function WithholdingTaxTab({
             {/* Printable 50 ทวิ Modal */}
             {activePrintRecord && (
                 <div className="fixed inset-0 z-[200] flex flex-col bg-zinc-950/80 backdrop-blur-md items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-[oklch(99%_0.004_28)]">
-                    <div className="w-full max-w-3xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-6 py-3 border border-zinc-700 flex justify-between items-center font-mono text-xs mb-3 print:hidden shadow-2xl">
+                    <div className="w-full max-w-3xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-6 py-3 border border-zinc-700 flex justify-between items-center tabular-nums text-xs mb-3 print:hidden shadow-2xl">
                         <span>[ หนังสือรับรองการหักภาษี ณ ที่จ่าย 50 ทวิ // #{activePrintRecord.doc_number} ]</span>
                         <div className="flex gap-2">
                             <button
@@ -619,25 +619,25 @@ export default function WithholdingTaxTab({
                             <h1 className="font-bold text-[18pt] sm:text-[20pt] text-[oklch(18%_0.012_28)] leading-tight">
                                 หนังสือรับรองการหักภาษี ณ ที่จ่าย
                             </h1>
-                            <p className="font-mono text-[11.5pt] text-[oklch(42%_0.010_28)] mt-0.5 font-medium">
+                            <p className="tabular-nums text-[11.5pt] text-[oklch(42%_0.010_28)] mt-0.5 font-medium">
                                 ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร (แบบยื่น {activePrintRecord.form_type})
                             </p>
-                            <span className="font-mono text-[11.5pt] font-bold text-[oklch(18%_0.012_28)] block mt-1">
+                            <span className="tabular-nums text-[11.5pt] font-bold text-[oklch(18%_0.012_28)] block mt-1">
                                 เลขที่เอกสาร: {activePrintRecord.doc_number} • วันที่: {activePrintRecord.payment_date}
                             </span>
                         </div>
 
                         {/* Payer Box */}
-                        <div className="border-2 border-zinc-950 p-3.5 bg-[oklch(97%_0.008_28)] space-y-1 font-mono text-[11.5pt]">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] uppercase text-[10pt] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer):</span>
+                        <div className="border-2 border-zinc-950 p-3.5 bg-[oklch(97%_0.008_28)] space-y-1 tabular-nums text-[11.5pt]">
+                            <span className="font-bold text-[oklch(42%_0.010_28)] text-[10pt] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer):</span>
                             <div className="font-bold text-[14pt] text-[oklch(18%_0.012_28)]">{companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'}</div>
                             <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-[oklch(18%_0.012_28)] font-bold">{formatTaxId(companySettings?.tax_id)}</strong></div>
                             <div>ที่อยู่: {companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</div>
                         </div>
 
                         {/* Payee Box */}
-                        <div className="border-2 border-zinc-950 p-3.5 bg-[oklch(99%_0.004_28)] space-y-1 font-mono text-[11.5pt]">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] uppercase text-[10pt] block">2. ผู้ถูกหักภาษี ณ ที่จ่าย (Payee):</span>
+                        <div className="border-2 border-zinc-950 p-3.5 bg-[oklch(99%_0.004_28)] space-y-1 tabular-nums text-[11.5pt]">
+                            <span className="font-bold text-[oklch(42%_0.010_28)] text-[10pt] block">2. ผู้ถูกหักภาษี ณ ที่จ่าย (Payee):</span>
                             <div className="font-bold text-[14pt] text-[oklch(18%_0.012_28)]">{activePrintRecord.payee_name}</div>
                             <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-[oklch(18%_0.012_28)] font-bold">{formatTaxId(activePrintRecord.payee_tax_id)}</strong></div>
                             <div>ที่อยู่: {activePrintRecord.payee_address || '-'}</div>
@@ -646,7 +646,7 @@ export default function WithholdingTaxTab({
                         {/* Table of Income & Tax */}
                         <table className="w-full border-collapse border-2 border-zinc-950 text-[11.5pt]">
                             <thead>
-                                <tr className="bg-[oklch(94%_0.010_28)] border-b-2 border-zinc-950 font-mono text-[11pt] font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                <tr className="bg-[oklch(94%_0.010_28)] border-b-2 border-zinc-950 tabular-nums text-[11pt] font-bold text-[oklch(18%_0.012_28)] ">
                                     <th className="p-2.5 border-r border-zinc-950 text-left">ประเภทเงินได้พึงประเมินที่จ่าย</th>
                                     <th className="p-2.5 border-r border-zinc-950 w-28 text-center">วันเดือนปีที่จ่าย</th>
                                     <th className="p-2.5 border-r border-zinc-950 w-32 text-right">จำนวนเงินที่จ่าย</th>
@@ -656,13 +656,13 @@ export default function WithholdingTaxTab({
                             <tbody>
                                 <tr className="border-b border-[oklch(85%_0.012_28)]">
                                     <td className="p-2.5 border-r border-zinc-950 font-medium text-[oklch(18%_0.012_28)]">{activePrintRecord.income_type}</td>
-                                    <td className="p-2.5 border-r border-zinc-950 text-center font-mono">{activePrintRecord.payment_date}</td>
-                                    <td className="p-2.5 border-r border-zinc-950 text-right font-mono font-semibold">{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                    <td className="p-2.5 text-right font-mono font-bold text-[oklch(52%_0.16_28)]">{Number(activePrintRecord.tax_withheld).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    <td className="p-2.5 border-r border-zinc-950 text-center tabular-nums">{activePrintRecord.payment_date}</td>
+                                    <td className="p-2.5 border-r border-zinc-950 text-right tabular-nums font-semibold">{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    <td className="p-2.5 text-right tabular-nums font-bold text-[oklch(52%_0.16_28)]">{Number(activePrintRecord.tax_withheld).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 </tr>
                             </tbody>
                             <tfoot>
-                                <tr className="bg-[oklch(94%_0.010_28)] font-mono font-bold text-[12pt] text-[oklch(18%_0.012_28)] border-t-2 border-zinc-950">
+                                <tr className="bg-[oklch(94%_0.010_28)] tabular-nums font-bold text-[12pt] text-[oklch(18%_0.012_28)] border-t-2 border-zinc-950">
                                     <td colSpan={2} className="p-2.5 border-r border-zinc-950 text-right">รวมเงินภาษีที่หักและนำส่ง:</td>
                                     <td className="p-2.5 border-r border-zinc-950 text-right">฿{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     <td className="p-2.5 text-right">฿{Number(activePrintRecord.tax_withheld).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
@@ -671,17 +671,17 @@ export default function WithholdingTaxTab({
                         </table>
 
                         {/* Baht Text */}
-                        <div className="border-2 border-zinc-950 p-3 bg-[oklch(97%_0.008_28)] font-mono text-[11.5pt]">
+                        <div className="border-2 border-zinc-950 p-3 bg-[oklch(97%_0.008_28)] tabular-nums text-[11.5pt]">
                             <span className="text-[oklch(42%_0.010_28)]">จำนวนเงินภาษีที่หักและนำส่ง (ตัวอักษร): </span>
                             <strong className="text-[oklch(18%_0.012_28)] font-bold text-[12.5pt]">({thaiBahtText(activePrintRecord.tax_withheld)})</strong>
                         </div>
 
                         {/* Signatures */}
-                        <div className="pt-8 grid grid-cols-2 gap-8 font-mono text-[11px] text-center">
+                        <div className="pt-8 grid grid-cols-2 gap-8 tabular-nums text-xs text-center">
                             <div>
                                 <div className="w-48 border-b border-zinc-900 mx-auto pb-8 mb-2"></div>
                                 <div>ผู้จ่ายเงิน / ผู้มีหน้าที่หักภาษี ณ ที่จ่าย</div>
-                                <div className="text-[11px] text-[oklch(50%_0.010_28)]">วันที่: {activePrintRecord.payment_date}</div>
+                                <div className="text-xs text-[oklch(50%_0.010_28)]">วันที่: {activePrintRecord.payment_date}</div>
                             </div>
                             <div>
                                 <div className="w-48 border-b border-zinc-900 mx-auto pb-8 mb-2"></div>

@@ -51,7 +51,7 @@ const InstallPWA = () => {
         <button
             type="button"
             onClick={handleInstall}
-            className="flex items-center gap-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] px-3 py-1.5 rounded-lg text-xs font-mono font-bold hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer "
+            className="flex items-center gap-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] px-3 py-1.5 rounded-lg text-xs tabular-nums font-bold hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer "
         >
             <Download size={13} />
             <span>ติดตั้งแอป POS</span>

@@ -164,7 +164,7 @@ export default function OwnerPosBroadcastBar() {
                     <h3 className="text-sm font-semibold text-[oklch(18%_0.012_28)] tracking-tight">
                         ส่งข้อความประกาศถึงหน้าจอ POS
                     </h3>
-                    <p className="text-xs text-[oklch(50%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] text-[oklch(50%_0.010_28)] mt-0.5">
                         แสดงการแจ้งเตือนบนหน้าจอ POS ทุกเครื่องของพนักงานทันทีแบบเรียลไทม์
                     </p>
                 </div>
@@ -198,7 +198,7 @@ export default function OwnerPosBroadcastBar() {
                             &ldquo;{activeBroadcast.text}&rdquo;
                         </span>
                     </div>
-                    <span className="font-mono text-[11px] text-[oklch(50%_0.010_28)] shrink-0 tabular-nums">
+                    <span className=" text-xs text-[oklch(50%_0.010_28)] shrink-0 tabular-nums">
                         {activeBroadcast.timestamp ? new Date(activeBroadcast.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                 </div>
@@ -231,7 +231,7 @@ export default function OwnerPosBroadcastBar() {
             </div>
 
             {/* Quick Preset Chips */}
-            <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+            <div className="flex items-center gap-1.5 flex-wrap text-xs">
                 <span className="text-[oklch(50%_0.010_28)] font-medium mr-0.5">ข้อความด่วน:</span>
                 {QUICK_CHIPS.map((chip, idx) => (
                     <button

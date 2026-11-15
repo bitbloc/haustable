@@ -14,20 +14,20 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
             <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
-                <h3 className="font-mono text-sm font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
-                <p className="text-xs text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
+                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
                 <div className="flex gap-2 mt-5">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="flex-1 px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-bold uppercase rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="admin-btn h-9 flex-1"
                     >
                         {cancelText}
                     </button>
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className={`flex-1 px-3 py-2 text-xs font-mono font-bold uppercase rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             isDanger
                                 ? 'bg-red-700 hover:bg-red-800'
                                 : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
@@ -357,24 +357,16 @@ export default function OptionGroupList() {
     return (
         <div className="text-[oklch(18%_0.012_28)] pb-12 animate-fade-in font-sans">
             {/* Header Toolbar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)]">
-                            Option Groups & Modifiers
-                        </h2>
-                        <span className="font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)] tabular-nums">
-                            {groups.length} กลุ่มตัวเลือก
-                        </span>
-                    </div>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                        กำหนดตัวเลือกเสริม (ความหวาน, ประเภทนม, ท็อปปิ้ง, ระดับความสุก) และราคาบวกเพิ่ม
-                    </p>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <p className="text-[13px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">
+                    <span className="text-[oklch(18%_0.012_28)] font-medium tabular-nums">{groups.length} กลุ่มตัวเลือก</span>
+                    <span> · กำหนดตัวเลือกเสริม (ความหวาน, ประเภทนม, ท็อปปิ้ง, ระดับความสุก) และราคาบวกเพิ่ม</span>
+                    
+                </p>
 
                 <button 
                     onClick={handleCreate} 
-                    className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    className="admin-btn is-primary h-9"
                 >
                     <Plus size={15} /> สร้างกลุ่มตัวเลือก
                 </button>
@@ -388,7 +380,7 @@ export default function OptionGroupList() {
                     ))}
                 </div>
             ) : groups.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] font-mono text-xs">
+                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] tabular-nums text-xs">
                     ยังไม่มีกลุ่มตัวเลือก คลิก "สร้างกลุ่มตัวเลือก" เพื่อเริ่มต้น
                 </div>
             ) : (
@@ -418,16 +410,16 @@ export default function OptionGroupList() {
                                                     {group.name}
                                                 </h3>
                                                 {group.is_required && (
-                                                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
+                                                    <span className="tabular-nums text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.2 rounded-xs">
                                                         บังคับเลือก
                                                     </span>
                                                 )}
-                                                <span className="font-mono text-[11px] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.2 rounded-xs">
+                                                <span className="tabular-nums text-[11px] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.2 rounded-xs">
                                                     {group.selection_type === 'single' ? 'เลือก 1 อย่าง' : (group.max_selection > 0 ? `เลือกได้สูงสุด ${group.max_selection} อย่าง` : 'เลือกไม่จำกัด')}
                                                 </span>
                                             </div>
 
-                                            <div className="flex items-center gap-3 text-xs font-mono text-[oklch(55%_0.010_28)] mt-1 tabular-nums">
+                                            <div className="flex items-center gap-3 text-xs text-[oklch(55%_0.010_28)] mt-1 tabular-nums">
                                                 <span>{choicesList.length} ตัวเลือก</span>
                                                 <span>•</span>
                                                 <span>ใช้ใน {linkedCount} เมนู</span>
@@ -481,12 +473,12 @@ export default function OptionGroupList() {
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <span className="font-bold truncate leading-normal">{c.name}</span>
                                                             {c.is_available === false && (
-                                                                <span className="font-mono text-[11px] text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded-xs">
+                                                                <span className="tabular-nums text-[11px] text-red-700 bg-red-50 border border-red-200 px-1 py-0.5 rounded-xs">
                                                                     หมด
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="font-mono font-bold text-[oklch(52%_0.16_28)] shrink-0 ml-2 tabular-nums">
+                                                        <span className=" font-bold text-[oklch(52%_0.16_28)] shrink-0 ml-2 tabular-nums">
                                                             {c.price_modifier > 0 ? `+฿${c.price_modifier}` : 'ฟรี'}
                                                         </span>
                                                         </div>
@@ -499,14 +491,14 @@ export default function OptionGroupList() {
                                                                 <span className={`min-w-0 truncate leading-normal ${ingSummary ? 'text-[oklch(42%_0.010_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
                                                                     {ingSummary || 'ไม่ตัดสต๊อกเพิ่ม'}
                                                                 </span>
-                                                                <span className="font-mono text-[11px] uppercase tracking-wider text-[oklch(42%_0.010_28)] shrink-0">วัตถุดิบ</span>
+                                                                <span className="tabular-nums text-xs text-[oklch(42%_0.010_28)] shrink-0">วัตถุดิบ</span>
                                                             </button>
                                                         )}
                                                     </div>
                                                     )
                                                 })}
                                                 {choicesList.length === 0 && (
-                                                    <p className="text-xs font-mono text-[oklch(55%_0.010_28)] italic col-span-full py-2">
+                                                    <p className="text-[13px] tabular-nums text-[oklch(55%_0.010_28)] italic col-span-full py-2">
                                                         ยังไม่มีตัวเลือกย่อยในกลุ่มนี้
                                                     </p>
                                                 )}
@@ -527,10 +519,10 @@ export default function OptionGroupList() {
                         {/* Modal Header */}
                         <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-[oklch(98%_0.004_28)] z-10">
                             <div>
-                                <h3 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                     {editingGroup ? 'แก้ไขกลุ่มตัวเลือก' : 'สร้างกลุ่มตัวเลือกใหม่'}
                                 </h3>
-                                <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
                                     กำหนดเงื่อนไขการเลือกและรายการตัวเลือกย่อย
                                 </p>
                             </div>
@@ -546,14 +538,14 @@ export default function OptionGroupList() {
                         <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[oklch(98%_0.004_28)]">
                             {/* Group Name Input */}
                             <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1.5">
+                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1.5">
                                     ชื่อกลุ่มตัวเลือก (Group Name) *
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] font-bold focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                                     placeholder="เช่น ระดับความหวาน, ประเภทนม, เมล็ดกาแฟ, ท็อปปิ้ง"
                                     autoFocus
                                     required
@@ -563,10 +555,10 @@ export default function OptionGroupList() {
                             {/* Required Toggle (Planar Row) */}
                             <label className="flex items-center justify-between bg-[oklch(97%_0.008_28)] p-3 rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                 <div className="space-y-0.5">
-                                    <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                    <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
                                         ลูกค้าจำเป็นต้องเลือก? (Required)
                                     </div>
-                                    <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">
+                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums">
                                         หากเปิดไว้ ลูกค้าจะต้องเลือกอย่างน้อย 1 ตัวเลือกก่อนสั่งเมนูนี้ได้
                                     </p>
                                 </div>
@@ -580,7 +572,7 @@ export default function OptionGroupList() {
 
                             {/* Selection Rules (Planar Segmented Picker) */}
                             <div className="space-y-2 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block">
+                                <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block">
                                     จำนวนตัวเลือกที่เลือกได้ (Selection Rule)
                                 </label>
 
@@ -590,7 +582,7 @@ export default function OptionGroupList() {
                                         limitMode === '1' ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                                     }`}>
                                         <input type="radio" checked={limitMode === '1'} onChange={() => setLimitMode('1')} className="accent-[oklch(52%_0.16_28)]" />
-                                        <span className="text-xs font-mono text-[oklch(18%_0.012_28)]">1 ตัวเลือก</span>
+                                        <span className="text-xs tabular-nums text-[oklch(18%_0.012_28)]">1 ตัวเลือก</span>
                                     </label>
 
                                     {/* Multiple Limited */}
@@ -598,7 +590,7 @@ export default function OptionGroupList() {
                                         limitMode === 'limit' ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                                     }`}>
                                         <input type="radio" checked={limitMode === 'limit'} onChange={() => setLimitMode('limit')} className="accent-[oklch(52%_0.16_28)]" />
-                                        <span className="text-xs font-mono text-[oklch(18%_0.012_28)]">หลายตัวเลือก (จำกัด)</span>
+                                        <span className="text-xs tabular-nums text-[oklch(18%_0.012_28)]">หลายตัวเลือก (จำกัด)</span>
                                     </label>
 
                                     {/* Unlimited */}
@@ -606,24 +598,24 @@ export default function OptionGroupList() {
                                         limitMode === 'unlimited' ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                                     }`}>
                                         <input type="radio" checked={limitMode === 'unlimited'} onChange={() => setLimitMode('unlimited')} className="accent-[oklch(52%_0.16_28)]" />
-                                        <span className="text-xs font-mono text-[oklch(18%_0.012_28)]">ไม่จำกัด</span>
+                                        <span className="text-xs tabular-nums text-[oklch(18%_0.012_28)]">ไม่จำกัด</span>
                                     </label>
                                 </div>
 
                                 {limitMode === 'limit' && (
                                     <div className="flex items-center gap-3 p-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs mt-2">
-                                        <span className="text-xs font-mono text-[oklch(42%_0.010_28)]">เลือกได้สูงสุดไม่เกิน:</span>
+                                        <span className="text-xs tabular-nums text-[oklch(42%_0.010_28)]">เลือกได้สูงสุดไม่เกิน:</span>
                                         <div className="flex items-center gap-1.5 ml-auto">
                                             <button
                                                 type="button"
                                                 onClick={() => setFormData(p => ({ ...p, max_selection: Math.max(2, (parseInt(p.max_selection, 10) || 2) - 1) }))}
-                                                className="w-9 h-9 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono font-bold text-sm hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                                className="w-9 h-9 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] tabular-nums font-bold text-sm hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                             >-</button>
-                                            <span className="w-8 text-center font-mono font-bold text-sm tabular-nums">{formData.max_selection || 2}</span>
+                                            <span className="w-8 text-center font-bold text-sm tabular-nums">{formData.max_selection || 2}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => setFormData(p => ({ ...p, max_selection: (parseInt(p.max_selection, 10) || 2) + 1 }))}
-                                                className="w-9 h-9 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono font-bold text-sm hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                                className="w-9 h-9 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] tabular-nums font-bold text-sm hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                             >+</button>
                                         </div>
                                     </div>
@@ -634,17 +626,17 @@ export default function OptionGroupList() {
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <label className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block">
+                                        <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block">
                                             รายการตัวเลือกย่อย (Choices List)
                                         </label>
-                                        <span className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">
+                                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">
                                             ใส่ราคา 0 หากไม่คิดเงินเพิ่ม
                                         </span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={addChoice}
-                                        className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                        className="text-xs tabular-nums font-bold text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                     >
                                         <Plus size={14} /> เพิ่มตัวเลือก
                                     </button>
@@ -684,7 +676,7 @@ export default function OptionGroupList() {
                                                 value={choice.name}
                                                 onChange={e => updateChoice(idx, 'name', e.target.value)}
                                                 placeholder="ชื่อตัวเลือก (เช่น หวาน 50%, นมข้าวโอ๊ต)"
-                                                className="flex-1 text-xs font-bold text-[oklch(18%_0.012_28)] outline-none bg-transparent placeholder-[oklch(55%_0.010_28)] border-b border-transparent focus:border-[oklch(52%_0.16_28)] py-1"
+                                                className="flex-1 text-sm text-[oklch(18%_0.012_28)] outline-none bg-transparent placeholder-[oklch(55%_0.010_28)] border-b border-transparent focus:border-[oklch(52%_0.16_28)] py-1"
                                                 onKeyDown={e => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault()
@@ -695,12 +687,12 @@ export default function OptionGroupList() {
 
                                             {/* Price Modifier */}
                                             <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2 py-1">
-                                                <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">+฿</span>
+                                                <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)]">+฿</span>
                                                 <input
                                                     type="number"
                                                     value={choice.price_modifier}
                                                     onChange={e => updateChoice(idx, 'price_modifier', e.target.value)}
-                                                    className="w-12 bg-transparent text-xs font-mono font-bold outline-none text-right tabular-nums"
+                                                    className="w-12 bg-transparent text-sm outline-none text-right tabular-nums"
                                                     placeholder="0"
                                                 />
                                             </div>
@@ -709,7 +701,7 @@ export default function OptionGroupList() {
                                             <button
                                                 type="button"
                                                 onClick={() => updateChoice(idx, 'is_available', choice.is_available === false ? true : false)}
-                                                className={`px-2 py-1 rounded-xs border text-[11px] font-mono font-bold transition-colors duration-150 cursor-pointer ${
+                                                className={`px-2 py-1 rounded-xs border text-xs tabular-nums font-bold transition-colors duration-150 cursor-pointer ${
                                                     choice.is_available !== false 
                                                         ? 'bg-green-50 text-green-700 border-green-300' 
                                                         : 'bg-red-50 text-red-700 border-red-300'
@@ -739,14 +731,14 @@ export default function OptionGroupList() {
                             <button 
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
-                                className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="admin-btn h-9 flex-1"
                             >
                                 ยกเลิก
                             </button>
                             <button 
                                 type="button"
                                 onClick={handleSubmit} 
-                                className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="admin-btn is-primary h-9 flex-1"
                             >
                                 บันทึกกลุ่มตัวเลือก
                             </button>

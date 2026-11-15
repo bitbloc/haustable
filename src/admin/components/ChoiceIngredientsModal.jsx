@@ -157,9 +157,9 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                 onClick={e => e.stopPropagation()}
             >
                 <div className={`px-5 pt-5 pb-4 border-b ${RULE}`}>
-                    <p className={`font-mono text-[11px] tracking-wider ${NEUTRAL}`}>วัตถุดิบของตัวเลือก · {group.name}</p>
+                    <p className={`tabular-nums text-[13px] tracking-wider ${NEUTRAL}`}>วัตถุดิบของตัวเลือก · {group.name}</p>
                     <h3 id="choice-ingredients-title" className={`text-lg font-bold leading-snug mt-1 ${INK}`}>{choice.name}</h3>
-                    <p className={`text-xs leading-relaxed mt-2 ${MUTED}`}>
+                    <p className={`text-[13px] leading-relaxed mt-2 ${MUTED}`}>
                         จำนวนต่อ 1 ที่ที่สั่ง เป็นหน่วยใช้ของวัตถุดิบ เลือก “ใช้เพิ่ม” สำหรับของที่ใส่เพิ่ม (เพิ่มช็อต, ไข่ดาว)
                         และ “ใช้น้อยลง” สำหรับของที่ตัวเลือกนี้เอาออกจากสูตรหลัก (เปลี่ยนนมวัวเป็นนมโอ๊ต)
                     </p>
@@ -167,7 +167,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
 
                 <div className="flex-1 overflow-y-auto px-5 py-4">
                     {loading ? (
-                        <p className={`text-xs font-mono py-6 text-center ${NEUTRAL}`}>กำลังโหลด…</p>
+                        <p className={`text-[13px] tabular-nums py-6 text-center ${NEUTRAL}`}>กำลังโหลด…</p>
                     ) : missing ? (
                         <p className={`text-sm leading-relaxed py-4 ${MUTED}`}>
                             ฐานข้อมูลยังไม่มีตาราง option_choice_ingredients ต้องติดตั้ง migration ตัดสต๊อกแบบเงา (sale stock shadow) ก่อน
@@ -191,13 +191,13 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                 <div className="min-w-0">
                                                     <p className={`text-sm font-bold leading-snug ${INK}`}>{item?.name || 'ไม่พบวัตถุดิบ'}</p>
                                                     {item && (
-                                                        <p className={`font-mono text-[11px] mt-0.5 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(item)] || ''} · หน่วยใช้ {unit || '-'}</p>
+                                                        <p className={`tabular-nums text-[13px] mt-0.5 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(item)] || ''} · หน่วยใช้ {unit || '-'}</p>
                                                     )}
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => removeRow(row.key)}
-                                                    className={`shrink-0 font-mono text-[11px] px-2 py-1 ${NEUTRAL} hover:text-red-700 rounded-xs cursor-pointer ${FOCUS}`}
+                                                    className={`shrink-0 tabular-nums text-xs px-2 py-1 ${NEUTRAL} hover:text-red-700 rounded-xs cursor-pointer ${FOCUS}`}
                                                 >
                                                     ลบ
                                                 </button>
@@ -229,7 +229,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                         onChange={e => updateRow(row.key, { amount: e.target.value })}
                                                         placeholder="0"
                                                         aria-label={`จำนวน ${item?.name || ''}`}
-                                                        className={`w-full min-w-0 bg-transparent px-3 py-2 text-sm font-mono tabular-nums outline-none ${INK}`}
+                                                        className={`w-full min-w-0 bg-transparent px-3 py-2 text-sm tabular-nums outline-none ${INK}`}
                                                     />
                                                     <span className={`pr-3 text-xs shrink-0 ${NEUTRAL}`}>{unit}</span>
                                                 </label>
@@ -243,14 +243,14 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                     {menus.map(m => <option key={m.id} value={m.id}>เฉพาะ {m.name}</option>)}
                                                 </select>
                                             </div>
-                                            {err && <p className="text-xs text-red-700 mt-2">{err}</p>}
+                                            {err && <p className="text-[13px] text-red-700 mt-2">{err}</p>}
                                         </li>
                                     )
                                 })}
                             </ul>
 
                             <div className="mt-4">
-                                <label htmlFor="choice-ingredient-search" className={`block font-mono text-[11px] uppercase tracking-wider mb-1.5 ${NEUTRAL}`}>เพิ่มวัตถุดิบ</label>
+                                <label htmlFor="choice-ingredient-search" className={`block tabular-nums text-xs mb-1.5 ${NEUTRAL}`}>เพิ่มวัตถุดิบ</label>
                                 <input
                                     id="choice-ingredient-search"
                                     ref={searchRef}
@@ -270,19 +270,19 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                     className={`w-full text-left px-3 py-2 flex items-baseline justify-between gap-3 hover:bg-[oklch(94%_0.010_28)] cursor-pointer ${FOCUS}`}
                                                 >
                                                     <span className={`text-sm leading-snug ${INK}`}>{i.name}</span>
-                                                    <span className={`font-mono text-[11px] shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {i.usage_unit || i.unit || '-'}</span>
+                                                    <span className={`tabular-nums text-xs shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {i.usage_unit || i.unit || '-'}</span>
                                                 </button>
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                                 {search.trim() && matches.length === 0 && (
-                                    <p className={`text-xs mt-2 ${NEUTRAL}`}>ไม่พบวัตถุดิบชื่อนี้</p>
+                                    <p className={`text-[13px] mt-2 ${NEUTRAL}`}>ไม่พบวัตถุดิบชื่อนี้</p>
                                 )}
                             </div>
 
                             {menus.length > 0 && (
-                                <p className={`text-xs leading-relaxed mt-4 ${NEUTRAL}`}>
+                                <p className={`text-[13px] leading-relaxed mt-4 ${NEUTRAL}`}>
                                     แถว “เฉพาะเมนู” จะใช้แทนแถว “ทุกเมนู” ของตัวเลือกนี้เมื่อสั่งเมนูนั้น
                                 </p>
                             )}
@@ -295,7 +295,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                         type="button"
                         onClick={onClose}
                         disabled={saving}
-                        className={`flex-1 px-3 py-2.5 border ${RULE} bg-[oklch(94%_0.010_28)] ${INK} text-xs font-mono font-bold uppercase rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
+                        className={`flex-1 px-3 py-2.5 border ${RULE} bg-[oklch(94%_0.010_28)] ${INK} text-xs tabular-nums font-bold rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
                     >
                         ยกเลิก
                     </button>
@@ -303,7 +303,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                         type="button"
                         onClick={handleSave}
                         disabled={saving || loading || missing}
-                        className={`flex-1 px-3 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold uppercase rounded-sm transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
+                        className={`flex-1 px-3 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)] text-[oklch(97%_0.008_28)] text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
                     >
                         {saving ? 'กำลังบันทึก…' : 'บันทึก'}
                     </button>

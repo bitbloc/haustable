@@ -3,7 +3,8 @@
  * pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
-.admin-system {
+/* Tokens live on :root so dialogs portalled to <body> (outside .admin-system) keep them. */
+:root {
   /* Braun ET66 & T3 pocket radio industrial precision tokens */
   --ram-canvas: oklch(97% 0.008 28);      /* Warm cream/sand surface */
   --ram-paper: oklch(98% 0.004 28);       /* Ivory white button / panel face */
@@ -20,6 +21,9 @@
   --ram-font-display: 'Space Mono', monospace;
   --ram-font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
   
+}
+
+.admin-system {
   /* Layout settings */
   font-family: var(--ram-font-body);
   background-color: var(--ram-canvas);

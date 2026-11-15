@@ -471,7 +471,7 @@ export default function AdminTaxHub() {
                 {activeTab === 'invoices' && (
                     <div className="space-y-6">
                         {/* Control Toolbar */}
-                        <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                        <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                             <div className="flex flex-wrap items-center gap-2">
                                 <div className="flex border border-[var(--color-rule)]">
                                     <button
@@ -528,7 +528,7 @@ export default function AdminTaxHub() {
                                                 setInvoiceDateFilter(todayStr);
                                                 try { localStorage.setItem('onhaus_tax_invoice_date_filter', todayStr); } catch {}
                                             }}
-                                            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px] cursor-pointer"
+                                            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-xs cursor-pointer"
                                         >
                                             วันนี้
                                         </button>
@@ -582,7 +582,7 @@ export default function AdminTaxHub() {
 
                             <button
                                 onClick={fetchInvoices}
-                                className="px-3 py-1.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px]"
+                                className="px-3 py-1.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs"
                             >
                                 <RotateCcw size={12} />
                                 <span>RELOAD</span>
@@ -592,9 +592,9 @@ export default function AdminTaxHub() {
                         {/* Invoices List Table */}
                         <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse font-mono text-xs">
+                                <table className="w-full text-left border-collapse tabular-nums text-[13px]">
                                     <thead>
-                                        <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-[11px] text-[var(--color-neutral)] tracking-wider uppercase font-bold">
+                                        <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-xs text-[var(--color-neutral)] font-bold">
                                             <th className="p-3 border-r border-[var(--color-rule)] w-12 text-center">NO.</th>
                                             <th className="p-3 border-r border-[var(--color-rule)] w-28">DATE</th>
                                             <th className="p-3 border-r border-[var(--color-rule)] w-36">DOCUMENT NO</th>
@@ -621,33 +621,33 @@ export default function AdminTaxHub() {
                                                     <td className="p-3 border-r border-[var(--color-rule)] font-bold text-[var(--color-ink)]">
                                                         <div>{inv.invoice_number}</div>
                                                         {inv.booking_id && (
-                                                            <span className="inline-block mt-0.5 px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] text-[11px] font-mono font-normal">
+                                                            <span className="inline-block mt-0.5 px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] text-[11px] tabular-nums font-normal">
                                                                 #POS-{String(inv.booking_id).slice(0, 4).toUpperCase()}
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td className="p-3 border-r border-[var(--color-rule)] text-[11px]">
+                                                    <td className="p-3 border-r border-[var(--color-rule)] text-[13px]">
                                                         <span className={`px-1.5 py-0.5 border ${isVatDoc ? 'border-amber-400 bg-amber-50 text-amber-900 font-bold' : 'border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-ink)]'}`}>
                                                             {isVatDoc ? 'TAX INV' : 'RECEIPT'}
                                                         </span>
                                                     </td>
                                                     <td className="p-3 border-r border-[var(--color-rule)]">
                                                         <div className="font-sans font-bold text-xs text-[var(--color-ink)]">{inv.customer_name}</div>
-                                                        <div className="text-[11px] text-[var(--color-muted)] font-mono">
+                                                        <div className="text-xs text-[var(--color-muted)] tabular-nums">
                                                             {formatBranch(inv.customer_branch_type, inv.customer_branch_code)}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3 border-r border-[var(--color-rule)] font-mono text-[11px]">{formatTaxId(inv.customer_tax_id)}</td>
-                                                    <td className="p-3 border-r border-[var(--color-rule)] text-right font-black text-xs text-[var(--color-ink)]">
+                                                    <td className="p-3 border-r border-[var(--color-rule)] tabular-nums text-[13px]">{formatTaxId(inv.customer_tax_id)}</td>
+                                                    <td className="p-3 border-r border-[var(--color-rule)] text-right font-black text-[13px] text-[var(--color-ink)]">
                                                         ฿{Number(inv.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                     </td>
                                                     <td className="p-3 border-r border-[var(--color-rule)] text-center">
                                                         {isCancelled ? (
-                                                            <span className="text-red-600 font-bold text-[11px]">
+                                                            <span className="text-red-600 font-bold text-xs">
                                                                 [VOID]
                                                             </span>
                                                         ) : (
-                                                            <span className="text-[var(--color-emerald)] font-bold text-[11px]">
+                                                            <span className="text-[var(--color-emerald)] font-bold text-xs">
                                                                 [ACTIVE]
                                                             </span>
                                                         )}
@@ -659,7 +659,7 @@ export default function AdminTaxHub() {
                                                                     setPrintModalInitialEmail(false);
                                                                     setActivePrintInvoice(inv);
                                                                 }}
-                                                                className="px-2 py-1 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                                                                className="px-2 py-1 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold text-xs flex items-center gap-1 cursor-pointer"
                                                                 title="เปิดดูและพิมพ์ A4 / ดาวน์โหลด PDF"
                                                             >
                                                                 <Printer size={11} />
@@ -672,7 +672,7 @@ export default function AdminTaxHub() {
                                                                     setSelectedBookingForInvoice(linkedB || null);
                                                                     setShowInvoiceModal(true);
                                                                 }}
-                                                                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-[oklch(97%_0.008_28)] font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                                                                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-[oklch(97%_0.008_28)] font-bold text-xs flex items-center gap-1 cursor-pointer"
                                                                 title="แก้ไขข้อมูลเอกสารใบนี้ (รวมรายการ / แก้ไขชื่อ / ยอดเงิน)"
                                                             >
                                                                 <Edit3 size={11} />
@@ -710,7 +710,7 @@ export default function AdminTaxHub() {
 
                                         {filteredInvoices.length === 0 && (
                                             <tr>
-                                                <td colSpan={9} className="p-12 text-center text-[var(--color-muted)] font-mono">
+                                                <td colSpan={9} className="p-12 text-center text-[var(--color-muted)] tabular-nums">
                                                     {loading ? 'LOADING DOCUMENT ARCHIVE...' : 'NO INVOICE RECORDS FOUND'}
                                                 </td>
                                             </tr>
@@ -862,7 +862,7 @@ export default function AdminTaxHub() {
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 space-y-4 shadow-2xl">
                         <div className="border-b border-[var(--color-rule)] pb-3 flex items-center gap-2 text-red-600">
                             <ShieldAlert size={18} />
-                            <h3 className="font-mono font-bold text-sm text-[var(--color-ink)] uppercase">
+                            <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)] ">
                                 CONFIRM DOCUMENT VOID // {cancellationTarget.invoice_number}
                             </h3>
                         </div>
@@ -872,7 +872,7 @@ export default function AdminTaxHub() {
                         </p>
 
                         <div>
-                            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                            <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
                                 CANCELLATION REASON (สาเหตุการยกเลิก) *
                             </label>
                             <input
@@ -897,7 +897,7 @@ export default function AdminTaxHub() {
                                         key={reason}
                                         type="button"
                                         onClick={() => setCancellationReason(reason)}
-                                        className={`px-2 py-0.5 border text-[11px] font-mono transition-colors cursor-pointer ${
+                                        className={`px-2 py-0.5 border text-[11px] tabular-nums transition-colors cursor-pointer ${
                                             cancellationReason === reason
                                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-bold'
                                                 : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)] hover:border-[var(--color-ink)]'
@@ -909,7 +909,7 @@ export default function AdminTaxHub() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-rule)] font-mono text-xs">
+                        <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-rule)] tabular-nums text-xs">
                             <button
                                 type="button"
                                 disabled={voiding}
