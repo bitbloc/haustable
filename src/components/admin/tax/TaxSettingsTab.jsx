@@ -325,7 +325,7 @@ export default function TaxSettingsTab({
                             </h3>
                             <p className="text-[13px] text-[oklch(42%_0.010_28)] mt-0.5">
                                 {isVatOn 
-                                    ? '✓ กำลังใช้งานโหมด: จดทะเบียนภาษีมูลค่าเพิ่ม 7% (ออกใบกำกับภาษีเต็มรูปแบบ และจัดทำรายงานภาษีขาย ภ.พ.30)' 
+                                    ? 'กำลังใช้งานโหมด: จดทะเบียนภาษีมูลค่าเพิ่ม 7% (ออกใบกำกับภาษีเต็มรูปแบบ และจัดทำรายงานภาษีขาย ภ.พ.30)' 
                                     : '• กำลังใช้งานโหมด: ยังไม่จดทะเบียนภาษีมูลค่าเพิ่ม (ออกใบเสร็จรับเงินทางการ ไม่คิด VAT 7% พร้อมสวิตช์เปิด VAT ได้ทันทีในปีหน้า)'}
                             </p>
                         </div>
@@ -392,7 +392,7 @@ export default function TaxSettingsTab({
                             </label>
                             {settings.tax_id && (
                                 <span className={`tabular-nums text-xs font-bold ${isCompanyTaxIdValid ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                    {isCompanyTaxIdValid ? '✓ เลขถูกต้อง' : 'รูปแบบ 13 หลัก'}
+                                    {isCompanyTaxIdValid ? 'เลขถูกต้อง' : 'รูปแบบ 13 หลัก'}
                                 </span>
                             )}
                         </div>
@@ -633,7 +633,7 @@ export default function TaxSettingsTab({
                         }`}
                     >
                         {settings.tax_signature_enabled === 'true' ? <ToggleRight size={18} className="text-emerald-700" /> : <ToggleLeft size={18} />}
-                        <span>{settings.tax_signature_enabled === 'true' ? '✓ แสดงลายเซ็นในเอกสาร' : 'ปิดการแสดงลายเซ็น'}</span>
+                        <span>{settings.tax_signature_enabled === 'true' ? 'แสดงลายเซ็นในเอกสาร' : 'ปิดการแสดงลายเซ็น'}</span>
                     </button>
                 </div>
 
@@ -741,7 +741,7 @@ export default function TaxSettingsTab({
                         {signatureMode === 'draw' && (
                             <div className="border border-[oklch(85%_0.012_28)] rounded-xl p-3 bg-[oklch(99%_0.004_28)] space-y-2.5">
                                 <div className="flex items-center justify-between text-xs text-[oklch(50%_0.010_28)] tabular-nums">
-                                    <span>✍️ ใช้นิ้วมือ, เมาส์ หรือปากกาสไตลัสเซ็นชื่อลงในกรอบ:</span>
+                                    <span>ใช้นิ้วมือ, เมาส์ หรือปากกาสไตลัสเซ็นชื่อลงในกรอบ:</span>
                                     <span className="text-[oklch(50%_0.010_28)] text-xs">ความหนาเส้น 2.5px คมชัด</span>
                                 </div>
 
@@ -881,7 +881,7 @@ export default function TaxSettingsTab({
                             />
                         </div>
                         <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-1 block">
-                            💡 สมัครและรับ API Key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
+                            สมัครและรับ API Key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
                         </span>
                     </div>
 

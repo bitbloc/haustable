@@ -4,7 +4,7 @@
  * Fully compatible with modern CSS (OKLCH, CSS Variables, Flex/Grid layouts, Print stylesheets).
  * Enhanced for iOS Safari, Android, and LINE in-app browsers with Web Share API and memory-safe pixel ratios.
  */
-import { toPng } from 'html-to-image';
+import { toPng, toJpeg, getFontEmbedCSS } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 /**
@@ -69,7 +69,22 @@ export async function generateTaxDocumentPdf(element, options = {}) {
     const standardWidth = orientation === 'landscape' ? 1123 : 794;
     const standardHeight = orientation === 'landscape' ? 794 : 1123;
 
-    // 6. Capture and append each page
+    // 6. Embed the page's web fonts (IBM Plex Sans Thai) once for all pages, so the PDF looks the
+    //    same on every device instead of falling back to each phone's own Thai system font.
+    let fontEmbedCSS = '';
+    try {
+        fontEmbedCSS = await getFontEmbedCSS(targets[0]);
+    } catch (fontErr) {
+        console.warn('Font embedding failed, PDF will use system fonts:', fontErr);
+    }
+    const fontOptions = fontEmbedCSS ? { fontEmbedCSS } : { skipFonts: true, fontEmbedCSS: '' };
+
+    // Pages full of receipt photos are far smaller as JPEG (a month of receipts as lossless PNG
+    // can reach tens of MB and crash iOS Safari). Text-only documents stay PNG for sharp lines.
+    const useJpeg = options.imageFormat === 'jpeg';
+    const capture = useJpeg ? toJpeg : toPng;
+
+    // 7. Capture and append each page
     for (let i = 0; i < targets.length; i++) {
         if (i > 0) {
             pdf.addPage('a4', orientation);
@@ -79,13 +94,12 @@ export async function generateTaxDocumentPdf(element, options = {}) {
 
         let imgData = null;
         try {
-            imgData = await toPng(target, {
+            imgData = await capture(target, {
                 pixelRatio: adaptivePixelRatio,
                 backgroundColor: '#ffffff',
                 cacheBust: false,
-                quality: 0.98,
-                skipFonts: true,
-                fontEmbedCSS: '',
+                quality: useJpeg ? 0.85 : 0.98,
+                ...fontOptions,
                 width: standardWidth,
                 height: standardHeight,
                 canvasWidth: Math.round(standardWidth * adaptivePixelRatio),
@@ -111,12 +125,11 @@ export async function generateTaxDocumentPdf(element, options = {}) {
         } catch (captureErr) {
             console.warn('First pass capture warning, retrying with fallback settings:', captureErr);
             // Fallback retry with safe pixelRatio 1.5 and standard dimensions
-            imgData = await toPng(target, {
+            imgData = await capture(target, {
                 pixelRatio: 1.5,
                 backgroundColor: '#ffffff',
                 cacheBust: true,
-                skipFonts: true,
-                fontEmbedCSS: '',
+                ...fontOptions,
                 width: standardWidth,
                 height: standardHeight,
                 style: {
@@ -135,7 +148,7 @@ export async function generateTaxDocumentPdf(element, options = {}) {
         // Add to PDF: fills 100% of the A4 page with exact 1:1 natural proportions (no stretching, no squishing)
         pdf.addImage(
             imgData,
-            'PNG',
+            useJpeg ? 'JPEG' : 'PNG',
             0,
             0,
             pdfWidth,

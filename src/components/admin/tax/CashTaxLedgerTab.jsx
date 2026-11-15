@@ -54,9 +54,9 @@ export default function CashTaxLedgerTab({
     // Filter & Period States
     const [periodMode, setPeriodMode] = useState(() => {
         try {
-            return localStorage.getItem('onhaus_cash_ledger_period_mode') || 'day';
+            return localStorage.getItem('onhaus_cash_ledger_period_v2') || 'month';
         } catch {
-            return 'day';
+            return 'month';
         }
     }); // 'day' | 'month' | 'year' | 'all'
     const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -465,14 +465,14 @@ export default function CashTaxLedgerTab({
                 <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
                         <span className="px-2 py-0.5 tabular-nums text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
-                            REVENUE DEPT // FORM 161
+                            รายงานเงินสดรับ-จ่าย
                         </span>
                         <span className="tabular-nums text-xs text-[var(--color-neutral)]  ">
-                            [รายงานเงินสดรับ - จ่าย ตามประกาศอธิบดีกรมสรรพากร]
+                            ตามประกาศอธิบดีกรมสรรพากร
                         </span>
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-ink)] tabular-nums ">
-                        CASH &amp; TAX P&amp;L LEDGER (เปรียบเทียบรายรับ-รายจ่ายทางภาษี)
+                        รายรับ-รายจ่ายทางภาษี
                     </h2>
                     <div className="text-xs text-[var(--color-neutral)] tabular-nums flex items-center gap-2 flex-wrap">
                         <span>รอบระยะเวลา: <strong className="text-[var(--color-ink)]">{activePeriodLabel}</strong></span>
@@ -501,7 +501,7 @@ export default function CashTaxLedgerTab({
                         title="ส่งออกรายงานเงินสดรับ-จ่าย เป็นไฟล์ Excel (.xlsx) ตามแบบฟอร์มสรรพากรบุคคลธรรมดา"
                     >
                         <FileSpreadsheet size={14} className="text-emerald-300" />
-                        <span>📗 EXPORT EXCEL (แบบสรรพากร)</span>
+                        <span>Excel แบบสรรพากร</span>
                     </button>
 
                     <button
@@ -509,7 +509,7 @@ export default function CashTaxLedgerTab({
                         className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                         <FileText size={14} className="text-[oklch(42%_0.010_28)]" />
-                        <span>EXPORT CSV</span>
+                        <span>CSV</span>
                     </button>
 
                     <button
@@ -528,7 +528,7 @@ export default function CashTaxLedgerTab({
                 {/* Total Cash In (Revenue) */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 ">
                     <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-neutral)] font-bold">
-                        <span>TOTAL CASH IN (รายรับสุทธิ)</span>
+                        <span>รายรับสุทธิ</span>
                         <TrendingUp size={15} className="text-emerald-600" />
                     </div>
                     <div className="text-2xl font-bold tabular-nums text-emerald-800">
@@ -547,7 +547,7 @@ export default function CashTaxLedgerTab({
                 {/* Total Cash Out (Expenses) */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 ">
                     <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-neutral)] font-bold">
-                        <span>TOTAL CASH OUT (รายจ่าย)</span>
+                        <span>รายจ่าย</span>
                         <TrendingDown size={15} className="text-rose-600" />
                     </div>
                     <div className="text-2xl font-bold tabular-nums text-rose-800">
@@ -562,7 +562,7 @@ export default function CashTaxLedgerTab({
                 {/* Net Operating Profit */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 ">
                     <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-neutral)] font-bold">
-                        <span>NET PROFIT (กำไรสุทธิก่อนภาษี)</span>
+                        <span>กำไรสุทธิก่อนภาษี</span>
                         <Scale size={15} className="text-blue-600" />
                     </div>
                     <div className={`text-2xl font-bold tabular-nums ${totals.netProfit >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-700'}`}>
@@ -581,14 +581,14 @@ export default function CashTaxLedgerTab({
                     <div className="flex items-center justify-between text-xs tabular-nums text-amber-900 font-bold ">
                         <span className="flex items-center gap-1">
                             <Sparkles size={13} className="text-amber-600" />
-                            <span>TAX ENGINE // คำแนะนำ</span>
+                            <span>หักค่าใช้จ่ายแบบไหนดีกว่า</span>
                         </span>
                         <span className="text-[11px] px-1.5 py-0.5 bg-amber-200 text-amber-900 tabular-nums font-bold">
                             ภ.ง.ด.90/94
                         </span>
                     </div>
                     <div className="text-sm font-bold tabular-nums text-amber-950">
-                        {totals.actualIsBetter ? '✅ หักตามจริง ประหยัดกว่า' : '💡 หักเหมา 60% ประหยัดกว่า'}
+                        {totals.actualIsBetter ? 'หักตามจริงประหยัดกว่า' : 'หักเหมา 60% ประหยัดกว่า'}
                     </div>
                     <div className="text-xs text-amber-900 tabular-nums leading-tight">
                         {totals.actualIsBetter 
@@ -660,7 +660,7 @@ export default function CashTaxLedgerTab({
                         <button
                             onClick={() => {
                                 setPeriodMode('day');
-                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'day'); } catch {}
+                                try { localStorage.setItem('onhaus_cash_ledger_period_v2', 'day'); } catch {}
                             }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
@@ -669,7 +669,7 @@ export default function CashTaxLedgerTab({
                         <button
                             onClick={() => {
                                 setPeriodMode('month');
-                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'month'); } catch {}
+                                try { localStorage.setItem('onhaus_cash_ledger_period_v2', 'month'); } catch {}
                             }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
@@ -678,7 +678,7 @@ export default function CashTaxLedgerTab({
                         <button
                             onClick={() => {
                                 setPeriodMode('year');
-                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'year'); } catch {}
+                                try { localStorage.setItem('onhaus_cash_ledger_period_v2', 'year'); } catch {}
                             }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'year' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
@@ -687,7 +687,7 @@ export default function CashTaxLedgerTab({
                         <button
                             onClick={() => {
                                 setPeriodMode('all');
-                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'all'); } catch {}
+                                try { localStorage.setItem('onhaus_cash_ledger_period_v2', 'all'); } catch {}
                             }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >

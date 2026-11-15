@@ -58,6 +58,7 @@ export default function WithholdingTaxTab({
     const [paymentDate, setPaymentDate] = useState(() => toBangkokDateKey(new Date()));
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
+    const [whtPdfBusy, setWhtPdfBusy] = useState(false);
 
     // Sync from database with Realtime
     React.useEffect(() => {
@@ -598,12 +599,21 @@ export default function WithholdingTaxTab({
                         <span>[ หนังสือรับรองการหักภาษี ณ ที่จ่าย 50 ทวิ // #{activePrintRecord.doc_number} ]</span>
                         <div className="flex gap-2">
                             <button
+                                disabled={whtPdfBusy}
                                 onClick={async () => {
                                     const sheet = document.getElementById('wht-50-tavi-printable-sheet');
-                                    if (!sheet) return;
-                                    const { blob } = await generateTaxDocumentPdf(sheet, { fileName: `WHT_50_TAVI_${activePrintRecord.doc_number}.pdf` });
-                                    downloadTaxPdf(blob, `WHT_50_TAVI_${activePrintRecord.doc_number}.pdf`);
-                                    toast.success('ดาวน์โหลดหนังสือ 50 ทวิ เรียบร้อยแล้ว');
+                                    if (!sheet || whtPdfBusy) return;
+                                    setWhtPdfBusy(true);
+                                    try {
+                                        const fileName = `WHT_50_TAVI_${activePrintRecord.doc_number}.pdf`;
+                                        const { blob } = await generateTaxDocumentPdf(sheet, { fileName });
+                                        downloadTaxPdf(blob, fileName);
+                                        toast.success('ดาวน์โหลดหนังสือ 50 ทวิ เรียบร้อยแล้ว');
+                                    } catch (pdfErr) {
+                                        toast.error('สร้าง PDF ไม่สำเร็จ: ' + (pdfErr?.message || 'ลองใหม่อีกครั้ง'));
+                                    } finally {
+                                        setWhtPdfBusy(false);
+                                    }
                                 }}
                                 className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-[oklch(97%_0.008_28)] font-bold rounded flex items-center gap-1.5 cursor-pointer text-xs"
                             >
@@ -629,11 +639,11 @@ export default function WithholdingTaxTab({
                     {/* A4 50 ทวิ Certificate Sheet */}
                     <div 
                         id="wht-50-tavi-printable-sheet"
-                        style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                        className="print-page-sheet w-full max-w-3xl bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] p-8 sm:p-10 border border-[oklch(85%_0.012_28)] shadow-2xl text-[11.5pt] print:m-0 print:p-8 print:border-none print:shadow-none space-y-4"
+                        style={{ fontFamily: "'IBM Plex Sans Thai', 'Sarabun', 'Leelawadee', system-ui, -apple-system, sans-serif" }}
+                        className="print-page-sheet w-[794px] min-w-[794px] self-start md:self-center print:w-full print:min-w-0 bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] p-10 border border-[oklch(85%_0.012_28)] shadow-2xl text-[11.5pt] print:m-0 print:p-8 print:border-none print:shadow-none space-y-4"
                     >
                         <div className="text-center border-b-2 border-zinc-950 pb-3.5">
-                            <h1 className="font-bold text-[18pt] sm:text-[20pt] text-[oklch(18%_0.012_28)] leading-tight">
+                            <h1 className="font-bold text-[20pt] text-[oklch(18%_0.012_28)] leading-tight">
                                 หนังสือรับรองการหักภาษี ณ ที่จ่าย
                             </h1>
                             <p className="tabular-nums text-[11.5pt] text-[oklch(42%_0.010_28)] mt-0.5 font-medium">

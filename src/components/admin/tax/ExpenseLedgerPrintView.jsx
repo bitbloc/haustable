@@ -309,7 +309,7 @@ export default function ExpenseLedgerPrintView({
             </div>
 
             {/* Printable Container */}
-            <div id="expense-ledger-printable-container" className="w-full max-w-5xl space-y-6 print:space-y-0 print:w-full print:max-w-none">
+            <div id="expense-ledger-printable-container" className="w-full max-w-full overflow-x-auto space-y-6 print:space-y-0 print:w-full print:max-w-none print:overflow-visible">
                 {pages.map((pageRows, pageIdx) => {
                     const isLastPage = pageIdx === pages.length - 1;
                     const pageStartOffset = pages.slice(0, pageIdx).reduce((acc, p) => acc + p.length, 0);
@@ -317,8 +317,8 @@ export default function ExpenseLedgerPrintView({
                     return (
                         <div 
                             key={pageIdx}
-                            style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                            className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-7 border border-zinc-300 shadow-xl text-[10.5pt] flex flex-col justify-between print:m-0 print:p-0 print:border-none print:shadow-none"
+                            style={{ fontFamily: "'IBM Plex Sans Thai', 'Sarabun', 'Leelawadee', system-ui, -apple-system, sans-serif" }}
+                            className="print-page-sheet w-[794px] min-w-[794px] mx-auto print:w-full print:min-w-0 bg-white text-zinc-950 p-7 border border-zinc-300 shadow-xl text-[10.5pt] flex flex-col justify-between print:m-0 print:p-0 print:border-none print:shadow-none"
                         >
                             <div>
                                 {/* Header Section (Official Revenue Department Format) */}
@@ -355,7 +355,7 @@ export default function ExpenseLedgerPrintView({
                                             </div>
                                         </div>
 
-                                        <div className="space-y-1 sm:text-right">
+                                        <div className="space-y-1 text-right">
                                             <div>
                                                 <span className="text-zinc-600 font-mono">เลขประจำตัวผู้เสียภาษีอากร: </span>
                                                 <strong className="font-mono text-zinc-950 font-bold whitespace-nowrap">{formatTaxId(companySettings?.tax_id || '1120100144907')}</strong>
@@ -451,7 +451,7 @@ export default function ExpenseLedgerPrintView({
                             {isLastPage && (
                                 <div className="mt-4 pt-3 border-t-2 border-zinc-950 space-y-3">
                                     {/* Financial Summary Box */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-zinc-50 border-2 border-zinc-950 p-3 font-mono text-[11pt]">
+                                    <div className="grid grid-cols-2 gap-4 bg-zinc-50 border-2 border-zinc-950 p-3 font-mono text-[11pt]">
                                         <div className="space-y-1">
                                             <div className="text-[9.5pt] text-zinc-600 uppercase font-bold">จำนวนเงินตัวอักษร / Thai Baht in Words:</div>
                                             <div className="font-bold text-zinc-950 font-sans text-[11.5pt]">({bahtWords})</div>
@@ -464,8 +464,8 @@ export default function ExpenseLedgerPrintView({
                                                 <span>Grade C: <strong>฿{gradeC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
                                             </div>
                                         </div>
-                                        <div className="space-y-1 sm:text-right flex flex-col justify-end">
-                                            <div className="flex justify-between sm:justify-end gap-4 text-[12pt] pt-1 border-t border-zinc-300">
+                                        <div className="space-y-1 text-right flex flex-col justify-end">
+                                            <div className="flex justify-end gap-4 text-[12pt] pt-1 border-t border-zinc-300">
                                                 <span className="font-bold text-zinc-900">รวมค่าใช้จ่ายทั้งสิ้น (GRAND TOTAL):</span>
                                                 <strong className="text-zinc-950 font-black text-[13.5pt]">฿{grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                             </div>

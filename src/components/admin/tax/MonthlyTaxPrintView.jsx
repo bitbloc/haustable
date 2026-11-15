@@ -33,7 +33,7 @@ export default function MonthlyTaxPrintView({
         const toastId = toast.loading('กำลังสร้างชุดเอกสาร PDF คุณภาพสูง...');
         try {
             const fileName = `Monthly_Tax_Dossier_${periodMonth || 'Period'}.pdf`;
-            const { blob } = await generateTaxDocumentPdf(sheetElement, { fileName });
+            const { blob } = await generateTaxDocumentPdf(sheetElement, { fileName, imageFormat: 'jpeg' }); // receipt photos: JPEG keeps the file small
             downloadTaxPdf(blob, fileName);
             toast.success(`ดาวน์โหลดเอกสาร ${fileName} เรียบร้อยแล้ว`, { id: toastId });
         } catch (err) {
@@ -173,13 +173,13 @@ export default function MonthlyTaxPrintView({
             </div>
 
             {/* Printable Container (A4 Multi-page Stack) */}
-            <div id="monthly-tax-printable-container" className="w-full max-w-4xl space-y-8 print:space-y-0 print:w-full print:max-w-none">
+            <div id="monthly-tax-printable-container" className="w-full max-w-full overflow-x-auto space-y-8 print:space-y-0 print:w-full print:max-w-none print:overflow-visible">
                 
                 {/* PAGE 1: COVER SHEET (ใบปะหน้าสรุปเอกสารภาษีประจำเดือน) */}
                 {includeCover && (
                     <div 
-                        style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                        className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11.5pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:p-8 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
+                        style={{ fontFamily: "'IBM Plex Sans Thai', 'Sarabun', 'Leelawadee', system-ui, -apple-system, sans-serif" }}
+                        className="print-page-sheet w-[794px] min-w-[794px] mx-auto print:w-full print:min-w-0 bg-white text-zinc-950 p-8 border border-zinc-300 shadow-xl text-[11.5pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:p-8 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
                     >
                         <div>
                             {/* Header Section */}
@@ -190,7 +190,7 @@ export default function MonthlyTaxPrintView({
                                         <img 
                                             src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
                                             alt="IN THE HAUS" 
-                                            className="w-16 h-16 sm:w-20 sm:h-20 object-contain object-left-top shrink-0"
+                                            className="w-20 h-20 object-contain object-left-top shrink-0"
                                             crossOrigin="anonymous"
                                             onError={(e) => {
                                                 if (e.target.src !== `${window.location.origin}/logo.png`) {
@@ -204,7 +204,7 @@ export default function MonthlyTaxPrintView({
                                         <div className="font-mono text-[10pt] font-bold text-zinc-600 uppercase tracking-wider mb-0.5">
                                             [ OFFICIAL MONTHLY TAX DOSSIER &amp; EXPENSE SUMMARY ]
                                         </div>
-                                        <h1 className="font-bold text-[18pt] sm:text-[20pt] uppercase tracking-tight text-zinc-950 leading-tight">
+                                        <h1 className="font-bold text-[20pt] uppercase tracking-tight text-zinc-950 leading-tight">
                                             {companySettings?.tax_company_name || 'IN THE HAUS'}
                                         </h1>
                                         {companySettings?.tax_company_name_en && (
@@ -242,19 +242,19 @@ export default function MonthlyTaxPrintView({
                             <div className="mt-4 grid grid-cols-3 border-2 border-zinc-950 divide-x-2 divide-zinc-950 bg-zinc-50 text-center font-mono">
                                 <div className="p-3">
                                     <span className="text-[10pt] font-bold text-zinc-600 uppercase block">ยอดรวมค่าใช้จ่ายทั้งสิ้น</span>
-                                    <span className="font-black text-[15pt] sm:text-[17pt] text-zinc-950 mt-0.5 block">
+                                    <span className="font-black text-[17pt] text-zinc-950 mt-0.5 block">
                                         ฿{totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="p-3">
                                     <span className="text-[10pt] font-bold text-zinc-600 uppercase block">ภาษีมูลค่าเพิ่ม (VAT 7%)</span>
-                                    <span className="font-black text-[15pt] sm:text-[17pt] text-zinc-950 mt-0.5 block">
+                                    <span className="font-black text-[17pt] text-zinc-950 mt-0.5 block">
                                         ฿{totalVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="p-3">
                                     <span className="text-[10pt] font-bold text-zinc-600 uppercase block">จำนวนชุดเอกสารแนบ</span>
-                                    <span className="font-black text-[15pt] sm:text-[17pt] text-zinc-950 mt-0.5 block">
+                                    <span className="font-black text-[17pt] text-zinc-950 mt-0.5 block">
                                         {selectedExpenses.length} บิล
                                     </span>
                                 </div>
@@ -370,8 +370,8 @@ export default function MonthlyTaxPrintView({
                 {receiptPages.map((pageItems, pageIdx) => (
                     <div 
                         key={`page-${pageIdx}`}
-                        style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                        className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
+                        style={{ fontFamily: "'IBM Plex Sans Thai', 'Sarabun', 'Leelawadee', system-ui, -apple-system, sans-serif" }}
+                        className="print-page-sheet w-[794px] min-w-[794px] mx-auto print:w-full print:min-w-0 bg-white text-zinc-950 p-8 border border-zinc-300 shadow-xl text-[11pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
                     >
                         <div>
                             {/* Page Header Strip */}
@@ -389,7 +389,7 @@ export default function MonthlyTaxPrintView({
                             <div className={`grid gap-4 ${
                                 layoutMode === '4up' 
                                     ? 'grid-cols-2 grid-rows-2' 
-                                    : (layoutMode === '1up' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2')
+                                    : (layoutMode === '1up' ? 'grid-cols-1' : 'grid-cols-2')
                             }`}>
                                 {pageItems.map((exp, itemIdx) => {
                                     const globalIndex = (pageIdx * itemsPerPage) + itemIdx + 1;

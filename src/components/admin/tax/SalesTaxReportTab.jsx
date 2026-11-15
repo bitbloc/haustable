@@ -86,7 +86,7 @@ export default function SalesTaxReportTab({
     };
 
     // Filter & Granularity States
-    const [timeFilterMode, setTimeFilterMode] = useState('day'); // 'day' | 'month' | 'all' (Default to 'day' for instant daily view)
+    const [timeFilterMode, setTimeFilterMode] = useState('month'); // 'day' | 'month' | 'all' (tax periods are months)
     const [selectedDate, setSelectedDate] = useState(getTodayDate);
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
     const [searchQuery, setSearchQuery] = useState('');
@@ -507,50 +507,22 @@ export default function SalesTaxReportTab({
 
     return (
         <div className="space-y-6">
-            {/* 1.8 Million Baht VAT Threshold Monitor (Non-VAT Advisory Tracker) */}
+            {/* Year-to-date sales against the 1.8M VAT line: information only. The owner has
+                agreed with the Revenue Department that the shop does not register yet. */}
             {!isVatRegistered && (
-                <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                            <div className={`p-2 rounded-xl tabular-nums font-bold text-xs ${ytdStats.isExceeded ? 'bg-red-100 text-red-700' : (ytdStats.isNearThreshold ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')}`}>
-                                1.8M VAT TRACKER
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                                    เกณฑ์ติดตามรายได้สะสมประจำปี {ytdStats.year} (เกณฑ์จด VAT 1.8 ล้านบาท)
-                                </h3>
-                                <p className="text-[13px] text-[oklch(50%_0.010_28)]">
-                                    ตามประมวลรัษฎากร หากรายรับเกิน 1,800,000 บาท/ปี ต้องยื่นคำขอจดทะเบียนภาษีมูลค่าเพิ่ม (ภ.พ.01) ภายใน 30 วันนับจากวันที่เกิน
-                                </p>
-                            </div>
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold text-[var(--color-ink)]">ยอดขายสะสมปี {ytdStats.year}</h3>
+                            <p className="text-xs text-[var(--color-muted)]">เทียบกับเกณฑ์จด VAT 1,800,000 บาทต่อปี (ข้อมูลอ้างอิง)</p>
                         </div>
-
                         <div className="text-right tabular-nums">
-                            <span className="text-xs text-[oklch(50%_0.010_28)] block">รายรับสะสมปี {ytdStats.year}</span>
-                            <span className="font-black text-base text-[oklch(18%_0.012_28)]">
-                                ฿{ytdStats.ytdGross.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                            </span>
-                            <span className="text-xs text-[oklch(50%_0.010_28)]"> / ฿1,800,000</span>
+                            <span className="text-lg font-bold text-[var(--color-ink)]">฿{ytdStats.ytdGross.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-xs text-[var(--color-muted)]"> / ฿1,800,000 · {ytdStats.pct.toFixed(0)}%</span>
                         </div>
                     </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-[oklch(94%_0.010_28)] rounded-full h-3 overflow-hidden border border-[oklch(90%_0.008_28)]">
-                        <div 
-                            className={`h-full transition-all duration-500 rounded-full ${ytdStats.isExceeded ? 'bg-red-600' : (ytdStats.isNearThreshold ? 'bg-amber-500' : 'bg-emerald-600')}`}
-                            style={{ width: `${ytdStats.pct}%` }}
-                        />
-                    </div>
-
-                    <div className="flex flex-wrap justify-between items-center text-xs tabular-nums text-[oklch(42%_0.010_28)] pt-1">
-                        <span>ความคืบหน้า: <strong>{ytdStats.pct.toFixed(1)}%</strong></span>
-                        <span>
-                            {ytdStats.isExceeded ? (
-                                <strong className="text-red-600">เกินเกณฑ์แล้ว ปรึกษานักบัญชีเรื่องยื่นจด VAT (ภ.พ.01) ภายใน 30 วัน</strong>
-                            ) : (
-                                <span>ยังสามารถรับรายได้แบบ Non-VAT ได้อีก: <strong className="text-emerald-700">฿{ytdStats.remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
-                            )}
-                        </span>
+                    <div className="w-full h-1.5 bg-[var(--color-paper-2)]">
+                        <div className="h-full bg-[var(--color-ink)] transition-all duration-500" style={{ width: `${ytdStats.pct}%` }} />
                     </div>
                 </div>
             )}

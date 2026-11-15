@@ -310,7 +310,7 @@ export default function CashTaxLedgerPrintView({
                     return (
                         <div 
                             key={`page-${pageIndex}`}
-                            className="print-page-sheet w-[210mm] min-h-[297mm] bg-white text-zinc-900 p-6 sm:p-7 shadow-2xl flex flex-col justify-between box-border border border-zinc-200 print:border-none print:shadow-none print:p-0"
+                            className="print-page-sheet w-[210mm] min-h-[297mm] bg-white text-zinc-900 p-7 shadow-2xl flex flex-col justify-between box-border border border-zinc-200 print:border-none print:shadow-none print:p-0"
                             style={{ fontFamily: "'IBM Plex Sans Thai', 'Sarabun', sans-serif" }}
                         >
                             {/* Page Content */}

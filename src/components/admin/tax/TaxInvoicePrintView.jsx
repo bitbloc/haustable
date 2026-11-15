@@ -538,7 +538,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                 <div 
                                     key={`sheet-${pIdx}`}
                                     style={{ 
-                                        fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif",
+                                        fontFamily: "'IBM Plex Sans Thai', 'Sarabun', 'Leelawadee', system-ui, -apple-system, sans-serif",
                                         width: '794px',
                                         minWidth: '794px',
                                         minHeight: '280mm',
@@ -556,7 +556,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                                 <img 
                                                     src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
                                                     alt="IN THE HAUS" 
-                                                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
+                                                    className="w-16 h-16 object-contain object-left-top shrink-0"
                                                     crossOrigin="anonymous"
                                                     onError={(e) => {
                                                         if (e.target.src !== `${window.location.origin}/logo.png`) {
@@ -592,7 +592,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                     {/* Document Title & Number Badge */}
                                     <div className="text-right flex flex-col items-end shrink-0">
                                         <div className="border-2 border-zinc-950 px-3 py-1.5 bg-zinc-50 text-right min-w-[190px]">
-                                            <span className="font-bold text-[13.5pt] sm:text-[15pt] block text-zinc-950 leading-tight">
+                                            <span className="font-bold text-[15pt] block text-zinc-950 leading-tight">
                                                 {docTitle}
                                             </span>
                                             <span className="font-mono text-[9pt] font-bold text-zinc-700 uppercase tracking-wider block mt-0.5">
@@ -627,7 +627,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
 
                                 {/* Customer Info Box (Shown on first page or multi-page header) */}
                                 {page.isFirst && (
-                                    <div className="mt-2 border-2 border-zinc-950 bg-zinc-50/70 px-3 py-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10.5pt]">
+                                    <div className="mt-2 border-2 border-zinc-950 bg-zinc-50/70 px-3 py-2 grid grid-cols-2 gap-2 text-[10.5pt]">
                                         <div>
                                             <div className="font-mono text-[9pt] font-bold uppercase tracking-wider text-zinc-600 mb-0.5">
                                                 [ ข้อมูลผู้ซื้อสินค้า / ผู้รับบริการ (CUSTOMER INFO) ]
@@ -640,7 +640,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col justify-end md:items-end font-mono text-[10pt] space-y-0.5">
+                                        <div className="flex flex-col justify-end items-end font-mono text-[10pt] space-y-0.5">
                                             <div>
                                                 <span className="text-zinc-600">เลขประจำตัวผู้เสียภาษี: </span>
                                                 <strong className="text-zinc-950 font-bold">{formatTaxId(invoice.customer_tax_id)}</strong>
@@ -731,7 +731,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
 
                                 {/* Summary & Totals Calculation Block (Rendered on final page) */}
                                 {page.isLast && (
-                                    <div className="mt-2.5 grid grid-cols-1 md:grid-cols-2 gap-2.5 items-start avoid-page-break">
+                                    <div className="mt-2.5 grid grid-cols-2 gap-2.5 items-start avoid-page-break">
                                         {/* Baht Text Box & Non-VAT Notice */}
                                         <div className="border-2 border-zinc-950 p-2.5 bg-zinc-50 flex flex-col justify-between min-h-[85px]">
                                             <div>

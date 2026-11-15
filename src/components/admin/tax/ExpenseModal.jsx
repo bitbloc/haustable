@@ -275,7 +275,7 @@ export default function ExpenseModal({
 
         // Duplicate Warning Confirmation
         if (duplicateCheckResult?.isDuplicate && duplicateCheckResult.confidence === 'HIGH') {
-            const proceed = window.confirm(`⚠️ ระบบตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว:\n\n${duplicateCheckResult.reason}\n\nคุณแน่ใจหรือไม่ว่าต้องการบันทึกรายการนี้ซ้ำอีกครั้ง?`);
+            const proceed = window.confirm(`ระบบตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว:\n\n${duplicateCheckResult.reason}\n\nคุณแน่ใจหรือไม่ว่าต้องการบันทึกรายการนี้ซ้ำอีกครั้ง?`);
             if (!proceed) return;
         }
 
