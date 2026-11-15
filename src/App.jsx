@@ -45,6 +45,8 @@ const AdminMarketingPage = lazy(() => import('./pages/admin/AdminMarketingPage')
 const MemberCard = lazy(() => import('./pages/MemberCard'))
 const StaffDashboard = lazy(() => import('./StaffDashboard'))
 const StaffLiveOrders = lazy(() => import('./StaffLiveOrders'))
+const StaffBillPage = lazy(() => import('./staff/StaffBillPage'))
+const StaffOrderPage = lazy(() => import('./staff/StaffOrderPage'))
 const StockPage = lazy(() => import('./StockPage'))
 const StockCountPage = lazy(() => import('./components/stock/StockCountPage'))
 const StockLabelsPage = lazy(() => import('./components/stock/StockLabelsPage'))
@@ -249,6 +251,8 @@ function App() {
                 {/* Staff/Kitchen Route */}
                 <Route element={<StaffAuthLayout />}>
                   <Route path="/staff" element={<StaffDashboard />} />
+                  <Route path="/staff/tables/:tableId" element={<StaffBillPage />} />
+                  <Route path="/staff/tables/:tableId/order" element={<StaffOrderPage />} />
                   <Route path="/staff/orders" element={<StaffLiveOrders />} />
                   <Route path="/staff/history" element={<StaffLiveOrders />} />
                   <Route path="/staff/checkin" element={<StaffLiveOrders />} />

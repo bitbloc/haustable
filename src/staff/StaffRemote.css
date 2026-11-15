@@ -1,0 +1,216 @@
+/* Hallmark · staff POS remote (table bill, take an order) · app style: achromatic ledger, same sheet as
+ * the staff home (tasteskill app sheet, seed 1519771181), with the owner's palette for these screens:
+ * white / charcoal chrome, lime as the one hue. Lime is a fill, never text (it fails contrast on white):
+ * it sits on the one "send to kitchen" action and on the count of what is in the cart. Nothing else.
+ * Status keeps its own pale pair (an order waiting too long for its slip).
+ *
+ * Type 12 / 14 / 16 / 24 (20 on phones), IBM Plex Sans Thai, line-height 1.6 so Thai marks never clip.
+ * Radii 8 / 6 / 4. No icons, shadows or gradients. Touch targets 44px and up.
+ * Grid: bill page one 760px column (a short list does not span 1200). Order page at 900 and up:
+ * menu 1fr + 12 gap + cart 360; below that one column with the cart behind a bottom bar.
+ */
+
+.staff-dash.staff-remote {
+  --sd-paper:       oklch(97.2% 0.004 125);
+  --sd-card:        oklch(99.4% 0.002 125);
+  --sd-paper-2:     oklch(94.5% 0.005 125);
+  --sd-ink:         oklch(24% 0.006 125);
+  --sd-ink-2:       oklch(42% 0.006 125);
+  --sd-ink-3:       oklch(50% 0.006 125);
+  --sd-border:      oklch(89% 0.005 125);
+  --sd-rule:        oklch(93% 0.004 125);
+  --sd-control:     oklch(82% 0.006 125);
+  --sd-on-ink:      oklch(98% 0.003 125);
+  --sd-focus:       oklch(24% 0.006 125);
+  --sd-live:        oklch(62% 0.17 130);
+
+  --sr-lime:        oklch(89% 0.2 122);
+  --sr-lime-press:  oklch(84% 0.2 122);
+  --sr-warn-bg:     oklch(95% 0.03 28);
+  --sr-warn-ink:    oklch(40% 0.13 28);
+
+  /* The shared option sheet reads the site's global tokens: map them onto this palette while it is open here. */
+  --color-paper:   var(--sd-card);
+  --color-paper-2: var(--sd-paper);
+  --color-rule:    var(--sd-border);
+  --color-neutral: var(--sd-ink-3);
+  --color-muted:   var(--sd-ink-3);
+  --color-ink:     var(--sd-ink);
+  --color-accent:  var(--sd-ink);
+}
+
+.staff-remote ::selection { background: var(--sr-lime); color: var(--sd-ink); }
+.staff-remote .font-mono { font-family: var(--sd-font); font-variant-numeric: tabular-nums; }
+
+/* The first tab keeps to the column edge here: its active state is a filled chip, which must not hang into the margin */
+.staff-remote .sd-tab:first-child { margin-left: 0; }
+
+.sr-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sr-main { display: grid; gap: var(--sd-gap); padding-top: 16px; padding-bottom: 120px; }
+/* One left edge: the bill column starts under the bar's back button and stops at 760px */
+.sr-main--bill > * { max-width: 760px; }
+.sr-dock__row.sr-main--bill > .sr-btn { max-width: 760px; }
+
+/* ── Buttons: one height per row; charcoal is the primary, lime is only "send" ── */
+.sr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--sd-ink);
+  border-radius: var(--sd-r-control);
+  background: var(--sd-ink);
+  color: var(--sd-on-ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  transition: background-color var(--sd-dur) var(--sd-ease), transform var(--sd-dur) var(--sd-ease);
+}
+.sr-btn:active { transform: scale(0.99); }
+.sr-btn:disabled { background: var(--sd-paper-2); border-color: var(--sd-border); color: var(--sd-ink-3); cursor: default; transform: none; }
+.sr-btn--block { width: 100%; }
+.sr-btn--ghost { background: var(--sd-card); color: var(--sd-ink); border-color: var(--sd-control); font-weight: 500; }
+.sr-btn--ghost:hover { border-color: var(--sd-ink); }
+.sr-btn--send { background: var(--sr-lime); border-color: var(--sr-lime); color: var(--sd-ink); justify-content: space-between; }
+.sr-btn--send:hover { background: var(--sr-lime-press); border-color: var(--sr-lime-press); }
+
+/* ── Bill: the figures as one divided strip, then the lines ── */
+.sr-lede { font-size: 14px; color: var(--sd-ink-2); }
+.sr-lede.is-warn { color: var(--sr-warn-ink); font-weight: 500; }
+
+.sr-figures {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-r-card);
+  background: var(--sd-card);
+}
+.sr-figure { display: flex; flex-direction: column; padding: 12px 16px; border-left: 1px solid var(--sd-rule); min-width: 0; }
+.sr-figure:first-child { border-left: 0; }
+.sr-figure__label { font-size: 12px; font-weight: 500; color: var(--sd-ink-2); }
+.sr-figure__n { font-size: 16px; line-height: 1.6; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sr-figure.is-lead .sr-figure__n { font-size: 24px; line-height: 1.4; letter-spacing: -0.01em; }
+
+.sr-line { align-items: flex-start; padding: 10px 0; }
+.sr-line__qty { flex: none; min-width: 28px; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--sd-ink-2); }
+.sr-line__name { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.sr-line__sub { font-size: 12px; color: var(--sd-ink-3); overflow-wrap: anywhere; }
+.sr-line__side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.sr-line__price { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.sr-chip {
+  flex: none;
+  padding: 0 8px;
+  border-radius: var(--sd-r-chip);
+  background: var(--sd-paper-2);
+  color: var(--sd-ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.sr-chip.is-warn { background: var(--sr-warn-bg); color: var(--sr-warn-ink); }
+.sr-chip.is-cart { background: var(--sr-lime); color: var(--sd-ink); font-variant-numeric: tabular-nums; }
+
+.sr-notice {
+  padding: 12px 16px;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-r-card);
+  background: var(--sd-card);
+  font-size: 14px;
+  color: var(--sd-ink);
+}
+.sr-notice.is-warn { border-color: var(--sr-warn-ink); background: var(--sr-warn-bg); color: var(--sr-warn-ink); }
+.sr-notice__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.sr-foot-note { font-size: 12px; color: var(--sd-ink-3); }
+
+/* ── Bottom bar: the screen's one job, in thumb reach ── */
+.sr-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  border-top: 1px solid var(--sd-border);
+  background: var(--sd-paper);
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.sr-dock__row { display: flex; align-items: center; gap: var(--sd-gap); }
+.sr-dock__row > .sr-btn { flex: 1; }
+.sr-dock__sum { display: flex; flex-direction: column; min-width: 0; flex: none; }
+.sr-dock__sum span:first-child { font-size: 12px; color: var(--sd-ink-2); }
+.sr-dock__sum span:last-child { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Order: menu on the left, cart on the right (wide); one column with a dock (narrow) ── */
+.sr-order { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--sd-gap); align-items: start; }
+.sr-menu { display: grid; gap: 4px; min-width: 0; }
+.sr-menu .sd-panel { margin-top: 8px; }
+.sr-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sd-gap);
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--sd-rule);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.sr-item:first-child { border-top: 0; }
+.sr-item:hover .sr-item__name { text-decoration: underline; text-decoration-color: var(--sd-control); text-underline-offset: 4px; }
+.sr-item__main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.sr-item__name { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.sr-item__sub { font-size: 12px; color: var(--sd-ink-3); }
+.sr-item__side { display: flex; align-items: center; gap: 8px; flex: none; }
+.sr-item__price { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--sd-ink-2); white-space: nowrap; }
+
+.sr-cart { position: sticky; top: 72px; }
+.sr-cart .sd-panel { padding-bottom: 16px; }
+.sr-cart__total { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sd-gap); padding: 12px 0; border-top: 1px solid var(--sd-rule); font-size: 14px; }
+.sr-cart__total strong { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sr-cart__actions { display: grid; gap: 8px; }
+
+.sr-stepper { display: inline-flex; align-items: center; border: 1px solid var(--sd-control); border-radius: var(--sd-r-control); background: var(--sd-card); flex: none; }
+.sr-stepper button { width: 44px; height: 44px; border: 0; background: transparent; color: var(--sd-ink); font-size: 16px; line-height: 1; }
+.sr-stepper button:hover { background: var(--sd-paper-2); }
+.sr-stepper span { min-width: 28px; text-align: center; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.sr-only-narrow { display: none; }
+.sr-only-wide { display: inline; }
+
+@media (max-width: 899px) {
+  .sr-order { grid-template-columns: minmax(0, 1fr); }
+  .sr-cart { position: static; display: none; }
+  .sr-order.is-review .sr-cart { display: block; }
+  .sr-order.is-review .sr-menu { display: none; }
+  .sr-only-narrow { display: inline; }
+  .sr-only-wide { display: none; }
+}
+
+@media (min-width: 900px) {
+  .sr-dock--order { display: none; }
+  .sr-main--order { padding-bottom: 48px; }
+}
+
+/* Wide: a one-figure menu row does not span 800px; two columns keep the price next to its name */
+@media (min-width: 1100px) {
+  .sr-menu .sd-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+  .sr-menu .sd-panel > .sd-note { grid-column: 1 / -1; }
+  .sr-item:nth-child(2) { border-top: 0; }
+}
+
+@media (max-width: 639px) {
+  .sr-figures { grid-auto-flow: row; grid-auto-columns: auto; }
+  .sr-figure { flex-direction: row; align-items: baseline; justify-content: space-between; gap: var(--sd-gap); border-left: 0; border-top: 1px solid var(--sd-rule); }
+  .sr-figure:first-child { border-top: 0; }
+  .sr-figure.is-lead .sr-figure__n { font-size: 20px; }
+}

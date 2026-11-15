@@ -9,7 +9,7 @@ import { getThaiDate } from '../../utils/timeUtils';
 import ManualBookingModal from '../admin/ManualBookingModal';
 import { logStaffActivity } from '../../utils/auditLogger';
 
-export default function TableManager({ isStaffView = false, onSelectTable: externalSelectTable }) {
+export default function TableManager({ isStaffView = false, onSelectTable: externalSelectTable, onOpenBill }) {
     const [tables, setTables] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -983,6 +983,15 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
                             {/* Actions */}
                             <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex flex-col gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
+                                {onOpenBill && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenBill(seatingModalTable)}
+                                        className="w-full py-3 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] rounded-sm cursor-pointer font-sans text-sm normal-case tracking-normal"
+                                    >
+                                        สั่งอาหารโต๊ะนี้
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     disabled={actionLoading}
@@ -1166,6 +1175,16 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                 <div className="py-4 text-center font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] rounded-sm">
                                     NO FOOD OR DRINK ORDERS YET
                                 </div>
+                            )}
+
+                            {onOpenBill && inspectedTable.state.status !== 'blocked' && (
+                                <button
+                                    type="button"
+                                    onClick={() => onOpenBill(inspectedTable.table)}
+                                    className="w-full py-3 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] rounded-sm cursor-pointer text-sm font-bold"
+                                >
+                                    บิล / สั่งอาหาร
+                                </button>
                             )}
 
                             {/* Action Buttons */}
