@@ -115,12 +115,14 @@ export default function WithholdingTaxTab({
     }, [records, selectedMonth, searchQuery]);
 
     // Monthly totals
+    // Cancelled certificates stay listed but are not part of the amounts to file
+    const activeRecords = useMemo(() => filteredRecords.filter(r => r.status !== 'cancelled'), [filteredRecords]);
     const totals = useMemo(() => {
-        const gross = filteredRecords.reduce((s, r) => s + Number(r.gross_amount || 0), 0);
-        const tax = filteredRecords.reduce((s, r) => s + Number(r.tax_withheld || 0), 0);
-        const net = filteredRecords.reduce((s, r) => s + Number(r.net_paid || 0), 0);
-        return { gross, tax, net, count: filteredRecords.length };
-    }, [filteredRecords]);
+        const gross = activeRecords.reduce((s, r) => s + Number(r.gross_amount || 0), 0);
+        const tax = activeRecords.reduce((s, r) => s + Number(r.tax_withheld || 0), 0);
+        const net = activeRecords.reduce((s, r) => s + Number(r.net_paid || 0), 0);
+        return { gross, tax, net, count: activeRecords.length };
+    }, [activeRecords]);
 
     // Handle Income Type change (Auto set default rate & form type)
     const handleIncomeTypeChange = (e) => {
@@ -224,28 +226,32 @@ export default function WithholdingTaxTab({
         setNotes('');
     };
 
-    const handleDeleteRecord = async (id, docNo) => {
-        if (!confirm(`ต้องการลบรายการ ${docNo} หรือไม่?`)) return;
-        try {
-            if (!String(id).startsWith('local_')) {
-                await supabase.from('withholding_tax_records').delete().eq('id', id);
-            }
-        } catch {
-            // Fallback locally
+    // 50 ทวิ certificates are kept for 5 years: a wrong one is cancelled, never deleted
+    const handleCancelRecord = async (id, docNo) => {
+        const reason = window.prompt(`ยกเลิกเอกสาร ${docNo}\nระบุเหตุผล (เอกสารยังเก็บไว้ในระบบ ไม่ถูกลบ):`);
+        if (reason === null) return;
+        if (!reason.trim()) {
+            toast.error('กรุณาระบุเหตุผลการยกเลิก');
+            return;
         }
-
-        const updated = records.filter(r => r.id !== id);
+        const patch = { status: 'cancelled', cancellation_reason: reason.trim(), cancelled_at: new Date().toISOString() };
+        const { error } = await supabase.from('withholding_tax_records').update(patch).eq('id', id);
+        if (error) {
+            toast.error('ยกเลิกไม่สำเร็จ: ' + error.message);
+            return;
+        }
+        const updated = records.map(r => (r.id === id ? { ...r, ...patch } : r));
         setRecords(updated);
         localStorage.setItem('onhaus_wht_records', JSON.stringify(updated));
-        toast.success(`ลบรายการ ${docNo} แล้ว`);
+        toast.success(`ยกเลิกเอกสาร ${docNo} แล้ว`);
     };
 
     const handleExportCsv = () => {
-        if (filteredRecords.length === 0) {
+        if (activeRecords.length === 0) {
             toast.warning('ไม่มีรายการภาษีหัก ณ ที่จ่ายในเดือนที่เลือก');
             return;
         }
-        const csv = exportWithholdingTaxCsv(filteredRecords, selectedMonth);
+        const csv = exportWithholdingTaxCsv(activeRecords, selectedMonth);
         downloadCsvFile(csv, `Withholding_Tax_Report_${selectedMonth}.csv`);
         toast.success('ดาวน์โหลดรายงานภาษีหัก ณ ที่จ่ายเรียบร้อย');
     };
@@ -360,10 +366,15 @@ export default function WithholdingTaxTab({
                         </thead>
                         <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
                             {filteredRecords.map((rec, idx) => (
-                                <tr key={rec.id || idx} className="hover:bg-[oklch(97%_0.008_28)] transition-colors">
+                                <tr key={rec.id || idx} className={`hover:bg-[oklch(97%_0.008_28)] transition-colors ${rec.status === 'cancelled' ? 'opacity-50' : ''}`}>
                                     <td className="p-3 text-center tabular-nums text-[oklch(50%_0.010_28)]">{idx + 1}</td>
                                     <td className="p-3 tabular-nums">{rec.payment_date}</td>
-                                    <td className="p-3 tabular-nums font-bold text-[oklch(18%_0.012_28)]">{rec.doc_number}</td>
+                                    <td className="p-3 tabular-nums font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className={rec.status === 'cancelled' ? 'line-through' : ''}>{rec.doc_number}</span>
+                                        {rec.status === 'cancelled' && (
+                                            <span className="block text-xs font-semibold text-[var(--color-accent)]" title={rec.cancellation_reason || ''}>ยกเลิกแล้ว</span>
+                                        )}
+                                    </td>
                                     <td className="p-3 tabular-nums">
                                         <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${rec.form_type === 'PND53' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
                                             {rec.form_type}
@@ -394,13 +405,15 @@ export default function WithholdingTaxTab({
                                             >
                                                 <Printer size={15} />
                                             </button>
-                                            <button
-                                                onClick={() => handleDeleteRecord(rec.id, rec.doc_number)}
-                                                className="p-1 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer"
-                                                title="ลบรายการ"
-                                            >
-                                                <Trash2 size={15} />
-                                            </button>
+                                            {rec.status !== 'cancelled' && (
+                                                <button
+                                                    onClick={() => handleCancelRecord(rec.id, rec.doc_number)}
+                                                    className="p-1 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer"
+                                                    title="ยกเลิกเอกสาร"
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

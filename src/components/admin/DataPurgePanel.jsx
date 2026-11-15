@@ -120,7 +120,7 @@ export default function DataPurgePanel() {
             title: '1. ออเดอร์ & บิลขาย (Orders & Billing)',
             subtitle: 'ล้างประวัติการสั่งอาหาร, บิลโต๊ะ, บิล Takeaway และเคลียร์สถานะโต๊ะทั้งหมด',
             dangerLevel: 'high',
-            tables: ['order_items', 'bookings', 'tax_invoices', 'withholding_tax_records', 'payment_slips_registry'],
+            tables: ['order_items', 'bookings', 'payment_slips_registry'],
             recordsCount: (counts.orders || 0) + (counts.order_items || 0),
             recordsBreakdown: `${counts.orders || 0} บิล / ${counts.order_items || 0} รายการอาหาร`,
             badge: 'Transactional',
@@ -152,18 +152,8 @@ export default function DataPurgePanel() {
             warningNotes: 'ประวัติ Log การปรับสต็อกจะถูกลบ โดยรายการสินค้าในคลังหลักยังคงอยู่',
             hasStockZeroOption: true
         },
-        {
-            id: 'tax_expenses',
-            title: '4. ภาษี & บันทึกรายจ่ายร้าน (Tax & Expenses)',
-            subtitle: 'ล้างใบกำกับภาษีทดสอบ และประวัติการสแกนบิลค่าใช้จ่าย (Makro ฯลฯ)',
-            dangerLevel: 'medium',
-            tables: ['tax_invoices', 'withholding_tax_records', 'store_expenses'],
-            recordsCount: (counts.tax_invoices || 0) + (counts.withholding_tax || 0) + (counts.store_expenses || 0),
-            recordsBreakdown: `${counts.tax_invoices || 0} ใบกำกับภาษี / ${counts.store_expenses || 0} บิลรายจ่าย`,
-            badge: 'Tax & Accounting',
-            confirmTitle: 'ยืนยันการล้างข้อมูลภาษีและรายจ่ายร้านทดสอบ',
-            warningNotes: 'ใบกำกับภาษีและรายการบันทึกค่าใช้จ่ายทั้งหมดจะถูกล้าง'
-        },
+        // Tax documents and expense records are kept for 5 years, so they are not purgeable
+        // (the database blocks deleting them; see 20261116150000_tax_document_integrity.sql).
         {
             id: 'activities',
             title: '5. กิจกรรม & บันเทิง (Entertainment & Logs)',
@@ -232,8 +222,6 @@ export default function DataPurgePanel() {
     const executeDirectFallback = async (categoryId, shouldResetStock) => {
         if (categoryId === 'orders' || categoryId === 'all_operational') {
             await supabase.from('order_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('tax_invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('withholding_tax_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             await supabase.from('payment_slips_registry').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         }
@@ -246,11 +234,6 @@ export default function DataPurgePanel() {
             if (shouldResetStock) {
                 await supabase.from('stock_items').update({ current_quantity: 0 }).neq('id', '00000000-0000-0000-0000-000000000000');
             }
-        }
-        if (categoryId === 'tax_expenses' || categoryId === 'all_operational') {
-            await supabase.from('tax_invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('withholding_tax_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('store_expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         }
         if (categoryId === 'activities' || categoryId === 'all_operational') {
             await supabase.from('song_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -350,10 +333,10 @@ export default function DataPurgePanel() {
                     onClick={() => setActiveModal({
                         id: 'all_operational',
                         title: 'ล้างข้อมูลทดสอบการทำงานทั้งหมด (All Operational Test Data)',
-                        subtitle: 'ล้างออเดอร์, บิล, กะการเงิน, ประวัติสต็อก, ภาษี, และกิจกรรมเสริมทั้งหมดพร้อมกัน',
+                        subtitle: 'ล้างออเดอร์, บิล, กะการเงิน, ประวัติสต็อก และกิจกรรมเสริมทั้งหมดพร้อมกัน (เอกสารภาษีและค่าใช้จ่ายเก็บไว้)',
                         dangerLevel: 'critical',
-                        tables: ['order_items', 'bookings', 'pos_shifts', 'pos_audit_logs', 'stock_transactions', 'tax_invoices', 'withholding_tax_records', 'store_expenses', 'payment_slips_registry', 'song_requests', 'leaderboard', 'arcade_rewards_log', 'haus_checkins'],
-                        recordsCount: (counts.orders || 0) + (counts.shifts || 0) + (counts.stock_transactions || 0) + (counts.tax_invoices || 0),
+                        tables: ['order_items', 'bookings', 'pos_shifts', 'pos_audit_logs', 'stock_transactions', 'payment_slips_registry', 'song_requests', 'leaderboard', 'arcade_rewards_log', 'haus_checkins'],
+                        recordsCount: (counts.orders || 0) + (counts.shifts || 0) + (counts.stock_transactions || 0),
                         confirmTitle: 'ยืนยันการล้างข้อมูลทดสอบทั้งหมดในระบบ',
                         warningNotes: 'การดำเนินการนี้จะลบข้อมูลธุรกรรมการทดสอบทั้งหมด แต่จะเก็บรายชื่อลูกค้า CRM เมนู และการตั้งค่าร้านไว้ 100%',
                         hasStockZeroOption: true

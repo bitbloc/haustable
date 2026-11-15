@@ -240,6 +240,9 @@ export default function TaxInvoiceModal({
         (booking ? detectBookingPaymentMethod(booking) : 'CASH')
     );
     const [notes, setNotes] = useState(existingInvoice?.notes || '');
+    // An issued document is never edited in place: saving it cancels it and issues a new number
+    const isReissue = Boolean(existingInvoice?.id && existingInvoice?.status !== 'cancelled' && !String(existingInvoice.id).startsWith('local_'));
+    const [reissueReason, setReissueReason] = useState('');
     const [saving, setSaving] = useState(false);
 
     // Handler when user selects a receipt from picker
@@ -424,20 +427,26 @@ export default function TaxInvoiceModal({
                     .eq('booking_id', targetBookingId)
                     .neq('status', 'cancelled');
                 if (dupErr) throw new Error('ตรวจสอบเอกสารซ้ำไม่สำเร็จ: ' + dupErr.message);
+                // The document being corrected is cancelled in the same step, so it does not count
                 const other = (dupes || []).find(d => d.id !== existingInvoice?.id);
                 if (other) {
                     throw new Error(`บิลนี้มีเอกสาร ${other.invoice_number} อยู่แล้ว ยกเลิกใบเดิมก่อนถ้าต้องการออกใหม่`);
                 }
             }
 
-            // Document number (still random within the month until running numbers move to the database)
+            if (isReissue && !reissueReason.trim()) {
+                throw new Error(`กรุณาระบุเหตุผลที่แก้ไข ใบเดิม ${existingInvoice.invoice_number} จะถูกยกเลิกและออกเลขใหม่แทน`);
+            }
+
+            // The database assigns the real running number on insert (tax_invoices_before_insert).
+            // This placeholder only matters if that migration has not been applied yet.
             const prefix = isDocVat
                 ? (activeCompanySettings?.tax_invoice_prefix || 'INV')
                 : (activeCompanySettings?.tax_receipt_prefix || 'REC');
             const ymSource = issuedDate || toLocalDateInput(resolvedIssuedAt);
             const ym = ymSource.slice(0, 7).replace('-', '');
             const newNumber = () => `${prefix}-${ym}-${Math.floor(Math.random() * 9000) + 1000}`;
-            let invoiceNumber = existingInvoice?.invoice_number || newNumber();
+            let invoiceNumber = newNumber();
 
             const invoicePayload = {
                 invoice_number: invoiceNumber,
@@ -477,15 +486,16 @@ export default function TaxInvoiceModal({
             // 1. Write to the database. A legal document that exists only in one browser's
             // localStorage is not issued, so any failure stops here and says so.
             let savedRecord;
-            if (existingInvoice?.id && !String(existingInvoice.id).startsWith('local_')) {
-                const { data, error } = await supabase
-                    .from('tax_invoices')
-                    .update(invoicePayload)
-                    .eq('id', existingInvoice.id)
-                    .select()
-                    .single();
-                if (error || !data) throw new Error(error?.message || 'บันทึกไม่สำเร็จ');
-                savedRecord = data;
+            if (isReissue) {
+                // Cancel the old document and issue the corrected one in a single transaction
+                const { data, error } = await supabase.rpc('reissue_tax_invoice', {
+                    p_old_id: existingInvoice.id,
+                    p_reason: `แก้ไขและออกใบใหม่: ${reissueReason.trim()}`,
+                    p_new: invoicePayload
+                });
+                if (error) throw new Error(error.message);
+                savedRecord = Array.isArray(data) ? data[0] : data;
+                if (!savedRecord) throw new Error('ออกใบใหม่ไม่สำเร็จ');
             } else {
                 for (let attempt = 0; attempt < 5 && !savedRecord; attempt++) {
                     const { data, error } = await supabase
@@ -494,8 +504,8 @@ export default function TaxInvoiceModal({
                         .select()
                         .single();
                     if (!error && data) { savedRecord = data; break; }
-                    // 23505 = the random number is already taken: draw another
-                    if (error?.code === '23505' && !existingInvoice?.invoice_number) { invoiceNumber = newNumber(); continue; }
+                    // 23505 = placeholder number already taken (only before the numbering migration)
+                    if (error?.code === '23505') { invoiceNumber = newNumber(); continue; }
                     throw new Error(error?.message || 'บันทึกไม่สำเร็จ');
                 }
                 if (!savedRecord) throw new Error('สร้างเลขที่เอกสารไม่ซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง');
@@ -1169,6 +1179,22 @@ export default function TaxInvoiceModal({
                     </div>
                 </div>
 
+                {/* Correcting an issued document = cancel it and issue a new number, with a reason */}
+                {isReissue && (
+                    <div className="px-4 pt-3 bg-white border-t border-[#D1D1CD] shrink-0">
+                        <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">
+                            เหตุผลที่แก้ไข (ใบเดิม {existingInvoice.invoice_number} จะถูกยกเลิก และออกเลขใหม่แทน)
+                        </label>
+                        <input
+                            type="text"
+                            value={reissueReason}
+                            onChange={(e) => setReissueReason(e.target.value)}
+                            placeholder="เช่น แก้ชื่อบริษัทผู้ซื้อ / แก้ที่อยู่"
+                            className="w-full border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-2 text-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
+                        />
+                    </div>
+                )}
+
                 {/* Footer Toolbar */}
                 <div className="p-4 bg-white border-t border-[#D1D1CD] flex flex-wrap items-center justify-between gap-3 shrink-0">
                     <button
@@ -1197,7 +1223,7 @@ export default function TaxInvoiceModal({
                             className="px-5 py-2.5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg font-mono font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
                         >
                             <Save size={15} />
-                            <span>{saving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร (SAVE)'}</span>
+                            <span>{saving ? 'กำลังบันทึก...' : (isReissue ? 'ยกเลิกใบเดิมและออกใบใหม่' : 'บันทึกเอกสาร (SAVE)')}</span>
                         </button>
                     </div>
                 </div>

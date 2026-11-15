@@ -442,22 +442,22 @@ export default function SalesTaxReportTab({
                     })
                     .eq('id', billToDelete.id);
 
-                if (error) {
-                    console.warn('Booking status update failed, attempting delete fallback:', error);
-                    await supabase.from('bookings').delete().eq('id', billToDelete.id);
-                }
+                // Never hard-delete a sale: if voiding fails, stop and say so
+                if (error) throw error;
 
                 if (onDeleteBooking) {
                     onDeleteBooking(billToDelete.id);
                 }
             } else if (billToDelete.source_type === 'tax_invoice') {
-                await supabase
+                const { error } = await supabase
                     .from('tax_invoices')
-                    .update({ 
-                        status: 'cancelled', 
-                        cancellation_reason: 'Voided from Sales Ledger' 
+                    .update({
+                        status: 'cancelled',
+                        cancellation_reason: 'ยกเลิกจากสมุดรายงานยอดขาย',
+                        cancelled_at: new Date().toISOString()
                     })
                     .eq('id', billToDelete.id);
+                if (error) throw error;
 
                 if (onDeleteInvoice) {
                     onDeleteInvoice(billToDelete.id);
@@ -468,7 +468,7 @@ export default function SalesTaxReportTab({
             setBillToDelete(null);
         } catch (err) {
             console.error('Failed to delete bill:', err);
-            toast.error('เกิดข้อผิดพลาดในการลบบิล กรุณาลองใหม่อีกครั้ง', { id: toastId });
+            toast.error('ยกเลิกบิลไม่สำเร็จ: ' + (err?.message || 'กรุณาลองใหม่อีกครั้ง'), { id: toastId });
         } finally {
             setDeleting(false);
         }
