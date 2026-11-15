@@ -56,52 +56,59 @@ export default function LiquidLevelSlider({ value = 0, onChange, unit = '%' }) {
         };
     }, []);
 
-    // Determine color based on level
-    // High = Green/Blue, Low = Orange/Red
-    const getColor = (pct) => {
-        if (pct <= 20) return 'rgba(239, 68, 68, 0.8)'; // Red
-        if (pct <= 40) return 'rgba(249, 115, 22, 0.8)'; // Orange
-        return 'rgba(59, 130, 246, 0.8)'; // Blue
+    // Ink fill; the clay accent only when the container is nearly empty
+    const fill = value <= 20 ? 'oklch(52% 0.16 28)' : 'oklch(18% 0.012 28)';
+
+    const onKeyDown = (e) => {
+        const step = e.shiftKey ? 25 : 5;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); onChange(Math.min(100, Math.round(value) + step)); }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); onChange(Math.max(0, Math.round(value) - step)); }
     };
 
     return (
-        <div className="flex flex-col items-center gap-2">
-            <div 
+        <div className="flex flex-col items-center gap-1.5">
+            <div
                 ref={containerRef}
-                className="relative w-24 h-64 bg-gray-100 rounded-3xl overflow-hidden border-4 border-gray-200 shadow-inner cursor-pointer touch-none"
+                role="slider"
+                tabIndex={0}
+                aria-label="ปริมาณที่เหลือในของที่เปิดอยู่"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(value)}
+                aria-valuetext={`${Math.round(value)}${unit}`}
+                onKeyDown={onKeyDown}
+                className="relative w-20 h-44 rounded-lg overflow-hidden border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] cursor-ns-resize touch-none outline-none focus-visible:border-[oklch(18%_0.012_28)]"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
             >
-                {/* Background Tick Marks */}
-                <div className="absolute inset-0 flex flex-col justify-between py-4 pointer-events-none opacity-30 z-10 px-6">
+                {/* Quarter marks */}
+                <div className="absolute inset-0 flex flex-col justify-between py-0 pointer-events-none z-10">
                     {[100, 75, 50, 25, 0].map(tick => (
-                        <div key={tick} className="w-full h-px bg-gray-400"></div>
+                        <div key={tick} className={`w-3 h-px ${tick % 100 ? 'bg-[oklch(70%_0.012_28)]' : 'bg-transparent'}`} />
                     ))}
                 </div>
 
-                {/* Liquid Fill */}
-                <div 
-                    className="absolute bottom-0 left-0 right-0 transition-all duration-200 ease-out flex items-center justify-center font-bold text-white text-xl shadow-lg"
-                    style={{ 
-                        height: `${Math.round(value)}%`, 
-                        backgroundColor: getColor(value),
-                        boxShadow: `0 0 20px ${getColor(value)}`
+                {/* Level */}
+                <div
+                    className="absolute bottom-0 left-0 right-0 flex items-start justify-center pt-1.5 text-sm font-semibold tabular-nums text-[oklch(97%_0.008_28)]"
+                    style={{
+                        height: `${Math.round(value)}%`,
+                        backgroundColor: fill,
+                        transition: dragging ? 'none' : 'height 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 180ms'
                     }}
                 >
-                    {/* Only show text if meaningful height */}
-                    {value > 15 && <span className="drop-shadow-md">{Math.round(value)}{unit}</span>}
+                    {value > 15 && <span>{Math.round(value)}{unit}</span>}
                 </div>
-                
-                {/* Label if empty-ish */}
+
                 {value <= 15 && (
-                     <div className="absolute bottom-2 left-0 right-0 text-center text-xs font-bold text-gray-500 pointer-events-none">
-                         {Math.round(value)}{unit}
-                     </div>
+                    <div className="absolute bottom-1.5 left-0 right-0 text-center text-sm font-semibold tabular-nums text-[oklch(42%_0.010_28)] pointer-events-none">
+                        {Math.round(value)}{unit}
+                    </div>
                 )}
             </div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Slide to adjust</p>
+            <p className="text-xs text-[oklch(55%_0.010_28)]">ลากขึ้นลง</p>
         </div>
     );
 }

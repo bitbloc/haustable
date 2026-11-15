@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import * as ui from './stockUi';
 import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
 import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
@@ -22,6 +24,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
     const [unitOptions, setUnitOptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const savingRef = useRef(false); // Sync lock to prevent double-click
+    const reduceMotion = useReducedMotion();
     
     // Liquid / Partial State (for Set/Count mode)
     const [showLiquidSlider, setShowLiquidSlider] = useState(false);
@@ -212,261 +215,234 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
     if (!item) return null;
 
+    const MODES = [
+        { id: 'in', label: 'รับเข้า' },
+        { id: 'out', label: 'เบิกออก' },
+        { id: 'set', label: 'ตรวจนับ' }
+    ];
+    const decrement = () => { const val = parseFloat(amount || 0); if (val > 0) setAmount(String(Math.max(0, val - 1))); };
+    const stockNow = formatStockDisplay(item.current_quantity, item.unit).displayString;
+    const disabled = loading || (mode !== 'set' && (!amount || parseFloat(amount) <= 0)) || (mode === 'out' && !outReason);
+    const confirmLabel = loading ? 'กำลังบันทึก…' : mode === 'set' ? 'บันทึกการนับ' : mode === 'in' ? 'ยืนยันรับเข้า' : 'ยืนยันเบิกออก';
+
+    const renderStepper = (ariaLabel) => (
+        <div className="flex gap-2">
+            <button type="button" onClick={decrement} className={ui.stepBtn} aria-label="ลด 1">−</button>
+            <input
+                type="number"
+                inputMode="decimal"
+                aria-label={ariaLabel}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className={`flex-1 min-w-0 h-12 rounded-md border ${ui.RULE} ${ui.PAPER} text-center text-2xl font-semibold tabular-nums ${ui.INK} outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`}
+            />
+            <button type="button" onClick={() => quickAdd(1)} className={ui.stepBtn} aria-label="เพิ่ม 1">+</button>
+        </div>
+    );
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-            <div className="bg-white w-full max-w-sm rounded-xl overflow-hidden border border-[var(--color-hallmark-rule)] shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150 ease-out">
-                
-                {/* Header */}
-                <div className="relative h-36 bg-gray-100 flex items-center justify-center shrink-0 border-b border-[var(--color-hallmark-rule)]/50">
-                    {item.image_url ? (
-                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <span className="text-[12px] text-gray-400">ยังไม่มีรูป</span>
-                    )}
-                    
-                    <div className="absolute top-3 right-3 z-10 flex gap-1.5">
-                     <button onClick={onEdit} className="h-8.5 px-3 bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-[13px] font-bold text-white hover:bg-black/50 active:scale-90 transition-all">แก้</button>
-                     <button onClick={onClose} className="h-8.5 px-3 bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-[13px] font-bold text-white hover:bg-black/50 active:scale-90 transition-all">ปิด</button>
+        <motion.div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[oklch(18%_0.012_28/0.45)] backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 0.18 } }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <motion.div
+                {...ui.sheetMotion(reduceMotion)}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`ปรับสต๊อก ${item.name}`}
+                className={`${ui.PAPER} w-full sm:max-w-sm border ${ui.RULE} rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(18%_0.012_28/0.14)] flex flex-col max-h-[92vh] overflow-hidden`}
+            >
+                {/* Header: photo, name, what is in stock now */}
+                <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+                    <div className={`w-14 h-14 rounded-md overflow-hidden border ${ui.RULE} ${ui.PAPER2} shrink-0`}>
+                        {item.image_url
+                            ? <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                            : <div className={`w-full h-full flex items-center justify-center text-[10px] ${ui.NEUTRAL}`}>ไม่มีรูป</div>}
                     </div>
-                    
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent p-4 pt-12">
-                        <h2 className="text-white text-lg font-bold leading-tight truncate">{item.name}</h2>
-                        <div className="text-white/80 text-xs font-medium font-mono mt-0.5">
-                            {formatStockDisplay(item.current_quantity, item.unit).displayString}
-                        </div>
+                    <div className="flex-1 min-w-0">
+                        <h2 className={`text-base font-semibold leading-6 ${ui.INK} line-clamp-2`}>{item.name}</h2>
+                        <div className={`text-sm ${ui.MUTED} tabular-nums`}>คงเหลือ {stockNow}</div>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                        <button type="button" onClick={onEdit} className={ui.ghostBtn}>แก้</button>
+                        <button type="button" onClick={onClose} className={ui.ghostBtn}>ปิด</button>
+                    </div>
+                </div>
+
+                {/* Mode switch with a sliding pill */}
+                <div className="px-4">
+                    <div className={`relative grid grid-cols-3 p-1 rounded-md ${ui.PAPER2}`} role="tablist" aria-label="ประเภทการปรับสต๊อก">
+                        {MODES.map(m => (
+                            <button
+                                key={m.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={mode === m.id}
+                                onClick={() => setMode(m.id)}
+                                className={`relative h-9 rounded text-sm transition-colors ${mode === m.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}
+                            >
+                                {mode === m.id && (
+                                    <motion.span
+                                        layoutId="adjust-mode-pill"
+                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]`}
+                                        transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: ui.EASE }}
+                                    />
+                                )}
+                                <span className="relative">{m.label}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
                 {/* Body */}
-                <div className="p-4 flex-1 overflow-y-auto">
-                    
-                    {/* Mode Tabs */}
-                    <div className="flex bg-gray-100 p-0.5 rounded-lg border border-[var(--color-hallmark-rule)]/50 mb-4 shadow-inner">
-                        <button onClick={() => setMode('in')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'in' ? 'bg-white shadow text-green-700' : 'text-gray-400 hover:text-gray-600'}`}>+ รับเข้า</button>
-                        <button onClick={() => setMode('out')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'out' ? 'bg-white shadow text-red-700' : 'text-gray-400 hover:text-gray-600'}`}>- เบิกออก</button>
-                        <button onClick={() => setMode('set')} className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${mode === 'set' ? 'bg-[#1A1A1A] shadow text-white' : 'text-gray-400 hover:text-gray-600'}`}>ตรวจนับ</button>
-                    </div>
-
-                    {/* Unit Selector */}
-                    <div className="mb-4">
-                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">หน่วยนับ</label>
-                        <div className="grid grid-cols-2 gap-1.5">
-                            {unitOptions.map((opt) => (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => setSelectedUnit(opt)}
-                                    className={`py-2 px-3 rounded-lg border text-xs font-bold transition-all text-center ${selectedUnit?.key === opt.key ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white shadow-sm' : 'border-[var(--color-hallmark-rule)] text-gray-600 hover:bg-gray-50'}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* --- COUNT MODE (Quantity Remaining) --- */}
-                    {mode === 'set' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
-                            
-                            {/* 1. Unopened Section */}
-                            <div>
-                                <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                                    จำนวนที่ยังไม่เปิด
-                                </label>
-                                <div className="flex gap-2">
-                                    <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-500" aria-hidden="true">−</span><span className="sr-only">ลด 1</span></button>
-                                    <input 
-                                        type="number" 
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        placeholder="0"
-                                        className="flex-1 h-10 bg-gray-50/80 border border-[var(--color-hallmark-rule)] rounded-lg text-center text-xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] focus:ring-1 focus:ring-[#1A1A1A] transition-all"
-                                    />
-                                    <button onClick={() => quickAdd(1)} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-700" aria-hidden="true">+</span><span className="sr-only">เพิ่ม 1</span></button>
-                                </div>
-                            </div>
-
-                            {/* 2. Opened Section */}
-                            <div className="p-3 bg-gray-50/50 rounded-xl border border-[var(--color-hallmark-rule)]/60">
-                                <div className="flex items-center justify-between mb-2.5">
-                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                                        จำนวนที่เปิดแล้ว (เศษ)
-                                    </label>
-                                    
-                                    {/* Toggle Opened Item Checkbox/Counter */}
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={() => {
-                                                if (partialAmount > 0) {
-                                                    setPartialAmount(0);
-                                                } else {
-                                                    setPartialAmount(0.5);
-                                                }
-                                            }}
-                                            className={`px-2.5 py-0.5 rounded border text-[10px] font-bold transition-all shadow-sm ${partialAmount > 0 ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]' : 'bg-white text-gray-400 border-[var(--color-hallmark-rule)] hover:bg-gray-50'}`}
-                                        >
-                                            {partialAmount > 0 ? 'มีของเปิดอยู่' : 'ไม่มีของเปิดอยู่'}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {partialAmount > 0 && (
-                                    <div className="animate-in fade-in slide-in-from-top-2 duration-150">
-                                        <div className="p-3 bg-white rounded-lg border border-[var(--color-hallmark-rule)]/80 mb-1.5 shadow-sm">
-                                            <h4 className="text-[10px] font-bold text-gray-500 mb-2 flex items-center gap-1.5">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                เหลืออยู่กี่ %
-                                            </h4>
-                                            
-                                            {useMlCalculator ? (
-                                                <div className="space-y-2">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                            <div>
-                                                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 block">ปริมาตรเต็ม (ml)</label>
-                                                                <input 
-                                                                    type="number" 
-                                                                    value={fullCapacityMl || ''} 
-                                                                    onChange={e => {
-                                                                        const val = e.target.value;
-                                                                        setFullCapacityMl(val === '' ? 0 : parseFloat(val));
-                                                                    }} 
-                                                                    className="w-full p-2 bg-gray-50/50 border border-[var(--color-hallmark-rule)] rounded-lg text-xs font-bold font-mono focus:outline-none focus:border-[#1A1A1A]" 
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 block">คงเหลือ (ml)</label>
-                                                                <input 
-                                                                    type="number" 
-                                                                    value={remainingMl || ''} 
-                                                                    onChange={e => {
-                                                                        const val = e.target.value;
-                                                                        setRemainingMl(val === '' ? 0 : parseFloat(val));
-                                                                    }} 
-                                                                    className="w-full p-2 bg-gray-50/50 border border-blue-200 text-blue-600 rounded-lg text-xs font-bold font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
-                                                                    autoFocus 
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex justify-between items-center text-[10px] font-bold text-blue-800 pt-1">
-                                                            <span className="font-mono">= {((partialAmount || 0) * 100).toFixed(0)}%</span>
-                                                            <button onClick={() => setUseMlCalculator(false)} className="text-gray-400 underline decoration-dotted">ใช้แบบเลื่อน</button>
-                                                        </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="flex gap-4 items-center">
-                                                        <LiquidLevelSlider 
-                                                            value={Math.round(partialAmount * 100)} 
-                                                            onChange={(val) => setPartialAmount(val / 100)} 
-                                                        />
-                                                        <div className="text-[10px] text-gray-500">
-                                                            <div className="font-bold text-base text-[#1A1A1A] font-mono">{Math.round(partialAmount * 100)}%</div>
-                                                            <div className="opacity-70 leading-tight">ประมาณสายตา</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right mt-1.5 flex justify-end">
-                                                         <button onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className="text-[9px] font-bold text-blue-600 flex items-center gap-1 justify-end hover:bg-blue-50 px-2 py-0.5 rounded transition-colors border border-blue-100 bg-blue-50/30">
-                                                             คำนวณ ml
-                                                         </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Summary Section */}
-                            <div className="bg-white rounded-lg border border-[var(--color-hallmark-rule)] p-3 shadow-sm">
-                                <h4 className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                    <span className="w-1 h-1 rounded-full bg-[#1A1A1A]"></span>
-                                    สรุปรายการตรวจนับ
-                                </h4>
-                                <div className="space-y-0.5">
-                                    <div className="text-xs font-bold text-[#1A1A1A] font-mono">
-                                        {amount || 0} {item.unit} (เต็ม) 
-                                        {partialAmount > 0 && ` + 1 ${item.unit} (เศษ: ${(partialAmount * 100).toFixed(0)}%)`}
-                                    </div>
-                                    <div className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-                                        ผู้บันทึก: <span className="text-[#1A1A1A] font-bold">{currentUser?.user_metadata?.full_name || 'Staff'}</span>
-                                        <span className="opacity-50 font-mono">
-                                            ({new Date().toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Main Input for In/Out (Hidden in Set mode) */}
-                    {mode !== 'set' && (
-                        <div className="mb-2">
-                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                                จำนวน
-                            </label>
-                            <div className="flex gap-2">
-                                <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-500" aria-hidden="true">−</span><span className="sr-only">ลด 1</span></button>
-                                <input 
-                                    type="number" 
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="0"
-                                    className="flex-1 h-10 bg-gray-50/80 border border-[var(--color-hallmark-rule)] rounded-lg text-center text-xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] focus:ring-1 focus:ring-[#1A1A1A] transition-all"
-                                />
-                                <button onClick={() => quickAdd(1)} className="w-10 h-10 rounded-lg border border-[var(--color-hallmark-rule)] flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"><span className="text-[20px] leading-none text-gray-700" aria-hidden="true">+</span><span className="sr-only">เพิ่ม 1</span></button>
-                            </div>
-                        </div>
-                    )}
-
-                    {mode === 'out' && (
-                        <div className="mt-4">
-                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">เหตุผล</label>
-                            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="เหตุผลการเบิกออก">
-                                {WITHDRAW_REASONS.map(r => (
-                                    <button
-                                        key={r.key}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={outReason === r.key}
-                                        onClick={() => setOutReason(r.key)}
-                                        className={`py-2 px-2 rounded-lg border text-xs font-bold leading-snug transition-all text-center ${outReason === r.key ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white shadow-sm' : 'border-[var(--color-hallmark-rule)] text-gray-600 hover:bg-gray-50'}`}
-                                    >
-                                        {r.label}
+                <div className="px-4 py-4 flex-1 overflow-y-auto space-y-4">
+                    {/* Unit */}
+                    {unitOptions.length > 1 && (
+                        <div>
+                            <span className={ui.label}>หน่วย</span>
+                            <div className="flex flex-wrap gap-1.5">
+                                {unitOptions.map(opt => (
+                                    <button key={opt.key} type="button" onClick={() => setSelectedUnit(opt)} className={ui.chip(selectedUnit?.key === opt.key)}>
+                                        {opt.label}
                                     </button>
                                 ))}
                             </div>
-                            <input
-                                type="text"
-                                value={outNote}
-                                onChange={(e) => setOutNote(e.target.value)}
-                                placeholder={outReason === STOCK_REASONS.WASTE ? 'เช่น เสีย หมดอายุ ทำหก' : 'โน้ต (ไม่บังคับ)'}
-                                maxLength={120}
-                                className="mt-2 w-full h-9 bg-gray-50/80 border border-[var(--color-hallmark-rule)] rounded-lg px-3 text-xs text-[#1A1A1A] outline-none focus:border-[#1A1A1A] transition-all"
-                            />
-                            <p className="text-[10px] text-gray-400 leading-relaxed mt-1.5">ของที่ใช้ทำเมนูที่ขาย ระบบคิดจากสูตรให้แล้ว ใช้เบิกออกเฉพาะของเสีย ของที่พนักงานกิน หรือเหตุอื่น</p>
                         </div>
                     )}
+
+                    <AnimatePresence mode="wait" initial={false}>
+                        {mode === 'set' ? (
+                            <motion.div key="set" {...ui.panelMotion(reduceMotion)} className="space-y-4">
+                                <div>
+                                    <span className={ui.label}>ยังไม่เปิด ({selectedUnit?.label})</span>
+                                    {renderStepper('จำนวนที่ยังไม่เปิด')}
+                                </div>
+
+                                {/* Opened container */}
+                                <div className={`rounded-md border ${ui.RULE} p-3 space-y-3`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className={`text-sm ${ui.INK}`}>มีของที่เปิดใช้อยู่</span>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={partialAmount > 0}
+                                            onClick={() => setPartialAmount(partialAmount > 0 ? 0 : 0.5)}
+                                            className={`relative w-11 h-6 rounded-full transition-colors ${partialAmount > 0 ? 'bg-[oklch(18%_0.012_28)]' : 'bg-[oklch(85%_0.012_28)]'}`}
+                                        >
+                                            <motion.span
+                                                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[oklch(99%_0.004_28)]"
+                                                animate={{ x: partialAmount > 0 ? 20 : 0 }}
+                                                transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: ui.EASE }}
+                                            />
+                                        </button>
+                                    </div>
+                                    <AnimatePresence initial={false}>
+                                        {partialAmount > 0 && (
+                                            <motion.div
+                                                key="opened"
+                                                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto', transition: { duration: 0.2, ease: ui.EASE } }}
+                                                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, transition: { duration: 0.14 } }}
+                                                className="overflow-hidden"
+                                            >
+                                                {useMlCalculator ? (
+                                                    <div className="space-y-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div>
+                                                                <label className={ui.label}>เต็มขวด (มล.)</label>
+                                                                <input type="number" inputMode="decimal" value={fullCapacityMl || ''}
+                                                                    onChange={e => setFullCapacityMl(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                                                                    className={`${ui.input} tabular-nums`} />
+                                                            </div>
+                                                            <div>
+                                                                <label className={ui.label}>เหลือ (มล.)</label>
+                                                                <input type="number" inputMode="decimal" value={remainingMl || ''} autoFocus
+                                                                    onChange={e => setRemainingMl(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                                                                    className={`${ui.input} tabular-nums`} />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className={`${ui.INK} font-semibold tabular-nums`}>= {Math.round((partialAmount || 0) * 100)}%</span>
+                                                            <button type="button" onClick={() => setUseMlCalculator(false)} className={`text-xs ${ui.MUTED} underline underline-offset-2`}>กะด้วยสายตา</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-4">
+                                                            <LiquidLevelSlider value={Math.round(partialAmount * 100)} onChange={(val) => setPartialAmount(val / 100)} />
+                                                            <div>
+                                                                <div className={`text-2xl font-semibold tabular-nums ${ui.INK}`}>{Math.round(partialAmount * 100)}%</div>
+                                                                <div className={`text-xs ${ui.NEUTRAL}`}>ประมาณด้วยสายตา</div>
+                                                            </div>
+                                                        </div>
+                                                        <button type="button" onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className={`text-xs ${ui.MUTED} underline underline-offset-2`}>
+                                                            คำนวณจาก มล.
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Summary */}
+                                <div className={`rounded-md ${ui.PAPER2} px-3 py-2.5`}>
+                                    <div className={`text-xs ${ui.NEUTRAL}`}>จะบันทึกว่า</div>
+                                    <div className={`text-sm font-semibold tabular-nums ${ui.INK}`}>
+                                        {amount || 0} {selectedUnit?.label || item.unit}
+                                        {partialAmount > 0 && ` + ที่เปิดอยู่ ${Math.round(partialAmount * 100)}%`}
+                                    </div>
+                                    <div className={`text-xs ${ui.NEUTRAL}`}>
+                                        โดย {currentUser?.user_metadata?.full_name || 'พนักงาน'} · {new Date().toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div key={mode} {...ui.panelMotion(reduceMotion)} className="space-y-4">
+                                <div>
+                                    <span className={ui.label}>จำนวน{selectedUnit ? ` (${selectedUnit.label})` : ''}</span>
+                                    {renderStepper(mode === 'in' ? 'จำนวนรับเข้า' : 'จำนวนเบิกออก')}
+                                </div>
+                                {mode === 'out' && (
+                                    <div className="space-y-2">
+                                        <span className={ui.label}>เหตุผล</span>
+                                        <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="เหตุผลการเบิกออก">
+                                            {WITHDRAW_REASONS.map(r => (
+                                                <button key={r.key} type="button" role="radio" aria-checked={outReason === r.key}
+                                                    onClick={() => setOutReason(r.key)}
+                                                    className={`${ui.chip(outReason === r.key)} px-2 leading-snug`}>
+                                                    {r.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={outNote}
+                                            onChange={(e) => setOutNote(e.target.value)}
+                                            placeholder={outReason === STOCK_REASONS.WASTE ? 'เช่น เสีย หมดอายุ ทำหก' : 'โน้ต (ไม่บังคับ)'}
+                                            maxLength={120}
+                                            className={ui.input}
+                                        />
+                                        <p className={`text-xs ${ui.NEUTRAL} leading-relaxed`}>
+                                            ของที่ใช้ทำเมนูที่ขาย ระบบคิดจากสูตรให้แล้ว เบิกออกเฉพาะของเสีย ของที่พนักงานกิน หรือเหตุอื่น
+                                        </p>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-[var(--color-hallmark-rule)]/50 bg-gray-50/50 safe-area-inset-bottom">
-                    <button 
-                        onClick={handleSave}
-                        disabled={loading || (mode !== 'set' && (!amount || parseFloat(amount) <= 0)) || (mode === 'out' && !outReason)}
-                        className={`w-full py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-white font-bold text-sm shadow-md transition-all active:scale-98 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed ${
-                            loading ? 'bg-gray-400 cursor-not-allowed shadow-none' : 
-                            mode === 'in' ? 'bg-green-600 hover:bg-green-700' : 
-                            mode === 'out' ? 'bg-red-600 hover:bg-red-700' :
-                            'bg-[#1A1A1A] hover:bg-black'
-                        }`}
-                    >
-                        {loading ? 'กำลังบันทึก...' : (
-                            <>
-                                {mode === 'set' ? 'บันทึกการนับ' : `ยืนยัน${mode === 'in' ? 'รับเข้า' : 'เบิกออก'}`}
-                            </>
-                        )}
+                <div className={`px-4 py-3 border-t ${ui.RULE} pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
+                    <button type="button" onClick={handleSave} disabled={disabled} className={ui.primaryBtn}>
+                        {confirmLabel}
                     </button>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 }

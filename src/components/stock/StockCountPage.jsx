@@ -14,6 +14,8 @@ import { rankVariance, shopDayRange, suggestSpotCount } from '../../utils/stockR
 import { countUnitCost } from '../../utils/stockReceiving';
 import BarcodeLinkSheet from './BarcodeLinkSheet';
 import { linkBarcodeToItem } from '../../utils/stockBarcodeLink';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import * as ui from './stockUi';
 
 const DRAFT_KEY = (kind, day) => `stock_count_draft_v1:${day}:${kind}`;
 
@@ -77,6 +79,10 @@ const scanFeedback = (ok) => {
 
 const capacityOf = fullUnitCapacity;
 
+// Count fields: 16px so phones do not zoom on focus; border colour is added per state.
+const numInput = `h-11 px-2 rounded-md border ${ui.PAPER} ${ui.INK} text-base font-semibold tabular-nums text-right outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`;
+const smallPrimary = 'h-9 px-3 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-[oklch(25%_0.012_28)] cursor-pointer';
+
 /** Full units + what is left in the open one -> one decimal count. */
 function OpenUnitHelper({ item, onApply, onClose }) {
     const cap = capacityOf(item);
@@ -88,40 +94,38 @@ function OpenUnitHelper({ item, onApply, onClose }) {
     const total = Number((fullN + fraction).toFixed(4));
     const unit = displayUnit(item.unit);
     return (
-        <div className="col-span-2 border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-3 space-y-2.5">
+        <div className={`rounded-md border ${ui.RULE} ${ui.PAPER2} p-3 space-y-3`}>
             <div className="grid grid-cols-2 gap-2">
-                <label className="space-y-1">
-                    <span className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] block">ยังไม่เปิด ({unit})</span>
+                <label className="block min-w-0">
+                    <span className={ui.label}>ยังไม่เปิด ({unit})</span>
                     <input type="text" inputMode="decimal" value={full} onChange={e => setFull(e.target.value)} autoFocus
-                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-[16px] text-right outline-none focus:border-black" />
+                        className={`w-full ${numInput} ${ui.RULE}`} />
                 </label>
-                <label className="space-y-1">
-                    <span className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] block">
+                <label className="block min-w-0">
+                    <span className={ui.label}>
                         {cap ? `เปิดแล้วเหลือ (${cap.unit} จาก ${cap.amount.toLocaleString()})` : 'เปิดแล้วเหลือ (%)'}
                     </span>
                     <input type="text" inputMode="decimal" value={left} onChange={e => setLeft(e.target.value)}
-                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-[16px] text-right outline-none focus:border-black" />
+                        className={`w-full ${numInput} ${ui.RULE}`} />
                 </label>
             </div>
             {!cap && (
-                <div className="flex gap-1.5">
+                <div className="grid grid-cols-4 gap-2">
                     {[0, 25, 50, 75].map(p => (
-                        <button key={p} type="button" onClick={() => setLeft(String(p))}
-                            className={`flex-1 py-1.5 border font-mono text-[13px] cursor-pointer ${String(p) === left ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-black' : 'bg-white border-[oklch(85%_0.012_28)]'}`}>
+                        <button key={p} type="button" onClick={() => setLeft(String(p))} aria-pressed={String(p) === left}
+                            className={`${ui.chip(String(p) === left)} tabular-nums`}>
                             {p}%
                         </button>
                     ))}
                 </div>
             )}
-            <div className="flex items-center justify-between gap-2">
-                <span className="font-sans text-[13px] leading-5">
-                    รวม <span className="font-mono font-bold">{total}</span> {unit}
+            <div className="flex items-center justify-between gap-3">
+                <span className={`text-[13px] leading-5 ${ui.MUTED}`}>
+                    รวม <span className={`font-semibold tabular-nums ${ui.INK}`}>{fmt(total)}</span> {unit}
                 </span>
-                <div className="flex gap-1.5">
-                    <button type="button" onClick={onClose}
-                        className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-white font-sans font-bold text-[13px] cursor-pointer">ยกเลิก</button>
-                    <button type="button" onClick={() => onApply(String(total))}
-                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-sans font-bold text-[13px] cursor-pointer">ใช้ค่านี้</button>
+                <div className="flex gap-2">
+                    <button type="button" onClick={onClose} className={ui.ghostBtn}>ยกเลิก</button>
+                    <button type="button" onClick={() => onApply(String(total))} className={smallPrimary}>ใช้ค่านี้</button>
                 </div>
             </div>
         </div>
@@ -130,6 +134,10 @@ function OpenUnitHelper({ item, onApply, onClose }) {
 
 export default function StockCountPage() {
     const navigate = useNavigate();
+    const reduceMotion = useReducedMotion();
+    const fade = reduceMotion
+        ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+        : { initial: { opacity: 0, y: -6 }, animate: { opacity: 1, y: 0, transition: { duration: 0.18, ease: ui.EASE } }, exit: { opacity: 0, transition: { duration: 0.1 } } };
     const shopDay = useMemo(() => shopDayOf(new Date()), []);
     const [kind, setKind] = useState(() => defaultCountKind(new Date()));
     const [items, setItems] = useState([]);
@@ -348,256 +356,288 @@ export default function StockCountPage() {
         }
     };
 
-    const tabClass = (active) => `flex-1 py-2.5 font-sans font-bold text-[14px] leading-6 transition-colors cursor-pointer ${
-        active ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
-    }`;
+    const pillTransition = reduceMotion ? { duration: 0 } : { duration: 0.22, ease: ui.EASE };
+    const kindEntries = Object.entries(COUNT_KINDS);
 
     return (
-        <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-sans pb-28">
-            {/* Header cells */}
-            <header className="sticky top-0 z-20 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
-                <div className="max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[oklch(85%_0.012_28)] border-x border-[oklch(85%_0.012_28)]">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/staff/stock')}
-                        className="px-4 font-sans font-bold text-[13px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
-                    >
+        <div className={`min-h-screen bg-[oklch(97%_0.008_28)] ${ui.INK} font-sans pb-28`}>
+            <header className={`sticky top-0 z-20 bg-[oklch(97%_0.008_28)] border-b ${ui.RULE}`}>
+                <div className={`max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[oklch(85%_0.012_28)] border-x ${ui.RULE}`}>
+                    <button type="button" onClick={() => navigate('/staff/stock')}
+                        className={`px-4 font-bold text-[13px] ${ui.MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>
                         กลับ
                     </button>
                     <div className="px-4 py-2.5">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">STOCK COUNT</span>
-                        <h1 className="font-sans font-bold text-lg leading-7">นับสต๊อก</h1>
-                        <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
-                            วันทำการ <span className="font-mono">{shopDay}</span> · ตัดรอบวันตอน 05:00
+                        <h1 className="font-semibold text-lg leading-7">นับสต๊อก</h1>
+                        <p className={`text-[12px] leading-5 ${ui.MUTED}`}>
+                            วันทำการ <span className="tabular-nums">{shopDay}</span> · ตัดรอบวันตอน 05:00
                         </p>
                     </div>
                 </div>
-
-                <div className="max-w-3xl mx-auto border-x border-t border-[oklch(85%_0.012_28)]">
-                    <div className="flex divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="รอบนับ">
-                        {Object.entries(COUNT_KINDS).map(([key, k]) => (
-                            <button key={key} type="button" role="tab" aria-selected={kind === key}
-                                onClick={() => changeKind(key)} className={tabClass(kind === key)}>
-                                {k.label}
+                <div className={`max-w-3xl mx-auto border-x border-t ${ui.RULE} px-3 py-2`}>
+                    <div className={`relative grid p-1 rounded-md ${ui.PAPER2}`} style={{ gridTemplateColumns: `repeat(${kindEntries.length}, minmax(0, 1fr))` }}
+                        role="tablist" aria-label="รอบนับ">
+                        {kindEntries.map(([key, k]) => (
+                            <button key={key} type="button" role="tab" aria-selected={kind === key} onClick={() => changeKind(key)}
+                                className={`relative h-9 rounded text-sm transition-colors cursor-pointer ${kind === key ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}>
+                                {kind === key && (
+                                    <motion.span layoutId="count-kind-pill" transition={pillTransition}
+                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]`} />
+                                )}
+                                <span className="relative">{k.label}</span>
                             </button>
                         ))}
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-3xl mx-auto border-x border-[oklch(85%_0.012_28)] bg-white min-h-[60vh]">
+            <main className={`max-w-3xl mx-auto border-x ${ui.RULE} ${ui.PAPER} min-h-[60vh]`}>
+                <AnimatePresence mode="wait" initial={false}>
                 {result ? (
-                    <section className="p-4 space-y-4" aria-labelledby="count-result">
+                    <motion.section key="result" {...fade} className="p-4 space-y-4" aria-labelledby="count-result">
                         <div>
-                            <h2 id="count-result" className="font-sans font-bold text-base leading-7">
+                            <h2 id="count-result" className="font-semibold text-base leading-7">
                                 บันทึก{COUNT_KINDS[result.kind]?.label || ''}แล้ว {result.line_count} รายการ
                             </h2>
-                            <p className="font-sans text-[13px] leading-6 text-[oklch(42%_0.010_28)]">
+                            <p className={`text-[13px] leading-6 ${ui.MUTED}`}>
                                 ผลต่างจากยอดในระบบรวม{' '}
-                                <span className={`font-mono font-bold ${Number(result.value_diff) < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
+                                <span className={`font-semibold tabular-nums ${Number(result.value_diff) < 0 ? ui.ACCENT : ui.INK}`}>
                                     ฿{Number(result.value_diff || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             </p>
                         </div>
-                        <ol className="border border-[oklch(85%_0.012_28)] divide-y divide-[oklch(90%_0.008_28)]">
-                            {(result.lines || []).map(l => (
-                                <li key={l.stock_item_id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2">
-                                    <span className="font-sans font-bold text-[14px] leading-6 min-w-0 break-words">{l.name}</span>
-                                    <span className={`font-mono text-[13px] tabular-nums text-right ${Number(l.diff) < 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>
+                        <ol className={`rounded-md border ${ui.RULE} divide-y divide-[oklch(90%_0.008_28)] overflow-hidden`}>
+                            {(result.lines || []).map((l, i) => (
+                                <motion.li key={l.stock_item_id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2.5"
+                                    initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: ui.EASE, delay: Math.min(i, 12) * 0.02 } }}>
+                                    <span className="font-semibold text-[14px] leading-6 min-w-0 break-words">{l.name}</span>
+                                    <span className={`text-[13px] leading-6 tabular-nums text-right ${Number(l.diff) < 0 ? ui.ACCENT : ui.MUTED}`}>
                                         {Number(l.diff) > 0 ? '+' : ''}{fmt(l.diff)} {displayUnit(l.unit)}
                                     </span>
-                                    <span className="font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)]">
-                                        ระบบ {fmt(l.system_qty)} → นับได้ {fmt(l.counted_qty)}
+                                    <span className={`text-[12px] leading-5 ${ui.NEUTRAL}`}>
+                                        ระบบ <span className="tabular-nums">{fmt(l.system_qty)}</span> → นับได้ <span className="tabular-nums">{fmt(l.counted_qty)}</span>
                                     </span>
-                                    <span className="font-mono text-[12px] tabular-nums text-right text-[oklch(55%_0.010_28)]">
+                                    <span className={`text-[12px] leading-5 tabular-nums text-right ${ui.NEUTRAL}`}>
                                         ฿{Number(l.value_diff || 0).toFixed(2)}
                                     </span>
-                                </li>
+                                </motion.li>
                             ))}
                         </ol>
-                        <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                        <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setResult(null)}
-                                className="py-3 font-sans font-bold text-[14px] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                                className={`h-12 rounded-md border ${ui.RULE} text-[15px] font-semibold ${ui.INK} hover:border-[oklch(18%_0.012_28)] transition-colors cursor-pointer`}>
                                 นับต่อ
                             </button>
-                            <button type="button" onClick={() => navigate('/staff/stock')}
-                                className="py-3 font-sans font-bold text-[14px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer">
+                            <button type="button" onClick={() => navigate('/staff/stock')} className={ui.primaryBtn}>
                                 กลับหน้าคลัง
                             </button>
                         </div>
-                    </section>
+                    </motion.section>
                 ) : (
-                    <>
+                    <motion.div key="sheet" {...fade}>
                         {/* Controls */}
-                        <div className="p-3 border-b border-[oklch(85%_0.012_28)] space-y-2.5 bg-[oklch(98%_0.004_28)]">
+                        <div className={`p-3 border-b ${ui.RULE} space-y-3`}>
                             <div className="flex flex-wrap gap-2 items-center">
-                                <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
-                                    <button type="button" onClick={() => setScope('daily')} aria-pressed={scope === 'daily'}
-                                        className={`px-3 py-1.5 font-sans font-bold text-[13px] leading-5 cursor-pointer ${scope === 'daily' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)]'}`}>
-                                        นับทุกวัน <span className="font-mono text-[11px]">{dailyCount}</span>
-                                    </button>
-                                    <button type="button" onClick={() => setScope('all')} aria-pressed={scope === 'all'}
-                                        className={`px-3 py-1.5 font-sans font-bold text-[13px] leading-5 cursor-pointer ${scope === 'all' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white text-[oklch(42%_0.010_28)]'}`}>
-                                        ทั้งหมด <span className="font-mono text-[11px]">{items.length}</span>
-                                    </button>
+                                <div className={`relative inline-grid grid-cols-2 p-1 rounded-md ${ui.PAPER2}`} role="group" aria-label="รายการที่แสดง">
+                                    {[
+                                        { id: 'daily', label: 'นับทุกวัน', n: dailyCount },
+                                        { id: 'all', label: 'ทั้งหมด', n: items.length }
+                                    ].map(s => (
+                                        <button key={s.id} type="button" onClick={() => setScope(s.id)} aria-pressed={scope === s.id}
+                                            className={`relative h-8 px-3 rounded text-[13px] whitespace-nowrap transition-colors cursor-pointer ${scope === s.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}>
+                                            {scope === s.id && (
+                                                <motion.span layoutId="count-scope-pill" transition={pillTransition}
+                                                    className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]`} />
+                                            )}
+                                            <span className="relative">{s.label} <span className={`tabular-nums ${ui.NEUTRAL}`}>{s.n}</span></span>
+                                        </button>
+                                    ))}
                                 </div>
-                                <button type="button" onClick={() => navigate('/staff/stock/labels')}
-                                    className="font-sans font-bold text-[13px] leading-5 text-[oklch(42%_0.010_28)] underline underline-offset-2 hover:text-[oklch(18%_0.012_28)] cursor-pointer">
+                                <button type="button" onClick={() => navigate('/staff/stock/labels')} className={ui.ghostBtn}>
                                     ป้าย QR
                                 </button>
-                                <label className="flex items-center gap-2 font-sans text-[13px] leading-5 text-[oklch(42%_0.010_28)] cursor-pointer select-none ml-auto">
-                                    <input type="checkbox" checked={showSystem} onChange={e => setShowSystem(e.target.checked)}
-                                        className="w-4 h-4 accent-[oklch(18%_0.012_28)]" />
+                                <button type="button" role="switch" aria-checked={showSystem} onClick={() => setShowSystem(v => !v)}
+                                    className={`ml-auto flex items-center gap-2 h-9 text-[13px] ${ui.MUTED} cursor-pointer select-none`}>
                                     แสดงยอดในระบบ
-                                </label>
+                                    <span className={`relative w-11 h-6 rounded-full transition-colors ${showSystem ? 'bg-[oklch(18%_0.012_28)]' : 'bg-[oklch(85%_0.012_28)]'}`}>
+                                        <motion.span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[oklch(99%_0.004_28)]"
+                                            animate={{ x: showSystem ? 20 : 0 }} transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: ui.EASE }} />
+                                    </span>
+                                </button>
                             </div>
-                            <div className="grid grid-cols-[1fr_auto] border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                            <div className="flex gap-2">
                                 <input
                                     type="search"
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="ค้นหาชื่อ..."
                                     aria-label="ค้นหาชื่อวัตถุดิบ"
-                                    className="w-full min-w-0 p-2 bg-white font-sans text-[14px] outline-none focus:bg-[oklch(98%_0.004_28)]"
+                                    className={`${ui.input} flex-1 min-w-0`}
                                 />
                                 <button type="button" onClick={() => { scanFeedback.ctx?.resume?.(); setScanning(s => !s); gateRef.current.reset(); }}
                                     aria-pressed={scanning}
-                                    className={`px-4 font-sans font-bold text-[14px] cursor-pointer ${scanning ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-white hover:bg-[oklch(94%_0.010_28)]'}`}>
+                                    className={`h-11 px-4 shrink-0 rounded-md border text-sm font-semibold transition-colors cursor-pointer ${scanning
+                                        ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                        : `${ui.RULE} ${ui.INK} hover:border-[oklch(18%_0.012_28)]`}`}>
                                     {scanning ? 'กำลังสแกน' : 'สแกน'}
                                 </button>
                             </div>
-                            {kind === 'closing' && !showSystem && (
-                                <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
-                                    นับปิดร้านแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
-                                </p>
-                            )}
-                            {kind === 'spot' && spotSuggestions.length > 0 && (
-                                <div className="border border-[oklch(85%_0.012_28)] bg-white">
-                                    <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2 border-b border-[oklch(90%_0.008_28)]">
-                                        <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
-                                            <span className="font-bold text-[oklch(18%_0.012_28)]">แนะนำให้นับตอนนี้ {spotSuggestions.length} รายการ</span>
-                                            <span className="block">ไม่ต้องนับทั้งร้าน ตัวที่ขาดบ่อยหรือมูลค่าสูงที่ยังไม่ได้นับ</span>
+                            <AnimatePresence initial={false}>
+                                {kind === 'closing' && !showSystem && (
+                                    <motion.p key="blind" {...fade} className={`text-[12px] leading-5 ${ui.MUTED}`}>
+                                        นับปิดร้านแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
+                                    </motion.p>
+                                )}
+                                {kind === 'spot' && spotSuggestions.length > 0 && (
+                                    <motion.div key="spot" {...fade} className={`rounded-md border ${ui.RULE} ${ui.PAPER} overflow-hidden`}>
+                                        <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2.5 border-b border-[oklch(90%_0.008_28)]">
+                                            <p className={`text-[12px] leading-5 ${ui.MUTED} min-w-0`}>
+                                                <span className={`font-semibold text-[13px] ${ui.INK}`}>แนะนำให้นับตอนนี้ {spotSuggestions.length} รายการ</span>
+                                                <span className="block">ไม่ต้องนับทั้งร้าน ตัวที่ขาดบ่อยหรือมูลค่าสูงที่ยังไม่ได้นับ</span>
+                                            </p>
+                                            <button type="button" onClick={() => setScope(scope === 'suggested' ? 'all' : 'suggested')} aria-pressed={scope === 'suggested'}
+                                                className={scope === 'suggested' ? ui.ghostBtn : smallPrimary}>
+                                                {scope === 'suggested' ? 'แสดงทั้งหมด' : 'นับเฉพาะที่แนะนำ'}
+                                            </button>
+                                        </div>
+                                        <ul className="divide-y divide-[oklch(92%_0.006_28)]">
+                                            {spotSuggestions.map(({ item, why }) => (
+                                                <li key={item.id} className="grid sm:grid-cols-[1fr_auto] gap-x-3 px-3 py-2 text-[12px] leading-5">
+                                                    <span className={`font-semibold ${ui.INK} break-words min-w-0`}>{item.name}</span>
+                                                    <span className={`${ui.NEUTRAL} sm:text-right`}>{why}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </motion.div>
+                                )}
+                                {kind === 'opening' && lastClosing && (
+                                    <motion.div key="carry" {...fade} className={`grid grid-cols-[1fr_auto] gap-3 items-center rounded-md border ${ui.RULE} ${ui.PAPER} px-3 py-2.5`}>
+                                        <p className={`text-[12px] leading-5 ${ui.MUTED} min-w-0`}>
+                                            เมื่อวานนับปิดร้าน <span className={`font-semibold tabular-nums ${ui.INK}`}>{new Set(lastClosing.lines.map(l => l.stock_item_id)).size}</span> รายการ
+                                            {' '}({lastClosing.sessions.map(x => `${new Date(x.created_at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} ${x.performed_by || ''}`.trim()).join(', ')})
+                                            <span className="block">ถ้าไม่มีอะไรเปลี่ยนตอนปิด ใช้ยอดนั้นเป็นยอดเปิด แล้วแก้เฉพาะที่ไม่ตรง</span>
                                         </p>
-                                        <button type="button" onClick={() => setScope(scope === 'suggested' ? 'all' : 'suggested')} aria-pressed={scope === 'suggested'}
-                                            className={`px-3 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer whitespace-nowrap ${scope === 'suggested' ? 'bg-white border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black'}`}>
-                                            {scope === 'suggested' ? 'แสดงทั้งหมด' : 'นับเฉพาะที่แนะนำ'}
+                                        <button type="button" onClick={applyLastClosing} className={smallPrimary}>
+                                            ใส่ยอดปิดเมื่อวาน
                                         </button>
-                                    </div>
-                                    <ul className="divide-y divide-[oklch(92%_0.006_28)]">
-                                        {spotSuggestions.map(({ item, why }) => (
-                                            <li key={item.id} className="grid grid-cols-[1fr_auto] gap-3 px-3 py-1.5 font-sans text-[12px] leading-5">
-                                                <span className="font-bold text-[oklch(18%_0.012_28)] break-words min-w-0">{item.name}</span>
-                                                <span className="text-[oklch(55%_0.010_28)] text-right">{why}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            {kind === 'opening' && lastClosing && (
-                                <div className="grid grid-cols-[1fr_auto] gap-3 items-center border border-[oklch(85%_0.012_28)] bg-white px-3 py-2">
-                                    <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">
-                                        เมื่อวานนับปิดร้าน <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{new Set(lastClosing.lines.map(l => l.stock_item_id)).size}</span> รายการ
-                                        {' '}({lastClosing.sessions.map(x => `${new Date(x.created_at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} ${x.performed_by || ''}`.trim()).join(', ')})
-                                        <span className="block">ถ้าไม่มีอะไรเปลี่ยนตอนปิด ใช้ยอดนั้นเป็นยอดเปิด แล้วแก้เฉพาะที่ไม่ตรง</span>
-                                    </p>
-                                    <button type="button" onClick={applyLastClosing}
-                                        className="px-3 py-2 font-sans font-bold text-[13px] leading-5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer whitespace-nowrap">
-                                        ใส่ยอดปิดเมื่อวาน
-                                    </button>
-                                </div>
-                            )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
-                        {scanning && (
-                            <div>
-                                <ScanStrip onCode={handleScan} onClose={() => setScanning(false)} status={scanStatus} />
-                                {lastScanned && itemsById.get(lastScanned) && (() => {
-                                    const it = itemsById.get(lastScanned);
-                                    const raw = counts[it.id] ?? '';
-                                    return (
-                                        <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
-                                            <div className="min-w-0">
-                                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block">ล่าสุด</span>
-                                                <span className="font-sans font-bold text-[15px] leading-6 break-words">{it.name}</span>
+                        <AnimatePresence initial={false}>
+                            {scanning && (
+                                <motion.div key="scan" {...fade} className={`border-b ${ui.RULE}`}>
+                                    <ScanStrip onCode={handleScan} onClose={() => setScanning(false)} status={scanStatus} />
+                                    {lastScanned && itemsById.get(lastScanned) && (() => {
+                                        const it = itemsById.get(lastScanned);
+                                        const raw = counts[it.id] ?? '';
+                                        return (
+                                            <div className={`grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2.5 ${ui.PAPER2}`}>
+                                                <AnimatePresence mode="wait" initial={false}>
+                                                    <motion.div key={it.id} {...fade} className="min-w-0">
+                                                        <span className={`text-[11px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด</span>
+                                                        <span className="font-semibold text-[15px] leading-6 break-words">{it.name}</span>
+                                                    </motion.div>
+                                                </AnimatePresence>
+                                                <div className="flex items-center gap-2">
+                                                    <button type="button" aria-label={`ลด ${it.name} 1`}
+                                                        onClick={() => setCounts(prev => ({ ...prev, [it.id]: String(Math.max(0, (parseCount(prev[it.id]) ?? 0) - 1)) }))}
+                                                        className={`w-11 h-11 shrink-0 rounded-md border ${ui.RULE} ${ui.PAPER} text-xl ${ui.INK} flex items-center justify-center transition-[background-color,transform] hover:bg-[oklch(94%_0.010_28)] active:scale-95 cursor-pointer`}>−</button>
+                                                    <input type="text" inputMode="decimal" value={raw} aria-label={`จำนวน ${it.name}`}
+                                                        onChange={e => setCounts(prev => ({ ...prev, [it.id]: e.target.value }))}
+                                                        className={`w-20 ${numInput} ${ui.RULE}`} />
+                                                    <span className={`w-12 text-[12px] leading-5 ${ui.MUTED} break-words`}>{displayUnit(it.unit)}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <button type="button" aria-label={`ลด ${it.name} 1`}
-                                                    onClick={() => setCounts(prev => ({ ...prev, [it.id]: String(Math.max(0, (parseCount(prev[it.id]) ?? 0) - 1)) }))}
-                                                    className="w-10 h-10 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-[18px] cursor-pointer">−</button>
-                                                <input type="text" inputMode="decimal" value={raw} aria-label={`จำนวน ${it.name}`}
-                                                    onChange={e => setCounts(prev => ({ ...prev, [it.id]: e.target.value }))}
-                                                    className="w-20 h-10 p-2 border border-[oklch(85%_0.012_28)] bg-white font-mono font-bold text-[16px] text-right outline-none focus:border-black" />
-                                                <span className="w-12 font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] break-words">{displayUnit(it.unit)}</span>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
+                                        );
+                                    })()}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {loading ? (
-                            <p className="p-6 font-sans text-[14px] text-[oklch(55%_0.010_28)]">กำลังโหลด...</p>
+                            <p className={`p-6 text-[14px] ${ui.NEUTRAL}`}>กำลังโหลด...</p>
                         ) : visible.length === 0 ? (
-                            <div className="p-6 space-y-2 font-sans text-[14px] leading-6 text-[oklch(42%_0.010_28)]">
+                            <div className={`p-6 space-y-2 text-[14px] leading-6 ${ui.MUTED}`}>
                                 {scope === 'daily' && !search
                                     ? <>ยังไม่มีรายการที่นับทุกวัน กด "ทั้งหมด" แล้วกด "นับทุกวัน" ที่รายการที่ต้องการ</>
                                     : <>ไม่พบรายการ</>}
                             </div>
                         ) : (
-                            <ul className="divide-y divide-[oklch(90%_0.008_28)]">
+                            <motion.ul key={scope} initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.18 } }}
+                                className="divide-y divide-[oklch(90%_0.008_28)]">
                                 {visible.map(item => {
                                     const raw = counts[item.id] ?? '';
-                                    const invalid = String(raw).trim() !== '' && parseCount(raw) === null;
+                                    const entered = String(raw).trim() !== '';
+                                    const invalid = entered && parseCount(raw) === null;
                                     return (
-                                        <li key={item.id} className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 px-3 py-2.5 items-center">
-                                            <div className="min-w-0">
-                                                <label htmlFor={`count-${item.id}`} className="font-sans font-bold text-[15px] leading-6 block break-words">
-                                                    {item.name}
-                                                </label>
-                                                <div className="flex flex-wrap gap-x-3 font-sans text-[12px] leading-5 text-[oklch(55%_0.010_28)]">
-                                                    {showSystem && <span>ในระบบ <span className="font-mono">{fmt(item.current_quantity)}</span></span>}
-                                                    <button type="button" onClick={() => setHelperFor(helperFor === item.id ? null : item.id)}
-                                                        className="font-bold underline underline-offset-2 hover:text-[oklch(18%_0.012_28)] cursor-pointer">
-                                                        มีของเปิดแล้ว
-                                                    </button>
-                                                    {scope === 'all' && (
-                                                        <button type="button" onClick={() => toggleDaily(item)}
-                                                            className="font-bold underline underline-offset-2 hover:text-[oklch(18%_0.012_28)] cursor-pointer">
-                                                            {item.track_mode === 'daily' ? 'เลิกนับทุกวัน' : 'นับทุกวัน'}
+                                        <li key={item.id} className={`px-3 py-3 transition-colors ${entered && !invalid ? 'bg-[oklch(97.5%_0.006_28)]' : ''}`}>
+                                            <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center">
+                                                <div className="min-w-0">
+                                                    <label htmlFor={`count-${item.id}`} className="font-semibold text-[15px] leading-6 block break-words">
+                                                        {item.name}
+                                                    </label>
+                                                    <div className={`flex flex-wrap gap-x-3 text-[12px] leading-5 ${ui.NEUTRAL}`}>
+                                                        {showSystem && <span>ในระบบ <span className="tabular-nums">{fmt(item.current_quantity)}</span></span>}
+                                                        <button type="button" onClick={() => setHelperFor(helperFor === item.id ? null : item.id)}
+                                                            aria-expanded={helperFor === item.id}
+                                                            className={`font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer ${helperFor === item.id ? ui.INK : ''}`}>
+                                                            มีของเปิดแล้ว
                                                         </button>
-                                                    )}
+                                                        {scope === 'all' && (
+                                                            <button type="button" onClick={() => toggleDaily(item)}
+                                                                className="font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer">
+                                                                {item.track_mode === 'daily' ? 'เลิกนับทุกวัน' : 'นับทุกวัน'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        id={`count-${item.id}`}
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        autoComplete="off"
+                                                        value={raw}
+                                                        onChange={e => setCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                                        aria-invalid={invalid}
+                                                        className={`w-24 ${numInput} ${invalid
+                                                            ? 'border-[oklch(52%_0.16_28)]'
+                                                            : entered ? 'border-[oklch(42%_0.010_28)]' : ui.RULE}`}
+                                                    />
+                                                    <span className={`w-14 text-[12px] leading-5 ${ui.MUTED} break-words`}>{displayUnit(item.unit)}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <input
-                                                    id={`count-${item.id}`}
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    autoComplete="off"
-                                                    value={raw}
-                                                    onChange={e => setCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
-                                                    aria-invalid={invalid}
-                                                    className={`w-24 p-2 border bg-white font-mono font-bold text-[16px] text-right outline-none focus:border-black ${invalid ? 'border-[oklch(52%_0.16_28)]' : 'border-[oklch(85%_0.012_28)]'}`}
-                                                />
-                                                <span className="w-14 font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)] break-words">{displayUnit(item.unit)}</span>
-                                            </div>
-                                            {helperFor === item.id && (
-                                                <OpenUnitHelper
-                                                    item={item}
-                                                    onClose={() => setHelperFor(null)}
-                                                    onApply={(value) => {
-                                                        setCounts(prev => ({ ...prev, [item.id]: value }));
-                                                        setHelperFor(null);
-                                                    }}
-                                                />
-                                            )}
+                                            <AnimatePresence initial={false}>
+                                                {helperFor === item.id && (
+                                                    <motion.div key="helper"
+                                                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                                                        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, height: 'auto', transition: { duration: 0.22, ease: ui.EASE } }}
+                                                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, transition: { duration: 0.14, ease: ui.EASE } }}
+                                                        className="overflow-hidden">
+                                                        <div className="pt-3">
+                                                            <OpenUnitHelper
+                                                                item={item}
+                                                                onClose={() => setHelperFor(null)}
+                                                                onApply={(value) => {
+                                                                    setCounts(prev => ({ ...prev, [item.id]: value }));
+                                                                    setHelperFor(null);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </li>
                                     );
                                 })}
-                            </ul>
+                            </motion.ul>
                         )}
-                    </>
+                    </motion.div>
                 )}
+                </AnimatePresence>
             </main>
 
             {unknownCode && (
@@ -610,26 +650,37 @@ export default function StockCountPage() {
                 />
             )}
 
-            {!result && (
-                <footer className="fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)]">
-                    <div className="max-w-3xl mx-auto grid grid-cols-[1fr_auto] items-center border-x border-[oklch(85%_0.012_28)]">
-                        <span className="px-4 font-sans text-[13px] leading-5 text-[oklch(42%_0.010_28)]">
-                            กรอกแล้ว <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{filled}</span> รายการ
-                            {invalidCount > 0
-                                ? <span className="block text-[11px] font-bold text-[oklch(52%_0.16_28)]">แก้ช่องสีแดง {invalidCount} ช่องก่อนบันทึก</span>
-                                : <span className="block text-[11px] text-[oklch(55%_0.010_28)]">รายการที่ไม่กรอกจะไม่ถูกเปลี่ยน</span>}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={!filled || invalidCount > 0 || saving}
-                            className="px-6 py-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-sans font-bold text-[15px] hover:bg-black disabled:opacity-40 cursor-pointer"
-                        >
-                            {saving ? 'กำลังบันทึก...' : `บันทึก${COUNT_KINDS[kind].label}`}
-                        </button>
-                    </div>
-                </footer>
-            )}
+            <AnimatePresence>
+                {!result && (
+                    <motion.footer key="footer"
+                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: ui.EASE } }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, transition: { duration: 0.14, ease: ui.EASE } }}
+                        className={`fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t ${ui.RULE}`}>
+                        <div className={`max-w-3xl mx-auto flex items-center gap-3 px-3 py-3 border-x ${ui.RULE}`}>
+                            <span className={`flex-1 min-w-0 text-[13px] leading-5 ${ui.MUTED}`}>
+                                กรอกแล้ว{' '}
+                                <motion.span key={filled} className={`inline-block font-semibold tabular-nums ${ui.INK}`}
+                                    initial={reduceMotion || !filled ? false : { opacity: 0, y: -4 }}
+                                    animate={{ opacity: 1, y: 0, transition: { duration: 0.16, ease: ui.EASE } }}>
+                                    {filled}
+                                </motion.span> รายการ
+                                {invalidCount > 0
+                                    ? <span className={`block text-[12px] font-semibold ${ui.ACCENT}`}>แก้ช่องสีแดง {invalidCount} ช่องก่อนบันทึก</span>
+                                    : <span className={`block text-[12px] ${ui.NEUTRAL}`}>รายการที่ไม่กรอกจะไม่ถูกเปลี่ยน</span>}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={!filled || invalidCount > 0 || saving}
+                                className="h-12 px-6 shrink-0 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[15px] font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {saving ? 'กำลังบันทึก...' : `บันทึก${COUNT_KINDS[kind].label}`}
+                            </button>
+                        </div>
+                    </motion.footer>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
