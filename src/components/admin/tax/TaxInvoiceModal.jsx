@@ -20,6 +20,7 @@ import {
     RotateCcw
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
+import { saveTaxCustomerProfile, taxCustomerKey } from '../../../utils/taxCustomerDirectory';
 import { 
     thaiBahtText, 
     validateThaiTaxId, 
@@ -535,19 +536,20 @@ export default function TaxInvoiceModal({
                     email: customerEmail.trim()
                 };
 
+                // The document is already issued; a directory hiccup must not fail it, only warn
+                let savedProfile = customerProfilePayload;
                 try {
-                    await supabase.from('tax_customer_profiles').upsert([customerProfilePayload]);
-                } catch {
-                    // Fallback to local
+                    const { record } = await saveTaxCustomerProfile(customerProfilePayload);
+                    savedProfile = record || customerProfilePayload;
+                } catch (profileErr) {
+                    console.warn('Tax customer directory save failed:', profileErr);
+                    toast.warning('ออกเอกสารแล้ว แต่บันทึกรายชื่อลูกค้าไม่สำเร็จ');
                 }
 
-                const localProfiles = JSON.parse(localStorage.getItem('onhaus_tax_customer_profiles') || '[]');
-                const pIdx = localProfiles.findIndex(p => p.tax_id === customerProfilePayload.tax_id || p.company_name === customerProfilePayload.company_name);
-                if (pIdx >= 0) {
-                    localProfiles[pIdx] = customerProfilePayload;
-                } else {
-                    localProfiles.unshift(customerProfilePayload);
-                }
+                const key = taxCustomerKey(savedProfile);
+                const localProfiles = JSON.parse(localStorage.getItem('onhaus_tax_customer_profiles') || '[]')
+                    .filter(p => taxCustomerKey(p) !== key);
+                localProfiles.unshift(savedProfile);
                 localStorage.setItem('onhaus_tax_customer_profiles', JSON.stringify(localProfiles));
             }
 

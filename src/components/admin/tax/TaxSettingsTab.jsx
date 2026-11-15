@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { validateThaiTaxId, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
+import { saveTaxCustomerProfile } from '../../../utils/taxCustomerDirectory';
 import { GEMINI_SUPPORTED_MODELS } from '../../../utils/geminiOcrHelper';
 import { toast } from 'sonner';
 
@@ -258,34 +259,26 @@ export default function TaxSettingsTab({
         }
 
         try {
-            let savedRecord = { ...payload, id: editingCustomer?.id || `local_${Date.now()}` };
-            try {
-                if (editingCustomer?.id && !String(editingCustomer.id).startsWith('local_')) {
-                    const { data } = await supabase
-                        .from('tax_customer_profiles')
-                        .update(payload)
-                        .eq('id', editingCustomer.id)
-                        .select()
-                        .single();
-                    if (data) savedRecord = data;
-                } else {
-                    const { data } = await supabase
-                        .from('tax_customer_profiles')
-                        .insert([payload])
-                        .select()
-                        .single();
-                    if (data) savedRecord = data;
-                }
-            } catch {
-                // Fallback locally
+            let savedRecord;
+            let mergedIntoExisting = false;
+            if (editingCustomer?.id && !String(editingCustomer.id).startsWith('local_')) {
+                const { data, error } = await supabase
+                    .from('tax_customer_profiles')
+                    .update({ ...payload, updated_at: new Date().toISOString() })
+                    .eq('id', editingCustomer.id)
+                    .select()
+                    .single();
+                if (error || !data) throw new Error(error?.message || 'บันทึกไม่สำเร็จ');
+                savedRecord = data;
+            } else {
+                // Adding a customer who is already in the list updates that entry instead
+                const { record, updated } = await saveTaxCustomerProfile(payload);
+                savedRecord = record;
+                mergedIntoExisting = updated;
             }
 
-            let updatedList;
-            if (editingCustomer) {
-                updatedList = customers.map(c => c.id === editingCustomer.id ? savedRecord : c);
-            } else {
-                updatedList = [savedRecord, ...customers];
-            }
+            const updatedList = [savedRecord, ...customers.filter(c => c.id !== savedRecord.id && c.id !== editingCustomer?.id)];
+            if (mergedIntoExisting) toast.info('มีลูกค้ารายนี้อยู่แล้ว อัปเดตข้อมูลให้แทนการเพิ่มซ้ำ');
             setCustomers(updatedList);
             localStorage.setItem('onhaus_tax_customer_profiles', JSON.stringify(updatedList));
 

@@ -7,6 +7,22 @@ import {
     buildStableBillNumbers
 } from '../thaiTaxHelper';
 import { expenseDocGrade } from '../expenseConstants';
+import { taxCustomerKey } from '../taxCustomerDirectory';
+
+describe('Tax customer directory key', () => {
+    it('same tax ID and branch is the same customer, whatever the name spelling', () => {
+        const a = taxCustomerKey({ tax_id: '0905555001144', branch_type: 'head_office', company_name: 'บริษัท เวิลด์เทรนนิ่ง จำกัด' });
+        const b = taxCustomerKey({ tax_id: '0-9055-55001-14-4', branch_type: 'head_office', company_name: 'บริษัท เวิลด์เทรนนิ่ง จำกัด ( สำนักงานใหญ่ )' });
+        expect(a).toBe(b);
+    });
+    it('different branches of one company are different customers', () => {
+        expect(taxCustomerKey({ tax_id: '0105540030477', branch_type: 'branch', branch_code: '00001' }))
+            .not.toBe(taxCustomerKey({ tax_id: '0105540030477', branch_type: 'head_office' }));
+    });
+    it('without a tax ID the name identifies the customer', () => {
+        expect(taxCustomerKey({ tax_id: '', company_name: ' คุณอ้อน ' })).toBe(taxCustomerKey({ company_name: 'คุณอ้อน' }));
+    });
+});
 
 describe('Thai tax periods use Bangkok calendar days', () => {
     it('a bill at 00:30 Bangkok on the 1st belongs to the new month, not the old one', () => {
