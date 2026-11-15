@@ -389,21 +389,59 @@ export default function TaxInvoiceModal({
                 resolvedIssuedAt = existingInvoice.issued_at;
             }
 
-            // Generate sequence number if new
-            let invoiceNumber = existingInvoice?.invoice_number;
-            if (!invoiceNumber) {
-                const prefix = isDocVat 
-                    ? (activeCompanySettings?.tax_invoice_prefix || 'INV')
-                    : (activeCompanySettings?.tax_receipt_prefix || 'REC');
-                const ymSource = issuedDate || toLocalDateInput(resolvedIssuedAt);
-                const ym = ymSource.slice(0, 7).replace('-', '');
-                const randomSeq = Math.floor(Math.random() * 9000) + 1000;
-                invoiceNumber = `${prefix}-${ym}-${randomSeq}`;
+            if (docType === 'tax_invoice' && !isCompanyVatRegistered && !existingInvoice?.id) {
+                throw new Error('ร้านยังไม่ได้จด VAT จึงออกใบกำกับภาษีไม่ได้ ให้ออกเป็นใบเสร็จรับเงินแทน');
             }
+
+            // A cancelled document stays cancelled; corrections are a new document with a new number
+            if (existingInvoice?.status === 'cancelled') {
+                throw new Error(`เอกสาร ${existingInvoice.invoice_number} ถูกยกเลิกแล้ว แก้ไขหรือเปิดใช้ใหม่ไม่ได้ กรุณาออกเอกสารใบใหม่`);
+            }
+
+            // The seller block is a legal requirement on the document: never print a made-up one
+            let seller = activeCompanySettings || {};
+            if (!seller.tax_company_name || !seller.tax_id || !seller.tax_address) {
+                // Settings may not have arrived yet (e.g. POS with an empty cache): read them once now
+                const { data: rows } = await supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', ['tax_company_name', 'tax_id', 'tax_address', 'tax_branch_code', 'tax_phone']);
+                seller = { ...seller, ...(rows || []).reduce((acc, r) => ({ ...acc, [r.key]: r.value }), {}) };
+            }
+            const issuerName = (seller.tax_company_name || '').trim();
+            const issuerTaxId = String(seller.tax_id || '').replace(/\D/g, '');
+            const issuerAddress = (seller.tax_address || '').trim();
+            if (!issuerName || issuerTaxId.length !== 13 || !issuerAddress) {
+                throw new Error('ข้อมูลผู้ขายไม่ครบ (ชื่อ เลขผู้เสียภาษี 13 หลัก หรือที่อยู่) กรุณาตั้งค่าที่แท็บ Tax config ก่อนออกเอกสาร');
+            }
+
+            // One active document per bill: issuing twice for the same bill is how the duplicates happened
+            const targetBookingId = linkedBooking?.id || booking?.id || existingInvoice?.booking_id || null;
+            if (targetBookingId) {
+                const { data: dupes, error: dupErr } = await supabase
+                    .from('tax_invoices')
+                    .select('id, invoice_number')
+                    .eq('booking_id', targetBookingId)
+                    .neq('status', 'cancelled');
+                if (dupErr) throw new Error('ตรวจสอบเอกสารซ้ำไม่สำเร็จ: ' + dupErr.message);
+                const other = (dupes || []).find(d => d.id !== existingInvoice?.id);
+                if (other) {
+                    throw new Error(`บิลนี้มีเอกสาร ${other.invoice_number} อยู่แล้ว ยกเลิกใบเดิมก่อนถ้าต้องการออกใหม่`);
+                }
+            }
+
+            // Document number (still random within the month until running numbers move to the database)
+            const prefix = isDocVat
+                ? (activeCompanySettings?.tax_invoice_prefix || 'INV')
+                : (activeCompanySettings?.tax_receipt_prefix || 'REC');
+            const ymSource = issuedDate || toLocalDateInput(resolvedIssuedAt);
+            const ym = ymSource.slice(0, 7).replace('-', '');
+            const newNumber = () => `${prefix}-${ym}-${Math.floor(Math.random() * 9000) + 1000}`;
+            let invoiceNumber = existingInvoice?.invoice_number || newNumber();
 
             const invoicePayload = {
                 invoice_number: invoiceNumber,
-                booking_id: linkedBooking?.id || booking?.id || existingInvoice?.booking_id || null,
+                booking_id: targetBookingId,
                 doc_type: docType,
                 customer_type: customerType,
                 customer_name: customerName.trim(),
@@ -424,11 +462,11 @@ export default function TaxInvoiceModal({
                 net_payable: totals.netPayable,
                 payment_method: paymentMethod,
                 items,
-                issuer_name: activeCompanySettings?.tax_company_name || 'ร้านในบ้าน นครพนม',
-                issuer_tax_id: activeCompanySettings?.tax_id || '1120100144907',
-                issuer_branch: activeCompanySettings?.tax_branch_code || '00000',
-                issuer_address: activeCompanySettings?.tax_address || '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000',
-                issuer_phone: activeCompanySettings?.tax_phone || '',
+                issuer_name: issuerName,
+                issuer_tax_id: issuerTaxId,
+                issuer_branch: seller.tax_branch_code || '00000',
+                issuer_address: issuerAddress,
+                issuer_phone: seller.tax_phone || '',
                 status: 'issued',
                 cancellation_reason: null,
                 cancelled_at: null,
@@ -436,28 +474,33 @@ export default function TaxInvoiceModal({
                 issued_at: resolvedIssuedAt
             };
 
-            // 1. Try writing to Supabase
-            let savedRecord = { ...invoicePayload, id: existingInvoice?.id || `local_${Date.now()}` };
-            try {
-                if (existingInvoice?.id && !String(existingInvoice.id).startsWith('local_')) {
+            // 1. Write to the database. A legal document that exists only in one browser's
+            // localStorage is not issued, so any failure stops here and says so.
+            let savedRecord;
+            if (existingInvoice?.id && !String(existingInvoice.id).startsWith('local_')) {
+                const { data, error } = await supabase
+                    .from('tax_invoices')
+                    .update(invoicePayload)
+                    .eq('id', existingInvoice.id)
+                    .select()
+                    .single();
+                if (error || !data) throw new Error(error?.message || 'บันทึกไม่สำเร็จ');
+                savedRecord = data;
+            } else {
+                for (let attempt = 0; attempt < 5 && !savedRecord; attempt++) {
                     const { data, error } = await supabase
                         .from('tax_invoices')
-                        .update(invoicePayload)
-                        .eq('id', existingInvoice.id)
+                        .insert([{ ...invoicePayload, invoice_number: invoiceNumber }])
                         .select()
                         .single();
-                    if (!error && data) savedRecord = data;
-                } else {
-                    const { data, error } = await supabase
-                        .from('tax_invoices')
-                        .insert([invoicePayload])
-                        .select()
-                        .single();
-                    if (!error && data) savedRecord = data;
+                    if (!error && data) { savedRecord = data; break; }
+                    // 23505 = the random number is already taken: draw another
+                    if (error?.code === '23505' && !existingInvoice?.invoice_number) { invoiceNumber = newNumber(); continue; }
+                    throw new Error(error?.message || 'บันทึกไม่สำเร็จ');
                 }
-            } catch (dbErr) {
-                console.warn('Supabase tax_invoices fallback to local store:', dbErr);
+                if (!savedRecord) throw new Error('สร้างเลขที่เอกสารไม่ซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง');
             }
+            invoiceNumber = savedRecord.invoice_number;
 
             // 2. LocalStorage Persistence Sync
             const localInvoices = JSON.parse(localStorage.getItem('onhaus_tax_invoices') || '[]');
@@ -572,13 +615,14 @@ export default function TaxInvoiceModal({
                             >
                                 OFFICIAL RECEIPT
                             </button>
-                            <button
+                            {/* Only a VAT-registered seller may issue a tax invoice (ม.86/13) */}
+                            {(isCompanyVatRegistered || docType === 'tax_invoice') && <button
                                 type="button"
                                 onClick={() => setDocType('tax_invoice')}
                                 className={`px-3 py-1.5 font-bold text-xs transition-all cursor-pointer border ${docType === 'tax_invoice' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'}`}
                             >
                                 TAX INVOICE (VAT 7%)
-                            </button>
+                            </button>}
                         </div>
                     </div>
 

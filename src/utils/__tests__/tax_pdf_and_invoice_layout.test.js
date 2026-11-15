@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect } from 'vitest';
-import { isMobileBrowser, saveOrShareTaxPdf } from '../taxPdfHelper';
+import { isMobileBrowser, saveOrShareTaxPdf, paginateInvoiceItems } from '../taxPdfHelper';
 import { thaiBahtText, formatTaxId, formatBranch } from '../thaiTaxHelper';
 
 describe('taxPdfHelper & Mobile Invoicing Logic', () => {
@@ -28,13 +28,25 @@ describe('taxPdfHelper & Mobile Invoicing Logic', () => {
         expect(result.downloaded || result.openedInTab || result.shared !== undefined).toBe(true);
     });
 
-    it('dynamic pagination splits correctly for <= 12 items vs > 12 items', () => {
-        const items11 = Array.from({ length: 11 }, (_, i) => ({ name: 'Item ' + (i+1), price: 100, quantity: 1 }));
-        const pages11 = items11.length <= 12 ? 1 : 2;
-        expect(pages11).toBe(1);
-
-        const items20 = Array.from({ length: 20 }, (_, i) => ({ name: 'Item ' + (i+1), price: 100, quantity: 1 }));
-        const pages20 = items20.length <= 12 ? 1 : Math.ceil(items20.length / 14);
-        expect(pages20).toBeGreaterThanOrEqual(2);
+    it('invoice pagination always ends on a page with totals and keeps every item', () => {
+        const make = (n) => Array.from({ length: n }, (_, i) => ({ name: 'Item ' + (i + 1) }));
+        for (let n = 0; n <= 60; n++) {
+            const pages = paginateInvoiceItems(make(n));
+            const last = pages[pages.length - 1];
+            expect(last.isLast).toBe(true);
+            expect(pages.filter(p => p.isLast)).toHaveLength(1);
+            expect(pages[0].isFirst).toBe(true);
+            expect(pages.reduce((s, p) => s + p.items.length, 0)).toBe(n);
+            expect(last.items.length).toBeLessThanOrEqual(12);
+            if (n > 0) expect(last.items.length).toBeGreaterThan(0);
+            pages.forEach((p, i) => {
+                expect(p.pageNum).toBe(i + 1);
+                expect(p.totalPages).toBe(pages.length);
+                expect(p.items.length).toBeLessThanOrEqual(i === 0 ? 14 : 18);
+            });
+        }
+        expect(paginateInvoiceItems(make(11))).toHaveLength(1);
+        expect(paginateInvoiceItems(make(13))).toHaveLength(2); // was 1 page with no totals
+        expect(paginateInvoiceItems(make(14))).toHaveLength(2);
     });
 });

@@ -22,6 +22,14 @@ export const getCleanCategoryLabel = (catId, useShort = true) => {
     return raw.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
 };
 
+/** Evidence grade of an expense document: A tax invoice, B cash bill, C slip / voucher / none. */
+export const expenseDocGrade = (expense) => {
+    const t = expense?.doc_type;
+    if (t === 'tax_invoice') return 'A';
+    if (t === 'cash_bill') return 'B';
+    return 'C';
+};
+
 export const VENDOR_PRESETS = [
     'Siam Makro',
     'Lotus',

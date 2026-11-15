@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Printer, X, Download, ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { formatTaxId, formatBranch, thaiBahtText, downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
-import { EXPENSE_CATEGORIES, getCleanCategoryLabel } from '../../../utils/expenseConstants';
+import { EXPENSE_CATEGORIES, getCleanCategoryLabel, expenseDocGrade } from '../../../utils/expenseConstants';
 import { toast } from 'sonner';
 
 export default function ExpenseLedgerPrintView({
@@ -47,9 +47,11 @@ export default function ExpenseLedgerPrintView({
     const bahtWords = thaiBahtText(grandTotal);
 
     // Stats by Grade
-    const gradeA = expenses.filter(e => e.doc_type === 'tax_invoice').reduce((s, e) => s + Number(e.amount || 0), 0);
-    const gradeB = expenses.filter(e => e.doc_type === 'cash_bill').reduce((s, e) => s + Number(e.amount || 0), 0);
-    const gradeC = expenses.filter(e => e.doc_type === 'slip' || !e.doc_type).reduce((s, e) => s + Number(e.amount || 0), 0);
+    // A = full tax invoice, B = cash bill, C = everything else (transfer slip, payment voucher, none),
+    // so the three grades always add up to the grand total
+    const gradeA = expenses.filter(e => expenseDocGrade(e) === 'A').reduce((s, e) => s + Number(e.amount || 0), 0);
+    const gradeB = expenses.filter(e => expenseDocGrade(e) === 'B').reduce((s, e) => s + Number(e.amount || 0), 0);
+    const gradeC = expenses.filter(e => expenseDocGrade(e) === 'C').reduce((s, e) => s + Number(e.amount || 0), 0);
 
     // Stats by Category
     const categoryTotals = expenses.reduce((acc, exp) => {
@@ -118,13 +120,14 @@ export default function ExpenseLedgerPrintView({
             const periodSlug = (periodMonth || periodDate || 'all').replace(/[^a-zA-Z0-9_-]/g, '_');
             const fileName = `Expense_Ledger_${periodSlug}.pdf`;
 
-            const pdfBlob = await generateTaxDocumentPdf(sheetElement, {
+            const pdfResult = await generateTaxDocumentPdf(sheetElement, {
                 title: `รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน - ${formatThaiDatePeriod()}`,
                 orientation: 'portrait',
-                scale: 2
+                scale: 2,
+                fileName
             });
 
-            downloadTaxPdf(pdfBlob, fileName);
+            downloadTaxPdf(pdfResult, fileName);
             toast.success(`ดาวน์โหลดไฟล์ ${fileName} สำเร็จ`);
         } catch (err) {
             console.error('Failed to generate expense ledger PDF:', err);
@@ -155,7 +158,10 @@ export default function ExpenseLedgerPrintView({
 
         const rows = expenses.map((exp, idx) => {
             const catLabel = getCleanCategoryLabel(exp.category);
-            const docGrade = exp.doc_type === 'tax_invoice' ? 'Grade A (ใบกำกับภาษี)' : (exp.doc_type === 'cash_bill' ? 'Grade B (บิลเงินสด)' : 'Grade C (สลิปโอน)');
+            const g = expenseDocGrade(exp);
+            const docGrade = g === 'A' ? 'Grade A (ใบกำกับภาษี)'
+                : g === 'B' ? 'Grade B (บิลเงินสด)'
+                : exp.doc_type === 'receipt_voucher' ? 'Grade C (ใบสำคัญจ่าย)' : 'Grade C (สลิปโอน)';
             return [
                 idx + 1,
                 `"${exp.expense_date || '-'}"`,

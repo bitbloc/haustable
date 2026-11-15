@@ -19,7 +19,7 @@ import {
     Edit3
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
-import { formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
+import { formatTaxId, formatBranch, toBangkokDateKey, bangkokYearStartIso, isTaxableSale, bookingSaleAmount } from '../../../utils/thaiTaxHelper';
 import { toast } from 'sonner';
 import { logStaffActivity } from '../../../utils/auditLogger';
 
@@ -148,7 +148,11 @@ export default function AdminTaxHub() {
 
             // 3. Fetch POS Bookings for Annual VAT Threshold & Sales Ledger
             try {
-                const { data: bookingsData, error: bookingsErr } = await supabase
+                // The API caps each response at 1,000 rows, so a single .limit(2000) silently
+                // returned only the newest ~2 months. Page through this Thai year and last year.
+                const sinceIso = bangkokYearStartIso(Number(toBangkokDateKey(new Date()).slice(0, 4)) - 1);
+                const PAGE = 1000;
+                const fetchPage = (from) => supabase
                     .from('bookings')
                     .select(`
                         id, 
@@ -188,19 +192,37 @@ export default function AdminTaxHub() {
                             )
                         )
                     `)
+                    .gte('created_at', sinceIso)
                     .order('created_at', { ascending: false })
-                    .limit(2000);
+                    .range(from, from + PAGE - 1);
+
+                let bookingsData = [];
+                let bookingsErr = null;
+                for (let from = 0; from < 50 * PAGE; from += PAGE) {
+                    const { data: page, error } = await fetchPage(from);
+                    if (error) { bookingsErr = error; break; }
+                    bookingsData = bookingsData.concat(page || []);
+                    if (!page || page.length < PAGE) break;
+                }
 
                 if (!bookingsErr && bookingsData && isMounted) {
                     setAllYearBookings(bookingsData);
                     try { localStorage.setItem('onhaus_tax_bookings_cache', JSON.stringify(bookingsData)); } catch {}
                 } else if (bookingsErr && isMounted) {
                     console.warn('[AdminTaxHub] Primary query failed, using basic select fallback:', bookingsErr.message);
-                    const { data: fallbackData } = await supabase
-                        .from('bookings')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(2000);
+                    let fallbackData = [];
+                    for (let from = 0; from < 50 * PAGE; from += PAGE) {
+                        const { data: page, error } = await supabase
+                            .from('bookings')
+                            .select('*')
+                            .gte('created_at', sinceIso)
+                            .order('created_at', { ascending: false })
+                            .range(from, from + PAGE - 1);
+                        if (error) { fallbackData = null; break; }
+                        fallbackData = fallbackData.concat(page || []);
+                        if (!page || page.length < PAGE) break;
+                    }
+                    if (!fallbackData) toast.error('โหลดบิลขายไม่ครบ ตัวเลขภาษีอาจไม่ถูกต้อง ลองกดโหลดใหม่');
 
                     if (fallbackData && isMounted) {
                         setAllYearBookings(fallbackData);
@@ -211,9 +233,10 @@ export default function AdminTaxHub() {
                 console.error('[AdminTaxHub] Error loading bookings:', err);
                 if (isMounted) {
                     try {
-                        const local = localStorage.getItem('onhaus_tax_bookings_cache') || localStorage.getItem('pos_cache_active_bookings');
+                        const local = localStorage.getItem('onhaus_tax_bookings_cache');
                         if (local) setAllYearBookings(JSON.parse(local));
                     } catch {}
+                    toast.error('โหลดบิลขายจากเซิร์ฟเวอร์ไม่ได้ กำลังแสดงข้อมูลที่บันทึกไว้ล่าสุด');
                 }
             }
 
@@ -226,7 +249,7 @@ export default function AdminTaxHub() {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 if (isMounted) loadInitialData(true);
-            }, 600);
+            }, 3000); // a busy POS changes bookings constantly; the full-year reload is a few pages
         };
 
         // Realtime Subscription: tax_invoices, app_settings, bookings with safe unique channel name
@@ -252,15 +275,7 @@ export default function AdminTaxHub() {
 
     const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
 
-    const toLocalDateKey = (rawDate) => {
-        if (!rawDate) return '';
-        const d = new Date(rawDate);
-        if (Number.isNaN(d.getTime())) return String(rawDate).slice(0, 10);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    };
+    const toLocalDateKey = toBangkokDateKey;
 
     const bookingById = React.useMemo(() => {
         const map = new Map();
@@ -299,17 +314,8 @@ export default function AdminTaxHub() {
     const currentMonthPosRevenue = React.useMemo(() => {
         if (!allYearBookings || allYearBookings.length === 0) return 0;
         return allYearBookings
-            .filter(b => {
-                const isCancelled = b.status === 'cancelled' || b.status === 'void' || b.status === 'deleted';
-                if (isCancelled) return false;
-                const bDate = b.booking_time || b.created_at || '';
-                const bMonth = bDate.slice(0, 7);
-                return bMonth === monthFilter;
-            })
-            .reduce((s, b) => {
-                const amt = Number(b.total_amount !== undefined && b.total_amount !== null ? b.total_amount : (b.total_price !== undefined ? b.total_price : (b.deposit_amount || 0)));
-                return s + amt;
-            }, 0);
+            .filter(b => isTaxableSale(b) && toBangkokDateKey(b.booking_time || b.created_at).slice(0, 7) === monthFilter)
+            .reduce((s, b) => s + bookingSaleAmount(b), 0);
     }, [allYearBookings, monthFilter]);
 
     // Handle Document Cancellation (with resilient DB fallback)
@@ -347,7 +353,8 @@ export default function AdminTaxHub() {
                         .eq('id', cancellationTarget.id);
 
                     if (fallbackErr) {
-                        console.error('Supabase fallback void error:', fallbackErr);
+                        // Do not mark it cancelled on screen when the database still has it issued
+                        throw new Error(fallbackErr.message);
                     }
                 }
             }

@@ -17,7 +17,8 @@ import {
     thaiBahtText, 
     formatTaxId, 
     exportWithholdingTaxCsv, 
-    downloadCsvFile 
+    downloadCsvFile,
+    toBangkokDateKey
 } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
 import { toast } from 'sonner';
@@ -54,7 +55,7 @@ export default function WithholdingTaxTab({
     const [taxRate, setTaxRate] = useState(3);
     const [grossAmount, setGrossAmount] = useState('');
     const [formType, setFormType] = useState('PND53'); // 'PND1' | 'PND3' | 'PND53'
-    const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [paymentDate, setPaymentDate] = useState(() => toBangkokDateKey(new Date()));
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -184,25 +185,28 @@ export default function WithholdingTaxTab({
                 notes: notes.trim()
             };
 
-            // DB Insert
-            let saved = { ...recordPayload, id: `local_${Date.now()}` };
-            try {
+            // DB Insert: a certificate that is not in the database was not issued, so failures surface
+            let saved = null;
+            for (let attempt = 0; attempt < 5 && !saved; attempt++) {
+                const payload = attempt === 0 ? recordPayload
+                    : { ...recordPayload, doc_number: `${prefix}-${ym}-${Math.floor(Math.random() * 9000) + 1000}` };
                 const { data, error } = await supabase
                     .from('withholding_tax_records')
-                    .insert([recordPayload])
+                    .insert([payload])
                     .select()
                     .single();
-                if (!error && data) saved = data;
-            } catch {
-                // Fallback locally
+                if (!error && data) { saved = data; break; }
+                if (error?.code === '23505') continue; // number taken, draw another
+                throw new Error(error?.message || 'บันทึกลงฐานข้อมูลไม่สำเร็จ');
             }
+            if (!saved) throw new Error('สร้างเลขที่เอกสารไม่ซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง');
 
             // LocalStorage sync
             const updated = [saved, ...records];
             setRecords(updated);
             localStorage.setItem('onhaus_wht_records', JSON.stringify(updated));
 
-            toast.success(`บันทึกภาษีหัก ณ ที่จ่าย ${docNumber} เรียบร้อยแล้ว`);
+            toast.success(`บันทึกภาษีหัก ณ ที่จ่าย ${saved.doc_number || docNumber} เรียบร้อยแล้ว`);
             setShowCreateModal(false);
             resetForm();
         } catch (err) {

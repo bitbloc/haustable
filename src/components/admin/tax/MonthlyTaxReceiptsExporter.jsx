@@ -249,24 +249,38 @@ export default function MonthlyTaxReceiptsExporter({
     };
 
     // 4. Batch Download Enhanced Images
-    const handleDownloadAllImages = () => {
-        const targets = selectedExpensesList.filter(e => !!(enhancedImagesMap[e.id] || e.receipt_image_url));
+    const handleDownloadAllImages = async () => {
+        const sourceOf = (e) => enhancedImagesMap[e.id] || parseReceiptUrls(e.receipt_image_url)[0] || null;
+        const targets = selectedExpensesList.filter(e => !!sourceOf(e));
         if (targets.length === 0) {
             toast.warning('ไม่พบรูปภาพที่สามารถดาวน์โหลดได้');
             return;
         }
 
-        toast.info(`กำลังเริ่มดาวน์โหลด ${targets.length} ไฟล์...`);
-        targets.forEach((exp, idx) => {
-            const dataUrl = enhancedImagesMap[exp.id] || exp.receipt_image_url;
+        const toastId = toast.loading(`กำลังดาวน์โหลด ${targets.length} ไฟล์...`);
+        let failed = 0;
+        for (let idx = 0; idx < targets.length; idx++) {
+            const exp = targets[idx];
+            const src = sourceOf(exp);
             const refNo = String(idx + 1).padStart(2, '0');
             const cleanVendor = (exp.vendor_name || 'Vendor').replace(/[^a-zA-Z0-9ก-๙]/g, '_');
             const fileName = `${selectedMonth}_TAX_#${refNo}_${cleanVendor}_${Number(exp.amount || 0).toFixed(0)}.jpg`;
-            
-            setTimeout(() => {
-                downloadFile(dataUrl, fileName);
-            }, idx * 180);
-        });
+            try {
+                // Storage URLs are cross-origin: browsers ignore `download` on them and navigate away,
+                // so fetch the bytes first and save a local Blob.
+                const payload = src.startsWith('data:') ? src : await fetch(src).then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.blob();
+                });
+                downloadFile(payload, fileName);
+                await new Promise(r => setTimeout(r, 180));
+            } catch (err) {
+                console.error('Receipt image download failed:', exp.id, err);
+                failed++;
+            }
+        }
+        if (failed) toast.error(`ดาวน์โหลดไม่สำเร็จ ${failed} จาก ${targets.length} ไฟล์`, { id: toastId });
+        else toast.success(`ดาวน์โหลดครบ ${targets.length} ไฟล์`, { id: toastId });
     };
 
     // 5. Export CSV Summary

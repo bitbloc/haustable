@@ -210,7 +210,60 @@ export function downloadCsvFile(csvContent, filename) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Some Safari/Firefox builds cancel the download if the URL is revoked in the same tick
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/**
+ * Calendar date of a timestamp in Thailand (UTC+7, no DST), as 'YYYY-MM-DD'.
+ * Tax periods are Thai calendar days/months, whatever time zone the device is set to.
+ */
+export function toBangkokDateKey(rawDate) {
+    if (!rawDate) return '';
+    const d = new Date(rawDate);
+    if (Number.isNaN(d.getTime())) return String(rawDate).slice(0, 10);
+    return new Date(d.getTime() + BANGKOK_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** First instant of a Thai calendar year, as an ISO string (for server-side range filters). */
+export function bangkokYearStartIso(year) {
+    return new Date(Date.UTC(Number(year), 0, 1) - BANGKOK_OFFSET_MS).toISOString();
+}
+
+/**
+ * The one rule for which POS bills count as sales in every tax tab, report and export:
+ * only bills that were paid and closed. Open tables, pending reservations and voids are not sales.
+ */
+export function isTaxableSale(booking) {
+    return String(booking?.status || '').toLowerCase() === 'completed';
+}
+
+/** Amount of a POS bill as charged to the customer. */
+export function bookingSaleAmount(booking) {
+    return Number(booking?.total_amount ?? booking?.total_price ?? 0) || 0;
+}
+
+/**
+ * Stable bill numbers: BILL-YYYYMM-NNNN running in time order within each Thai calendar month,
+ * counted over all taxable bills, so a bill keeps its number in day, month and all views.
+ * Bills with a real order_number keep it.
+ */
+export function buildStableBillNumbers(bookings = []) {
+    const sorted = bookings
+        .filter(isTaxableSale)
+        .slice()
+        .sort((a, b) => new Date(a.booking_time || a.created_at) - new Date(b.booking_time || b.created_at));
+    const counters = new Map();
+    const numbers = new Map();
+    sorted.forEach(b => {
+        const ym = toBangkokDateKey(b.booking_time || b.created_at).slice(0, 7).replace('-', '');
+        const n = (counters.get(ym) || 0) + 1;
+        counters.set(ym, n);
+        numbers.set(b.id, b.order_number || `BILL-${ym}-${String(n).padStart(4, '0')}`);
+    });
+    return numbers;
 }
 
 /**

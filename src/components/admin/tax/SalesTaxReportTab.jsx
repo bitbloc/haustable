@@ -34,7 +34,11 @@ import {
     formatBranch, 
     exportUnifiedSalesLedgerCsv, 
     downloadCsvFile,
-    thaiBahtText 
+    thaiBahtText,
+    toBangkokDateKey,
+    isTaxableSale,
+    bookingSaleAmount,
+    buildStableBillNumbers
 } from '../../../utils/thaiTaxHelper';
 import { supabase } from '../../../lib/supabaseClient';
 import SalesTaxLedgerPrintView from './SalesTaxLedgerPrintView';
@@ -171,15 +175,9 @@ export default function SalesTaxReportTab({
     };
 
     // Helper: Convert ISO date string to local YYYY-MM-DD (Thailand time)
-    const toLocalDateKey = (rawDate) => {
-        if (!rawDate) return '';
-        const d = new Date(rawDate);
-        if (Number.isNaN(d.getTime())) return String(rawDate).slice(0, 10);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    };
+    const toLocalDateKey = toBangkokDateKey;
+
+    const stableBillNumbers = useMemo(() => buildStableBillNumbers(allYearBookings || []), [allYearBookings]);
 
     // In-memory lookup map of bookings by id
     const bookingById = useMemo(() => {
@@ -216,8 +214,7 @@ export default function SalesTaxReportTab({
         
         // Filter bookings matching the active date/month filter AND exclude void/cancelled
         const timeFiltered = allYearBookings.filter(b => {
-            const isCancelled = b.status === 'cancelled' || b.status === 'void' || b.status === 'deleted';
-            if (isCancelled) return false; // Completely exclude voided/cancelled bills
+            if (!isTaxableSale(b)) return false; // only paid, closed bills are sales
 
             const localDate = toLocalDateKey(b.booking_time || b.created_at);
             if (timeFilterMode === 'day') {
@@ -236,14 +233,12 @@ export default function SalesTaxReportTab({
             return timeA - timeB;
         });
 
-        // Map to structured bill records with running sequence
-        const ymCompact = (selectedMonth || getCurrentMonth()).replace('-', '');
-        return timeFiltered.map((b, idx) => {
-            const total = Number(b.total_amount || b.total_price || 0);
-            const preVat = isVatRegistered ? (total / 1.07) : total;
-            const vat = isVatRegistered ? (total - preVat) : 0;
-            const seqNumber = String(idx + 1).padStart(4, '0');
-            const generatedBillNo = b.order_number || `BILL-${ymCompact}-${seqNumber}`;
+        // Map to structured bill records; bill numbers come from the stable monthly sequence
+        return timeFiltered.map((b) => {
+            const total = bookingSaleAmount(b);
+            const preVat = isVatRegistered ? Math.round((total / 1.07) * 100) / 100 : total;
+            const vat = isVatRegistered ? Math.round((total - preVat) * 100) / 100 : 0;
+            const generatedBillNo = stableBillNumbers.get(b.id) || b.order_number || '-';
             const detectedPayment = detectPaymentMethod(b);
             const customerName = getCustomerDisplayName(b);
             const itemsSummary = getItemsSummary(b);
@@ -279,7 +274,7 @@ export default function SalesTaxReportTab({
                 source_type: 'pos_bill'
             };
         });
-    }, [allYearBookings, timeFilterMode, selectedDate, selectedMonth, isVatRegistered, invoiceByBookingId]);
+    }, [allYearBookings, timeFilterMode, selectedDate, selectedMonth, isVatRegistered, invoiceByBookingId, stableBillNumbers]);
 
     // Active Compiled Records based on Data Source Mode (Excluding Voided)
     const activeRawRecords = useMemo(() => {
@@ -391,15 +386,15 @@ export default function SalesTaxReportTab({
     const ytdStats = useMemo(() => {
         const currentYear = (selectedDate || selectedMonth).split('-')[0] || String(new Date().getFullYear());
         
-        const yearInvoices = invoices.filter(i => 
-            (i.issued_at || i.created_at || '').startsWith(currentYear) && i.status !== 'cancelled'
+        const yearInvoices = invoices.filter(i =>
+            toBangkokDateKey(i.issued_at || i.created_at).startsWith(currentYear) && i.status !== 'cancelled'
         );
         const totalFromInvoices = yearInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
 
-        const yearBookings = (allYearBookings || []).filter(b => 
-            (b.booking_time || b.created_at || '').startsWith(currentYear) && b.status === 'completed'
+        const yearBookings = (allYearBookings || []).filter(b =>
+            isTaxableSale(b) && toBangkokDateKey(b.booking_time || b.created_at).startsWith(currentYear)
         );
-        const totalFromBookings = yearBookings.reduce((sum, b) => sum + Number(b.total_amount || b.total_price || 0), 0);
+        const totalFromBookings = yearBookings.reduce((sum, b) => sum + bookingSaleAmount(b), 0);
 
         const ytdGross = Math.max(totalFromInvoices, totalFromBookings);
         const pct = Math.min(100, (ytdGross / VAT_THRESHOLD_ANNUAL) * 100);
@@ -525,7 +520,7 @@ export default function SalesTaxReportTab({
                                     เกณฑ์ติดตามรายได้สะสมประจำปี {ytdStats.year} (เกณฑ์จด VAT 1.8 ล้านบาท)
                                 </h3>
                                 <p className="text-[13px] text-[oklch(50%_0.010_28)]">
-                                    ตามประมวลรัษฎากร หากรายรับเกิน 1,800,000 บาท/ปี ต้องยื่นขอจดทะเบียนภาษีมูลค่าเพิ่ม (ภ.พ.20) ภายใน 30 วัน
+                                    ตามประมวลรัษฎากร หากรายรับเกิน 1,800,000 บาท/ปี ต้องยื่นคำขอจดทะเบียนภาษีมูลค่าเพิ่ม (ภ.พ.01) ภายใน 30 วันนับจากวันที่เกิน
                                 </p>
                             </div>
                         </div>
@@ -551,7 +546,7 @@ export default function SalesTaxReportTab({
                         <span>ความคืบหน้า: <strong>{ytdStats.pct.toFixed(1)}%</strong></span>
                         <span>
                             {ytdStats.isExceeded ? (
-                                <strong className="text-red-600">เกินเกณฑ์แล้ว! เตรียมยื่นจด VAT (ภ.พ.20) ภายใน 30 วัน</strong>
+                                <strong className="text-red-600">เกินเกณฑ์แล้ว ปรึกษานักบัญชีเรื่องยื่นจด VAT (ภ.พ.01) ภายใน 30 วัน</strong>
                             ) : (
                                 <span>ยังสามารถรับรายได้แบบ Non-VAT ได้อีก: <strong className="text-emerald-700">฿{ytdStats.remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
                             )}

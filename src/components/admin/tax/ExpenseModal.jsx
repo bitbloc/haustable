@@ -31,6 +31,7 @@ import {
     uploadReceiptToStorage 
 } from '../../../utils/receiptImageHelper';
 import { checkDuplicateExpense } from '../../../utils/duplicateDetector';
+import { toBangkokDateKey } from '../../../utils/thaiTaxHelper';
 import { toast } from 'sonner';
 
 export default function ExpenseModal({ 
@@ -39,7 +40,7 @@ export default function ExpenseModal({
     onSaveSuccess 
 }) {
     const [expenseDate, setExpenseDate] = useState(
-        existingExpense?.expense_date || new Date().toISOString().slice(0, 10)
+        existingExpense?.expense_date || toBangkokDateKey(new Date())
     );
     const [category, setCategory] = useState(existingExpense?.category || 'raw_material');
     const [title, setTitle] = useState(existingExpense?.title || 'ซื้อวัตถุดิบ Makro');
@@ -281,7 +282,8 @@ export default function ExpenseModal({
         setSaving(true);
         try {
             let vatVal = 0;
-            if (vatIncluded) {
+            // Input VAT exists only on a full tax invoice; a cash bill or slip has none to claim
+            if (vatIncluded && docType === 'tax_invoice') {
                 vatVal = parseFloat(((numAmount * 7) / 107).toFixed(2));
             }
 
@@ -300,29 +302,15 @@ export default function ExpenseModal({
                 notes: notes.trim()
             };
 
-            let savedRecord = { ...payload, id: existingExpense?.id || `local_${Date.now()}` };
-
-            // 1. Supabase Sync
-            try {
-                if (existingExpense?.id && !String(existingExpense.id).startsWith('local_')) {
-                    const { data } = await supabase
-                        .from('store_expenses')
-                        .update(payload)
-                        .eq('id', existingExpense.id)
-                        .select()
-                        .single();
-                    if (data) savedRecord = data;
-                } else {
-                    const { data } = await supabase
-                        .from('store_expenses')
-                        .insert([payload])
-                        .select()
-                        .single();
-                    if (data) savedRecord = data;
-                }
-            } catch {
-                // Fallback locally
-            }
+            // 1. Save to the database. If it fails, say so: an expense kept only in this
+            // browser never reaches the ledger, the tax reports or the other devices.
+            let savedRecord;
+            const isUpdate = existingExpense?.id && !String(existingExpense.id).startsWith('local_');
+            const { data, error } = isUpdate
+                ? await supabase.from('store_expenses').update(payload).eq('id', existingExpense.id).select().single()
+                : await supabase.from('store_expenses').insert([payload]).select().single();
+            if (error || !data) throw new Error(error?.message || 'บันทึกลงฐานข้อมูลไม่สำเร็จ');
+            savedRecord = data;
 
             // 2. LocalStorage Sync
             const localList = JSON.parse(localStorage.getItem('onhaus_store_expenses') || '[]');

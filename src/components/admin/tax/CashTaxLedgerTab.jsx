@@ -25,8 +25,7 @@ import {
     Check
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
-import { downloadCsvFile, thaiBahtText, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
-import { EXPENSE_CATEGORIES, getCleanCategoryLabel } from '../../../utils/expenseConstants';
+import { downloadCsvFile, thaiBahtText, formatTaxId, formatBranch, toBangkokDateKey, isTaxableSale, bookingSaleAmount } from '../../../utils/thaiTaxHelper';import { EXPENSE_CATEGORIES, getCleanCategoryLabel } from '../../../utils/expenseConstants';
 import { parseReceiptUrls } from '../../../utils/receiptImageHelper';
 import { exportCashTaxTemplateExcel, classifyExpenseType } from '../../../utils/thaiTaxExcelHelper';
 import CashTaxLedgerPrintView from './CashTaxLedgerPrintView';
@@ -164,65 +163,10 @@ export default function CashTaxLedgerTab({
             if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
                 return rawDate;
             }
-            const d = new Date(rawDate);
-            if (isNaN(d.getTime())) return String(rawDate).slice(0, 10);
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
+            return toBangkokDateKey(rawDate);
         } catch {
             return String(rawDate).slice(0, 10);
         }
-    };
-
-    // Helper: Extract accurate booking revenue total (Net after CRM, Member Tier, xHaus & Coupon Discounts)
-    const calculateBookingTotal = (b) => {
-        // 1. Calculate raw order items subtotal if available
-        let subtotal = 0;
-        if (b.order_items && Array.isArray(b.order_items) && b.order_items.length > 0) {
-            subtotal = b.order_items.reduce((acc, it) => {
-                const price = Number(it.price_at_time !== undefined ? it.price_at_time : (it.price || it.menu_items?.price || 0));
-                const qty = Number(it.quantity || 1);
-                return acc + (price * qty);
-            }, 0);
-        }
-
-        // 2. Identify all CRM & Promotion Discounts
-        const discountAmt = Number(b.discount_amount || 0);
-        const xhausDisc = Number(b.xhaus_discount || 0);
-        const totalDiscount = Math.max(discountAmt, xhausDisc > 0 ? (discountAmt >= xhausDisc ? discountAmt : discountAmt + xhausDisc) : discountAmt);
-
-        // 3. Evaluate total_amount from DB (which is typically already net of discount)
-        const bookedTotal = (b.total_amount !== undefined && b.total_amount !== null && !isNaN(Number(b.total_amount)))
-            ? Number(b.total_amount)
-            : null;
-
-        if (bookedTotal !== null && bookedTotal > 0) {
-            // Guard against edge cases where total_amount was stored before applying discount
-            if (totalDiscount > 0 && subtotal > 0 && Math.abs(bookedTotal - subtotal) < 2) {
-                return Math.max(0, subtotal - totalDiscount);
-            }
-            return bookedTotal;
-        }
-
-        // 4. Fallback: Subtotal minus full CRM discount
-        if (subtotal > 0) {
-            return Math.max(0, subtotal - totalDiscount);
-        }
-
-        if (b.total_price !== undefined && b.total_price !== null && !isNaN(Number(b.total_price)) && Number(b.total_price) > 0) {
-            const tp = Number(b.total_price);
-            if (totalDiscount > 0 && subtotal > 0 && Math.abs(tp - subtotal) < 2) {
-                return Math.max(0, tp - totalDiscount);
-            }
-            return tp;
-        }
-
-        if (b.final_total_price !== undefined && b.final_total_price !== null && !isNaN(Number(b.final_total_price)) && Number(b.final_total_price) > 0) {
-            return Number(b.final_total_price);
-        }
-
-        return 0;
     };
 
     // Helper: Format in-store sales title (ยอดขายหน้าร้าน)
@@ -250,9 +194,7 @@ export default function CashTaxLedgerTab({
     const incomeItems = useMemo(() => {
         return allYearBookings
             .filter(b => {
-                const s = String(b.status || '').toLowerCase();
-                const isCancelled = ['cancelled', 'void', 'voided', 'deleted'].includes(s);
-                if (isCancelled) return false;
+                if (!isTaxableSale(b)) return false; // same rule as the Sales tab: paid, closed bills only
 
                 const dateStr = getLocalDateString(b.booking_time || b.created_at || b.booking_date);
                 if (!dateStr) return false;
@@ -267,8 +209,8 @@ export default function CashTaxLedgerTab({
                 return true;
             })
             .map((b, idx) => {
-                const total = calculateBookingTotal(b);
-                const vatAmt = isVatRegistered ? (total * 7 / 107) : 0;
+                const total = bookingSaleAmount(b);
+                const vatAmt = isVatRegistered ? Math.round((total * 7 / 107) * 100) / 100 : 0;
                 const dateStr = getLocalDateString(b.booking_time || b.created_at || b.booking_date);
                 const docNo = b.order_number || b.invoice_number || `POS-${(b.id ? String(b.id).slice(0, 8) : String(idx + 1).padStart(4, '0'))}`;
                 const desc = getBookingTitle(b);
@@ -325,12 +267,13 @@ export default function CashTaxLedgerTab({
             })
             .map(e => {
                 const total = parseFloat(e.amount || 0);
-                const vatAmt = parseFloat(e.vat_amount || (e.has_vat ? (total * 7 / 107) : 0));
+                // Input VAT can only be claimed by a VAT-registered shop, and only from a full tax invoice
+                const vatAmt = (isVatRegistered && e.doc_type === 'tax_invoice') ? (parseFloat(e.vat_amount) || 0) : 0;
                 const dateStr = getLocalDateString(e.expense_date || e.created_at);
                 const docNo = e.receipt_number || e.invoice_number || `EXP-${String(e.id).slice(0, 8)}`;
                 const catLabel = getCleanCategoryLabel(e.category) || 'ต้นทุนสินค้าและค่าใช้จ่ายดำเนินงาน';
                 const proofType = getExpenseProofType(e);
-                const proofUrl = e.receipt_url || e.image_url || null;
+                const proofUrl = parseReceiptUrls(e.receipt_image_url)[0] || null;
                 const expType = classifyExpenseType(e);
 
                 return {
@@ -354,7 +297,7 @@ export default function CashTaxLedgerTab({
                     referenceType: 'EXPENSE_DOC'
                 };
             });
-    }, [expenses, periodMode, selectedDate, selectedMonth, selectedYear]);
+    }, [expenses, periodMode, selectedDate, selectedMonth, selectedYear, isVatRegistered]);
 
     // 3. Combined Chronological Ledger
     const combinedLedger = useMemo(() => {
@@ -457,6 +400,20 @@ export default function CashTaxLedgerTab({
         };
     }, [incomeItems, expenseItems]);
 
+    // The printed sheet lists the filtered rows, so its summary must add up those same rows
+    const printTotals = useMemo(() => {
+        const totalRevenue = filteredLedger.reduce((s, r) => s + Number(r.inAmount || 0), 0);
+        const totalExpense = filteredLedger.reduce((s, r) => s + Number(r.outAmount || 0), 0);
+        return {
+            ...totals,
+            totalRevenue,
+            totalExpense,
+            totalGoodsExpense: filteredLedger.reduce((s, r) => s + Number(r.goodsAmount || 0), 0),
+            totalOtherExpense: filteredLedger.reduce((s, r) => s + Number(r.otherAmount || 0), 0),
+            netProfit: totalRevenue - totalExpense
+        };
+    }, [totals, filteredLedger]);
+
     // Export Excel Template Handler (Revenue Dept Form 161)
     const handleExportExcel = async (mode = excelExportMode) => {
         setIsExportingExcel(true);
@@ -497,7 +454,7 @@ export default function CashTaxLedgerTab({
         ]);
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-        downloadCsvFile(`รายงานเงินสดรับจ่าย_สรรพากร_${selectedMonth || 'export'}.csv`, csvContent);
+        downloadCsvFile(csvContent, `รายงานเงินสดรับจ่าย_สรรพากร_${selectedMonth || 'export'}.csv`);
     };
 
     return (
@@ -643,7 +600,14 @@ export default function CashTaxLedgerTab({
 
             {/* 3. Secondary Metrics: VAT & Evidence Health Strip */}
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)] tabular-nums text-xs">
+                {!isVatRegistered && (
+                    <div className="px-3 py-1.5 sm:col-span-2">
+                        <div className="text-xs text-[var(--color-neutral)]">ภาษีมูลค่าเพิ่ม</div>
+                        <div className="text-sm font-bold text-[var(--color-ink)]">ไม่ได้จด VAT · ไม่มีภาษีขาย ภาษีซื้อ หรือ ภ.พ.30 ให้ยื่น</div>
+                    </div>
+                )}
                 {/* VAT Summary */}
+                {isVatRegistered && (<>
                 <div className="px-3 py-1.5 flex items-center justify-between">
                     <div>
                         <div className="text-xs text-[var(--color-neutral)] ">ภาษีขาย (OUTPUT VAT 7%)</div>
@@ -664,9 +628,10 @@ export default function CashTaxLedgerTab({
                         </div>
                     </div>
                     <span className="text-[11px] px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-neutral)]">
-                        {isVatRegistered ? 'VAT 7% REG' : 'NON-VAT'}
+                        VAT 7%
                     </span>
                 </div>
+                </>)}
 
                 {/* Evidence Completeness Health */}
                 <div className="px-3 py-1.5 flex items-center justify-between">
@@ -931,16 +896,16 @@ export default function CashTaxLedgerTab({
                                     รวมยอดทั้งสิ้น ({thaiBahtText(totals.netProfit)}):
                                 </td>
                                 <td className="p-3 text-right tabular-nums text-emerald-800 text-sm border-l border-[var(--color-rule)]">
-                                    ฿{totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    ฿{printTotals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-3 text-right tabular-nums text-rose-800 text-sm border-l border-[var(--color-rule)]">
-                                    ฿{totals.totalGoodsExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    ฿{printTotals.totalGoodsExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-3 text-right tabular-nums text-rose-800 text-sm border-l border-[var(--color-rule)]">
-                                    ฿{totals.totalOtherExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    ฿{printTotals.totalOtherExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-3 text-right tabular-nums text-[var(--color-ink)] text-sm border-l border-[var(--color-rule)]">
-                                    ฿{totals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    ฿{printTotals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
                                 {isVatRegistered && (
                                     <td className="p-3 text-right tabular-nums text-[var(--color-ink)] text-[13px] border-l border-[var(--color-rule)]">
@@ -1098,7 +1063,7 @@ export default function CashTaxLedgerTab({
                     filterMode={periodMode}
                     periodLabel={activePeriodLabel}
                     records={ledgerWithRunningBalance}
-                    totals={totals}
+                    totals={printTotals}
                     companySettings={companySettings}
                     isVatRegistered={isVatRegistered}
                     onClose={() => setShowPrintModal(false)}

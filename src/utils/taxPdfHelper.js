@@ -251,11 +251,41 @@ export async function saveOrShareTaxPdf(pdfResult, options = {}) {
  * @param {jsPDF|Blob|File} pdfOrBlob 
  * @param {string} fileName 
  */
+/**
+ * A4 pages for a tax invoice. The last page carries totals, baht-in-words and signatures,
+ * so it holds at most 12 rows; other pages hold 14 (first) or 18 (middle).
+ * Every invoice therefore ends on a page with its totals, whatever the item count.
+ */
+export function paginateInvoiceItems(items = []) {
+    const LAST = 12, FIRST = 14, MIDDLE = 18;
+    if (items.length <= LAST) {
+        return [{ items, isFirst: true, isLast: true, pageNum: 1, totalPages: 1 }];
+    }
+    const result = [];
+    let remaining = [...items];
+    let cap = FIRST;
+    while (remaining.length > LAST) {
+        // Always leave at least one row for the final page so totals never land on a page of their own
+        const take = Math.min(cap, remaining.length - 1);
+        result.push({ items: remaining.slice(0, take), isFirst: result.length === 0, isLast: false });
+        remaining = remaining.slice(take);
+        cap = MIDDLE;
+    }
+    result.push({ items: remaining, isFirst: false, isLast: true });
+    return result.map((p, i) => ({ ...p, pageNum: i + 1, totalPages: result.length }));
+}
+
 export function downloadTaxPdf(pdfOrBlob, fileName = 'tax-invoice.pdf') {
     if (pdfOrBlob instanceof Blob || pdfOrBlob instanceof File) {
         saveOrShareTaxPdf({ blob: pdfOrBlob, fileName }, { preferShare: false });
+    } else if (pdfOrBlob?.blob instanceof Blob) {
+        // The result object of generateTaxDocumentPdf
+        saveOrShareTaxPdf({ ...pdfOrBlob, fileName }, { preferShare: false });
     } else if (pdfOrBlob && typeof pdfOrBlob.save === 'function') {
         pdfOrBlob.save(fileName);
+    } else {
+        // Never let the caller report a download that did not happen
+        throw new Error('ไม่พบไฟล์ PDF ที่สร้าง');
     }
 }
 

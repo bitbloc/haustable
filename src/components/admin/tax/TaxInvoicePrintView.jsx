@@ -24,7 +24,7 @@ import {
     Edit3
 } from 'lucide-react';
 import { thaiBahtText, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
-import { generateTaxDocumentPdf, downloadTaxPdf, saveOrShareTaxPdf, openPdfInNewTab, isMobileBrowser } from '../../../utils/taxPdfHelper';
+import { generateTaxDocumentPdf, downloadTaxPdf, saveOrShareTaxPdf, openPdfInNewTab, isMobileBrowser, paginateInvoiceItems } from '../../../utils/taxPdfHelper';
 import { supabase } from '../../../lib/supabaseClient';
 import { toast } from 'sonner';
 
@@ -101,37 +101,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
     // Dynamic Pagination Logic for Invoices:
     // - If items <= 12: 1 Single A4 Page (fits header, customer, items, summary, signatures seamlessly).
     // - If items > 12: Multi-page A4 pagination (Page 1: 14 items; Middle pages: 18 items; Final page: remaining + summary + signatures).
-    const pages = React.useMemo(() => {
-        if (rawItems.length <= 12) {
-            return [{ items: rawItems, isFirst: true, isLast: true, pageNum: 1, totalPages: 1 }];
-        }
-
-        const result = [];
-        let remaining = [...rawItems];
-        let pageIdx = 1;
-
-        // First page
-        const firstPageItems = remaining.splice(0, 14);
-        result.push({ items: firstPageItems, isFirst: true, isLast: false, pageNum: pageIdx });
-        pageIdx++;
-
-        // Middle and last pages
-        while (remaining.length > 0) {
-            if (remaining.length <= 12) {
-                // Fits cleanly on last page with summary & signatures
-                result.push({ items: remaining, isFirst: false, isLast: true, pageNum: pageIdx });
-                remaining = [];
-            } else {
-                const chunk = remaining.splice(0, 18);
-                const isFinal = remaining.length === 0;
-                result.push({ items: chunk, isFirst: false, isLast: isFinal, pageNum: pageIdx });
-            }
-            pageIdx++;
-        }
-
-        const totalPages = result.length;
-        return result.map(p => ({ ...p, totalPages }));
-    }, [rawItems]);
+    const pages = React.useMemo(() => paginateInvoiceItems(rawItems), [rawItems]);
 
     // Prepare default Email Subject on load
     useEffect(() => {

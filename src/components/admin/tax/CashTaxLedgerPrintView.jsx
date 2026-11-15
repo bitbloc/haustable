@@ -181,7 +181,7 @@ export default function CashTaxLedgerPrintView({
         ]);
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-        downloadCsvFile(`รายงานเงินสดรับจ่าย_สรรพากร_${periodMonth || 'export'}.csv`, csvContent);
+        downloadCsvFile(csvContent, `รายงานเงินสดรับจ่าย_สรรพากร_${periodMonth || 'export'}.csv`);
     };
 
     // Calculate global running index offset for multi-page numbering
