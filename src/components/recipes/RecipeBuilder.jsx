@@ -19,6 +19,37 @@ import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/rec
 import { unitFix } from '../../utils/recipeUnits';
 import { saveRecipeVersion } from '../../utils/recipeVersions';
 import RecipeHistoryModal from './RecipeHistoryModal';
+import MakroPriceSheet from '../stock/MakroPriceSheet';
+import MenuOptionStockPanel from './MenuOptionStockPanel';
+import { makroPickPatch, describeMakroPick } from '../../utils/makroUnits';
+
+// Price, size and photo from makro.pro, shared by the edit and quick-add windows below
+function MakroPickButton({ term, current, unitsUnset, onApply }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <>
+            <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="h-8 px-3 border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-semibold hover:bg-[oklch(94%_0.010_28)] transition-colors whitespace-nowrap"
+                title="ดึงราคา ขนาด และรูปจาก makro.pro"
+            >
+                ราคากลาง
+            </button>
+            {open && (
+                <MakroPriceSheet
+                    initialTerm={term || ''}
+                    onClose={() => setOpen(false)}
+                    onPick={(product) => {
+                        const pick = makroPickPatch(product, current, unitsUnset === undefined ? {} : { unitsUnset });
+                        onApply(pick.patch, describeMakroPick(product, pick), product);
+                        setOpen(false);
+                    }}
+                />
+            )}
+        </>
+    );
+}
 
 // ── 1. Mini Modal for Quick Stock Item Edit ──
 function EditStockModal({ item, onClose, onSave }) {
@@ -28,8 +59,10 @@ function EditStockModal({ item, onClose, onSave }) {
         pack_unit: item.pack_unit || 'g',
         usage_unit: item.usage_unit || 'g',
         conversion_factor: item.conversion_factor || 1,
-        yield_percent: item.yield_percent || 100
+        yield_percent: item.yield_percent || 100,
+        image_url: item.image_url || ''
     });
+    const [makroNote, setMakroNote] = useState('');
 
     const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
     const suggestedFactor = suggestConversionFactor(formData.pack_unit, formData.usage_unit);
@@ -110,9 +143,25 @@ function EditStockModal({ item, onClose, onSave }) {
 
                     {/* Buying Info */}
                     <div className="p-3 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] space-y-2 rounded-xs">
-                        <span className="font-bold text-xs text-[oklch(18%_0.012_28)] block">
-                            1. ข้อมูลการซื้อ (BUYING)
-                        </span>
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">
+                                1. ข้อมูลการซื้อ
+                            </span>
+                            <MakroPickButton
+                                term={item.name}
+                                current={formData}
+                                onApply={(patch, note) => {
+                                    setFormData(prev => ({ ...prev, ...patch }));
+                                    setMakroNote(note);
+                                }}
+                            />
+                        </div>
+                        {makroNote && (
+                            <div className="flex items-center gap-2 text-xs text-[oklch(42%_0.010_28)] font-sans">
+                                {formData.image_url && <img src={formData.image_url} alt="" className="w-8 h-8 object-cover border border-[oklch(85%_0.012_28)]" />}
+                                <span className="leading-snug">{makroNote} · กดบันทึกเพื่อใช้</span>
+                            </div>
+                        )}
                         <div className="grid grid-cols-3 gap-2">
                             <div>
                                 <span className="text-xs text-[oklch(55%_0.010_28)] block mb-0.5">ราคาซื้อ (บาท)</span>
@@ -139,7 +188,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                     onChange={e => handleUnitChange('pack_unit', e.target.value)} 
                                     className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm"
                                 >
-                                    {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                                    {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -151,7 +200,7 @@ function EditStockModal({ item, onClose, onSave }) {
                     {/* Usage Info */}
                     <div className="p-3 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] space-y-2 rounded-xs">
                         <span className="font-bold text-xs text-[oklch(18%_0.012_28)] block">
-                            2. การใช้จริงในสูตร (USAGE)
+                            2. หน่วยที่ใช้ในสูตร
                         </span>
                         <div className="flex gap-2 items-center">
                             <div className="flex-1">
@@ -250,8 +299,10 @@ function QuickAddStockModal({ onClose, onSave }) {
         pack_unit: 'kg',
         usage_unit: 'g',
         conversion_factor: 1000,
-        yield_percent: 100
+        yield_percent: 100,
+        image_url: ''
     });
+    const [makroNote, setMakroNote] = useState('');
 
     useEffect(() => {
         const fetchCats = async () => {
@@ -294,13 +345,30 @@ function QuickAddStockModal({ onClose, onSave }) {
                 <div className="space-y-3 tabular-nums text-xs">
                     <div>
                         <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">ชื่อวัตถุดิบ *</label>
-                        <input 
-                            value={formData.name}
-                            onChange={e => setFormData({...formData, name: e.target.value})}
-                            placeholder="เช่น ไซรัปมะพร้าวน้ำหอม, ผงโกโก้พรีเมียม"
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-sm"
-                            autoFocus
-                        />
+                        <div className="flex items-center gap-2">
+                            <input 
+                                value={formData.name}
+                                onChange={e => setFormData({...formData, name: e.target.value})}
+                                placeholder="เช่น ไซรัปมะพร้าวน้ำหอม, ผงโกโก้พรีเมียม"
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-sm"
+                                autoFocus
+                            />
+                            <MakroPickButton
+                                term={formData.name}
+                                current={formData}
+                                unitsUnset={true}
+                                onApply={(patch, note, product) => {
+                                    setFormData(prev => ({ ...prev, name: prev.name.trim() ? prev.name : product.title, ...patch }));
+                                    setMakroNote(note);
+                                }}
+                            />
+                        </div>
+                        {makroNote && (
+                            <div className="mt-2 flex items-center gap-2 text-xs text-[oklch(42%_0.010_28)] font-sans">
+                                {formData.image_url && <img src={formData.image_url} alt="" className="w-8 h-8 object-cover border border-[oklch(85%_0.012_28)]" />}
+                                <span className="leading-snug">{makroNote}</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -342,7 +410,7 @@ function QuickAddStockModal({ onClose, onSave }) {
                                 onChange={e => handleUnitChange('pack_unit', e.target.value)} 
                                 className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm"
                             >
-                                {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                                {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                             </select>
                         </div>
                         <div>
@@ -357,8 +425,8 @@ function QuickAddStockModal({ onClose, onSave }) {
                         </div>
                     </div>
 
-                    {!isCompatible && (
-                        <div className="p-2 bg-[oklch(96%_0.03_80)] border border-[oklch(88%_0.06_80)] text-[oklch(35%_0.08_60)] text-xs">
+                    {(!isCompatible || Number(formData.conversion_factor) !== 1) && (
+                        <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs">
                             1 {formData.pack_unit} = <input 
                                 type="number" 
                                 className="w-16 p-0.5 border border-[oklch(85%_0.06_80)] bg-[oklch(99%_0.004_28)] text-center" 
@@ -1433,6 +1501,18 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                 })}
                             </SortableContext>
                         </DndContext>
+                    )}
+
+                    {/* Hot/iced, sweetness and other options: what they change in stock, for this menu */}
+                    {parentType === 'menu' && parentId && (
+                        <div className="pt-3">
+                            <MenuOptionStockPanel
+                                menuId={parentId}
+                                stockItems={availableItems}
+                                recipe={ingredients}
+                                onSweetenerChanged={(id, value) => setAvailableItems(prev => prev.map(i => i.id === id ? { ...i, is_sweetener: value } : i))}
+                            />
+                        </div>
                     )}
                 </div>
 

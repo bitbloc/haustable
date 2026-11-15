@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 import MakroPriceSheet from './MakroPriceSheet';
-import { parseMakroUnits } from '../../utils/makroUnits';
+import { makroPickPatch, unitsLookUnset, describeMakroPick } from '../../utils/makroUnits';
 import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { calculateRealUnitCost } from '../../utils/costUtils';
@@ -206,31 +206,17 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const [showPriceSearch, setShowPriceSearch] = useState(false);
     const [priceSearchTerm, setPriceSearchTerm] = useState('');
     // Picked a makro.pro product: its price is per item as sold (one pack), so it goes to "price per pack"
-    // Units come from the product title too ("น้ำเชื่อม 1.8 ล." -> 1 ขวด = 1,800 มล.), but only
-    // when this item has no units yet: changing the usage unit of an item already in recipes
-    // would change what those recipe quantities mean.
+    // Picking a makro product fills price, photo (if none) and units from its title. Units are
+    // only filled when this item has none yet, or when makro uses the same usage unit: changing
+    // the usage unit of an item already in recipes would change what those quantities mean.
     const handleSelectPrice = (product) => {
-        const units = parseMakroUnits(product.title, product.unitSize);
-        const unitsUnset = !isEdit || ((formData.usage_unit || 'unit') === 'unit' && Number(formData.conversion_factor || 1) === 1);
-        const applyUnits = Boolean(units && unitsUnset);
+        const pick = makroPickPatch(product, formData, { unitsUnset: !isEdit || unitsLookUnset(formData) });
         setFormData(prev => ({
             ...prev,
             name: prev.name?.trim() ? prev.name : product.title,
-            cost_price: product.price,
-            ...(applyUnits ? {
-                pack_size: 1,
-                pack_unit: units.packUnit,
-                usage_unit: units.usageUnit,
-                conversion_factor: units.conversionFactor
-            } : {})
+            ...pick.patch
         }));
-        if (applyUnits) {
-            toast.success(`ใส่ราคา ฿${product.price} และหน่วย ${units.summary} จาก makro แล้ว ตรวจให้ตรงกับของที่ซื้อจริง`);
-        } else if (units) {
-            toast.success(`ใส่ราคา ฿${product.price} แล้ว · makro ระบุ ${units.summary} ถ้าหน่วยของรายการนี้ต่างจากนี้ ให้แก้ที่แท็บต้นทุนและหน่วย`);
-        } else {
-            toast.success(`ใส่ราคา ฿${product.price} ต่อแพ็คจาก makro แล้ว ตรวจขนาดและหน่วยซื้อให้ตรงกับ "${product.title}"`);
-        }
+        toast.success(describeMakroPick(product, pick));
         setShowPriceSearch(false);
     };
 
@@ -295,87 +281,97 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         }
     };
 
+    // Quiet, token-based form styles shared by every field below
+    const ink = 'text-[oklch(18%_0.012_28)]';
+    const labelCls = 'block text-xs font-medium text-[oklch(42%_0.010_28)] mb-1.5';
+    const inputCls = `w-full h-11 px-3 rounded-md border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] ${ink} text-[15px] outline-none transition-colors focus:border-[oklch(18%_0.012_28)] disabled:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(55%_0.010_28)] disabled:cursor-not-allowed`;
+    const unitSuffix = 'text-xs text-[oklch(55%_0.010_28)] whitespace-nowrap';
+    const sectionTitle = `text-sm font-semibold ${ink}`;
+    const numberChange = (key) => (e) => setFormData({ ...formData, [key]: e.target.value === '' ? 0 : parseFloat(e.target.value) });
+    const unitLabel = (u) => (THAI_UNITS.find(x => x.value === u)?.label || u || '').replace(/\s*\(.*\)\s*$/, '');
+
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
-                
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[oklch(18%_0.012_28/0.45)] backdrop-blur-sm p-0 sm:p-4">
+            <div className="bg-[oklch(99%_0.004_28)] w-full sm:max-w-lg border border-[oklch(85%_0.012_28)] rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(18%_0.012_28/0.12)] flex flex-col max-h-[92vh]">
+
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
-                    <h2 className="font-bold text-lg">{isEdit ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full">
+                <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <h2 className={`text-lg font-semibold leading-7 ${ink}`}>{isEdit ? 'แก้ไขวัตถุดิบ' : 'เพิ่มวัตถุดิบ'}</h2>
+                        {isEdit && <p className="text-sm text-[oklch(55%_0.010_28)] truncate">{item.name}</p>}
+                    </div>
+                    <button type="button" onClick={onClose} className="h-9 px-3 rounded-md border border-[oklch(85%_0.012_28)] text-sm text-[oklch(42%_0.010_28)] hover:border-[oklch(18%_0.012_28)] hover:text-[oklch(18%_0.012_28)] transition-colors">
                         ปิด
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200">
-                    <button 
-                        onClick={() => setActiveTab('basic')}
-                        className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'basic' ? 'border-[#1A1A1A] text-[#1A1A1A]' : 'border-transparent text-gray-400'}`}
-                    >
-                        ข้อมูลทั่วไป
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('costing')}
-                        className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'costing' ? 'border-[oklch(18%_0.012_28)] text-black' : 'border-transparent text-gray-400'}`}
-                    >
-                        ต้นทุนและหน่วย
-                    </button>
+                <div className="px-5 flex gap-6 border-b border-[oklch(85%_0.012_28)]" role="tablist">
+                    {[['basic', 'ข้อมูลทั่วไป'], ['costing', 'ต้นทุนและหน่วย']].map(([id, label]) => (
+                        <button
+                            key={id}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === id}
+                            onClick={() => setActiveTab(id)}
+                            className={`-mb-px py-2.5 text-sm border-b-2 transition-colors ${activeTab === id ? `border-[oklch(18%_0.012_28)] ${ink} font-semibold` : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    
-                    {/* Unit Mismatch Warning */}
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+
+                    {/* Counting unit differs from buying unit */}
                     {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (
-                        <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-xl flex gap-3 items-start animate-in slide-in-from-top-2">
-                             <div className="flex-1">
-                                 <div className="text-sm font-bold text-yellow-800">พบหน่วยไม่ตรงกัน (Unit Mismatch)</div>
-                                 <p className="text-xs text-yellow-700 mb-2">
-                                     ปัจจุบันหน่วยนับคือ <span className="font-bold underline">{formData.unit}</span> แต่หน่วยซื้อคือ <span className="font-bold underline">{formData.pack_unit}</span> 
-                                     ซึ่งอาจทำให้การแจ้งเตือน "จุดสั่งซื้อ" ผิดพลาดได้
-                                 </p>
-                                 <button 
-                                    onClick={() => setFormData({ ...formData, unit: formData.pack_unit })}
-                                    className="text-[10px] bg-yellow-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-yellow-700 transition-colors"
-                                 >
-                                     ปรับหน่วยนับให้เป็น "{formData.pack_unit}" ตามหน่วยซื้อ
-                                 </button>
-                             </div>
+                        <div className="border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] pl-3 pr-3 py-2.5 space-y-2">
+                            <p className={`text-sm ${ink}`}>
+                                หน่วยนับ <strong>{unitLabel(formData.unit)}</strong> ไม่ตรงกับหน่วยซื้อ <strong>{unitLabel(formData.pack_unit)}</strong> จุดสั่งซื้ออาจแจ้งเตือนผิด
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, unit: formData.pack_unit })}
+                                className="text-sm font-semibold text-[oklch(52%_0.16_28)] hover:underline"
+                            >
+                                ใช้ "{unitLabel(formData.pack_unit)}" เป็นหน่วยนับ
+                            </button>
                         </div>
                     )}
 
                     {/* Basic Info Tab */}
                     {activeTab === 'basic' && (
                         <>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase flex justify-between">
-                                    <span>ชื่อสินค้า</span>
-                                </label>
+                            <div>
+                                <label className={labelCls} htmlFor="stock-name">ชื่อวัตถุดิบ</label>
                                 <div className="flex gap-2">
-                                    <input 
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#1A1A1A]" 
+                                    <input
+                                        id="stock-name"
+                                        className={inputCls}
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="เช่น มะนาวแป้น, น้ำเชื่อมมิตรผล"
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => {
                                             setPriceSearchTerm(formData.name || '');
                                             setShowPriceSearch(true);
                                         }}
-                                        className="bg-white text-[oklch(18%_0.012_28)] px-4 rounded-xl font-bold border border-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors flex items-center whitespace-nowrap"
-                                        title="ค้นราคาจาก makro.pro"
-                                    > ราคากลาง
+                                        className={`h-11 px-4 rounded-md border border-[oklch(18%_0.012_28)] ${ink} text-sm font-semibold whitespace-nowrap hover:bg-[oklch(94%_0.010_28)] transition-colors`}
+                                        title="ค้นราคาและขนาดจาก makro.pro"
+                                    >
+                                        ราคากลาง
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="flex gap-4">
-                                <div className="flex-1 space-y-1">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">หมวดหมู่</label>
-                                    <select 
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none"
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelCls} htmlFor="stock-category">หมวดหมู่</label>
+                                    <select
+                                        id="stock-category"
+                                        className={inputCls}
                                         value={formData.category}
                                         onChange={e => setFormData({ ...formData, category: e.target.value })}
                                     >
@@ -384,177 +380,131 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="flex-1 space-y-1 relative">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">บาร์โค้ด</label>
-                                    <input 
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" 
-                                        value={formData.barcode}
-                                        onChange={e => setFormData({ ...formData, barcode: e.target.value })}
-                                    />
-                                    <button onClick={() => setShowScanner(true)} className="absolute right-2 top-8 p-1.5 bg-gray-200 rounded-lg">
-                                        สแกน
-                                    </button>
+                                <div>
+                                    <label className={labelCls} htmlFor="stock-barcode">บาร์โค้ด</label>
+                                    <div className="relative">
+                                        <input
+                                            id="stock-barcode"
+                                            className={`${inputCls} pr-16`}
+                                            value={formData.barcode}
+                                            onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                        />
+                                        <button type="button" onClick={() => setShowScanner(true)} className="absolute right-1.5 top-1.5 h-8 px-2.5 rounded text-xs font-semibold text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                                            สแกน
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            {/* Inventory Levels Grid */}
-                            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">จำนวนคงเหลือปัจจุบัน</label>
-                                    <div className="flex items-center gap-2">
-                                        <input 
-                                            type="number"
-                                            disabled={isEdit}
-                                            className={`w-full border border-gray-200 rounded-xl p-3 outline-none text-lg font-bold ${isEdit ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`} 
-                                            value={formData.current_quantity}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                current_quantity: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                        />
-                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
-                                    </div>
-                                    {isEdit && (
-                                        <div className="text-[10px] text-gray-500 mt-1">
-                                            * แก้ไขจำนวนได้ที่ปุ่มปรับปรุงสต็อก (รับเข้า/เบิกออก) หน้าแรกเท่านั้น เพื่อความถูกต้องของประวัติ
+
+                            {/* Stock levels, all in the buying unit */}
+                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                                <h3 className={sectionTitle}>ระดับสต๊อก <span className="font-normal text-[oklch(55%_0.010_28)]">· นับเป็น {unitLabel(formData.pack_unit)}</span></h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { key: 'current_quantity', label: 'คงเหลือตอนนี้', disabled: isEdit },
+                                        { key: 'min_stock_threshold', label: 'จุดวิกฤต', marker: true },
+                                        { key: 'reorder_point', label: 'จุดสั่งซื้อ' },
+                                        { key: 'par_level', label: 'เป้าหมาย (Par)' }
+                                    ].map(f => (
+                                        <div key={f.key}>
+                                            <label className={labelCls} htmlFor={`stock-${f.key}`}>
+                                                {f.marker && <span className="inline-block w-1.5 h-1.5 mr-1.5 align-middle bg-[oklch(52%_0.16_28)]" aria-hidden="true" />}
+                                                {f.label}
+                                            </label>
+                                            <input
+                                                id={`stock-${f.key}`}
+                                                type="number"
+                                                inputMode="decimal"
+                                                disabled={f.disabled}
+                                                className={`${inputCls} tabular-nums`}
+                                                value={formData[f.key]}
+                                                onChange={numberChange(f.key)}
+                                            />
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
-                                
-                                <div>
-                                    <label className="text-xs font-bold text-red-500 uppercase flex items-center gap-1"> จุดวิกฤต (Critical)
-                                    </label>
-                                    <div className="flex items-center gap-2">
-                                        <input 
-                                            type="number"
-                                            className="w-full bg-red-50 border border-red-200 rounded-xl p-3 outline-none font-bold text-red-700" 
-                                            value={formData.min_stock_threshold}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                min_stock_threshold: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                        />
-                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-orange-500 uppercase">จุดสั่งซื้อ (Reorder)</label>
-                                    <div className="flex items-center gap-2">
-                                        <input 
-                                            type="number"
-                                            className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none font-bold text-orange-700" 
-                                            value={formData.reorder_point}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                reorder_point: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                        />
-                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">เป้าหมาย (Par Level)</label>
-                                    <div className="flex items-center gap-2">
-                                        <input 
-                                            type="number"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" 
-                                            value={formData.par_level}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                par_level: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                        />
-                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
-                                    </div>
-                                </div>
-                            </div>
+                                {isEdit && (
+                                    <p className="text-xs text-[oklch(55%_0.010_28)] leading-relaxed">
+                                        แก้จำนวนคงเหลือได้จากปุ่มรับเข้า / เบิกออกที่หน้าสต๊อก เพื่อให้ประวัติถูกต้อง
+                                    </p>
+                                )}
+                            </section>
 
                             {/* Image */}
-                            <div className="pt-2">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">รูปสินค้า</label>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
+                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                                <h3 className={sectionTitle}>รูปวัตถุดิบ</h3>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-16 h-16 rounded-md overflow-hidden border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] shrink-0">
                                         {formData.image_url ? (
-                                            <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview"/>
+                                            <img src={formData.image_url} className="w-full h-full object-cover" alt="" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-[11px] text-gray-400">ยังไม่มีรูป</div>
+                                            <div className="w-full h-full flex items-center justify-center text-[11px] text-[oklch(55%_0.010_28)]">ไม่มีรูป</div>
                                         )}
                                     </div>
-                                    <label className="flex-1 cursor-pointer">
-                                        <div className="flex items-center justify-center gap-2 p-3 bg-white border border-dashed border-gray-300 rounded-xl hover:bg-gray-50">
-                                            <span className="text-sm">อัพโหลดรูปใหม่</span>
-                                        </div>
+                                    <label className={`h-11 px-4 inline-flex items-center rounded-md border border-dashed border-[oklch(78%_0.012_28)] text-sm ${ink} cursor-pointer hover:border-[oklch(18%_0.012_28)] transition-colors`}>
+                                        {formData.image_url ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
                                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                                     </label>
                                 </div>
-                            </div>
+                            </section>
                         </>
                     )}
 
                     {/* Costing Tab */}
                     {activeTab === 'costing' && (
-                        <div className="space-y-6">
+                        <>
                             {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && (
-                                <div className="bg-red-50 border border-red-200 p-3 rounded-xl flex gap-3 items-start animate-in slide-in-from-top-2">
-                                    <div className="flex-1">
-                                        <div className="text-sm font-bold text-red-800">คำเตือน: การแปลงหน่วยข้ามประเภท</div>
-                                        <p className="text-xs text-red-700">
-                                            หน่วยซื้อ ({formData.pack_unit}) และหน่วยใช้จริง ({formData.usage_unit}) เป็นคนละประเภทกัน (เช่น น้ำหนักกับปริมาตร) 
-                                            จำเป็นต้องระบุตัวแปลงหน่วย (Conversion Factor) ตามน้ำหนักจริงหรือความหนาแน่น ห้ามใช้ค่าเริ่มต้นเป็น 1 หากไม่ใช่สัดส่วน 1:1 จริง
-                                        </p>
-                                    </div>
+                                <div className="border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] px-3 py-2.5">
+                                    <p className={`text-sm ${ink} leading-relaxed`}>
+                                        หน่วยซื้อ ({unitLabel(formData.pack_unit)}) กับหน่วยใช้ ({unitLabel(formData.usage_unit)}) เป็นคนละประเภท ใส่ตัวแปลงหน่วยตามของจริง เช่น 1 ขวด = 750 มล.
+                                    </p>
                                 </div>
                             )}
-                            
-                            {/* 1. Buying Info */}
-                            <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
-                                <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2"> 1. ข้อมูลการซื้อ (Buying) & ประเภท
-                                </h3>
-                                <div className="mb-3 p-3 bg-white rounded-lg border border-blue-200 flex items-center gap-3">
-                                    <input 
-                                        type="checkbox" 
-                                        id="isBase"
-                                        className="w-5 h-5 accent-blue-600"
+
+                            {/* 1. Buying */}
+                            <section className="space-y-3">
+                                <h3 className={sectionTitle}>1 · การซื้อ</h3>
+                                <label className="flex items-start gap-3 p-3 rounded-md border border-[oklch(85%_0.012_28)] cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-0.5 w-4 h-4 accent-[oklch(18%_0.012_28)]"
                                         checked={formData.is_base_recipe}
                                         onChange={e => setFormData({ ...formData, is_base_recipe: e.target.checked })}
                                     />
-                                    <label htmlFor="isBase" className="text-sm font-bold text-gray-700">
-                                        เป็นสินค้าสูตร (Base Recipe) 
-                                        <span className="block text-xs text-gray-400 font-normal">ผลิตเองจากวัตถุดิบอื่น (เช่น ซอส, พริกแกง)</span>
-                                    </label>
+                                    <span>
+                                        <span className={`block text-sm font-medium ${ink}`}>ทำเองในร้าน (สูตรพื้นฐาน)</span>
+                                        <span className="block text-xs text-[oklch(55%_0.010_28)]">ผลิตจากวัตถุดิบอื่น เช่น ซอส พริกแกง</span>
+                                    </span>
+                                </label>
+                                <div>
+                                    <label className={labelCls} htmlFor="stock-cost">ราคาซื้อต่อแพ็ค (บาท)</label>
+                                    <input
+                                        id="stock-cost"
+                                        type="number"
+                                        inputMode="decimal"
+                                        className={`${inputCls} tabular-nums text-lg font-semibold`}
+                                        value={formData.cost_price}
+                                        onChange={numberChange('cost_price')}
+                                        placeholder="0.00"
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div className="col-span-2">
-                                        <label className="text-xs text-gray-500">ราคาซื้อต่อแพ็ค (บาท)</label>
-                                        <input 
-                                            type="number" 
-                                            className="w-full bg-white border border-blue-200 rounded-lg p-2 text-lg font-bold text-blue-700"
-                                            value={formData.cost_price}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                            placeholder="0.00"
-                                        />
-                                    </div>
                                     <div>
-                                        <label className="text-xs text-gray-500">ปริมาณ (Size)</label>
-                                        <input 
-                                            type="number" 
-                                            className="w-full bg-white border border-blue-200 rounded-lg p-2"
+                                        <label className={labelCls} htmlFor="stock-pack-size">จำนวนต่อการซื้อ</label>
+                                        <input
+                                            id="stock-pack-size"
+                                            type="number"
+                                            inputMode="decimal"
+                                            className={`${inputCls} tabular-nums`}
                                             value={formData.pack_size}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
+                                            onChange={numberChange('pack_size')}
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500">หน่วยซื้อ (Unit)</label>
-                                        <select 
-                                            className="w-full bg-white border border-blue-200 rounded-lg p-2"
+                                        <label className={labelCls} htmlFor="stock-pack-unit">หน่วยซื้อ</label>
+                                        <select
+                                            id="stock-pack-unit"
+                                            className={inputCls}
                                             value={formData.pack_unit}
                                             onChange={e => handleUnitChange('pack_unit', e.target.value)}
                                         >
@@ -562,127 +512,111 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         </select>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
 
-                            {/* 2. Usage Info */}
-                            <div className="bg-green-50 p-4 rounded-xl space-y-3 border border-green-100">
-                                <h3 className="text-sm font-bold text-green-800 flex items-center gap-2"> 2. หน่วยที่ใช้ในสูตร (Usage)
-                                </h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="col-span-2">
-                                        <label className="text-xs text-gray-500 block mb-1">หน่วยที่ใช้จริง (เช่น กรัม, มิลลิลิตร)</label>
-                                        <select 
-                                            className="w-full bg-white border border-green-200 rounded-lg p-2 font-bold"
-                                            value={formData.usage_unit}
-                                            onChange={e => handleUnitChange('usage_unit', e.target.value)}
-                                        >
-                                            {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-                                        </select>
-                                    </div>
-                                    
-                                    <div className="col-span-2 bg-white p-3 rounded-lg border border-green-200">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <label className="text-xs text-gray-500">ตัวแปลงหน่วย (Conversion)</label>
-                                            <span className="text-[10px] text-gray-400">1 {formData.pack_unit} = ? {formData.usage_unit}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-gray-400">×</span>
-                                            <input 
-                                                type="number" 
-                                                className="flex-1 border-b border-green-300 text-center py-1 font-bold text-green-700 outline-none"
-                                                value={formData.conversion_factor}
-                                                onChange={e => setFormData({ 
-                                                    ...formData, 
-                                                    conversion_factor: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                                })}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 3. Yield Info */}
-                            <div className="bg-orange-50 p-4 rounded-xl space-y-3 border border-orange-100">
-                                <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2"> 3. ประสิทธิภาพ (Yield %)
-                                </h3>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <input 
-                                            type="range" 
-                                            min="1" max="100" 
-                                            value={formData.yield_percent}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                yield_percent: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                            className="w-full accent-orange-500"
-                                        />
-                                    </div>
-                                    <div className="w-16">
-                                        <input 
-                                            type="number" 
-                                            className="w-full bg-white border border-orange-200 rounded-lg p-2 text-center font-bold"
-                                            value={formData.yield_percent}
-                                            onChange={e => setFormData({ 
-                                                ...formData, 
-                                                yield_percent: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                            })}
-                                        />
-                                    </div>
-                                </div>
-                                <p className="text-[10px] text-orange-600">
-                                    *Yield ต่ำกว่า 100% หมายถึงมีการสูญเสีย (เช่น เปลือก, กาก) ทำให้ต้นทุนจริงสูงขึ้น
-                                </p>
-                            </div>
-                            
-                            {/* Sweetener: the sweetness option of a drink scales this ingredient */}
-                            <label className="flex items-start gap-3 p-4 rounded-xl border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="mt-1 w-4 h-4 accent-[oklch(52%_0.16_28)]"
-                                    checked={formData.is_sweetener === true}
-                                    onChange={e => setFormData({ ...formData, is_sweetener: e.target.checked })}
-                                />
-                                <span>
-                                    <span className="block text-sm font-bold text-[oklch(18%_0.012_28)]">สารให้ความหวาน</span>
-                                    <span className="block text-xs text-[oklch(42%_0.010_28)] leading-relaxed">
-                                        เช่น น้ำเชื่อม น้ำตาล นมข้นหวาน น้ำผึ้ง เมื่อลูกค้าเลือก "หวานน้อย" ระบบจะตัดสต๊อกรายการนี้ตามตัวคูณของตัวเลือก (เช่น ครึ่งเดียว)
-                                    </span>
-                                </span>
-                            </label>
-
-                            {/* Yield Alert */}
-                            {formData.yield_percent < 80 && (
-                                <div className="bg-red-50 p-3 rounded-xl border border-red-200 flex gap-3 items-start animate-pulse">
-                                    <div>
-                                        <div className="font-bold text-red-700 text-sm">Yield ต่ำกว่าเกณฑ์ (Loss สูง)</div>
-                                        <div className="text-xs text-red-600">ต้นทุนจริงจะสูงขึ้นมาก โปรดตรวจสอบว่ามีการสูญเสียมากขนาดนี้จริงหรือไม่</div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Result: Real Cost */}
-                            <div className="bg-[#1A1A1A] text-white p-4 rounded-xl flex justify-between items-center shadow-lg">
+                            {/* 2. Usage */}
+                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                                <h3 className={sectionTitle}>2 · หน่วยที่ใช้ในสูตร</h3>
                                 <div>
-                                    <div className="text-xs text-gray-400 mb-1">ต้นทุนจริง (Real Cost)</div>
-                                    <div className="text-2xl font-bold font-mono tracking-tight text-[oklch(97%_0.008_28)]">
-                                        ฿{realCost.toFixed(4)}
-                                    </div>
-                                    <div className="text-[10px] text-gray-400">ต่อ 1 {formData.usage_unit}</div>
+                                    <label className={labelCls} htmlFor="stock-usage-unit">หน่วยที่ใช้จริง</label>
+                                    <select
+                                        id="stock-usage-unit"
+                                        className={inputCls}
+                                        value={formData.usage_unit}
+                                        onChange={e => handleUnitChange('usage_unit', e.target.value)}
+                                    >
+                                        {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                                    </select>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-[10px] text-gray-500">Price / (Pack × Factor × Yield)</div>
+                                <div>
+                                    <label className={labelCls} htmlFor="stock-conversion">ตัวแปลงหน่วย</label>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-sm ${ink} whitespace-nowrap`}>1 {unitLabel(formData.pack_unit)} =</span>
+                                        <input
+                                            id="stock-conversion"
+                                            type="number"
+                                            inputMode="decimal"
+                                            className={`${inputCls} tabular-nums text-center font-semibold`}
+                                            value={formData.conversion_factor}
+                                            onChange={numberChange('conversion_factor')}
+                                        />
+                                        <span className={`text-sm ${ink} whitespace-nowrap`}>{unitLabel(formData.usage_unit)}</span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* 3. Yield */}
+                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                                <h3 className={sectionTitle}>3 · ส่วนที่ใช้ได้จริง (Yield)</h3>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="range"
+                                        min="1" max="100"
+                                        aria-label="Yield %"
+                                        value={formData.yield_percent}
+                                        onChange={numberChange('yield_percent')}
+                                        className="flex-1"
+                                        style={{ accentColor: 'oklch(18% 0.012 28)' }}
+                                    />
+                                    <div className="flex items-center gap-1.5 w-24">
+                                        <input
+                                            type="number"
+                                            inputMode="decimal"
+                                            aria-label="Yield %"
+                                            className={`${inputCls} tabular-nums text-center`}
+                                            value={formData.yield_percent}
+                                            onChange={numberChange('yield_percent')}
+                                        />
+                                        <span className={unitSuffix}>%</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-[oklch(55%_0.010_28)] leading-relaxed">
+                                    ต่ำกว่า 100% เมื่อมีส่วนที่ทิ้ง เช่น เปลือก กาก ต้นทุนต่อหน่วยจริงจะสูงขึ้น
+                                </p>
+                                {formData.yield_percent < 80 && (
+                                    <p className="text-sm text-[oklch(52%_0.16_28)]">
+                                        Yield ต่ำกว่า 80% ตรวจว่าสูญเสียมากขนาดนี้จริงหรือไม่
+                                    </p>
+                                )}
+                            </section>
+
+                            {/* Sweetener: the sweetness option of a drink scales this ingredient */}
+                            <section className="pt-5 border-t border-[oklch(90%_0.008_28)]">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-0.5 w-4 h-4 accent-[oklch(18%_0.012_28)]"
+                                        checked={formData.is_sweetener === true}
+                                        onChange={e => setFormData({ ...formData, is_sweetener: e.target.checked })}
+                                    />
+                                    <span>
+                                        <span className={`block text-sm font-medium ${ink}`}>สารให้ความหวาน</span>
+                                        <span className="block text-xs text-[oklch(55%_0.010_28)] leading-relaxed">
+                                            เช่น น้ำเชื่อม น้ำตาล นมข้นหวาน น้ำผึ้ง เมื่อลูกค้าเลือก "หวานน้อย" ระบบตัดสต๊อกรายการนี้ตามตัวคูณของตัวเลือก
+                                        </span>
+                                    </span>
+                                </label>
+                            </section>
+
+                            {/* Result: real cost per usage unit */}
+                            <div className="flex items-baseline justify-between gap-3 p-4 rounded-md bg-[oklch(94%_0.010_28)]">
+                                <div>
+                                    <div className="text-xs text-[oklch(42%_0.010_28)]">ต้นทุนจริงต่อ 1 {unitLabel(formData.usage_unit)}</div>
+                                    <div className="text-xs text-[oklch(55%_0.010_28)]">ราคา ÷ (จำนวน × ตัวแปลง × yield)</div>
+                                </div>
+                                <div className={`text-2xl font-semibold tabular-nums ${ink}`}>
+                                    ฿{realCost.toFixed(4)}
                                 </div>
                             </div>
-
-                        </div>
+                        </>
                     )}
 
                 </div>
 
-                <div className="p-4 border-t border-gray-100 flex gap-2">
+                <div className="px-5 py-4 border-t border-[oklch(85%_0.012_28)] flex items-center gap-3">
                     {isEdit && (
-                        <button 
+                        <button
+                            type="button"
                             onClick={async () => {
                                 if (confirm('คุณแน่ใจหรือไม่ที่จะลบสินค้านี้? การลบจะไม่สามารถกู้คืนได้')) {
                                     setLoading(true);
@@ -701,17 +635,18 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 }
                             }}
                             disabled={loading}
-                            className="bg-red-50 text-red-600 p-4 rounded-xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center"
+                            className="h-12 px-4 text-sm font-semibold text-[oklch(52%_0.16_28)] hover:underline disabled:opacity-50"
                         >
                             ลบ
                         </button>
                     )}
-                    <button 
+                    <button
+                        type="button"
                         onClick={handleSave}
                         disabled={loading}
-                        className="flex-1 bg-[#1A1A1A] text-white p-4 rounded-xl font-bold hover:bg-black transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 h-12 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[15px] font-semibold hover:bg-[oklch(25%_0.012_28)] transition-colors disabled:opacity-60"
                     >
-                        {loading ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                        {loading ? 'กำลังบันทึก…' : 'บันทึก'}
                     </button>
                 </div>
             </div>
