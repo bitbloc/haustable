@@ -35,7 +35,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         usage_unit: item?.usage_unit || 'unit',    // Unit used in recipe
         conversion_factor: item?.conversion_factor || 1, // 1 pack_unit = X usage_unit
         yield_percent: 100, // Usable %
-        is_base_recipe: false
+        is_base_recipe: false,
+        is_sweetener: item?.is_sweetener || false // scaled by the sweetness option of a sale
     });
     
     const [showScanner, setShowScanner] = useState(false);
@@ -60,7 +61,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 usage_unit: item.usage_unit || item.unit || 'unit', // migration fallback
                 conversion_factor: item.conversion_factor || 1,
                 yield_percent: item.yield_percent || 100,
-                is_base_recipe: item.is_base_recipe || false
+                is_base_recipe: item.is_base_recipe || false,
+                is_sweetener: item.is_sweetener || false
             });
         }
     }, [item]);
@@ -614,6 +616,22 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </p>
                             </div>
                             
+                            {/* Sweetener: the sweetness option of a drink scales this ingredient */}
+                            <label className="flex items-start gap-3 p-4 rounded-xl border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="mt-1 w-4 h-4 accent-[oklch(52%_0.16_28)]"
+                                    checked={formData.is_sweetener === true}
+                                    onChange={e => setFormData({ ...formData, is_sweetener: e.target.checked })}
+                                />
+                                <span>
+                                    <span className="block text-sm font-bold text-[oklch(18%_0.012_28)]">สารให้ความหวาน</span>
+                                    <span className="block text-xs text-[oklch(42%_0.010_28)] leading-relaxed">
+                                        เช่น น้ำเชื่อม น้ำตาล นมข้นหวาน น้ำผึ้ง เมื่อลูกค้าเลือก "หวานน้อย" ระบบจะตัดสต๊อกรายการนี้ตามตัวคูณของตัวเลือก (เช่น ครึ่งเดียว)
+                                    </span>
+                                </span>
+                            </label>
+
                             {/* Yield Alert */}
                             {formData.yield_percent < 80 && (
                                 <div className="bg-red-50 p-3 rounded-xl border border-red-200 flex gap-3 items-start animate-pulse">

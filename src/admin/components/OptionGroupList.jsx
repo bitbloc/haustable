@@ -42,6 +42,14 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     )
 }
 
+// Blank means "no effect on sweeteners"; otherwise a 0-5 multiplier (0 none, 0.5 half, 1 normal)
+export function toSweetenerFactor(raw) {
+    if (raw === null || raw === undefined || String(raw).trim() === '') return null
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return null
+    return Math.min(5, Math.max(0, Math.round(n * 1000) / 1000))
+}
+
 export default function OptionGroupList() {
     const [groups, setGroups] = useState([])
     const [linkedCounts, setLinkedCounts] = useState({})
@@ -186,9 +194,9 @@ export default function OptionGroupList() {
             max_selection: 1
         })
         setChoices([
-            { id: `temp_${Date.now()}_1`, name: 'หวานปกติ (100%)', price_modifier: 0, is_available: true, display_order: 0 },
-            { id: `temp_${Date.now()}_2`, name: 'หวานน้อย (50%)', price_modifier: 0, is_available: true, display_order: 1 },
-            { id: `temp_${Date.now()}_3`, name: 'ไม่หวาน (0%)', price_modifier: 0, is_available: true, display_order: 2 }
+            { id: `temp_${Date.now()}_1`, name: 'หวานปกติ (100%)', price_modifier: 0, sweetener_factor: 1, is_available: true, display_order: 0 },
+            { id: `temp_${Date.now()}_2`, name: 'หวานน้อย (50%)', price_modifier: 0, sweetener_factor: 0.5, is_available: true, display_order: 1 },
+            { id: `temp_${Date.now()}_3`, name: 'ไม่หวาน (0%)', price_modifier: 0, sweetener_factor: 0, is_available: true, display_order: 2 }
         ])
         setIsModalOpen(true)
     }
@@ -296,6 +304,7 @@ export default function OptionGroupList() {
                         group_id: groupId,
                         name: c.name.trim(),
                         price_modifier: parseFloat(c.price_modifier || 0),
+                        sweetener_factor: toSweetenerFactor(c.sweetener_factor),
                         is_available: c.is_available !== false,
                         display_order: existingChoices.length + idx
                     }))
@@ -311,6 +320,7 @@ export default function OptionGroupList() {
                             .update({
                                 name: c.name.trim(),
                                 price_modifier: parseFloat(c.price_modifier || 0),
+                                sweetener_factor: toSweetenerFactor(c.sweetener_factor),
                                 is_available: c.is_available !== false,
                                 display_order: idx
                             })
@@ -335,6 +345,9 @@ export default function OptionGroupList() {
             { id: `temp_${Date.now()}`, name: '', price_modifier: 0, is_available: true, display_order: prev.length }
         ])
     }
+
+    // Sweetness controls appear for a sweetness group, or wherever a multiplier is already set
+    const showSweetness = /หวาน|sweet/i.test(formData.name || '') || choices.some(c => c.sweetener_factor !== null && c.sweetener_factor !== undefined && c.sweetener_factor !== '')
 
     const updateChoice = (index, field, value) => {
         setChoices(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
@@ -480,6 +493,9 @@ export default function OptionGroupList() {
                                                         </div>
                                                         <span className=" font-bold text-[oklch(52%_0.16_28)] shrink-0 ml-2 tabular-nums">
                                                             {c.price_modifier > 0 ? `+฿${c.price_modifier}` : 'ฟรี'}
+                                                            {c.sweetener_factor !== null && c.sweetener_factor !== undefined && (
+                                                                <span className="ml-2 font-normal text-xs text-[oklch(42%_0.010_28)]">หวาน ×{Number(c.sweetener_factor)}</span>
+                                                            )}
                                                         </span>
                                                         </div>
                                                         {choiceIngredients && (
@@ -676,7 +692,7 @@ export default function OptionGroupList() {
                                                 value={choice.name}
                                                 onChange={e => updateChoice(idx, 'name', e.target.value)}
                                                 placeholder="ชื่อตัวเลือก (เช่น หวาน 50%, นมข้าวโอ๊ต)"
-                                                className="flex-1 text-sm text-[oklch(18%_0.012_28)] outline-none bg-transparent placeholder-[oklch(55%_0.010_28)] border-b border-transparent focus:border-[oklch(52%_0.16_28)] py-1"
+                                                className="flex-1 min-w-0 text-sm text-[oklch(18%_0.012_28)] outline-none bg-transparent placeholder-[oklch(55%_0.010_28)] border-b border-transparent focus:border-[oklch(52%_0.16_28)] py-1"
                                                 onKeyDown={e => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault()
@@ -686,8 +702,8 @@ export default function OptionGroupList() {
                                             />
 
                                             {/* Price Modifier */}
-                                            <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2 py-1">
-                                                <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)]">+฿</span>
+                                            <div className="flex items-center gap-1 shrink-0 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2 py-1">
+                                                <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)] whitespace-nowrap">+฿</span>
                                                 <input
                                                     type="number"
                                                     value={choice.price_modifier}
@@ -696,6 +712,27 @@ export default function OptionGroupList() {
                                                     placeholder="0"
                                                 />
                                             </div>
+
+                                            {/* Sweetness multiplier: scales sweetener ingredients in stock (blank = no effect) */}
+                                            {showSweetness && (
+                                                <label
+                                                    className="flex items-center gap-1 shrink-0 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2 py-1"
+                                                    title="ตัวคูณสารให้ความหวานในการตัดสต๊อก เช่น ไม่หวาน 0, หวานน้อย 0.5, ปกติ 1, หวานมาก 1.2 · เว้นว่าง = ไม่ปรับ"
+                                                >
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)] whitespace-nowrap">หวาน ×</span>
+                                                    <input
+                                                        type="number"
+                                                        inputMode="decimal"
+                                                        step="0.1"
+                                                        min="0"
+                                                        max="5"
+                                                        value={choice.sweetener_factor ?? ''}
+                                                        onChange={e => updateChoice(idx, 'sweetener_factor', e.target.value)}
+                                                        className="w-12 bg-transparent text-sm outline-none text-right tabular-nums"
+                                                        placeholder="–"
+                                                    />
+                                                </label>
+                                            )}
 
                                             {/* In Stock Toggle */}
                                             <button

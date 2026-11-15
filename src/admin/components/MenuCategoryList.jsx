@@ -198,6 +198,16 @@ export default function MenuCategoryList() {
                     throw new Error('ไม่มีสิทธิ์ในการแก้ไขหมวดหมู่ (Permission Denied ในระบบ RLS)')
                 }
 
+                // Many screens (Menu cost, Recipe Lab, SOP, reports) still read the item's text
+                // category, so a rename must reach the items too or they keep showing the old name
+                if (editingCategory.name !== trimmedName) {
+                    const { error: renameErr } = await supabase
+                        .from('menu_items')
+                        .update({ category: trimmedName })
+                        .eq('category_id', editingCategory.id)
+                    if (renameErr) toast.warning('เปลี่ยนชื่อหมวดแล้ว แต่อัปเดตชื่อหมวดในเมนูไม่สำเร็จ: ' + renameErr.message)
+                }
+
                 if (editingCategory.is_drink_stamp_eligible !== formData.is_drink_stamp_eligible) {
                     await supabase
                         .from('menu_items')
