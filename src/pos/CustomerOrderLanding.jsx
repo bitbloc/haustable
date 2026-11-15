@@ -637,12 +637,16 @@ export default function CustomerOrderLanding() {
 
             if (effectiveUserId) {
                 const freshProf = await fetchFreshProfile(effectiveUserId);
-                if (freshProf && bookingData && bookingData.user_id !== effectiveUserId) {
-                    await supabase
+                // Only claim a bill that has no member yet. Anyone at the table (a friend, or a phone
+                // still holding last visit's profile) opening the QR must not take over someone
+                // else's bill, its points or its receipt name. Same rule as submitting an order.
+                if (freshProf && bookingData && !bookingData.user_id) {
+                    const { error: linkErr } = await supabase
                         .from('bookings')
                         .update({ user_id: effectiveUserId })
-                        .eq('id', bookingData.id);
-                    bookingData.user_id = effectiveUserId;
+                        .eq('id', bookingData.id)
+                        .is('user_id', null); // re-checked in the database, in case two phones race
+                    if (!linkErr) bookingData.user_id = effectiveUserId;
                 }
             }
 
@@ -710,9 +714,9 @@ export default function CustomerOrderLanding() {
                 setMemberProfile(data);
                 localStorage.setItem('customer_member_profile', JSON.stringify(data));
                 window.dispatchEvent(new Event('customer_profile_updated'));
-                if (activeBooking) {
-                    await supabase.from('bookings').update({ user_id: data.id }).eq('id', activeBooking.id);
-                    setActiveBooking(prev => prev ? { ...prev, user_id: data.id } : null);
+                if (activeBooking && !activeBooking.user_id) {
+                    const { error: linkErr } = await supabase.from('bookings').update({ user_id: data.id }).eq('id', activeBooking.id).is('user_id', null);
+                    if (!linkErr) setActiveBooking(prev => prev ? { ...prev, user_id: data.id } : null);
                 }
                 toast.success(tt('toastMemberWelcome', { name: data.display_name || tt('toastMemberFallback') }));
                 setShowMemberModal(false);
@@ -792,9 +796,10 @@ export default function CustomerOrderLanding() {
             setMemberProfile(savedProfile);
             localStorage.setItem('customer_member_profile', JSON.stringify(savedProfile));
             window.dispatchEvent(new Event('customer_profile_updated'));
-            if (activeBooking) {
+            if (activeBooking && !activeBooking.user_id) {
                 try {
-                    await supabase.from('bookings').update({ user_id: savedProfile.id }).eq('id', activeBooking.id);
+                    const { error: linkErr } = await supabase.from('bookings').update({ user_id: savedProfile.id }).eq('id', activeBooking.id).is('user_id', null);
+                    if (linkErr) throw linkErr;
                     setActiveBooking(prev => prev ? { ...prev, user_id: savedProfile.id } : null);
                 } catch (bErr) {
                     console.warn('Booking user_id update warning:', bErr);
