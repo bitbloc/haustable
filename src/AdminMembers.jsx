@@ -549,7 +549,7 @@ export default function AdminMembers() {
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={member.id}
-                                className={`bg-white border rounded-sm p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                                className={`bg-white border rounded-sm p-4 transition-all flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 ${
                                     isMaster 
                                         ? 'border-[oklch(52%_0.16_28)] shadow-2xs bg-[oklch(99%_0.004_28)]' 
                                         : isCustom

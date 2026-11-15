@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import AdminPageHeader, { AdminTabs } from '../../components/admin/AdminPageHeader'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useHausmadeAdmin } from '../../hooks/useHausmadeAdmin'
@@ -347,64 +348,35 @@ export default function HausmadeAdminPage() {
     })
 
     return (
-        <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-mono p-4 sm:p-6 flex flex-col gap-6 selection:bg-[oklch(52%_0.16_28)] selection:text-white">
-            {/* Top Admin Header Bar */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
-                <div>
-                    <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest block">
-                        // DEDICATED BRAND BACKOFFICE
-                    </span>
-                    <h1 className="text-2xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-0.5">
-                        [ HAUSMADE ADMIN SYSTEM ]
-                    </h1>
-                </div>
-
-                {/* Header Actions & Tab Switcher (Tabular Brutalist Cell Grid) */}
-                <div className="flex items-center gap-3 flex-wrap max-w-full">
+        <div className="bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-mono flex flex-col gap-6 selection:bg-[oklch(52%_0.16_28)] selection:text-white">
+            <AdminPageHeader
+                className=""
+                title="HAUSMADE Retail"
+                description="คิวจัดส่งออเดอร์ สินค้าและ Pre-Order และการตั้งค่าการจัดส่ง"
+                actions={
                     <a
                         href="/hausmade"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3.5 py-2 text-xs font-bold uppercase border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors cursor-pointer rounded-xs"
+                        className="admin-btn"
                         title="เปิดหน้าร้าน HAUSMADE สำหรับลูกค้าในแท็บใหม่"
                     >
-                        [ SHOP ↗ ]
+                        เปิดหน้าร้าน ↗
                     </a>
-
-                    <div className="inline-flex max-w-full items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs overflow-x-auto no-scrollbar divide-x divide-[oklch(85%_0.012_28)]">
-                        <button
-                            onClick={() => setActiveTab('orders')}
-                            className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
-                                activeTab === 'orders'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
-                            }`}
-                        >
-                            [ FULFILLMENT QUEUE ]
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('catalog')}
-                            className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
-                                activeTab === 'catalog'
-                                    ? 'bg-[oklch(52%_0.16_28)] text-white'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
-                            }`}
-                        >
-                            [ CATALOG & PRODUCTS ]
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('settings')}
-                            className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
-                                activeTab === 'settings'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
-                            }`}
-                        >
-                            [ SHIPPING & SENDER SETTINGS ]
-                        </button>
-                    </div>
-                </div>
-            </div>
+                }
+            >
+                <AdminTabs
+                    ariaLabel="HAUSMADE Retail"
+                    layoutId="hausmade-tabs"
+                    tabs={[
+                        { id: 'orders', label: 'Fulfillment queue' },
+                        { id: 'catalog', label: 'Catalog & products' },
+                        { id: 'settings', label: 'Shipping & sender' }
+                    ]}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
+            </AdminPageHeader>
 
             {/* Content Area */}
             {activeTab === 'orders' ? (

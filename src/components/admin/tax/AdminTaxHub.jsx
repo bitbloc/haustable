@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react';
+import AdminPageHeader, { AdminTabs } from '../AdminPageHeader'
 import { 
     FileText, 
     FileSpreadsheet, 
@@ -380,156 +381,72 @@ export default function AdminTaxHub() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] p-3 sm:p-6 lg:p-8 font-sans">
+        <div className="bg-[var(--color-paper)] text-[var(--color-ink)] font-sans">
             <div className="max-w-7xl mx-auto space-y-6">
                 
-                {/* 1. Structural Header: Dieter Rams Tabular Container */}
-                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
-                    <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--color-ink)] text-[var(--color-paper)]">
-                                TAX//OPERATING SYSTEM
-                            </span>
-                            <span className="font-mono text-[10px] text-[var(--color-neutral)] uppercase tracking-wider">
-                                {isVatRegistered ? '[STATUS: VAT 7% REGISTERED]' : '[STATUS: NON-VAT / OFFICIAL RECEIPTS]'}
-                            </span>
-                        </div>
-                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-ink)] font-mono uppercase">
-                            TAX MANAGEMENT &amp; INVOICE WORKBENCH
-                        </h1>
-                        <p className="text-xs text-[var(--color-neutral)] font-mono max-w-2xl leading-relaxed">
-                            ระบบออกเอกสารภาษี ใบเสร็จรับเงิน/ใบกำกับภาษีเต็มรูป (ม.86/4 &amp; 105), บันทึกค่าใช้จ่าย Makro ด้วย AI, รายงานภาษีขาย (ภ.พ.30) และ 50 ทวิ
-                        </p>
-                    </div>
-
-                    {/* Quick CTA Actions */}
-                    <div className="flex items-center gap-2 flex-wrap font-mono text-xs">
+                <AdminPageHeader
+                    className=""
+                    title="Tax & Invoices"
+                    description="ใบเสร็จและใบกำกับภาษีเต็มรูป ค่าใช้จ่าย Makro ภ.พ.30 และ 50 ทวิ"
+                    meta={isVatRegistered ? 'จดทะเบียน VAT 7%' : 'ไม่ได้จด VAT · ออกใบเสร็จรับเงิน'}
+                    actions={<>
                         <a
                             href="/manuals/thai_tax_guide_and_system_manual.html"
                             target="_blank"
                             rel="noreferrer"
-                            className="px-3 py-2 bg-[var(--color-paper)] hover:bg-white text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-[11px] flex items-center gap-1.5 transition-colors"
+                            className="admin-btn"
                         >
-                            <BookOpen size={14} className="text-[var(--color-neutral)]" />
-                            <span>MANUAL (PDF)</span>
+                            คู่มือ
                         </a>
-
                         <button
+                            type="button"
                             onClick={() => setShowMonthlyExporter(true)}
-                            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                            className="admin-btn"
                             title="Export and print all monthly receipts with B&W auto-crop"
                         >
-                            <FileText size={14} className="text-emerald-300" />
-                            <span>🧾 EXPORT MONTHLY TAX (จัดพิมพ์ทั้งเดือน)</span>
+                            พิมพ์เอกสารทั้งเดือน
                         </button>
-
-                        <button
-                            onClick={() => setShowReceiptPicker(true)}
-                            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                        >
-                            <Receipt size={14} />
-                            <span>+ ออกจากบิล POS</span>
+                        <button type="button" onClick={() => setShowReceiptPicker(true)} className="admin-btn">
+                            ออกจากบิล POS
                         </button>
-
                         <button
+                            type="button"
                             onClick={() => {
                                 setEditingExpense(null);
                                 setShowExpenseModal(true);
                             }}
-                            className="px-3.5 py-2 bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-white font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                            className="admin-btn"
                         >
-                            <ShoppingCart size={14} />
-                            <span>+ LOG EXPENSE (MAKRO)</span>
+                            บันทึกค่าใช้จ่าย
                         </button>
-
                         <button
+                            type="button"
                             onClick={() => {
                                 setEditingInvoice(null);
                                 setSelectedBookingForInvoice(null);
                                 setShowInvoiceModal(true);
                             }}
-                            className="px-4 py-2 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                            className="admin-btn is-primary"
                         >
-                            <Plus size={15} />
-                            <span>{isVatRegistered ? '+ NEW TAX INVOICE' : '+ NEW RECEIPT'}</span>
+                            {isVatRegistered ? 'ใบกำกับภาษีใหม่' : 'ใบเสร็จใหม่'}
                         </button>
-                    </div>
-                </div>
-
-                {/* 2. Structural Tab Navigation Strip */}
-                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0 divide-[var(--color-rule)] font-mono text-xs font-bold">
-                    <button
-                        onClick={() => setActiveTab('cash_ledger')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'cash_ledger' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <Scale size={14} className="text-amber-500" />
-                        <span>CASH &amp; TAX P&amp;L (เงินสดรับ-จ่าย)</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('sales_tax')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'sales_tax' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <FileSpreadsheet size={14} />
-                        <span>ALL SALES &amp; BILLS (บิลขายทั้งหมด)</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('invoices')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'invoices' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <Receipt size={14} />
-                        <span>TAX INVOICES ({invoices.length})</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('expenses')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'expenses' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <ShoppingCart size={14} />
-                        <span>EXPENSES &amp; MAKRO</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('wht')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'wht' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <FileText size={14} />
-                        <span>WHT 50 ทวิ</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('settings')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'settings' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <Settings size={14} />
-                        <span>TAX CONFIG</span>
-                    </button>
-                </div>
+                    </>}
+                >
+                    <AdminTabs
+                        ariaLabel="Tax & Invoices"
+                        layoutId="tax-tabs"
+                        tabs={[
+                            { id: 'cash_ledger', label: 'Cash & tax P&L' },
+                            { id: 'sales_tax', label: 'Sales & bills' },
+                            { id: 'invoices', label: 'Tax invoices', count: invoices.length },
+                            { id: 'expenses', label: 'Expenses & Makro' },
+                            { id: 'wht', label: 'WHT 50 ทวิ' },
+                            { id: 'settings', label: 'Tax config' }
+                        ]}
+                        active={activeTab}
+                        onChange={setActiveTab}
+                    />
+                </AdminPageHeader>
 
                 {/* 3. SUB-TAB VIEWPORT */}
 

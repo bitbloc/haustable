@@ -43,92 +43,261 @@
   background: var(--ram-ink-muted);
 }
 
-/* --- Navigation Sidebar & Menus --- */
+/* --- Shell: sidebar on the page ground, one hairline, neutral active pill --- */
 .admin-sidebar {
-  background-color: var(--ram-paper);
-  border-right: 1px solid var(--ram-rule);
-  padding: 1.25rem 1rem;
-  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1), padding 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  width: 240px;
+  padding: 16px 12px;
+  background-color: var(--ram-canvas);
+  border-right: 1px solid var(--ram-rule-light);
+  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.admin-sidebar-collapsed {
-  padding: 1rem 0.5rem !important;
+.admin-sidebar.is-collapsed {
+  width: 64px;
+  padding: 16px 8px;
 }
 
-.admin-sidebar-item {
+.admin-main {
+  transition: margin-left 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-nav-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  min-height: 42px;
-  border-radius: 4px;
-  font-family: var(--ram-font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ram-ink-muted);
-  border: 1px solid transparent;
-  transition: all 150ms ease;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+  color: oklch(42% 0.010 28);
+  transition: color 120ms ease, background-color 120ms ease;
 }
 
-.admin-sidebar-item:hover {
+.admin-nav-item.starts-group {
+  margin-top: 12px;
+}
+
+.admin-nav-item:hover {
   color: var(--ram-ink);
-  background-color: oklch(94% 0.010 28);
-  border-color: var(--ram-rule);
+  background-color: oklch(95% 0.008 28);
 }
 
-.admin-sidebar-item.is-active {
-  color: #ffffff;
-  background-color: var(--ram-ink);
-  border-color: var(--ram-ink);
+.admin-nav-item:focus-visible,
+.admin-icon-btn:focus-visible,
+.admin-link-btn:focus-visible,
+.admin-pending:focus-visible {
+  outline: 2px solid oklch(60% 0.15 28);
+  outline-offset: 2px;
 }
 
-/* Mobile top navigation */
-.admin-mobile-nav {
-  background-color: var(--ram-paper);
-  border-bottom: 1px solid var(--ram-rule);
-  min-height: 54px;
-}
-
-/* Touch optimization for tablet & mobile */
-@media (max-width: 1024px) {
-  .admin-sidebar-item {
-    min-height: 46px;
-    font-size: 0.8125rem;
-  }
-  .admin-mobile-nav button,
-  .admin-mobile-nav a {
-    min-height: 40px;
-    min-width: 40px;
-  }
-}
-
-/* Specific button helper classes if explicitly applied */
-.admin-btn {
-  font-family: var(--ram-font-display);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  border: 1px solid var(--ram-rule);
-  background-color: var(--ram-paper);
+.admin-nav-item.is-active {
   color: var(--ram-ink);
-  padding: 0.5rem 1rem;
-  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
+  font-weight: 500;
+  background-color: transparent;
+}
+
+.admin-nav-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background-color: oklch(92.5% 0.010 28);
+}
+
+.admin-nav-item.is-locked {
+  color: oklch(55% 0.010 28);
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.admin-nav-item.is-locked:hover {
+  background-color: transparent;
+  color: oklch(55% 0.010 28);
+}
+
+.admin-nav.is-collapsed .admin-nav-item {
+  justify-content: center;
+  padding: 0;
+  min-height: 40px;
+}
+
+.admin-nav-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 20px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ram-canvas);
+  background-color: var(--ram-accent);
+}
+
+.admin-nav-dot {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--ram-accent);
+}
+
+.admin-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px 0 10px;
+  border-top: 1px solid var(--ram-rule-light);
+}
+
+.admin-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 8px;
+  color: oklch(42% 0.010 28);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.admin-icon-btn:hover {
+  color: var(--ram-ink);
+  background-color: oklch(93% 0.010 28);
+}
+
+.admin-icon-btn:active,
+.admin-link-btn:active {
+  transform: translateY(1px);
+}
+
+.admin-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ram-rule);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--ram-ink);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.admin-link-btn:hover {
+  background-color: oklch(94% 0.010 28);
+}
+
+.admin-link-btn.is-primary {
+  border-color: var(--ram-ink);
+  background-color: var(--ram-ink);
+  color: var(--ram-canvas);
+}
+
+.admin-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--ram-accent);
+  background-color: oklch(94% 0.03 28);
+}
+
+.admin-mobile-nav {
+  height: 56px;
+  background-color: var(--ram-canvas);
+  border-bottom: 1px solid var(--ram-rule-light);
+}
+
+/* One short fade per hub. A CSS animation ends visible, so content is never
+   left at opacity 0 when frames are throttled (the old JS-driven wrapper was). */
+.admin-page {
+  animation: admin-page-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes admin-page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 1023px) {
+  .admin-nav-item { min-height: 44px; font-size: 14px; }
+  .admin-icon-btn { width: 40px; height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-page { animation: none; }
+  .admin-sidebar, .admin-main { transition: none; }
+}
+
+/* Buttons for hub title rows. One height, one radius; at most one .is-primary per screen. */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--ram-rule);
+  border-radius: 8px;
+  background-color: transparent;
+  color: var(--ram-ink);
+  font-family: var(--ram-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .admin-btn:hover {
   background-color: oklch(94% 0.010 28);
-  border-color: var(--ram-ink);
 }
 
 .admin-btn:active {
   transform: translateY(1px);
+}
+
+.admin-btn:focus-visible {
+  outline: 2px solid oklch(60% 0.15 28);
+  outline-offset: 2px;
+}
+
+.admin-btn:disabled {
+  color: oklch(50% 0.010 28);
+  cursor: default;
+}
+
+.admin-btn.is-primary {
+  border-color: var(--ram-ink);
+  background-color: var(--ram-ink);
+  color: var(--ram-canvas);
+}
+
+.admin-btn.is-primary:hover {
+  background-color: oklch(28% 0.012 28);
+}
+
+.admin-btn.is-icon {
+  width: 40px;
+  padding: 0;
 }

@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react';
+import AdminPageHeader, { AdminTabs } from './components/admin/AdminPageHeader'
 import { Link } from 'react-router-dom';
 import { Power, FileText, Heart, Terminal, QrCode, Coins, Trash2, AlertTriangle, Download, ArrowLeft, Send } from 'lucide-react';
 import { toast } from 'sonner';
@@ -399,64 +400,31 @@ export default function AdminSettings() {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto pb-12 px-4 pt-2 text-[var(--color-ink)] space-y-6">
-            {/* Top Navigation & Status Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-rule)] pb-3">
-                <div className="flex items-center gap-2">
-                    <Link
-                        to="/pos"
-                        className="inline-flex items-center gap-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors border border-[var(--color-rule)] shadow-2xs"
-                    >
-                        <ArrowLeft size={13} />
+        <div className="max-w-7xl mx-auto pb-12 text-[var(--color-ink)] space-y-6">
+            <AdminPageHeader
+                className=""
+                title="Settings"
+                description={SETTINGS_TABS.find(t => t.id === activeSettingsTab)?.desc}
+                actions={<>
+                    <Link to="/pos" className="admin-btn">
+                        <ArrowLeft size={14} strokeWidth={1.5} />
                         <span>POS</span>
                     </Link>
-                    <Link
-                        to="/staff"
-                        className="inline-flex items-center gap-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors border border-[var(--color-rule)] shadow-2xs"
-                    >
-                        <ArrowLeft size={13} />
+                    <Link to="/staff" className="admin-btn">
+                        <ArrowLeft size={14} strokeWidth={1.5} />
                         <span>Staff</span>
                     </Link>
-                    <span className="text-[var(--color-rule)]">|</span>
-                    <h1 className="text-base font-mono font-bold text-[var(--color-ink)] tracking-tight uppercase">
-                        System Settings
-                    </h1>
-                </div>
-
-                <InstallPWA />
-            </div>
-
-            {/* Neo-Brutalist Tabular Header Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 border border-[var(--color-rule)] divide-x divide-y sm:divide-y-0 divide-[var(--color-rule)] bg-[var(--color-paper)] rounded-xl overflow-hidden shadow-2xs">
-                {SETTINGS_TABS.map((tab) => {
-                    const IconComp = tab.icon;
-                    const isActive = activeSettingsTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setActiveSettingsTab(tab.id)}
-                            className={`p-3 text-left transition-colors cursor-pointer flex flex-col justify-between min-h-[64px] ${
-                                isActive
-                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
-                                    : 'bg-[var(--color-paper)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between w-full">
-                                <span className="text-xs font-mono font-bold tracking-tight block truncate">
-                                    {tab.label}
-                                </span>
-                                <IconComp size={14} className={isActive ? 'text-[var(--color-paper)]' : 'text-[var(--color-neutral)]'} />
-                            </div>
-                            <span className={`text-[9px] font-mono tracking-wider uppercase block truncate mt-1 ${
-                                isActive ? 'text-[var(--color-paper)]/75' : 'text-[var(--color-neutral)]'
-                            }`}>
-                                {tab.desc}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+                    <InstallPWA />
+                </>}
+            >
+                <AdminTabs
+                    ariaLabel="Settings"
+                    layoutId="settings-tabs"
+                    tabs={SETTINGS_TABS.map(t => ({ id: t.id, label: t.label }))}
+                    active={activeSettingsTab}
+                    onChange={setActiveSettingsTab}
+                />
+            </AdminPageHeader>
 
             {/* Tab 1: Core Booking Settings */}
             {activeSettingsTab === 'booking' && (

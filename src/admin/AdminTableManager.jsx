@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
+import AdminPageHeader, { AdminTabs } from '../components/admin/AdminPageHeader'
 import { supabase } from '../lib/supabaseClient'
 import TableManager from '../components/shared/TableManager'
 import AdminTableEditor from '../AdminTableEditor'
@@ -106,65 +107,24 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
     return (
         <div className="flex flex-col min-h-[calc(100vh-140px)] font-sans pb-12">
             
-            {/* Top Hub Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-sm">
-                            FLOOR & TABLE HUB
-                        </span>
-                        {metrics.pendingCalls > 0 && (
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider bg-[oklch(60%_0.15_60)] text-black px-2 py-0.5 rounded-sm animate-pulse">
-                                {metrics.pendingCalls} SERVICE CALLS
-                            </span>
-                        )}
-                    </div>
-                    <h1 className="font-mono text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] uppercase mt-1">
-                        Floor & Tables
-                    </h1>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                        Manage live table availability, guest seating, floorplan geometry & table QR codes
-                    </p>
-                </div>
-
-                {/* Sub-tab Switcher & External POS */}
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-xs">
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('live')}
-                            className={`px-4 py-2 rounded-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                                activeTab === 'live'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
-                            }`}
-                        >
-                            Live Operations
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('editor')}
-                            className={`px-4 py-2 rounded-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                                activeTab === 'editor'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
-                            }`}
-                        >
-                            Layout & QR Studio
-                        </button>
-                    </div>
-
-                    <a
-                        href="/pos"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-4 py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase rounded-sm transition-colors"
-                        title="Open POS Terminal"
-                    >
-                        POS TERMINAL ↗
-                    </a>
-                </div>
-            </div>
+            <AdminPageHeader
+                title="Floor & Tables"
+                description="สถานะโต๊ะสด การจัดที่นั่ง ผังร้าน และ QR ประจำโต๊ะ"
+                meta={metrics.pendingCalls > 0 ? (
+                    <span className="text-[oklch(52%_0.16_28)] font-medium">{metrics.pendingCalls} โต๊ะกำลังเรียกพนักงาน</span>
+                ) : null}
+            >
+                <AdminTabs
+                    ariaLabel="Floor & Tables"
+                    layoutId="tables-tabs"
+                    tabs={[
+                        { id: 'live', label: 'Live operations' },
+                        { id: 'editor', label: 'Layout & QR studio' }
+                    ]}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
+            </AdminPageHeader>
 
             {/* Realtime KPI Bar (Dieter Rams Structural Grid) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">

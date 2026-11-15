@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDuration } from '../../../utils/timeUtils'
 import { getShortBookingId } from '../../../utils/printerHelper'
-import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
+import { getBookingPaymentBreakdown } from '../../../utils/shiftHelper'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from '../../../utils/tableTransferHelper'
 import { supabase } from '../../../lib/supabaseClient'

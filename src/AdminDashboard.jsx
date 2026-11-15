@@ -1,29 +1,32 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabaseClient'
-import PageTransition from './components/PageTransition'
+
 import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly } from './utils/timeUtils'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
-import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
+import { getBookingPaymentBreakdown } from './utils/shiftHelper'
 import { playOrderAlert } from './utils/audioHelper'
 import { subscribePOSBroadcast, sendTrackingBroadcast, sendPOSBroadcast } from './utils/realtimeNotifier'
 import { RefreshCw } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-// Core Components
-import AdminExecutiveDataVizDashboard from './components/admin/overview/AdminExecutiveDataVizDashboard'
-import IntradayVelocityDaypartCockpit from './components/admin/financial/IntradayVelocityDaypartCockpit'
-import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
-import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerTab'
-import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
-import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
+// Live Now (default landing) stays in the main chunk
 import SimplifiedLiveOverview from './components/admin/overview/SimplifiedLiveOverview'
 import SimplifiedBillsSummaryList from './components/admin/overview/SimplifiedBillsSummaryList'
-import OnlineAdvanceOrdersHub from './components/admin/overview/OnlineAdvanceOrdersHub'
-import InboxSection from './components/admin/InboxSection'
-import ScheduleSection from './components/admin/ScheduleSection'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from './utils/tableTransferHelper'
 import { computeDailyOverviewMetrics } from './utils/overviewMetricsHelper'
+
+// Pro Analytics blocks load only when that mode is opened (keeps Live Now light)
+const AdminExecutiveDataVizDashboard = lazy(() => import('./components/admin/overview/AdminExecutiveDataVizDashboard'))
+const IntradayVelocityDaypartCockpit = lazy(() => import('./components/admin/financial/IntradayVelocityDaypartCockpit'))
+const LiveFloorQuickStatus = lazy(() => import('./components/admin/overview/LiveFloorQuickStatus'))
+const AdminShiftsLedgerTab = lazy(() => import('./components/admin/overview/AdminShiftsLedgerTab'))
+const AllDailyBillsHub = lazy(() => import('./components/admin/overview/AllDailyBillsHub'))
+const OwnerPosBroadcastBar = lazy(() => import('./components/admin/overview/OwnerPosBroadcastBar'))
+const OnlineAdvanceOrdersHub = lazy(() => import('./components/admin/overview/OnlineAdvanceOrdersHub'))
+const InboxSection = lazy(() => import('./components/admin/InboxSection'))
+const ScheduleSection = lazy(() => import('./components/admin/ScheduleSection'))
 
 // Lazy-Loaded Dialog Modals (Improves First Contentful Paint & Mobile Performance)
 const DailySummarySlipModal = lazy(() => import('./components/admin/overview/DailySummarySlipModal'))
@@ -38,7 +41,7 @@ export default function AdminDashboard() {
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Selected Date Bookings
     const [shifts, setShifts] = useState([]) // Stores shifts for Selected Date / Active shift
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('bills') // bills, shifts, inbox, schedule, floor, dine_in, pickup
+    const [activeTab, setActiveTab] = useState('bills') // bills, shifts, inbox, schedule, floor
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
     const [overviewMode, setOverviewMode] = useState(() => {
         // Always default to 'simplified' (LIVE NOW // โต๊ะสดหน้าร้าน) on initial landing
@@ -281,7 +284,10 @@ export default function AdminDashboard() {
             console.error('Error fetching dashboard data:', error.message)
             if (!isSilent) toast.error('Failed to load dashboard data')
         } finally {
-            if (requestId === activeRequestIdRef.current && !isSilent) {
+            // The newest request always clears the loading state. A silent refetch can
+            // supersede the first (non-silent) one, which then returns early above; if only
+            // non-silent requests cleared it, the page stayed on "loading" forever.
+            if (requestId === activeRequestIdRef.current) {
                 setLoading(false)
             }
         }
@@ -312,26 +318,11 @@ export default function AdminDashboard() {
         const channelId = `admin-dashboard-realtime-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         const tableChannel = supabase
             .channel(channelId)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-                console.log('[Admin Realtime] Bookings change detected:', payload?.eventType)
-                debouncedFetchData()
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, (payload) => {
-                console.log('[Admin Realtime] Order items change detected:', payload?.eventType)
-                debouncedFetchData()
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, (payload) => {
-                console.log('[Admin Realtime] Table layout change detected:', payload?.eventType)
-                debouncedFetchData()
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
-                console.log('[Admin Realtime] App settings change detected:', payload?.eventType)
-                debouncedFetchData()
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, (payload) => {
-                console.log('[Admin Realtime] Shift change detected:', payload?.eventType)
-                debouncedFetchData()
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, debouncedFetchData)
             .subscribe((status, err) => {
                 if (status === 'SUBSCRIBED') {
                     isRealtimeSubscribed = true
@@ -343,10 +334,7 @@ export default function AdminDashboard() {
             })
 
         // 2. Direct POS Realtime Notifications Broadcast Channel (cross-device < 50ms & local BroadcastChannel deduplicated)
-        const unsubscribePosBroadcast = subscribePOSBroadcast(({ event }) => {
-            console.log('[Admin Realtime] POS broadcast received:', event);
-            debouncedFetchData();
-        });
+        const unsubscribePosBroadcast = subscribePOSBroadcast(() => debouncedFetchData());
 
         const handleShiftChanged = () => debouncedFetchData()
         window.addEventListener('pos-shift-changed', handleShiftChanged)
@@ -636,41 +624,11 @@ export default function AdminDashboard() {
             )
         }
 
-        if (activeTab === 'dine_in') {
-            const filtered = dailyBookings.filter(b => b.booking_type === 'dine_in' || b.booking_type === 'walk_in')
-            return (
-                <AllDailyBillsHub
-                    bookings={filtered}
-                    loading={loading}
-                    onPrintSlip={handlePrint}
-                    onViewSlip={setViewSlipUrl}
-                    onOpenTaxInvoice={setTaxInvoiceBooking}
-                    onUpdateStatus={updateStatus}
-                    selectedDate={selectedDate}
-                />
-            )
-        }
-
-        if (activeTab === 'pickup') {
-            const filtered = dailyBookings.filter(b => b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway'))
-            return (
-                <AllDailyBillsHub
-                    bookings={filtered}
-                    loading={loading}
-                    onPrintSlip={handlePrint}
-                    onViewSlip={setViewSlipUrl}
-                    onOpenTaxInvoice={setTaxInvoiceBooking}
-                    onUpdateStatus={updateStatus}
-                    selectedDate={selectedDate}
-                />
-            )
-        }
-
         return null
     }
 
     return (
-        <PageTransition>
+        <>
             <ConfirmationModal 
                 isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
@@ -681,189 +639,119 @@ export default function AdminDashboard() {
             />
             
             <div className="pb-24 w-full min-w-0 overflow-x-clip">
-                {/* Executive Header Bar (Bento Minimalist Harmony) */}
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 mb-5 pb-4 border-b border-[oklch(88%_0.012_28)]">
-                    <div>
-                        <p className="text-xs font-medium text-[oklch(50%_0.010_28)] mb-0.5">
-                            In The Haus · Backoffice Overview
-                        </p>
-                        <h1 className="font-sans text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">
-                            ภาพรวมและการดำเนินงานหน้าร้าน
-                        </h1>
-                    </div>
-
-                    {/* Date Picker & Controls Ribbon */}
-                    <div className="flex items-stretch sm:items-center gap-2 flex-wrap sm:flex-nowrap">
-                        {/* Quick Date Switcher */}
-                        <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-xl p-1 font-mono text-xs flex-1 sm:flex-none shadow-2xs">
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => handleDateChange(e.target.value)}
-                                className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-semibold px-1.5 focus:outline-none cursor-pointer min-w-0"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => handleDateChange(getThaiDate())}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
-                            >
-                                วันนี้
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleDateChange(getYesterdayDate())}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-sans font-medium cursor-pointer transition-colors whitespace-nowrap ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
-                            >
-                                เมื่อวาน
-                            </button>
-                        </div>
-
-                        {/* Audio Alert Toggle */}
-                        {(soundMuted || pendingBookings.length > 0) && (
-                            <button
-                                type="button"
-                                onClick={() => setSoundMuted(!soundMuted)}
-                                className={`px-3 py-1.5 rounded-xl border font-mono text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                                    soundMuted 
-                                        ? 'bg-[oklch(94%_0.010_28)] border-[oklch(88%_0.012_28)] text-[oklch(50%_0.010_28)]' 
-                                        : 'bg-[oklch(94%_0.02_28)] border-[oklch(75%_0.10_28)] text-[oklch(48%_0.15_28)]'
-                                }`}
-                                title={soundMuted ? 'เปิดเสียงแจ้งเตือน' : 'มีคำขอรอการตรวจสอบ'}
-                            >
-                                <span className={`w-1.5 h-1.5 rounded-full ${soundMuted ? 'bg-[oklch(55%_0.010_28)]' : 'bg-[oklch(52%_0.16_28)]'}`} />
-                                <span>{soundMuted ? 'AUDIO // OFF' : 'AUDIO // ON'}</span>
-                            </button>
-                        )}
-
-                        {/* Export Daily Summary PNG Slip */}
-                        <button 
-                            type="button"
-                            onClick={() => setShowDailySummaryModal(true)}
-                            className="px-3 py-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(93%_0.010_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-medium rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
-                            title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
-                        >
-                            <span className="font-mono text-[10.5px] font-semibold text-[oklch(52%_0.16_28)]">[Z-REPORT]</span>
-                            <span>สลิปปิดวัน</span>
-                        </button>
-
-                        {/* Refresh */}
-                        <button 
-                            type="button"
-                            onClick={() => fetchData(false, selectedDate)} 
-                            disabled={loading}
-                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
-                            title="รีเฟรชข้อมูลล่าสุด"
-                        >
-                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">{loading ? '[SYNCING...]' : '[REFRESH]'}</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* SHIFT STATUS BANNER (Quiet Bento Status Pill Strip) */}
+                {/* Title row: the screen's name, the shift status as its one line of data, the day's controls */}
                 {(() => {
                     const isToday = selectedDate === getThaiDate()
+                    const strong = 'font-medium text-[oklch(18%_0.012_28)]'
+                    const dateChip = (active) => `h-8 px-3 rounded-md text-[13px] cursor-pointer transition-colors whitespace-nowrap ${active ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-medium border border-[oklch(85%_0.012_28)]' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] border border-transparent'}`
+                    const ghostBtn = 'h-10 px-3 rounded-lg border border-[oklch(85%_0.012_28)] text-[13px] font-medium text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:translate-y-px'
                     return (
-                        <div className={`mb-4 px-4 py-2.5 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none ${
-                            !isToday
-                                ? 'bg-[oklch(95.5%_0.008_28)] border-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
-                                : isShiftOpen
-                                    ? 'bg-[oklch(95%_0.02_140)] border-[oklch(84%_0.04_140)] text-[oklch(28%_0.08_140)]'
-                                    : 'bg-[oklch(95.5%_0.008_28)] border-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
-                        }`}>
-                            <div className="flex items-center gap-2.5 flex-wrap">
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${
-                                    !isToday
-                                        ? 'bg-[oklch(55%_0.010_28)]'
-                                        : isShiftOpen 
-                                            ? 'bg-[oklch(45%_0.08_140)]' 
-                                            : 'bg-[oklch(55%_0.010_28)]'
-                                }`} />
-                                <span className="font-mono font-semibold text-[11.5px]">
-                                    {!isToday
-                                        ? 'HISTORICAL RECORD // รอบขายย้อนหลัง'
-                                        : isShiftOpen 
-                                            ? 'POS SHIFT ACTIVE // กะกำลังทำงาน' 
-                                            : 'POS SHIFT CLOSED // กะปิดอยู่'
-                                    }
-                                </span>
-                                <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">·</span>
-                                <span className="font-sans font-normal text-xs">
-                                    {!isToday ? (
-                                        latestClosedShift ? (
-                                            <>ปิดรอบเมื่อ <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-semibold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>{shifts.length > 1 ? ` · ทั้งหมด ${shifts.length} กะ` : ''}</>
+                        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mb-6">
+                            <div className="min-w-0">
+                                <h1 className="text-2xl font-semibold leading-9 text-[oklch(18%_0.012_28)]">
+                                    ภาพรวมหน้าร้าน
+                                </h1>
+                                <p className="mt-1 text-sm leading-6 text-[oklch(42%_0.010_28)] flex items-start gap-2">
+                                    <span className={`mt-2 w-2 h-2 rounded-full shrink-0 ${isToday && isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(70%_0.010_28)]'}`} />
+                                    <span>
+                                        {!isToday ? (
+                                            latestClosedShift ? (
+                                                <>ย้อนหลัง · ปิดรอบ <span className={`tabular-nums ${strong}`}>{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <span className={strong}>{latestClosedShift.staff_name}</span>{shifts.length > 1 ? ` · ทั้งหมด ${shifts.length} กะ` : ''}</>
+                                            ) : (
+                                                <>ไม่มีรอบขาย POS ในวันที่ {formatThaiDateOnly(selectedDate)}</>
+                                            )
+                                        ) : isShiftOpen ? (
+                                            <>กะเปิดอยู่ · <span className={strong}>{activeShift.staff_name}</span> เปิดเมื่อ <span className="tabular-nums">{formatThaiTimeOnly(activeShift.opened_at)}</span></>
+                                        ) : latestClosedShift ? (
+                                            <>ยังไม่เปิดรอบขาย · ล่าสุดปิด <span className="tabular-nums">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <span className={strong}>{latestClosedShift.staff_name}</span></>
                                         ) : (
-                                            <>ไม่มีประวัติรอบขาย POS ในวันที่ {formatThaiDateOnly(selectedDate)}</>
-                                        )
-                                    ) : isShiftOpen ? (
-                                        <>ประจำเครื่อง: <strong className="font-semibold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
-                                    ) : latestClosedShift ? (
-                                        <>หน้าร้านยังไม่เปิดรอบขาย (ล่าสุดปิด {formatThaiTimeOnly(latestClosedShift.closed_at)} โดย <strong className="font-semibold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
-                                    ) : (
-                                        <>หน้าร้านยังไม่มีการเปิดรอบการขายบนเครื่อง POS</>
-                                    )}
-                                </span>
+                                            <>ยังไม่มีการเปิดรอบขายบนเครื่อง POS</>
+                                        )}
+                                    </span>
+                                </p>
                             </div>
 
-                            <div className="font-mono text-[11px] text-[oklch(50%_0.010_28)] self-end sm:self-auto">
-                                {!isToday 
-                                    ? (latestClosedShift ? 'บันทึกย้อนหลัง' : 'ไม่มีกะ')
-                                    : isShiftOpen ? 'POS เชื่อมต่ออยู่' : 'POS ปิดกะ'}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center gap-1 h-10 px-1 rounded-lg border border-[oklch(85%_0.012_28)] w-full sm:w-auto min-w-0">
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => handleDateChange(e.target.value)}
+                                        aria-label="เลือกวันที่"
+                                        className="bg-transparent border-none text-[oklch(18%_0.012_28)] text-[13px] tabular-nums px-2 focus:outline-none cursor-pointer min-w-0 flex-1"
+                                    />
+                                    <button type="button" onClick={() => handleDateChange(getThaiDate())} className={dateChip(isToday)}>
+                                        วันนี้
+                                    </button>
+                                    <button type="button" onClick={() => handleDateChange(getYesterdayDate())} className={dateChip(selectedDate === getYesterdayDate())}>
+                                        เมื่อวาน
+                                    </button>
+                                </div>
+
+                                {(soundMuted || pendingBookings.length > 0) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSoundMuted(!soundMuted)}
+                                        className={`${ghostBtn} ${soundMuted ? 'text-[oklch(42%_0.010_28)]' : ''}`}
+                                        title={soundMuted ? 'เปิดเสียงแจ้งเตือนคำขอรอตรวจ' : 'ปิดเสียงแจ้งเตือนคำขอรอตรวจ'}
+                                    >
+                                        <span className={`w-2 h-2 rounded-full ${soundMuted ? 'bg-[oklch(70%_0.010_28)]' : 'bg-[oklch(52%_0.16_28)]'}`} />
+                                        <span>{soundMuted ? 'เสียงปิด' : 'เสียงเปิด'}</span>
+                                    </button>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDailySummaryModal(true)}
+                                    className={ghostBtn}
+                                    title="ส่งออกสลิปสรุปยอดปิดวันเป็นภาพ PNG"
+                                >
+                                    สลิปปิดวัน
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => fetchData(false, selectedDate)}
+                                    disabled={loading}
+                                    className={`${ghostBtn} w-10 px-0 justify-center`}
+                                    title="รีเฟรชข้อมูลล่าสุด"
+                                    aria-label="รีเฟรชข้อมูลล่าสุด"
+                                >
+                                    <RefreshCw strokeWidth={1.5} className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                                </button>
                             </div>
                         </div>
                     )
                 })()}
 
-                {/* MASTER COCKPIT MODE SWITCHER (Clean Bento Segmented Switch) */}
-                <div className="grid grid-cols-2 border border-[oklch(88%_0.012_28)] bg-[oklch(94%_0.010_28)] p-1 rounded-2xl gap-1 mb-6 text-xs sm:text-sm">
-                    <button
-                        type="button"
-                        onClick={() => handleSetOverviewMode('simplified')}
-                        className={`py-2 px-3 sm:px-6 rounded-xl font-medium transition-colors cursor-pointer flex items-center justify-center select-none ${
-                            overviewMode === 'simplified'
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
-                                : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
-                        }`}
-                    >
-                        {/* Mobile: 2-Tier Stacked Layout */}
-                        <div className="flex sm:hidden flex-col items-center justify-center leading-tight py-0.5">
-                            <span className="flex items-center gap-1.5 font-mono text-[10px] opacity-85">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-40'}`} />
-                                Live Now
-                            </span>
-                            <span className="font-sans font-medium text-xs mt-0.5">โต๊ะสดหน้าร้าน</span>
-                        </div>
-
-                        {/* Desktop: Single-Line Tabular Layout */}
-                        <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-30'}`} />
-                            <span className="font-medium">Live Now · โต๊ะสดหน้าร้าน</span>
-                        </div>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleSetOverviewMode('pro')}
-                        className={`py-2 px-3 sm:px-6 rounded-xl font-medium transition-colors cursor-pointer flex items-center justify-center select-none ${
-                            overviewMode === 'pro'
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
-                                : 'text-[oklch(48%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
-                        }`}
-                    >
-                        {/* Mobile: 2-Tier Stacked Layout */}
-                        <div className="flex sm:hidden flex-col items-center justify-center leading-tight py-0.5">
-                            <span className="flex items-center gap-1.5 font-mono text-[10px] opacity-85">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(52%_0.16_28)]' : 'bg-current opacity-40'}`} />
-                                Pro Analytics
-                            </span>
-                            <span className="font-sans font-medium text-xs mt-0.5">ภาพรวมและเชิงลึก</span>
-                        </div>
-
-                        {/* Desktop: Single-Line Tabular Layout */}
-                        <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
-                            <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(52%_0.16_28)]' : 'bg-current opacity-30'}`} />
-                            <span className="font-medium">Pro Analytics · ภาพรวมและเชิงลึก</span>
-                        </div>
-                    </button>
+                {/* Mode switch: as wide as its two options, on a full-width hairline */}
+                <div className="flex gap-6 border-b border-[oklch(88%_0.012_28)] mb-6" role="tablist" aria-label="โหมดภาพรวม">
+                    {[
+                        { key: 'simplified', label: 'Live Now', sub: 'โต๊ะสดหน้าร้าน' },
+                        { key: 'pro', label: 'Pro Analytics', sub: 'ภาพรวมและเชิงลึก' }
+                    ].map((m) => {
+                        const on = overviewMode === m.key
+                        return (
+                            <button
+                                key={m.key}
+                                type="button"
+                                role="tab"
+                                aria-selected={on}
+                                onClick={() => handleSetOverviewMode(m.key)}
+                                className={`relative h-11 text-sm cursor-pointer transition-colors whitespace-nowrap ${on ? 'text-[oklch(18%_0.012_28)] font-medium' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            >
+                                <span>{m.label}</span>
+                                <span className="hidden sm:inline text-[oklch(50%_0.010_28)] font-normal"> · {m.sub}</span>
+                                {on && (
+                                    <motion.span
+                                        layoutId="overview-mode-underline"
+                                        className="absolute left-0 right-0 -bottom-px h-0.5 bg-[oklch(18%_0.012_28)]"
+                                        transition={{ type: 'spring', stiffness: 520, damping: 42, mass: 0.6 }}
+                                    />
+                                )}
+                            </button>
+                        )
+                    })}
                 </div>
 
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
@@ -897,6 +785,7 @@ export default function AdminDashboard() {
                         />
                     </div>
                 ) : (
+                    <Suspense fallback={<div className="h-64 rounded-2xl border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)]" aria-busy="true" />}>
                     <div className="space-y-6 mb-6">
                         {/* 0. Modern Bento Executive Data Visualization Dashboard */}
                         <AdminExecutiveDataVizDashboard
@@ -945,15 +834,13 @@ export default function AdminDashboard() {
                         <OwnerPosBroadcastBar />
 
                         {/* 4. Segmented Filter Tabs (Clean Bento Pill Bar) */}
-                        <div className="flex gap-1.5 overflow-x-auto bg-[oklch(94%_0.010_28)] p-1.5 rounded-2xl border border-[oklch(88%_0.012_28)] text-xs no-scrollbar">
+                        <div className="flex gap-6 overflow-x-auto border-b border-[oklch(88%_0.012_28)] text-sm no-scrollbar">
                             {[
-                                { key: 'bills', code: '01', label: 'บิลทั้งหมด', count: dailyBookings.length },
-                                { key: 'shifts', code: '02', label: 'กะเงินสด (Shifts)', count: shifts.length },
-                                { key: 'inbox', code: '03', label: 'คำขอรอตรวจ', count: pendingBookings.length },
-                                { key: 'schedule', code: '04', label: 'ตารางจอง', count: scheduleBookings.length },
-                                { key: 'dine_in', code: '05', label: 'ทานที่ร้าน', count: dineInCount },
-                                { key: 'pickup', code: '06', label: 'สั่งกลับบ้าน', count: pickupCount },
-                                { key: 'floor', code: '07', label: 'ผังโต๊ะ', count: derivedFloorOccupancy.occupiedTables }
+                                { key: 'bills', label: 'บิลทั้งหมด', count: dailyBookings.length },
+                                { key: 'shifts', label: 'กะเงินสด (Shifts)', count: shifts.length },
+                                { key: 'inbox', label: 'คำขอรอตรวจ', count: pendingBookings.length },
+                                { key: 'schedule', label: 'ตารางจอง', count: scheduleBookings.length },
+                                { key: 'floor', label: 'ผังโต๊ะ', count: derivedFloorOccupancy.occupiedTables }
                             ].map((tab) => {
                                 const isActive = activeTab === tab.key
                                 return (
@@ -961,16 +848,14 @@ export default function AdminDashboard() {
                                         key={tab.key}
                                         type="button"
                                         onClick={() => setActiveTab(tab.key)}
-                                        className={`py-1.5 px-3 rounded-xl font-medium transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                                            isActive 
-                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
-                                                : 'text-[oklch(45%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                        className={`h-11 -mb-px border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                                            isActive
+                                                ? 'border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium'
+                                                : 'border-transparent text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                         }`}
                                     >
                                         <span>{tab.label}</span>
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[10.5px] tabular-nums font-mono ${
-                                            isActive ? 'bg-[oklch(97%_0.008_28)]/18 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(89%_0.010_28)] text-[oklch(38%_0.010_28)]'
-                                        }`}>
+                                        <span className={`text-xs tabular-nums ${isActive ? 'text-[oklch(42%_0.010_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
                                             {tab.count}
                                         </span>
                                     </button>
@@ -983,6 +868,7 @@ export default function AdminDashboard() {
                             {getTabContent()}
                         </div>
                     </div>
+                    </Suspense>
                 )}
             </div>
 
@@ -1047,6 +933,6 @@ export default function AdminDashboard() {
                     />
                 )}
             </Suspense>
-        </PageTransition>
+        </>
     )
 }

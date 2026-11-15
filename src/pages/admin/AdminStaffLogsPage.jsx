@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import AdminPageHeader, { AdminTabs } from '../../components/admin/AdminPageHeader'
 import { 
     Search, 
     RefreshCw, 
@@ -152,44 +153,30 @@ export default function AdminStaffLogsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] p-4 sm:p-6 lg:p-8 font-sans">
+        <div className="bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-sans">
             <div className="max-w-7xl mx-auto space-y-6">
                 
-                {/* Header Title Section */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[oklch(85%_0.012_28)] pb-5">
-                    <div>
-                        <div className="flex items-center gap-2 text-xs font-mono text-[oklch(52%_0.16_28)] tracking-wider uppercase font-semibold">
-                            <ShieldCheck className="w-4 h-4" />
-                            <span>Audit & Security Engine · 7-Day Observability</span>
-                        </div>
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] mt-1">
-                            บันทึกการทำงานของพนักงานและระบบ (Staff Activity Logs)
-                        </h1>
-                        <p className="text-sm text-[oklch(45%_0.010_28)] mt-1">
-                            รายงานความโปร่งใสแบบละเอียด: ปรับแก้ SOP, ปรับสต็อก, ย้ายโต๊ะ, รวมบิล, ยกเลิกรายการ, และหลังบ้าน
-                        </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
+                <AdminPageHeader
+                    className=""
+                    title="Staff Activity Logs"
+                    description="ปรับแก้ SOP ปรับสต็อก ย้ายโต๊ะ รวมบิล ยกเลิกรายการ และงานหลังบ้าน"
+                    actions={<>
                         <button
+                            type="button"
                             onClick={() => loadLogs(true)}
                             disabled={refreshing}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-xs font-medium transition-colors cursor-pointer"
+                            className="admin-btn"
                             title="รีเฟรชข้อมูลล่าสุด"
                         >
-                            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                            <RefreshCw strokeWidth={1.5} className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                             <span>รีเฟรช</span>
                         </button>
-                        <button
-                            onClick={handleExport}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[oklch(18%_0.012_28)] hover:bg-[oklch(25%_0.015_28)] text-[oklch(97%_0.008_28)] text-xs font-medium transition-colors shadow-sm cursor-pointer"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>ส่งออก Excel CSV</span>
+                        <button type="button" onClick={handleExport} className="admin-btn">
+                            <Download strokeWidth={1.5} className="w-4 h-4" />
+                            <span>ส่งออก CSV</span>
                         </button>
-                    </div>
-                </div>
+                    </>}
+                />
 
                 {/* Summary Metrics Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

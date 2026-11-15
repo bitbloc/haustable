@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas'
 import { toast } from 'sonner'
 import { supabase } from '../../../lib/supabaseClient'
 import { getThaiDate } from '../../../utils/timeUtils'
-import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
+import { getBookingPaymentBreakdown } from '../../../utils/shiftHelper'
 
 export default function DailySummarySlipModal({
     bookings = [],

@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import AdminPageHeader, { AdminTabs } from './AdminPageHeader'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { getThaiDate } from '../../utils/timeUtils'
@@ -1184,76 +1185,44 @@ export default function AdminFinancialDashboard() {
     return (
         <div className="space-y-6 pb-20 text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]">
             
-            {/* 1. Master Tabular Header Bar (Neo-Brutalist 1px Border Grid) */}
+            <AdminPageHeader
+                className=""
+                title="Financial & Insights"
+                description={<>ข้อมูลธุรกรรมจริงจากฐานข้อมูล POS · {getTimeRangeLabel()}</>}
+                meta={<>
+                    <span className={isLiveConnected ? 'text-[oklch(40%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}>
+                        {isLiveConnected ? 'เชื่อมต่อ realtime' : 'กำลังเชื่อมต่อ'}
+                    </span>
+                    {' '}· {dbLatencyMs}ms · {dbRecordCount} แถว
+                </>}
+                actions={<>
+                    <button
+                        type="button"
+                        onClick={() => setCompareWithPrev(!compareWithPrev)}
+                        aria-pressed={compareWithPrev}
+                        className="admin-btn"
+                    >
+                        เทียบช่วงก่อน: {compareWithPrev ? 'เปิด' : 'ปิด'}
+                    </button>
+                    <Link to="/admin/tax" className="admin-btn">ภาษีและใบกำกับ</Link>
+                    <button type="button" onClick={handleExportReport} className="admin-btn">ส่งออก CSV</button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            fetchRealFinancialData()
+                            toast.success('อัพเดทข้อมูลการเงินล่าสุดแล้ว')
+                        }}
+                        disabled={loading}
+                        className="admin-btn"
+                    >
+                        {loading ? 'กำลังดึงข้อมูล…' : 'รีเฟรช'}
+                    </button>
+                </>}
+            />
+
+            {/* 1. Filter bar (Neo-Brutalist 1px Border Grid) */}
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-y divide-[oklch(85%_0.012_28)]">
                 
-                {/* Header Row: Title & Realtime Connection Status */}
-                <div className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-widest bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
-                                WORKBENCH // 05
-                            </span>
-                            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                                ระบบรายงานและการเงิน (Financial Cockpit)
-                            </h1>
-                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 font-bold border ${
-                                isLiveConnected
-                                    ? 'bg-[oklch(97%_0.008_28)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]/40'
-                                    : 'bg-[oklch(97%_0.008_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/40'
-                            }`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${isLiveConnected ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(52%_0.16_28)]'}`} />
-                                {isLiveConnected ? 'REALTIME SYNCED' : 'CONNECTING'}
-                            </span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] font-bold border border-[oklch(85%_0.012_28)]">
-                                {dbLatencyMs}ms ({dbRecordCount} rows)
-                            </span>
-                        </div>
-                        <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-1.5">
-                            ข้อมูลธุรกรรมจริงจากฐานข้อมูล POS // {getTimeRangeLabel()}
-                        </p>
-                    </div>
-
-                    {/* Action Tools */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                            onClick={() => {
-                                fetchRealFinancialData()
-                                toast.success('อัพเดทข้อมูลการเงินล่าสุดแล้ว')
-                            }}
-                            disabled={loading}
-                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold transition-all min-h-[38px] flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                            <span>{loading ? 'กำลังดึงข้อมูล…' : 'รีเฟรช [SYNC]'}</span>
-                        </button>
-
-                        <button
-                            onClick={() => setCompareWithPrev(!compareWithPrev)}
-                            className={`px-3.5 py-2 font-mono text-xs font-bold transition-all border min-h-[38px] ${
-                                compareWithPrev
-                                    ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(18%_0.012_28)]'
-                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
-                            }`}
-                        >
-                            <span>เทียบช่วงก่อน {compareWithPrev ? '[เปิด]' : '[ปิด]'}</span>
-                        </button>
-
-                        <Link
-                            to="/admin/tax"
-                            className="px-3.5 py-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold transition-all min-h-[38px] flex items-center"
-                        >
-                            <span>ระบบภาษี & ใบกำกับ →</span>
-                        </Link>
-
-                        <button
-                            onClick={handleExportReport}
-                            className="px-3.5 py-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold transition-all min-h-[38px]"
-                        >
-                            <span>ส่งออก [CSV]</span>
-                        </button>
-                    </div>
-                </div>
-
                 {/* Filter Ribbon Row: Day / Month / Year Mode, Compare Mode, & Date Picker */}
                 <div className="p-3 bg-[oklch(97%_0.008_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
                     

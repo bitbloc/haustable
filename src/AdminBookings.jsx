@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import AdminPageHeader, { AdminTabs } from './components/admin/AdminPageHeader'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
@@ -670,50 +671,29 @@ export default function AdminBookings() {
 
     return (
         <div className="max-w-7xl mx-auto pb-24 font-mono text-xs">
-            {/* 1. Header Block (Dieter Rams Tabular Header) */}
+            <AdminPageHeader
+                title="Bookings & Orders"
+                meta={<>{bookings.length} รายการ · ช่วง {getDateLabel()}</>}
+                actions={<>
+                    <button
+                        type="button"
+                        onClick={() => setIsTestSandboxOpen(true)}
+                        className="admin-btn"
+                        title="ศูนย์ทดสอบระบบ POS และการหักเงินมัดจำ (Zero-Cost Simulator)"
+                    >
+                        Test sandbox
+                    </button>
+                    <button type="button" onClick={() => fetchBookings(true)} disabled={loading} className="admin-btn">
+                        {loading ? 'กำลังโหลด…' : 'รีเฟรช'}
+                    </button>
+                    <button type="button" onClick={() => setIsManualBookingOpen(true)} className="admin-btn is-primary">
+                        เพิ่มการจอง
+                    </button>
+                </>}
+            />
+
+            {/* 1. KPI strip (Dieter Rams Tabular Header) */}
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] mb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 border-b border-[var(--color-rule)]">
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-bold tracking-wider text-[var(--color-accent)] uppercase bg-[var(--color-paper-2)] px-2 py-0.5 border border-[var(--color-rule)]">
-                                SYS.ADMIN · 2026
-                            </span>
-                            <span className="text-[10px] text-[var(--color-neutral)]">
-                                {bookings.length} TOTAL IN MEMORY · SCOPE: {getDateLabel()}
-                            </span>
-                        </div>
-                        <h1 className="text-xl md:text-2xl font-bold text-[var(--color-ink)] tracking-tight mt-1 uppercase">
-                            Bookings & Orders Hub
-                        </h1>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button 
-                            type="button"
-                            onClick={() => setIsTestSandboxOpen(true)}
-                            className="px-3.5 py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] text-[var(--color-ink)] font-bold uppercase transition-colors flex items-center gap-1.5 border border-[var(--color-rule)] cursor-pointer"
-                            title="ศูนย์ทดสอบระบบ POS และการหักเงินมัดจำ (Zero-Cost Simulator)"
-                        >
-                            <span>🧪 TEST SANDBOX (POS ENGINE)</span>
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={() => setIsManualBookingOpen(true)}
-                            className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 text-white font-bold uppercase transition-opacity flex items-center gap-1.5 border border-[var(--color-accent)] cursor-pointer"
-                        >
-                            <span>+ MANUAL BOOKING</span>
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={() => fetchBookings(true)} 
-                            disabled={loading}
-                            className="px-4 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold uppercase transition-opacity flex items-center gap-2 border border-[var(--color-ink)] cursor-pointer"
-                        >
-                            <span>{loading ? 'SYNCING…' : 'REFRESH'}</span>
-                        </button>
-                    </div>
-                </div>
-
                 {/* 2. Integrated KPI Instrument Strip (Connected Cellular Grid with Channel Breakdown) */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
                     <div className="p-4">
