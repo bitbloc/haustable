@@ -64,19 +64,18 @@ export default function CategoryManager({ onClose, onUpdate }) {
         setForm({ id: cat.id, label: cat.label || '', sort_order: cat.sort_order ?? '' });
     };
 
-    const field = 'w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] text-[14px] leading-6 text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] disabled:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(55%_0.010_28)]';
+    const field = 'w-full px-3 py-2 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-base leading-6 text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] disabled:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(55%_0.010_28)]';
     const label = 'block mb-1 text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)]';
 
     return createPortal(
-        <div className="fixed inset-0 z-[60] bg-black/50 flex justify-end" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] bg-[oklch(18%_0.012_28/0.45)] flex justify-end" onClick={onClose}>
             <div role="dialog" aria-modal="true" aria-labelledby="cat-manager-title" onClick={e => e.stopPropagation()}
                 className="w-full sm:max-w-md h-full flex flex-col bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-sans">
                 <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
                     <div className="px-4 py-3 min-w-0">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">CATEGORIES · {categories.length}</span>
-                        <h2 id="cat-manager-title" className="font-bold text-lg leading-7">หมวดหมู่วัตถุดิบ</h2>
+                        <h2 id="cat-manager-title" className="font-bold text-xl leading-7">หมวดหมู่วัตถุดิบ</h2>
                     </div>
-                    <button type="button" onClick={onClose} className="px-4 font-bold text-[13px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                    <button type="button" onClick={onClose} className="px-4 font-bold text-[14px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
                         ปิด
                     </button>
                 </header>
@@ -98,12 +97,12 @@ export default function CategoryManager({ onClose, onUpdate }) {
                     </label>
                     <div className={`col-span-2 grid ${editingId ? 'grid-cols-[1fr_auto]' : 'grid-cols-1'} gap-2`}>
                         <button type="submit" disabled={saving}
-                            className="py-2.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-[14px] leading-6 hover:bg-black disabled:opacity-60 cursor-pointer">
+                            className="py-2.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-[14px] leading-6 hover:bg-[oklch(25%_0.012_28)] disabled:opacity-60 cursor-pointer">
                             {saving ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'เพิ่มหมวด'}
                         </button>
                         {editingId && (
                             <button type="button" onClick={reset}
-                                className="px-4 border border-[oklch(85%_0.012_28)] bg-white font-bold text-[14px] leading-6 text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                                className="px-4 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-bold text-[14px] leading-6 text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
                                 ยกเลิก
                             </button>
                         )}
@@ -116,22 +115,22 @@ export default function CategoryManager({ onClose, onUpdate }) {
                     ) : categories.length === 0 ? (
                         <p className="p-6 text-[14px] text-[oklch(42%_0.010_28)]">ยังไม่มีหมวด</p>
                     ) : (
-                        <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-white border-b border-[oklch(85%_0.012_28)]">
+                        <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)] border-b border-[oklch(85%_0.012_28)]">
                             {categories.map(cat => (
                                 <li key={cat.id} className={`grid grid-cols-[2.5rem_1fr_auto] items-center ${editingId === cat.id ? 'bg-[oklch(94%_0.010_28)]' : ''}`}>
-                                    <span className="px-3 py-2 font-mono text-[12px] text-[oklch(55%_0.010_28)] tabular-nums">{cat.sort_order ?? '—'}</span>
+                                    <span className="px-3 py-2 text-[12px] text-[oklch(55%_0.010_28)] tabular-nums">{cat.sort_order ?? '—'}</span>
                                     <span className="min-w-0 py-2">
                                         <span className="block font-bold text-[14px] leading-6 break-words">{cat.label}</span>
                                         <span className="block font-mono text-[12px] leading-5 text-[oklch(55%_0.010_28)] break-all">{cat.id}</span>
                                     </span>
                                     <span className="flex self-stretch divide-x divide-[oklch(90%_0.008_28)] border-l border-[oklch(90%_0.008_28)]">
                                         <button type="button" onClick={() => startEdit(cat)}
-                                            className="px-3 text-[13px] leading-5 font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                                            className="px-3 text-[14px] leading-5 font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
                                             แก้
                                         </button>
                                         {!LOCKED.has(cat.id) && (
                                             <button type="button" onClick={() => handleDelete(cat)}
-                                                className="px-3 text-[13px] leading-5 font-bold text-[oklch(52%_0.16_28)] hover:bg-[oklch(95%_0.025_28)] cursor-pointer">
+                                                className="px-3 text-[14px] leading-5 font-bold text-[oklch(52%_0.16_28)] hover:bg-[oklch(95%_0.025_28)] cursor-pointer">
                                                 ลบ
                                             </button>
                                         )}

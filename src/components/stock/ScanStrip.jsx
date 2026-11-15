@@ -114,7 +114,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     {status || 'ส่องบาร์โค้ดทีละชิ้น สแกน 1 ครั้ง = นับเพิ่ม 1'}
                 </p>
                 <button type="button" onClick={onClose}
-                    className="px-4 py-2 font-sans font-bold text-[13px] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer">
+                    className="px-4 py-2 font-sans font-bold text-[13px] text-[oklch(97%_0.008_28)] hover:bg-[oklch(25%_0.012_28)] cursor-pointer">
                     ปิดกล้อง
                 </button>
             </div>

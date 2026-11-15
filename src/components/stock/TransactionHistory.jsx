@@ -61,16 +61,15 @@ export default function TransactionHistory({ onClose }) {
     }, [state.tx, filter, search]);
 
     return createPortal(
-        <div className="fixed inset-0 z-[60] bg-black/50 flex justify-end" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] bg-[oklch(18%_0.012_28/0.45)] flex justify-end" onClick={onClose}>
             <div role="dialog" aria-modal="true" aria-labelledby="tx-history-title" onClick={e => e.stopPropagation()}
                 className="w-full sm:max-w-lg h-full flex flex-col bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-sans">
                 <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
                     <div className="px-4 py-3 min-w-0">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">LEDGER · LATEST {LIMIT}</span>
-                        <h2 id="tx-history-title" className="font-bold text-lg leading-7">ประวัติความเคลื่อนไหว</h2>
+                        <h2 id="tx-history-title" className="font-bold text-xl leading-7">ประวัติความเคลื่อนไหว</h2>
                         <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)]">ดูรายตัวย้อนหลัง 30 วัน กดชื่อในหน้า Stock Recon</p>
                     </div>
-                    <button type="button" onClick={onClose} className="px-4 font-bold text-[13px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                    <button type="button" onClick={onClose} className="px-4 font-bold text-[14px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
                         ปิด
                     </button>
                 </header>
@@ -78,12 +77,12 @@ export default function TransactionHistory({ onClose }) {
                 <div className="shrink-0 grid grid-cols-4 border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="ชนิด">
                     {FILTERS.map(f => (
                         <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} onClick={() => setFilter(f.key)}
-                            className={`py-2.5 px-1 text-[13px] leading-5 font-bold cursor-pointer ${filter === f.key ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
+                            className={`py-2.5 px-1 text-[14px] leading-5 font-bold cursor-pointer ${filter === f.key ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
                             {f.label}
                         </button>
                     ))}
                 </div>
-                <label className="shrink-0 block border-b border-[oklch(85%_0.012_28)] bg-white">
+                <label className="shrink-0 block border-b border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
                     <span className="sr-only">ค้นหาวัตถุดิบ</span>
                     <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาวัตถุดิบ"
                         className="w-full px-4 py-2.5 text-[14px] leading-6 bg-transparent outline-none focus:bg-[oklch(98%_0.004_28)]" />
@@ -99,25 +98,27 @@ export default function TransactionHistory({ onClose }) {
                     ) : days.map(([day, rows]) => (
                         <section key={day} className="border-b border-[oklch(85%_0.012_28)]" aria-label={dayLabel(day)}>
                             <div className="sticky top-0 px-4 py-1.5 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
-                                <span className="font-bold text-[13px] leading-5">{dayLabel(day)}</span>
+                                <span className="font-bold text-[14px] leading-5">{dayLabel(day)}</span>
                             </div>
-                            <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-white">
+                            <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]">
                                 {rows.map(t => {
                                     const change = Number(t.quantity_change) || 0;
                                     const sub = [reasonLabel(t), t.performed_by, t.note].filter(Boolean).join(' · ');
                                     return (
                                         <li key={t.id} className="grid grid-cols-[3rem_1fr_auto] gap-x-3 px-4 py-2 items-baseline">
-                                            <span className="font-mono text-[12px] text-[oklch(55%_0.010_28)]">{timeOf(t.created_at)}</span>
+                                            <span className="tabular-nums text-[12px] text-[oklch(55%_0.010_28)]">{timeOf(t.created_at)}</span>
                                             <span className="min-w-0">
                                                 <span className="block font-bold text-[14px] leading-6 break-words">{t.stock_items?.name || 'ไม่ทราบชื่อ'}</span>
                                                 <span className="block text-[12px] leading-5 text-[oklch(55%_0.010_28)] break-words">{sub}</span>
                                             </span>
-                                            <span className="text-right font-mono tabular-nums">
-                                                <span className={`block text-[14px] font-bold ${change < 0 ? 'text-[oklch(52%_0.16_28)]' : ''}`}>
-                                                    {signed(change)} <span className="font-sans font-normal text-[11px] text-[oklch(55%_0.010_28)]">{displayUnit(t.stock_items?.unit)}</span>
+                                            <span className="text-right tabular-nums">
+                                                <span className="block text-[14px] font-bold">
+                                                    {signed(change)} <span className="font-sans font-normal text-[12px] text-[oklch(55%_0.010_28)]">{displayUnit(t.stock_items?.unit)}</span>
                                                 </span>
                                                 {t.balance_after !== null && t.balance_after !== undefined && (
-                                                    <span className="block text-[11px] text-[oklch(55%_0.010_28)]">เหลือ {qty(t.balance_after)}</span>
+                                                    <span className={`block text-[12px] ${Number(t.balance_after) <= 0 ? 'font-bold text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                                        {Number(t.balance_after) <= 0 ? 'หมดแล้ว' : `เหลือ ${qty(t.balance_after)}`}
+                                                    </span>
                                                 )}
                                             </span>
                                         </li>

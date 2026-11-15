@@ -49,21 +49,20 @@ export default function StockUsageReport({ onClose }) {
     }, [onClose]);
 
     const cellHead = 'px-3 py-2 text-right font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)] whitespace-nowrap';
-    const cell = 'px-3 py-2 text-right font-mono text-[13px] leading-5 tabular-nums whitespace-nowrap';
+    const cell = 'px-3 py-2 text-right text-[14px] leading-5 tabular-nums whitespace-nowrap';
 
     return createPortal(
-        <div className="fixed inset-0 z-[60] bg-black/50 flex justify-end" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] bg-[oklch(18%_0.012_28/0.45)] flex justify-end" onClick={onClose}>
             <div role="dialog" aria-modal="true" aria-labelledby="usage-report-title" onClick={e => e.stopPropagation()}
                 className="w-full sm:max-w-2xl h-full flex flex-col bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-sans">
                 <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
                     <div className="px-4 py-3 min-w-0">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">WITHDRAWALS · {period} DAYS</span>
-                        <h2 id="usage-report-title" className="font-bold text-lg leading-7">สรุปการเบิกออก</h2>
+                        <h2 id="usage-report-title" className="font-bold text-xl leading-7">สรุปการเบิกออก</h2>
                         <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
                             เฉพาะที่เบิกด้วยมือ ยอดใช้ตามยอดขายดูที่หน้า Stock Recon
                         </p>
                     </div>
-                    <button type="button" onClick={onClose} className="px-4 font-bold text-[13px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                    <button type="button" onClick={onClose} className="px-4 font-bold text-[14px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
                         ปิด
                     </button>
                 </header>
@@ -71,7 +70,7 @@ export default function StockUsageReport({ onClose }) {
                 <div className="shrink-0 grid grid-cols-2 border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="ช่วงเวลา">
                     {PERIODS.map(d => (
                         <button key={d} type="button" role="tab" aria-selected={period === d} onClick={() => setPeriod(d)}
-                            className={`py-2.5 text-[13px] leading-5 font-bold cursor-pointer ${period === d ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
+                            className={`py-2.5 text-[14px] leading-5 font-bold cursor-pointer ${period === d ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
                             {d} วันล่าสุด
                         </button>
                     ))}
@@ -85,7 +84,7 @@ export default function StockUsageReport({ onClose }) {
                     ) : state.rows.length === 0 ? (
                         <p className="p-6 text-[14px] leading-6 text-[oklch(42%_0.010_28)]">ไม่มีการเบิกออกใน {period} วันที่ผ่านมา</p>
                     ) : (<>
-                        <ul className="sm:hidden divide-y divide-[oklch(90%_0.008_28)] bg-white">
+                        <ul className="sm:hidden divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]">
                             {state.rows.map(r => (
                                 <li key={r.stock_item_id || r.name} className="grid grid-cols-[1fr_auto] gap-x-3 px-4 py-2 items-baseline">
                                     <span className="min-w-0">
@@ -94,14 +93,14 @@ export default function StockUsageReport({ onClose }) {
                                             {COLS.filter(c => r[c.key]).map(c => `${c.label} ${qty(r[c.key])}`).join(' · ')} · {r.count} ครั้ง
                                         </span>
                                     </span>
-                                    <span className="text-right font-mono tabular-nums">
+                                    <span className="text-right tabular-nums">
                                         <span className="block text-[14px] font-bold">{qty(r.total)}</span>
-                                        <span className="block font-sans text-[11px] text-[oklch(55%_0.010_28)]">{displayUnit(r.unit)}</span>
+                                        <span className="block font-sans text-[12px] text-[oklch(55%_0.010_28)]">{displayUnit(r.unit)}</span>
                                     </span>
                                 </li>
                             ))}
                         </ul>
-                        <table className="hidden sm:table w-full border-collapse bg-white">
+                        <table className="hidden sm:table w-full border-collapse bg-[oklch(99%_0.004_28)]">
                             <thead className="sticky top-0 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
                                 <tr>
                                     <th className="px-3 py-2 text-left font-sans text-[12px] leading-5 font-bold text-[oklch(42%_0.010_28)]">รายการ</th>
@@ -114,7 +113,7 @@ export default function StockUsageReport({ onClose }) {
                                     <tr key={r.stock_item_id || r.name}>
                                         <td className="px-3 py-2 min-w-0">
                                             <span className="block font-bold text-[14px] leading-6 break-words">{r.name}</span>
-                                            <span className="block text-[11px] leading-5 text-[oklch(55%_0.010_28)]">{r.count} ครั้ง · {displayUnit(r.unit)}</span>
+                                            <span className="block text-[12px] leading-5 text-[oklch(55%_0.010_28)]">{r.count} ครั้ง · {displayUnit(r.unit)}</span>
                                         </td>
                                         {COLS.map(c => (
                                             <td key={c.key} className={`${cell} ${r[c.key] ? '' : 'text-[oklch(70%_0.008_28)]'}`}>{qty(r[c.key])}</td>

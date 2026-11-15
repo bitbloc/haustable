@@ -120,7 +120,7 @@ function OpenUnitHelper({ item, onApply, onClose }) {
                 </div>
             )}
             <div className="flex items-center justify-between gap-3">
-                <span className={`text-[13px] leading-5 ${ui.MUTED}`}>
+                <span className={`text-[14px] leading-5 ${ui.MUTED}`}>
                     รวม <span className={`font-semibold tabular-nums ${ui.INK}`}>{fmt(total)}</span> {unit}
                 </span>
                 <div className="flex gap-2">
@@ -364,11 +364,11 @@ export default function StockCountPage() {
             <header className={`sticky top-0 z-20 bg-[oklch(97%_0.008_28)] border-b ${ui.RULE}`}>
                 <div className={`max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[oklch(85%_0.012_28)] border-x ${ui.RULE}`}>
                     <button type="button" onClick={() => navigate('/staff/stock')}
-                        className={`px-4 font-bold text-[13px] ${ui.MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>
+                        className={`px-4 font-bold text-[14px] ${ui.MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>
                         กลับ
                     </button>
                     <div className="px-4 py-2.5">
-                        <h1 className="font-semibold text-lg leading-7">นับสต๊อก</h1>
+                        <h1 className="font-semibold text-xl leading-7">นับสต๊อก</h1>
                         <p className={`text-[12px] leading-5 ${ui.MUTED}`}>
                             วันทำการ <span className="tabular-nums">{shopDay}</span> · ตัดรอบวันตอน 05:00
                         </p>
@@ -399,7 +399,7 @@ export default function StockCountPage() {
                             <h2 id="count-result" className="font-semibold text-base leading-7">
                                 บันทึก{COUNT_KINDS[result.kind]?.label || ''}แล้ว {result.line_count} รายการ
                             </h2>
-                            <p className={`text-[13px] leading-6 ${ui.MUTED}`}>
+                            <p className={`text-[14px] leading-6 ${ui.MUTED}`}>
                                 ผลต่างจากยอดในระบบรวม{' '}
                                 <span className={`font-semibold tabular-nums ${Number(result.value_diff) < 0 ? ui.ACCENT : ui.INK}`}>
                                     ฿{Number(result.value_diff || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -412,7 +412,7 @@ export default function StockCountPage() {
                                     initial={reduceMotion ? false : { opacity: 0, y: 4 }}
                                     animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: ui.EASE, delay: Math.min(i, 12) * 0.02 } }}>
                                     <span className="font-semibold text-[14px] leading-6 min-w-0 break-words">{l.name}</span>
-                                    <span className={`text-[13px] leading-6 tabular-nums text-right ${Number(l.diff) < 0 ? ui.ACCENT : ui.MUTED}`}>
+                                    <span className={`text-[14px] leading-6 tabular-nums text-right ${Number(l.diff) < 0 ? ui.ACCENT : ui.MUTED}`}>
                                         {Number(l.diff) > 0 ? '+' : ''}{fmt(l.diff)} {displayUnit(l.unit)}
                                     </span>
                                     <span className={`text-[12px] leading-5 ${ui.NEUTRAL}`}>
@@ -426,7 +426,7 @@ export default function StockCountPage() {
                         </ol>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setResult(null)}
-                                className={`h-12 rounded-md border ${ui.RULE} text-[15px] font-semibold ${ui.INK} hover:border-[oklch(18%_0.012_28)] transition-colors cursor-pointer`}>
+                                className={`h-12 rounded-md border ${ui.RULE} text-base font-semibold ${ui.INK} hover:border-[oklch(18%_0.012_28)] transition-colors cursor-pointer`}>
                                 นับต่อ
                             </button>
                             <button type="button" onClick={() => navigate('/staff/stock')} className={ui.primaryBtn}>
@@ -445,7 +445,7 @@ export default function StockCountPage() {
                                         { id: 'all', label: 'ทั้งหมด', n: items.length }
                                     ].map(s => (
                                         <button key={s.id} type="button" onClick={() => setScope(s.id)} aria-pressed={scope === s.id}
-                                            className={`relative h-8 px-3 rounded text-[13px] whitespace-nowrap transition-colors cursor-pointer ${scope === s.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}>
+                                            className={`relative h-8 px-3 rounded text-[14px] whitespace-nowrap transition-colors cursor-pointer ${scope === s.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}>
                                             {scope === s.id && (
                                                 <motion.span layoutId="count-scope-pill" transition={pillTransition}
                                                     className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]`} />
@@ -458,7 +458,7 @@ export default function StockCountPage() {
                                     ป้าย QR
                                 </button>
                                 <button type="button" role="switch" aria-checked={showSystem} onClick={() => setShowSystem(v => !v)}
-                                    className={`ml-auto flex items-center gap-2 h-9 text-[13px] ${ui.MUTED} cursor-pointer select-none`}>
+                                    className={`ml-auto flex items-center gap-2 h-9 text-[14px] ${ui.MUTED} cursor-pointer select-none`}>
                                     แสดงยอดในระบบ
                                     <span className={`relative w-11 h-6 rounded-full transition-colors ${showSystem ? 'bg-[oklch(18%_0.012_28)]' : 'bg-[oklch(85%_0.012_28)]'}`}>
                                         <motion.span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[oklch(99%_0.004_28)]"
@@ -493,7 +493,7 @@ export default function StockCountPage() {
                                     <motion.div key="spot" {...fade} className={`rounded-md border ${ui.RULE} ${ui.PAPER} overflow-hidden`}>
                                         <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2.5 border-b border-[oklch(90%_0.008_28)]">
                                             <p className={`text-[12px] leading-5 ${ui.MUTED} min-w-0`}>
-                                                <span className={`font-semibold text-[13px] ${ui.INK}`}>แนะนำให้นับตอนนี้ {spotSuggestions.length} รายการ</span>
+                                                <span className={`font-semibold text-[14px] ${ui.INK}`}>แนะนำให้นับตอนนี้ {spotSuggestions.length} รายการ</span>
                                                 <span className="block">ไม่ต้องนับทั้งร้าน ตัวที่ขาดบ่อยหรือมูลค่าสูงที่ยังไม่ได้นับ</span>
                                             </p>
                                             <button type="button" onClick={() => setScope(scope === 'suggested' ? 'all' : 'suggested')} aria-pressed={scope === 'suggested'}
@@ -537,8 +537,8 @@ export default function StockCountPage() {
                                             <div className={`grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2.5 ${ui.PAPER2}`}>
                                                 <AnimatePresence mode="wait" initial={false}>
                                                     <motion.div key={it.id} {...fade} className="min-w-0">
-                                                        <span className={`text-[11px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด</span>
-                                                        <span className="font-semibold text-[15px] leading-6 break-words">{it.name}</span>
+                                                        <span className={`text-[12px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด</span>
+                                                        <span className="font-semibold text-base leading-6 break-words">{it.name}</span>
                                                     </motion.div>
                                                 </AnimatePresence>
                                                 <div className="flex items-center gap-2">
@@ -576,7 +576,7 @@ export default function StockCountPage() {
                                         <li key={item.id} className={`px-3 py-3 transition-colors ${entered && !invalid ? 'bg-[oklch(97.5%_0.006_28)]' : ''}`}>
                                             <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center">
                                                 <div className="min-w-0">
-                                                    <label htmlFor={`count-${item.id}`} className="font-semibold text-[15px] leading-6 block break-words">
+                                                    <label htmlFor={`count-${item.id}`} className="font-semibold text-base leading-6 block break-words">
                                                         {item.name}
                                                     </label>
                                                     <div className={`flex flex-wrap gap-x-3 text-[12px] leading-5 ${ui.NEUTRAL}`}>
@@ -658,7 +658,7 @@ export default function StockCountPage() {
                         exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, transition: { duration: 0.14, ease: ui.EASE } }}
                         className={`fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t ${ui.RULE}`}>
                         <div className={`max-w-3xl mx-auto flex items-center gap-3 px-3 py-3 border-x ${ui.RULE}`}>
-                            <span className={`flex-1 min-w-0 text-[13px] leading-5 ${ui.MUTED}`}>
+                            <span className={`flex-1 min-w-0 text-[14px] leading-5 ${ui.MUTED}`}>
                                 กรอกแล้ว{' '}
                                 <motion.span key={filled} className={`inline-block font-semibold tabular-nums ${ui.INK}`}
                                     initial={reduceMotion || !filled ? false : { opacity: 0, y: -4 }}
@@ -673,7 +673,7 @@ export default function StockCountPage() {
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={!filled || invalidCount > 0 || saving}
-                                className="h-12 px-6 shrink-0 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[15px] font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                className="h-12 px-6 shrink-0 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-base font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                             >
                                 {saving ? 'กำลังบันทึก...' : `บันทึก${COUNT_KINDS[kind].label}`}
                             </button>

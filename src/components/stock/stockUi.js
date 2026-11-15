@@ -13,7 +13,7 @@ export const input = `w-full h-11 px-3 rounded-md border ${RULE} ${PAPER} ${INK}
 export const chip = (active) => `h-10 px-3 rounded-md border text-sm transition-colors ${active
     ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold'
     : `${RULE} ${MUTED} hover:border-[oklch(18%_0.012_28)] hover:text-[oklch(18%_0.012_28)]`}`;
-export const primaryBtn = 'w-full h-12 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[15px] font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
+export const primaryBtn = 'w-full h-12 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-base font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
 export const ghostBtn = `h-9 px-3 rounded-md border ${RULE} text-sm ${MUTED} hover:border-[oklch(18%_0.012_28)] hover:text-[oklch(18%_0.012_28)] transition-colors`;
 export const stepBtn = `w-12 h-12 shrink-0 rounded-md border ${RULE} ${PAPER} text-xl ${INK} flex items-center justify-center transition-[background-color,transform] hover:bg-[oklch(94%_0.010_28)] active:scale-95`;
 

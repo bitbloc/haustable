@@ -1,7 +1,7 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: custom · designed-as-app */
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
-import { formatStockDisplay } from './utils/stockUtils';
+import { formatStockDisplay, stockStatus, STOCK_STATUS_LABEL } from './utils/stockUtils';
 import { logStaffActivity } from './utils/auditLogger';
 import { postStockMovement, recordSpotCount, STOCK_REASONS } from './utils/stockLedger';
 
@@ -730,6 +730,11 @@ export default function StockPage() {
         }
     };
 
+    // How many need a look, across the whole store (not just the open tab)
+    const statusCounts = { out: 0, low: 0, reorder: 0, ok: 0 };
+    for (const item of items) statusCounts[stockStatus(item)] += 1;
+    const restockCount = statusCounts.out + statusCounts.low + statusCounts.reorder;
+
     // Filter & Sort Items
     const filteredItems = items
         .filter(item => {
@@ -744,12 +749,8 @@ export default function StockPage() {
 
             // Otherwise, filter by selected category tab
             if (activeCategory === 'all') return true;
-            if (activeCategory === 'restock') {
-                const qty = Number(item.current_quantity) || 0;
-                const reorder = Number(item.reorder_point) || 0;
-                const min = Number(item.min_stock_threshold) || 0;
-                return (reorder > 0 && qty <= reorder + 0.0001) || (min > 0 && qty <= min + 0.0001) || (qty <= 0);
-            }
+            if (activeCategory === 'restock') return stockStatus(item) !== 'ok';
+            if (activeCategory.startsWith('status:')) return stockStatus(item) === activeCategory.slice(7);
             return item.category === activeCategory;
         })
         .sort((a, b) => {
@@ -759,206 +760,120 @@ export default function StockPage() {
             return a.name.localeCompare(b.name, 'th');
         });
 
+    const statusFilter = activeCategory.startsWith('status:') ? activeCategory.slice(7) : null;
+    const pickStatus = (s) => setActiveCategory(statusFilter === s ? 'restock' : `status:${s}`);
+    const searching = searchQuery.trim() !== '';
+
     return (
         <div className="stock-page">
-            {/* Header */}
             <header className="sp-header">
-                <div className="sp-header__top">
-                    <button 
-                        onClick={() => navigate('/staff')}
-                        className="sp-header__back"
-                        title="ย้อนกลับ"
-                    >
-                        กลับ
+                <div className="sp-wrap sp-header__top">
+                    <button type="button" onClick={() => navigate('/staff')} className="sp-btn sp-btn--quiet">กลับ</button>
+                    <div className="sp-header__title">
+                        <h1>คลังวัตถุดิบ</h1>
+                        <p>{currentUser?.user_metadata?.full_name || 'พนักงาน'}</p>
+                    </div>
+                    <button type="button" onClick={() => { setEditingItem(null); setShowItemForm(true); }} className="sp-btn sp-btn--outline">
+                        เพิ่มวัตถุดิบ
                     </button>
-                    
-                    <div className="sp-header__logo-wrap">
-                        <img 
-                            src="/logo-staff-light.png" 
-                            alt="ในบ้าน Staff" 
-                            className="sp-header__logo"
-                        />
-                        <p className="sp-header__user">
-                            {currentUser?.user_metadata?.full_name || 'พนักงาน'}
-                        </p>
-                    </div>
-                    
-                    <div className="sp-header__actions">
-                        {/* Update Stock Button (Manual Push) */}
-                         <button 
-                            onClick={handleManualUpdate}
-                            disabled={loading}
-                            className="sp-header__btn sp-header__btn--line"
-                            title="ส่งสรุปเข้า LINE"
-                         >
-                            ส่ง LINE
-                         </button>
-
-                        {/* Report Button */}
-                         <button 
-                            onClick={() => setShowReport(true)}
-                            className="sp-header__btn"
-                            title="สรุปการเบิกออก 7 / 30 วัน"
-                         >
-                            สรุปเบิก
-                        </button>
-                         <button 
-                            onClick={() => setShowHistory(true)}
-                            className="sp-header__btn"
-                            title="ประวัติรายการ"
-                         >
-                            ประวัติ
-                        </button>
-                         <button 
-                            onClick={() => setShowCategoryManager(true)}
-                            className="sp-header__btn"
-                            title="จัดการหมวดหมู่"
-                         >
-                            หมวดหมู่
-                        </button>
-                        <button 
-                            onClick={() => { setEditingItem(null); setShowItemForm(true); }}
-                            className="sp-header__btn sp-header__btn--accent"
-                            title="เพิ่มวัตถุดิบ"
-                         >
-                            เพิ่มวัตถุดิบ
-                        </button>
-                         <button 
-                            onClick={fetchItems} 
-                            className="sp-header__btn"
-                            title="โหลดข้อมูลใหม่"
-                         >
-                            {loading ? 'กำลังโหลด' : 'โหลดใหม่'}
-                        </button>
-                    </div>
                 </div>
+                <nav className="sp-wrap sp-tools" aria-label="เครื่องมือคลัง">
+                    <button type="button" onClick={handleManualUpdate} disabled={loading} title="ส่งสรุป 1 ชั่วโมงล่าสุดเข้า LINE">ส่ง LINE</button>
+                    <button type="button" onClick={() => setShowReport(true)} title="สรุปการเบิกออก 7 / 30 วัน">สรุปเบิก</button>
+                    <button type="button" onClick={() => setShowHistory(true)}>ประวัติ</button>
+                    <button type="button" onClick={() => setShowCategoryManager(true)}>หมวดหมู่</button>
+                    <button type="button" onClick={fetchItems}>{loading ? 'กำลังโหลด' : 'โหลดใหม่'}</button>
+                </nav>
+            </header>
 
-                {/* Search & Scan Bar */}
-                <div className="sp-search-bar">
-                    <div className="sp-search-bar__input-wrap">
-                        <input 
-                            type="text"
-                            placeholder="ค้นหาวัตถุดิบ (ชื่อ/บาร์โค้ด)..."
+            {/* What needs a look, and the two jobs done every day */}
+            <section className="sp-wrap sp-board" aria-label="ต้องดู">
+                <div className="sp-status-grid" role="group" aria-label="สถานะสต๊อก">
+                    {['out', 'low', 'reorder'].map(s => (
+                        <button key={s} type="button" onClick={() => pickStatus(s)} aria-pressed={statusFilter === s}
+                            className={`sp-stat sp-stat--${s} ${statusCounts[s] > 0 ? 'is-hot' : ''} ${statusFilter === s ? 'is-active' : ''}`}>
+                            <span className="sp-stat__n">{loading && !items.length ? '–' : statusCounts[s]}</span>
+                            <span className="sp-stat__label">{STOCK_STATUS_LABEL[s]}</span>
+                        </button>
+                    ))}
+                </div>
+                <div className="sp-cta-grid">
+                    <button type="button" onClick={() => navigate('/staff/stock/count')} className="sp-cta sp-cta--ink">
+                        <span className="sp-cta__label">นับสต๊อก</span>
+                        <span className="sp-cta__hint">เปิด · ระหว่างวัน · ปิด</span>
+                    </button>
+                    <button type="button" onClick={() => navigate('/staff/stock/receive')} className="sp-cta">
+                        <span className="sp-cta__label">รับของ</span>
+                        <span className="sp-cta__hint">ตามบิล พร้อมค่าใช้จ่าย</span>
+                    </button>
+                </div>
+            </section>
+
+            <div className="sp-filters">
+                <div className="sp-wrap">
+                    <div className="sp-search-bar">
+                        <input
+                            type="search"
+                            placeholder="ค้นหาชื่อหรือบาร์โค้ด"
+                            aria-label="ค้นหาวัตถุดิบ"
                             className="sp-search-bar__input"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
+                        <button type="button" onClick={() => setShowScanner(true)} className="sp-btn sp-btn--outline">สแกน</button>
                     </div>
-                    <button 
-                        onClick={() => setShowScanner(true)}
-                        className="sp-search-bar__scan"
-                        title="สแกนบาร์โค้ด"
-                    >
-                        สแกน
-                    </button>
-                </div>
-
-                {/* View & Sort Controls */}
-                <div className="sp-controls">
-                    <div className="sp-controls__left">
-                        {/* Grid / List View Selector */}
-                        <div className="sp-controls__toggle-group">
-                            <button 
-                                onClick={() => setViewMode('grid')}
-                                className={`sp-controls__toggle-btn ${viewMode === 'grid' ? 'sp-controls__toggle-btn--active' : ''}`}
-                                title="มุมมองการ์ด"
-                            >
-                                การ์ด
-                            </button>
-                            <button 
-                                onClick={() => setViewMode('list')}
-                                className={`sp-controls__toggle-btn ${viewMode === 'list' ? 'sp-controls__toggle-btn--active' : ''}`}
-                                title="มุมมองรายการ"
-                            >
-                                รายการ
-                            </button>
-                        </div>
-                        
-                        {/* Counting happens in count sessions (opening / spot / closing) */}
-                        <button 
-                            onClick={() => navigate('/staff/stock/count')}
-                            className="sp-controls__quick-count"
-                            title="นับสต๊อกเป็นรอบ: เปิดร้าน / ระหว่างวัน / ปิดร้าน"
-                        >
-                            <span>นับสต๊อก</span>
-                        </button>
-                        <button
-                            onClick={() => navigate('/staff/stock/receive')}
-                            className="sp-controls__quick-count"
-                            title="รับของเข้าตามบิล: เพิ่มสต๊อก อัปเดตราคาทุน และบันทึกค่าใช้จ่ายในครั้งเดียว"
-                        >
-                            <span>รับของ</span>
-                        </button>
-                    </div>
-
-                    {/* Sort Controls */}
-                    <div className="sp-controls__sort">
-                        <button 
-                            onClick={() => setSortMode('name')}
-                            className={`sp-controls__sort-btn ${sortMode === 'name' ? 'sp-controls__sort-btn--active' : ''}`}
-                        >ชื่อ ก–ฮ</button>
-                        <button 
-                            onClick={() => setSortMode('low_stock')}
-                            className={`sp-controls__sort-btn sp-controls__sort-btn--low ${sortMode === 'low_stock' ? 'sp-controls__sort-btn--low-active' : ''}`}
-                        >ใกล้หมดก่อน</button>
-                    </div>
-                </div>
-
-                {/* Category Tabs */}
-                <div className="sp-tabs">
-                    {categories.map(cat => {
-                        const isActive = activeCategory === cat.id;
-                        return (
-                            <button 
-                                key={cat.id}
+                    <div className="sp-tabs" role="tablist" aria-label="หมวดหมู่">
+                        {categories.map(cat => (
+                            <button key={cat.id} type="button" role="tab" aria-selected={activeCategory === cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
-                                className={`sp-tab ${isActive ? 'sp-tab--active' : ''}`}
-                            >
-                                <span>{cat.label}</span>
+                                className={`sp-tab ${activeCategory === cat.id ? 'sp-tab--active' : ''} ${cat.id === 'restock' ? 'sp-tab--restock' : ''}`}>
+                                {cat.label}
+                                {cat.id === 'restock' && restockCount > 0 && <span className="sp-tab__n">{restockCount}</span>}
                             </button>
-                        );
-                    })}
+                        ))}
+                    </div>
+                    <div className="sp-controls">
+                        <span className="sp-controls__count">
+                            {filteredItems.length.toLocaleString('th-TH')} รายการ
+                        </span>
+                        <div className="sp-seg" role="group" aria-label="เรียง">
+                            <button type="button" onClick={() => setSortMode('name')} aria-pressed={sortMode === 'name'}>ชื่อ ก–ฮ</button>
+                            <button type="button" onClick={() => setSortMode('low_stock')} aria-pressed={sortMode === 'low_stock'}>น้อยก่อน</button>
+                        </div>
+                        <div className="sp-seg" role="group" aria-label="มุมมอง">
+                            <button type="button" onClick={() => setViewMode('grid')} aria-pressed={viewMode === 'grid'}>การ์ด</button>
+                            <button type="button" onClick={() => setViewMode('list')} aria-pressed={viewMode === 'list'}>รายการ</button>
+                        </div>
+                    </div>
                 </div>
-            </header>
+            </div>
 
-            {/* Main Content Info */}
-            <main className="sp-content">
+            <main className="sp-wrap sp-content">
                 {loading && items.length === 0 ? (
-                    <div className="sp-loading">
-                        <span className="sp-loading__title">กำลังโหลดสต๊อก...</span>
+                    <div className="sp-grid" aria-busy="true" aria-label="กำลังโหลดสต๊อก">
+                        {Array.from({ length: 10 }, (_, i) => (
+                            <div key={i} className="sc-card sc-card--skeleton" aria-hidden="true">
+                                <span className="sk" style={{ width: 40, height: 24 }} />
+                                <span className="sk" style={{ width: 64, height: 64, margin: '8px auto 12px', borderRadius: 6 }} />
+                                <span className="sk" style={{ width: '80%', height: 14, margin: '4px 0 18px' }} />
+                                <span className="sk" style={{ width: 56, height: 24, marginTop: 8 }} />
+                            </div>
+                        ))}
                     </div>
                 ) : filteredItems.length === 0 ? (
-                    <div className="sp-empty">
-                        <span className="sp-empty__title">ไม่พบสินค้าในหมวดหมู่: {activeCategory}</span>
-                    </div>
+                    <p className="sp-empty">
+                        {statusFilter ? `ไม่มีรายการที่${STOCK_STATUS_LABEL[statusFilter]}` : searching ? 'ไม่พบรายการที่ค้นหา' : 'ไม่มีรายการในหมวดนี้'}
+                    </p>
                 ) : (
-                    viewMode === 'grid' ? (
-                        <div className="sp-grid">
-                             {filteredItems.map(item => (
-                                 <StockCard 
-                                    key={item.id} 
-                                    item={item} 
-                                    onClick={(i) => setSelectedItem(i)} 
-                                    onRecipe={handleOpenRecipe}
-                                    searchActive={searchQuery.trim() !== ''}
-                                    categories={categories}
-                                 />
-                             ))}
-                        </div>
-                    ) : (
-                        <div className="sp-list">
-                            {filteredItems.map(item => (
-                                <StockListItem 
-                                    key={item.id}
-                                    item={item}
-                                    onClick={(i) => setSelectedItem(i)}
-                                    onRecipe={handleOpenRecipe}
-                                    searchActive={searchQuery.trim() !== ''}
-                                    categories={categories}
-                                />
-                            ))}
-                        </div>
-                    )
+                    <div key={`${viewMode}:${activeCategory}`} className={viewMode === 'grid' ? 'sp-grid sp-fade' : 'sp-list sp-fade'}>
+                        {filteredItems.map(item => viewMode === 'grid' ? (
+                            <StockCard key={item.id} item={item} onClick={(i) => setSelectedItem(i)} onRecipe={handleOpenRecipe}
+                                searchActive={searching} categories={categories} />
+                        ) : (
+                            <StockListItem key={item.id} item={item} onClick={(i) => setSelectedItem(i)} onRecipe={handleOpenRecipe}
+                                searchActive={searching} categories={categories} />
+                        ))}
+                    </div>
                 )}
             </main>
             

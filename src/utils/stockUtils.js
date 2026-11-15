@@ -1,3 +1,5 @@
+import { displayUnit } from './stockCount';
+
 /**
  * Formats stock quantity into a structured object for display.
  * Handles floating point precision safe logic.
@@ -78,3 +80,34 @@ export const calculateTotalFromComponents = (fullUnits, percent) => {
     const total = safeFull + (safePercent / 100);
     return Number(total.toFixed(4));
 };
+
+const STATUS_EPSILON = 0.0001;
+
+/**
+ * Where an item stands, for the stock screens: 'out' (nothing left), 'low' (at or under the
+ * minimum), 'reorder' (at or under the reorder point) or 'ok'. One rule for cards, rows and
+ * the summary, so a tag never says "หมด" while the number says 2.
+ */
+export const stockStatus = (item = {}) => {
+  const qty = Number(item.current_quantity) || 0;
+  const min = Number(item.min_stock_threshold) || 0;
+  const reorder = Number(item.reorder_point) || 0;
+  if (qty <= STATUS_EPSILON) return 'out';
+  if (min > 0 && qty <= min + STATUS_EPSILON) return 'low';
+  if (reorder > 0 && qty <= reorder + STATUS_EPSILON) return 'reorder';
+  return 'ok';
+};
+
+export const STOCK_STATUS_LABEL = Object.freeze({ out: 'หมด', low: 'เหลือน้อย', reorder: 'ควรสั่ง', ok: '' });
+
+/** "2 ขวด" and, when one is open, what is left in it ("เปิดแล้ว 300 ml" / "เปิดแล้ว 40%"). */
+export function stockQtyParts(item) {
+    const unit = displayUnit(item.unit || item.pack_unit);
+    const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
+        item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor
+    );
+    const open = hasOpen
+        ? `เปิดแล้ว ${remainderUsage !== null ? `${remainderUsage.toLocaleString('th-TH')} ${displayUnit(item.usage_unit)}` : `${percent}%`}`
+        : null;
+    return { main: fullUnits.toLocaleString('th-TH'), unit, open };
+}

@@ -36,7 +36,8 @@ const MUTED = 'text-[oklch(42%_0.010_28)]';
 const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
 const RULE = 'border-[oklch(85%_0.012_28)]';
 const ACCENT = 'text-[oklch(52%_0.16_28)]';
-const segBtn = (active) => `px-3 py-2 font-sans font-bold text-[13px] leading-5 cursor-pointer text-left ${active ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : `bg-[oklch(99%_0.004_28)] ${MUTED} hover:bg-[oklch(94%_0.010_28)]`}`;
+const segBtn = (active) => `relative h-9 px-3 rounded text-sm whitespace-nowrap transition-colors cursor-pointer ${active ? 'text-[oklch(18%_0.012_28)] font-semibold' : `${NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`;
+const segPill = 'absolute inset-0 rounded bg-[oklch(99%_0.004_28)] shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]';
 
 /**
  * Goods in: what arrived, how many, what the bill says. One save adds the stock,
@@ -48,6 +49,7 @@ export default function StockReceivePage() {
     const fade = reduceMotion
         ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
         : { initial: { opacity: 0, y: -6 }, animate: { opacity: 1, y: 0, transition: { duration: 0.18, ease: EASE } }, exit: { opacity: 0, transition: { duration: 0.1 } } };
+    const pill = reduceMotion ? { duration: 0 } : { duration: 0.22, ease: EASE };
     const saved = useMemo(() => readDraft(), []);
     const [items, setItems] = useState([]);
     const [extraBarcodes, setExtraBarcodes] = useState([]);
@@ -209,11 +211,11 @@ export default function StockReceivePage() {
             <header className={`sticky top-0 z-20 bg-[oklch(97%_0.008_28)] border-b ${RULE}`}>
                 <div className={`max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[oklch(85%_0.012_28)] border-x ${RULE}`}>
                     <button type="button" onClick={() => navigate('/staff/stock')}
-                        className={`px-4 font-bold text-[13px] ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>
+                        className={`px-4 font-bold text-[14px] ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>
                         กลับ
                     </button>
                     <div className="px-4 py-2.5">
-                        <h1 className="font-semibold text-lg leading-7">รับของเข้า</h1>
+                        <h1 className="font-semibold text-xl leading-7">รับของเข้า</h1>
                         <p className={`text-[12px] leading-5 ${MUTED}`}>บันทึกครั้งเดียว ได้ทั้งสต๊อก ราคาทุนล่าสุด และค่าใช้จ่าย</p>
                     </div>
                 </div>
@@ -226,7 +228,7 @@ export default function StockReceivePage() {
                             <h2 id="receive-result" className="font-bold text-base leading-7">
                                 รับเข้าแล้ว {result.line_count} รายการ{result.total ? ` · ${baht(result.total)}` : ''}
                             </h2>
-                            <p className={`text-[13px] leading-6 ${MUTED}`}>
+                            <p className={`text-[14px] leading-6 ${MUTED}`}>
                                 {result.duplicate
                                     ? 'บิลนี้ถูกบันทึกไปแล้วก่อนหน้า ไม่ได้รับเข้าซ้ำ'
                                     : result.expense_id
@@ -239,7 +241,7 @@ export default function StockReceivePage() {
                                 {result.lines.map(l => (
                                     <li key={l.stock_item_id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2">
                                         <span className="font-bold text-[14px] leading-6 min-w-0 break-words">{l.name}</span>
-                                        <span className="tabular-nums text-[13px] tabular-nums text-right">+{qty(l.quantity)} {displayUnit(l.unit)}</span>
+                                        <span className="tabular-nums text-[14px] tabular-nums text-right">+{qty(l.quantity)} {displayUnit(l.unit)}</span>
                                         <span className={`text-[12px] leading-5 ${NEUTRAL}`}>
                                             {l.new_cost_price !== null && l.new_cost_price !== undefined
                                                 ? `ราคาทุนอัปเดตเป็น ฿${Number(l.unit_cost).toFixed(2)}/${displayUnit(l.unit)}`
@@ -263,7 +265,7 @@ export default function StockReceivePage() {
                             <label className="block">
                                 <span className={`block text-[12px] leading-5 ${MUTED} mb-1`}>ร้าน / ผู้ขาย</span>
                                 <input type="text" value={vendor} onChange={e => setVendor(e.target.value)} list="receive-vendors" placeholder="เช่น Makro, ตลาด"
-                                    className={`w-full p-2 border ${RULE} bg-[oklch(99%_0.004_28)] text-[14px] outline-none focus:border-[oklch(18%_0.012_28)]`} />
+                                    className={`w-full h-11 px-3 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`} />
                                 <datalist id="receive-vendors">
                                     {[...new Set(['Makro', 'Siam Makro', 'ตลาด', ...recentExpenses.map(e => e.vendor_name).filter(Boolean)])].map(v => <option key={v} value={v} />)}
                                 </datalist>
@@ -271,23 +273,23 @@ export default function StockReceivePage() {
                             <label className="block">
                                 <span className={`block text-[12px] leading-5 ${MUTED} mb-1`}>โน้ต (ไม่บังคับ)</span>
                                 <input type="text" value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="เลขที่บิล หรือหมายเหตุ"
-                                    className={`w-full p-2 border ${RULE} bg-[oklch(99%_0.004_28)] text-[14px] outline-none focus:border-[oklch(18%_0.012_28)]`} />
+                                    className={`w-full h-11 px-3 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`} />
                             </label>
                         </section>
 
                         {/* Add items */}
                         <section className={`p-3 border-b ${RULE} space-y-2`} aria-label="เพิ่มรายการ">
-                            <div className={`grid grid-cols-[1fr_auto] border ${RULE} divide-x divide-[oklch(85%_0.012_28)]`}>
+                            <div className="flex gap-2">
                                 <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาวัตถุดิบที่รับเข้า..."
-                                    aria-label="ค้นหาวัตถุดิบ" className="w-full min-w-0 p-2 bg-[oklch(99%_0.004_28)] text-[14px] outline-none" />
+                                    aria-label="ค้นหาวัตถุดิบ" className={`flex-1 min-w-0 h-11 px-3 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`} />
                                 <button type="button" onClick={() => { setScanning(s => !s); gateRef.current.reset(); }} aria-pressed={scanning}
-                                    className={`px-4 font-bold text-[14px] cursor-pointer ${scanning ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
+                                    className={`h-11 px-4 shrink-0 rounded-md border text-sm font-semibold transition-colors cursor-pointer ${scanning ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : `${RULE} bg-[oklch(99%_0.004_28)] hover:border-[oklch(18%_0.012_28)]`}`}>
                                     {scanning ? 'กำลังสแกน' : 'สแกน'}
                                 </button>
                             </div>
                             <AnimatePresence initial={false}>
                             {matches.length > 0 && (
-                                <motion.ul key="matches" {...fade} className={`border ${RULE} divide-y divide-[oklch(90%_0.008_28)]`}>
+                                <motion.ul key="matches" {...fade} className={`rounded-md overflow-hidden border ${RULE} divide-y divide-[oklch(90%_0.008_28)]`}>
                                     {matches.map(i => (
                                         <li key={i.id}>
                                             <button type="button" onClick={() => { addItem(i.id, 1); setSearch(''); }}
@@ -300,7 +302,7 @@ export default function StockReceivePage() {
                                 </motion.ul>
                             )}
                             </AnimatePresence>
-                            {search.trim() && matches.length === 0 && !loading && <p className={`text-[13px] ${NEUTRAL}`}>ไม่พบวัตถุดิบชื่อนี้</p>}
+                            {search.trim() && matches.length === 0 && !loading && <p className={`text-[14px] ${NEUTRAL}`}>ไม่พบวัตถุดิบชื่อนี้</p>}
                         </section>
 
                         {scanning && (
@@ -323,22 +325,22 @@ export default function StockReceivePage() {
                                     return (
                                         <motion.li key={l.key} layout={!reduceMotion} {...fade} className={`px-3 py-3 space-y-2 ${err ? 'bg-[oklch(97%_0.02_28)]' : ''}`}>
                                             <div className="grid grid-cols-[1fr_auto] gap-3 items-baseline">
-                                                <span className="font-bold text-[15px] leading-6 break-words min-w-0">{item?.name || 'ไม่พบวัตถุดิบ'}</span>
+                                                <span className="font-bold text-base leading-6 break-words min-w-0">{item?.name || 'ไม่พบวัตถุดิบ'}</span>
                                                 <button type="button" onClick={() => setLines(prev => prev.filter(x => x.key !== l.key))}
                                                     className={`text-[12px] font-bold ${NEUTRAL} hover:text-[oklch(52%_0.16_28)] cursor-pointer`}>ลบ</button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <label className={`flex items-center border ${RULE} bg-[oklch(99%_0.004_28)] focus-within:border-[oklch(18%_0.012_28)]`}>
+                                                <label className={`flex items-center h-11 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] transition-colors focus-within:border-[oklch(18%_0.012_28)]`}>
                                                     <input type="text" inputMode="decimal" value={l.quantity} onChange={e => updateLine(l.key, { quantity: e.target.value })}
                                                         aria-label={`จำนวน ${item?.name || ''}`} placeholder="0"
-                                                        className="w-full min-w-0 p-2 bg-transparent tabular-nums font-bold text-[16px] text-right outline-none" />
+                                                        className="w-full min-w-0 p-2 bg-transparent tabular-nums font-bold text-base text-right outline-none" />
                                                     <span className={`pr-2 text-[12px] shrink-0 ${MUTED}`}>{u}</span>
                                                 </label>
-                                                <label className={`flex items-center border ${RULE} bg-[oklch(99%_0.004_28)] focus-within:border-[oklch(18%_0.012_28)]`}>
+                                                <label className={`flex items-center h-11 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] transition-colors focus-within:border-[oklch(18%_0.012_28)]`}>
                                                     <span className={`pl-2 text-[12px] shrink-0 ${MUTED}`}>รวม ฿</span>
                                                     <input type="text" inputMode="decimal" value={l.lineTotal} onChange={e => updateLine(l.key, { lineTotal: e.target.value })}
                                                         aria-label={`ราคารวม ${item?.name || ''}`} placeholder="ตามบิล"
-                                                        className="w-full min-w-0 p-2 bg-transparent tabular-nums font-bold text-[16px] text-right outline-none" />
+                                                        className="w-full min-w-0 p-2 bg-transparent tabular-nums font-bold text-base text-right outline-none" />
                                                 </label>
                                             </div>
                                             {change && (
@@ -371,22 +373,26 @@ export default function StockReceivePage() {
                         {/* Expense */}
                         <section className={`p-3 border-t ${RULE} bg-[oklch(98%_0.004_28)] space-y-2`} aria-label="ค่าใช้จ่าย">
                             <span className={`block text-[12px] leading-5 font-bold ${MUTED}`}>ค่าใช้จ่ายของบิลนี้</span>
-                            <div className={`grid sm:grid-cols-3 border ${RULE} divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]`} role="radiogroup" aria-label="ค่าใช้จ่าย">
-                                {[['new', 'สร้างค่าใช้จ่ายใหม่'], ['link', 'บันทึกไว้แล้ว (ผูก)'], ['none', 'ไม่บันทึก']].map(([v, label]) => (
+                            <div className="grid grid-cols-3 p-1 rounded-md bg-[oklch(94%_0.010_28)]" role="radiogroup" aria-label="ค่าใช้จ่าย">
+                                {[['new', 'สร้างใหม่'], ['link', 'ผูกที่บันทึกไว้'], ['none', 'ไม่บันทึก']].map(([v, label]) => (
                                     <button key={v} type="button" role="radio" aria-checked={expenseMode === v} onClick={() => setExpenseMode(v)} className={segBtn(expenseMode === v)}>
-                                        {label}
+                                        {expenseMode === v && <motion.span layoutId="receive-expense-pill" className={segPill} transition={pill} />}
+                                        <span className="relative">{label}</span>
                                     </button>
                                 ))}
                             </div>
                             <AnimatePresence mode="wait" initial={false}>
                             {expenseMode === 'new' && (
                                 <motion.div key="new" {...fade} className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                    <div className={`flex border ${RULE} divide-x divide-[oklch(85%_0.012_28)]`} role="radiogroup" aria-label="วิธีจ่าย">
+                                    <div className="inline-grid grid-cols-3 p-1 rounded-md bg-[oklch(94%_0.010_28)]" role="radiogroup" aria-label="วิธีจ่าย">
                                         {[['CASH', 'เงินสด'], ['TRANSFER', 'โอน'], ['CREDIT', 'เครดิต']].map(([v, label]) => (
-                                            <button key={v} type="button" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)} className={segBtn(payment === v)}>{label}</button>
+                                            <button key={v} type="button" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)} className={segBtn(payment === v)}>
+                                                {payment === v && <motion.span layoutId="receive-pay-pill" className={segPill} transition={pill} />}
+                                                <span className="relative">{label}</span>
+                                            </button>
                                         ))}
                                     </div>
-                                    <label className={`flex items-center gap-2 text-[13px] leading-5 ${MUTED} cursor-pointer select-none`}>
+                                    <label className={`flex items-center gap-2 text-[14px] leading-5 ${MUTED} cursor-pointer select-none`}>
                                         <input type="checkbox" checked={vatIncluded} onChange={e => setVatIncluded(e.target.checked)} className="w-4 h-4 accent-[oklch(18%_0.012_28)]" />
                                         ใบกำกับภาษี (รวม VAT 7%)
                                     </label>
@@ -394,17 +400,17 @@ export default function StockReceivePage() {
                             )}
                             {expenseMode === 'link' && (
                                 <motion.div key="link" {...fade}>{recentExpenses.length === 0 ? (
-                                    <p className={`text-[13px] leading-6 ${MUTED}`}>ไม่มีค่าใช้จ่ายใน 14 วันที่ผ่านมา</p>
+                                    <p className={`text-[14px] leading-6 ${MUTED}`}>ไม่มีค่าใช้จ่ายใน 14 วันที่ผ่านมา</p>
                                 ) : (
-                                    <ul className={`border ${RULE} bg-[oklch(99%_0.004_28)] divide-y divide-[oklch(90%_0.008_28)] max-h-64 overflow-y-auto`} role="radiogroup" aria-label="ค่าใช้จ่ายที่บันทึกไว้">
+                                    <ul className={`rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] divide-y divide-[oklch(90%_0.008_28)] max-h-64 overflow-y-auto`} role="radiogroup" aria-label="ค่าใช้จ่ายที่บันทึกไว้">
                                         {recentExpenses.map(e => (
                                             <li key={e.id}>
                                                 <button type="button" role="radio" aria-checked={linkedExpenseId === e.id} onClick={() => setLinkedExpenseId(e.id)}
-                                                    className={`w-full text-left px-3 py-2 grid grid-cols-[1fr_auto] gap-x-3 cursor-pointer ${linkedExpenseId === e.id ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(94%_0.010_28)]'}`}>
+                                                    className={`w-full text-left px-3 py-2 grid grid-cols-[1fr_auto] gap-x-3 cursor-pointer ${linkedExpenseId === e.id ? 'bg-[oklch(94%_0.010_28)] shadow-[inset_3px_0_0_oklch(18%_0.012_28)]' : 'hover:bg-[oklch(97%_0.008_28)]'}`}>
                                                     <span className="font-bold text-[14px] leading-6 break-words min-w-0">{e.vendor_name || e.title}</span>
-                                                    <span className="tabular-nums text-[13px] tabular-nums">{baht(e.amount)}</span>
-                                                    <span className={`text-[12px] leading-5 break-words ${linkedExpenseId === e.id ? 'text-[oklch(85%_0.012_28)]' : NEUTRAL}`}>{e.title}</span>
-                                                    <span className={`tabular-nums text-[12px] ${linkedExpenseId === e.id ? 'text-[oklch(85%_0.012_28)]' : NEUTRAL}`}>{e.expense_date}</span>
+                                                    <span className="tabular-nums text-[14px] tabular-nums">{baht(e.amount)}</span>
+                                                    <span className={`text-[12px] leading-5 break-words ${NEUTRAL}`}>{e.title}</span>
+                                                    <span className={`tabular-nums text-[12px] ${NEUTRAL}`}>{e.expense_date}</span>
                                                 </button>
                                             </li>
                                         ))}
@@ -421,14 +427,14 @@ export default function StockReceivePage() {
 
             {!result && (
                 <footer className={`fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t ${RULE}`}>
-                    <div className={`max-w-3xl mx-auto grid grid-cols-[1fr_auto] items-center border-x ${RULE}`}>
-                        <span className={`px-4 text-[13px] leading-5 ${MUTED}`}>
+                    <div className={`max-w-3xl mx-auto flex items-center gap-3 px-3 py-3 border-x ${RULE}`}>
+                        <span className={`flex-1 min-w-0 text-[14px] leading-5 ${MUTED}`}>
                             <span className={`tabular-nums font-bold ${INK}`}>{lines.length}</span> รายการ
                             {check.priced > 0 && <> · <span className={`tabular-nums font-bold ${INK}`}>{baht(check.total)}</span></>}
-                            <span className={`block text-[11px] ${NEUTRAL}`}>ร่างบันทึกไว้ในเครื่อง ปิดหน้าแล้วกลับมาต่อได้</span>
+                            <span className={`block text-[12px] ${NEUTRAL}`}>ร่างเก็บไว้ในเครื่องนี้ กลับมาทำต่อได้</span>
                         </span>
                         <button type="button" onClick={handleSave} disabled={saving || !lines.length || Boolean(problem)}
-                            className="px-6 py-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-[15px] hover:bg-[oklch(25%_0.012_28)] disabled:opacity-40 cursor-pointer">
+                            className="h-12 px-6 shrink-0 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold text-base transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
                             {saving ? 'กำลังบันทึก...' : 'บันทึกรับเข้า'}
                         </button>
                     </div>

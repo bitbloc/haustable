@@ -243,7 +243,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[oklch(18%_0.012_28/0.45)] backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[oklch(18%_0.012_28/0.45)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { duration: 0.18 } }}
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -260,7 +260,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                     <div className={`w-14 h-14 rounded-md overflow-hidden border ${ui.RULE} ${ui.PAPER2} shrink-0`}>
                         {item.image_url
                             ? <img src={item.image_url} alt="" className="w-full h-full object-cover" />
-                            : <div className={`w-full h-full flex items-center justify-center text-[10px] ${ui.NEUTRAL}`}>ไม่มีรูป</div>}
+                            : <div className={`w-full h-full flex items-center justify-center text-[12px] ${ui.NEUTRAL}`}>ไม่มีรูป</div>}
                     </div>
                     <div className="flex-1 min-w-0">
                         <h2 className={`text-base font-semibold leading-6 ${ui.INK} line-clamp-2`}>{item.name}</h2>
