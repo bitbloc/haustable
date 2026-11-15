@@ -55,7 +55,21 @@ const DEFAULT_SETTINGS = {
     link_sig_name_en_1: "Southern Fish Entrails Curry (Gaeng Tai Pla)",
     link_sig_name_en_2: "Stir-fried Liang Leaves (House Style)",
     link_sig_name_en_3: "Stir-fried Stink Beans with Shrimp",
+    link_sig_name_zh_1: "泰南发酵鱼内脏咖喱（味道浓烈）",
+    link_sig_name_zh_2: "家常炒良叶（泰南野菜）",
+    link_sig_name_zh_3: "臭豆炒虾",
+    link_sig_name_lo_1: "ແກງໄຕປາ (ລົດຊາດຈັດຈ້ານ)",
+    link_sig_name_lo_2: "ໃບຫຼຽງຂົ້ວສູດເຮືອນ",
+    link_sig_name_lo_3: "ສະຕໍຂົ້ວກຸ້ງລົດຈັດ",
     link_usp_en: "A Mekong café with real Southern Thai food · Sip from midday, mild dishes for every palate",
+    link_usp_zh: "湄公河畔的咖啡馆，地道泰南家常菜 · 中午就能来坐坐，也有不辣的菜",
+    link_usp_lo: "ຄາເຟ່ແຄມຂອງທີ່ມີອາຫານປັກໃຕ້ແທ້ໆ · ມານັ່ງຊິວໄດ້ຕັ້ງແຕ່ຕອນທ່ຽງ ຄົນບໍ່ກິນເຜັດກໍມີເມນູ",
+    link_location_short_zh: "湄公河畔 · 距那伽广场 2 分钟 · 有停车位",
+    link_location_short_lo: "ແຄມຂອງ · ຫ່າງຈາກລານພະຍານາກ 2 ນາທີ · ມີບ່ອນຈອດລົດ",
+    link_directions_sub_zh: "距那伽广场 2 分钟",
+    link_directions_sub_lo: "ຫ່າງຈາກລານພະຍານາກ 2 ນາທີ",
+    link_location_text_zh: "位于那空拍侬湄公河畔的顺通威集路（Sunthorn Wichit Road），距那伽神像广场（Phaya Si Satta Nakharat）约 2 分钟",
+    link_location_text_lo: "ຮ້ານຕັ້ງຢູ່ຖະໜົນສຸນທອນວິຈິດ ແຄມແມ່ນ້ຳຂອງ ນະຄອນພະນົມ ຫ່າງຈາກລານພະຍາສີສັດຕະນາຄະລາດ 2 ນາທີ",
     link_location_short_en: "By the Mekong · 2 min from Naga Square · Parking",
     link_directions_sub_en: "2 min from Naga Square",
     link_location_text_en: "On Sunthorn Wichit Road, 2 minutes from Phaya Si Satta Nakharat (Naga) Square, by the Mekong, Nakhon Phanom",
@@ -102,9 +116,148 @@ function spiceRange(name, spiceMap, id) {
     return { min: Math.min(...levels), max: Math.max(...levels) }
 }
 
-// TH/EN: both languages are rendered, CSS shows the one set on <html lang> (no re-render, no flash)
-function tt(th, en) {
-    return `<span class="l-th">${th}</span><span class="l-en">${en}</span>`
+// Chinese and Lao for fixed UI text, keyed by the English string passed to tt(). Text that
+// carries a number or comes from the database passes zh / lo to tt() directly instead.
+const ZH = {
+    "Open daily": "每日营业",
+    "By the Mekong · Walk-ins welcome · Parking": "湄公河畔 · 无需预订 · 有停车位",
+    "Get directions": "导航到店",
+    "<span class=\"nb\">First time here?</span> <span class=\"nb\">Pick a set for your group</span>": "<span class=\"nb\">第一次来？</span> <span class=\"nb\">按人数选套餐</span>",
+    "No booking needed · walk in anytime · parking": "无需预订 · 随时到店 · 有停车位",
+    "Start here": "推荐从这份开始",
+    "Call us": "电话咨询",
+    "Want a table for sure?": "想确保有位？",
+    "Book ahead": "提前订位",
+    "Order for pickup": "点餐到店自取",
+    "Book a table": "订位",
+    "Opening hours · daily": "营业时间 · 每天",
+    "Opens": "开门",
+    "Closes": "关门",
+    "Location": "地址",
+    "Map": "地图",
+    "How to get here": "怎么到店",
+    "Real guest photos": "顾客实拍",
+    "Check-in wall from our guests": "到店顾客的打卡墙",
+    "Menu": "菜单",
+    "Atmosphere": "环境",
+    "Contact": "联系",
+    "Signature dishes": "招牌菜",
+    "Tap to enlarge": "点击图片放大",
+    "Browse the printed menu": "翻看纸质菜单",
+    "Recommended": "推荐菜品",
+    "Every category, with prices and spice levels": "全部分类，含价格和辣度",
+    "By the Mekong": "湄公河畔的环境",
+    "Real meals from guests": "顾客拍的餐点",
+    "Contact us": "联系本店",
+    "Chat on LINE": "LINE 聊天",
+    "Ask us or order": "咨询或点餐",
+    "Call the shop": "致电本店",
+    "Book &amp; order": "订位与点餐",
+    "Walk-ins welcome": "不订位也可以来",
+    "When you want a table for sure": "想确保有位的时候",
+    "Order online, pick up at the shop": "线上点餐，到店自取",
+    "Delivery via LINE MAN": "LINE MAN 外卖",
+    "Order in the LINE MAN app": "在 LINE MAN 应用里下单",
+    "Follow &amp; info": "关注我们与店铺信息",
+    "FAQ": "常见问题",
+    "Questions guests often ask": "顾客常问的问题",
+    "Guest check-in wall": "顾客打卡墙",
+    "Photos from our guests": "到店顾客的照片",
+    "Directions": "导航",
+    "LINE chat": "LINE 聊天",
+    "Call": "电话",
+    "Book": "订位",
+    "Close": "关闭",
+    "Prev": "上一页",
+    "Next": "下一页",
+    "Not spicy": "不辣",
+    "Mild": "微辣",
+    "Medium": "中辣",
+    "Very spicy": "很辣",
+    "Some spicy dishes": "含辣菜",
+    "Open now": "营业中",
+    "Closed": "已打烊",
+    "Close the full menu": "收起完整菜单",
+    "Last order in": "距最后点餐还有",
+    "Closes in": "距打烊还有",
+    "Opens in": "距开门还有",
+}
+const LO = {
+    "Open daily": "ເປີດທຸກມື້",
+    "By the Mekong · Walk-ins welcome · Parking": "ແຄມຂອງ · ບໍ່ຈອງກໍມາໄດ້ · ມີບ່ອນຈອດລົດ",
+    "Get directions": "ນຳທາງມາຮ້ານ",
+    "<span class=\"nb\">First time here?</span> <span class=\"nb\">Pick a set for your group</span>": "<span class=\"nb\">ມາຄັ້ງທຳອິດບໍ?</span> <span class=\"nb\">ເລືອກຊຸດຕາມຈຳນວນຄົນ</span>",
+    "No booking needed · walk in anytime · parking": "ບໍ່ຈອງກໍມາໄດ້ · ເຂົ້າມາໄດ້ເລີຍ · ມີບ່ອນຈອດລົດ",
+    "Start here": "ເລີ່ມທີ່ຊຸດນີ້",
+    "Call us": "ໂທສອບຖາມ",
+    "Want a table for sure?": "ຢາກໄດ້ໂຕະແນ່ນອນບໍ?",
+    "Book ahead": "ຈອງລ່ວງໜ້າ",
+    "Order for pickup": "ສັ່ງແລ້ວມາຮັບທີ່ຮ້ານ",
+    "Book a table": "ຈອງໂຕະ",
+    "Opening hours · daily": "ເວລາເປີດ-ປິດ · ທຸກມື້",
+    "Opens": "ເປີດ",
+    "Closes": "ປິດ",
+    "Location": "ທີ່ຕັ້ງ",
+    "Map": "ແຜນທີ່",
+    "How to get here": "ວິທີມາຮ້ານ",
+    "Real guest photos": "ຮູບຈາກລູກຄ້າຈິງ",
+    "Check-in wall from our guests": "ກະດານເຊັກອິນຂອງລູກຄ້າທີ່ມາຮ້ານ",
+    "Menu": "ເມນູ",
+    "Atmosphere": "ບັນຍາກາດ",
+    "Contact": "ຕິດຕໍ່",
+    "Signature dishes": "ເມນູເດັ່ນຂອງຮ້ານ",
+    "Tap to enlarge": "ແຕະຮູບເພື່ອຂະຫຍາຍ",
+    "Browse the printed menu": "ເປີດເບິ່ງເມນູແບບເຫຼັ້ມ",
+    "Recommended": "ເມນູແນະນຳ",
+    "Every category, with prices and spice levels": "ທຸກໝວດ ພ້ອມລາຄາ ແລະ ລະດັບຄວາມເຜັດ",
+    "By the Mekong": "ບັນຍາກາດຮ້ານແຄມຂອງ",
+    "Real meals from guests": "ຮູບອາຫານຈາກລູກຄ້າ",
+    "Contact us": "ຕິດຕໍ່ຮ້ານ",
+    "Chat on LINE": "ແຊັດ LINE",
+    "Ask us or order": "ສອບຖາມ ຫຼື ສັ່ງອາຫານ",
+    "Call the shop": "ໂທຫາຮ້ານ",
+    "Book &amp; order": "ຈອງໂຕະ ແລະ ສັ່ງອາຫານ",
+    "Walk-ins welcome": "ບໍ່ຈອງກໍມາໄດ້",
+    "When you want a table for sure": "ສຳລັບມື້ທີ່ຢາກໄດ້ໂຕະແນ່ນອນ",
+    "Order online, pick up at the shop": "ສັ່ງອອນລາຍ ແລ້ວແວ່ມາຮັບ",
+    "Delivery via LINE MAN": "ສົ່ງອາຫານຜ່ານ LINE MAN",
+    "Order in the LINE MAN app": "ສັ່ງຜ່ານແອັບ LINE MAN",
+    "Follow &amp; info": "ຕິດຕາມ ແລະ ຂໍ້ມູນຮ້ານ",
+    "FAQ": "ຄຳຖາມທີ່ພົບເລື້ອຍ",
+    "Questions guests often ask": "ຄຳຖາມທີ່ລູກຄ້າຖາມເລື້ອຍໆ",
+    "Guest check-in wall": "ກະດານເຊັກອິນລູກຄ້າ",
+    "Photos from our guests": "ຮູບຈາກລູກຄ້າທີ່ມາຮ້ານ",
+    "Directions": "ນຳທາງ",
+    "LINE chat": "ແຊັດ LINE",
+    "Call": "ໂທ",
+    "Book": "ຈອງໂຕະ",
+    "Close": "ປິດ",
+    "Prev": "ກ່ອນໜ້າ",
+    "Next": "ຖັດໄປ",
+    "Not spicy": "ບໍ່ເຜັດ",
+    "Mild": "ເຜັດໜ້ອຍ",
+    "Medium": "ເຜັດກາງ",
+    "Very spicy": "ເຜັດຫຼາຍ",
+    "Some spicy dishes": "ມີຈານເຜັດ",
+    "Open now": "ເປີດຢູ່",
+    "Closed": "ປິດຢູ່",
+    "Close the full menu": "ປິດເມນູທັງໝົດ",
+    "Last order in": "ປິດຮັບອໍເດີໃນອີກ",
+    "Closes in": "ຮ້ານປິດໃນອີກ",
+    "Opens in": "ເປີດໃນອີກ",
+}
+
+// TH/EN/ZH/LO: every language is rendered, CSS shows the one set on <html lang> (no re-render, no flash).
+// A string with no Chinese or Lao reuses the English span (it carries l-zh / l-lo as well).
+function tt(th, en, zh, lo) {
+    const z = zh || ZH[en]
+    const l = lo || LO[en]
+    return `<span class="l-th">${th}</span><span class="l-en${z ? '' : ' l-zh'}${l ? '' : ' l-lo'}">${en}</span>${z ? `<span class="l-zh">${z}</span>` : ''}${l ? `<span class="l-lo">${l}</span>` : ''}`
+}
+// Class list for a wrapper that should show only in the languages that have content
+function langOnly(th, en, zh, lo) {
+    const has = { th: !!th, en: !!en, zh: !!(zh || en), lo: !!(lo || en) }
+    return Object.values(has).every(Boolean) ? '' : Object.keys(has).filter(k => has[k]).map(k => ` l-${k}`).join('')
 }
 const HEAT_LABELS_EN = ['Not spicy', 'Mild', 'Medium', 'Very spicy']
 
@@ -161,15 +314,17 @@ function formatDescriptionHtml(desc) {
 // Menu item name: EN view shows name_en with the Thai name underneath (guests can point it out to staff), like the QR order page
 function itemNameHtml(item) {
     const th = escapeHtml(item.name)
-    const en = String(item.name_en || '').trim()
-    return tt(th, en && en !== item.name ? `${escapeHtml(en)}<span class="item-name-th">${th}</span>` : th)
+    const alt = v => { const t = String(v || '').trim(); return t && t !== item.name ? `${escapeHtml(t)}<span class="item-name-th">${th}</span>` : '' }
+    return tt(th, alt(item.name_en) || th, alt(item.name_zh), alt(item.name_lo))
 }
 // Description: EN view shows only the English description (no Thai fallback), like the QR order page
 function itemDescHtml(item) {
     const th = item.description ? formatDescriptionHtml(item.description) : ''
     const en = item.description_en ? formatDescriptionHtml(item.description_en) : ''
-    if (!th && !en) return ''
-    return `<div class="item-desc${th ? '' : ' l-en'}${en ? '' : ' l-th'}">${tt(th, en)}</div>`
+    const zh = item.description_zh ? formatDescriptionHtml(item.description_zh) : ''
+    const lo = item.description_lo ? formatDescriptionHtml(item.description_lo) : ''
+    if (!th && !en && !zh && !lo) return ''
+    return `<div class="item-desc${langOnly(th, en, zh, lo)}">${tt(th, en, zh, lo)}</div>`
 }
 
 // Guest caption: no emoji, at most ~50 characters
@@ -209,12 +364,16 @@ function buildSetRow(item, spiceMap) {
         .replace(/\s*>\s*/g, ' ')
     let perPerson = ''
     let perPersonEn = ''
+    let perPersonZh = ''
+    let perPersonLo = ''
     if (pax && price) {
         const low = Math.round(price / Number(pax[2]))
         const high = Math.round(price / Number(pax[1]))
         const range = low === high ? `฿${low}` : `฿${low}–${high}`
         perPerson = `คนละ ${range}`
         perPersonEn = `${range} per person`
+        perPersonZh = `每人 ${range}`
+        perPersonLo = `${range} ຕໍ່ຄົນ`
     }
     // "Set L for 2-4: House Set" → "Set L · House Set"
     const nameEn = String(item.name_en || '').trim()
@@ -222,17 +381,36 @@ function buildSetRow(item, spiceMap) {
         ? nameEn.replace(/^(set\s+\w+)\s+for\s+[\d\s-]+:\s*/i, '$1 · ').replace(/^set\s*:\s*/i, '').trim()
         : title
     const dishesEn = String(item.description_en || '').trim().split('\n')[0].trim() || dishes
+    // "L 套餐（2-4 人）泰南风味套餐：臭豆炒虾 • …" → "L 套餐 · 泰南风味套餐"; "套餐：招牌烤猪颈肉饭 + 饮品" → "招牌烤猪颈肉饭 + 饮品"
+    const shortSetTitle = (full, lone, pax) => {
+        const text = String(full || '').trim()
+        if (!text) return ''
+        const cut = text.search(/[:：]/)
+        const head = (cut < 0 ? text : text.slice(0, cut)).trim()
+        if (lone.test(head)) return cut < 0 ? '' : text.slice(cut + 1).trim()
+        return head.replace(pax, ' · ').replace(/(\s·\s)+$/, '').trim()
+    }
+    const titleZh = shortSetTitle(item.name_zh, /^套餐$/, /\s*（[^）]*）\s*/)
+    const titleLo = shortSetTitle(item.name_lo, /^ຊຸດ$/, /\s*ສຳລັບ\s*[\d\s-]+ຄົນ\s*/)
+    const dishesZh = String(item.description_zh || '').trim().split('\n')[0].trim()
+    const dishesLo = String(item.description_lo || '').trim().split('\n')[0].trim()
     return {
         id: item.id,
         group: pax ? `${pax[1]}–${pax[2]}` : '1',
         groupMin: pax ? Number(pax[1]) : 1,
         title,
         titleEn,
+        titleZh,
+        titleLo,
         dishes,
         dishesEn,
+        dishesZh,
+        dishesLo,
         price,
         perPerson,
         perPersonEn,
+        perPersonZh,
+        perPersonLo,
         heat: heatHtml(spiceRange(name, spiceMap, item.id)),
         thumb: item.image_url ? optImg(item.image_url, 160, 70) : '',
         feature: item.image_url ? optImg(item.image_url, 720, 70) : '',
@@ -282,6 +460,19 @@ function generateStandaloneLandingHtml(data) {
         const hit = n && (dishes.find(m => String(m.name).trim() === String(name).trim()) || dishes.find(m => String(m.name).startsWith(n)))
         return escapeHtml(hit ? hit.name_en : (DEFAULT_SETTINGS[`link_sig_name_en_${i}`] || name))
     }
+    // Chinese / Lao signature name: link_sig_name_<lang>_N, else the same dish's translated menu name, else the English name
+    const sigAlt = (lang, i, name) => {
+        if (settings[`link_sig_name_${lang}_${i}`]) return escapeHtml(settings[`link_sig_name_${lang}_${i}`])
+        const field = `name_${lang}`
+        const n = String(name || '').replace(/\s*\(.*\)\s*/, '').trim()
+        const dishes = menuItems.filter(m => m[field] && !/^set\b|เซต/i.test(String(m.name || '')))
+        const hit = n && (dishes.find(m => String(m.name).trim() === String(name).trim()) || dishes.find(m => String(m.name).startsWith(n)))
+        return escapeHtml(hit ? hit[field] : (DEFAULT_SETTINGS[`link_sig_name_${lang}_${i}`] || ''))
+    }
+    const sigNames = [1, 2, 3].map(i => {
+        const name = settings[`link_sig_name_${i}`] || DEFAULT_SETTINGS[`link_sig_name_${i}`]
+        return { zh: sigAlt('zh', i, name), lo: sigAlt('lo', i, name) }
+    })
     const sig1NameEn = sigEn(1, settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
     const sig2NameEn = sigEn(2, settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
     const sig3NameEn = sigEn(3, settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
@@ -382,6 +573,14 @@ function generateStandaloneLandingHtml(data) {
     const hoursMainEn = hoursMain.replace(/\s*น\.?\s*$/, '').replace(' - ', ' – ')
     const hoursNoteEn = hoursNote.replace(/ปิดรับออเดอร์|ครัวปิด/, 'Last order').replace(/\s*น\.?\s*$/, '')
     const peopleEn = key => key === '1' ? '1 person' : `${key} people`
+    const hoursNoteZh = hoursNote.replace(/ปิดรับออเดอร์|ครัวปิด/, '最后点餐').replace(/\s*น\.?\s*$/, '')
+    const hoursNoteLo = hoursNote.replace(/ปิดรับออเดอร์|ครัวปิด/, 'ຮັບອໍເດີຮອດ').replace(/\s*น\.?\s*$/, '')
+    const directionsSubZh = escapeHtml(settings.link_directions_sub_zh || DEFAULT_SETTINGS.link_directions_sub_zh)
+    const directionsSubLo = escapeHtml(settings.link_directions_sub_lo || DEFAULT_SETTINGS.link_directions_sub_lo)
+    const locationShortZhHtml = phrasesHtml(settings.link_location_short_zh || DEFAULT_SETTINGS.link_location_short_zh, '·', ' · ')
+    const locationShortLoHtml = phrasesHtml(settings.link_location_short_lo || DEFAULT_SETTINGS.link_location_short_lo, '·', ' · ')
+    const locationTextZh = escapeHtml(settings.link_location_text_zh || DEFAULT_SETTINGS.link_location_text_zh)
+    const locationTextLo = escapeHtml(settings.link_location_text_lo || DEFAULT_SETTINGS.link_location_text_lo)
     // "11:00 - 21:30 น." → open and close times for the two-column hours grid
     const hoursSplit = hoursMain.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/)
 
@@ -431,13 +630,27 @@ function generateStandaloneLandingHtml(data) {
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 
     <script>
-        // Language: ?lang=en|th, else the visitor's saved choice, else Thai. Set before paint so nothing flashes.
+        // Language: ?lang=th|en|zh|lo, else the visitor's saved choice, else a phone whose first
+        // language is Chinese or Lao, else Thai. Set before paint so nothing flashes.
+        var HAUS_LANGS = { th: 'th', en: 'en', zh: 'zh-Hans', lo: 'lo' };
+        function loadLaoFont() {
+            if (document.getElementById('font-lao')) return;
+            var f = document.createElement('link');
+            f.id = 'font-lao'; f.rel = 'stylesheet';
+            f.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap';
+            document.head.appendChild(f);
+        }
         (function() {
             try {
                 var q = new URLSearchParams(location.search).get('lang');
-                var l = (q === 'en' || q === 'th') ? q : localStorage.getItem('haus_lang');
-                if (q === 'en' || q === 'th') localStorage.setItem('haus_lang', q);
-                if (l === 'en') document.documentElement.lang = 'en';
+                var l = HAUS_LANGS[q] ? q : localStorage.getItem('haus_lang');
+                if (HAUS_LANGS[q]) localStorage.setItem('haus_lang', q);
+                if (!HAUS_LANGS[l]) {
+                    var first = String((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase();
+                    l = first.indexOf('zh') === 0 ? 'zh' : first.indexOf('lo') === 0 ? 'lo' : 'th';
+                }
+                document.documentElement.lang = HAUS_LANGS[l];
+                if (l === 'lo') loadLaoFont();
             } catch (e) {}
         })();
     </script>
@@ -518,14 +731,23 @@ function generateStandaloneLandingHtml(data) {
         :where(#sec-menu, #sec-vibe, #sec-connect) { scroll-margin-top: 48px; }
         :where(#sec-vibe, #sec-connect) > .section-header:first-child { border-top: 1px solid var(--color-ink); }
         /* Identity band: the full line stays readable (wraps between phrases instead of being cut off with an ellipsis) */
-        html[lang="en"] .l-th, html:not([lang="en"]) .l-en { display: none !important; }
+        html[lang="th"] :is(.l-en, .l-zh, .l-lo):not(.l-th),
+        html[lang="en"] :is(.l-th, .l-zh, .l-lo):not(.l-en),
+        html[lang="zh-Hans"] :is(.l-th, .l-en, .l-lo):not(.l-zh),
+        html[lang="lo"] :is(.l-th, .l-en, .l-zh):not(.l-lo) { display: none !important; }
+        /* Lao has no glyphs in IBM Plex Sans Thai; Noto Sans Lao loads only when Lao is chosen */
+        html[lang="lo"] { --font-display: "IBM Plex Sans Thai", "Noto Sans Lao", -apple-system, "Segoe UI", sans-serif; --font-body: "IBM Plex Sans Thai", "Noto Sans Lao", -apple-system, "Segoe UI", sans-serif; }
+        html[lang="zh-Hans"] { --font-display: "IBM Plex Sans Thai", -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif; --font-body: "IBM Plex Sans Thai", -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif; }
         /* Each USP phrase is its own line, so no separator is ever left dangling on a line of its own */
         .marquee .nb { display: block; white-space: normal; }
         .marquee { display: flex; align-items: center; gap: var(--space-3); background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; }
         .marquee-text { flex: 1; min-width: 0; text-align: center; text-wrap: balance; }
-        /* Language switch: names the other language in its own script, so a visitor who can't read Thai still finds it */
-        .lang-btn { flex-shrink: 0; min-height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-ink); border-radius: var(--radius); font-size: var(--text-sm); font-weight: 700; line-height: 30px; white-space: nowrap; transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
-        .lang-btn:hover { background: var(--color-ink); color: var(--color-signal); }
+        /* Language cells: each language named in its own script, so a visitor who can't read Thai still finds theirs */
+        .lang-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--color-ink); background: var(--color-paper); }
+        .lang-cell { min-height: 36px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .lang-cell + .lang-cell { border-left: 1px solid var(--color-rule); }
+        .lang-cell:hover { color: var(--color-ink); }
+        html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--color-ink); color: var(--color-paper); }
         /* Masthead: brand cell | live status cell */
         .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
         .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
@@ -769,8 +991,8 @@ function generateStandaloneLandingHtml(data) {
         .booklet-nav button { min-height: 40px; padding: var(--space-2) var(--space-3); color: var(--color-paper); font-weight: 600; border: 1px solid var(--color-muted); border-radius: var(--radius); }
 
         /* Press feedback: everything tappable answers the thumb */
-        .row-link, .sig-card, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-btn { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
-        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-btn:active { transform: scale(0.985); }
+        .row-link, .sig-card, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-cell { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
+        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.985); }
         .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out); }
         .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); }
         .row-link:hover .arrow { transform: translateX(3px); }
@@ -852,7 +1074,8 @@ function generateStandaloneLandingHtml(data) {
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
-        <div class="marquee"><p class="marquee-text">${tt(phrasesHtml(settings.link_usp || DEFAULT_SETTINGS.link_usp, '·', ' '), phrasesHtml(settings.link_usp_en || DEFAULT_SETTINGS.link_usp_en, '·', ' '))}</p><button type="button" class="lang-btn" onclick="toggleLang()" aria-label="Switch language / เปลี่ยนภาษา">${tt('English', 'ภาษาไทย')}</button></div>
+        <div class="marquee"><p class="marquee-text">${tt(phrasesHtml(settings.link_usp || DEFAULT_SETTINGS.link_usp, '·', ' '), phrasesHtml(settings.link_usp_en || DEFAULT_SETTINGS.link_usp_en, '·', ' '), phrasesHtml(settings.link_usp_zh || DEFAULT_SETTINGS.link_usp_zh, '·', ' '), phrasesHtml(settings.link_usp_lo || DEFAULT_SETTINGS.link_usp_lo, '·', ' '))}</p></div>
+        <div class="lang-row" role="group" aria-label="Language / ภาษา / 语言 / ພາສາ"><button type="button" class="lang-cell" data-lang="th" lang="th" onclick="setLang('th')">ไทย</button><button type="button" class="lang-cell" data-lang="en" lang="en" onclick="setLang('en')">English</button><button type="button" class="lang-cell" data-lang="zh" lang="zh-Hans" onclick="setLang('zh')">中文</button><button type="button" class="lang-cell" data-lang="lo" lang="lo" onclick="setLang('lo')">ລາວ</button></div>
 
         <header class="masthead">
             <div class="brand">
@@ -862,7 +1085,7 @@ function generateStandaloneLandingHtml(data) {
             <!-- Live status: can I go now? -->
             <div class="status-cell" aria-live="polite">
                 <span class="fact-val" id="open-status" data-hours="${hours}"><span class="dot"></span> ${tt('เปิดทุกวัน', 'Open daily')}</span>
-                <span class="fact-note nb" id="status-hours">${tt(hoursMain, hoursMainEn)}</span>
+                <span class="fact-note nb" id="status-hours">${tt(hoursMain, hoursMainEn, hoursMainEn, hoursMainEn)}</span>
                 <span class="kitchen-note" id="kitchen-note" hidden></span>
             </div>
         </header>
@@ -871,7 +1094,7 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Location-first banner: shown when utm_content says the ad sold the location -->
         <section class="loc-hero" id="loc-hero" hidden>
-            <div class="loc-hero-title">${tt(directionsSub, directionsSubEn)}</div>
+            <div class="loc-hero-title">${tt(directionsSub, directionsSubEn, directionsSubZh, directionsSubLo)}</div>
             <div class="loc-hero-sub">${tt('ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ', 'By the Mekong · Walk-ins welcome · Parking')}</div>
             <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">${tt('นำทางมาร้าน', 'Get directions')} <span class="arrow">→</span></a>
         </section>
@@ -882,11 +1105,11 @@ function generateStandaloneLandingHtml(data) {
             <div class="sets-head">
                 <h2 class="sets-title" id="sets-title">${tt('<span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span>', '<span class="nb">First time here?</span> <span class="nb">Pick a set for your group</span>')}</h2>
                 <p class="sets-walkin">${tt('ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ', 'No booking needed · walk in anytime · parking')}</p>
-                <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">${tt(`หรือดูเมนูทั้งหมด ${menuItems.length} รายการ`, `Or see the full menu · ${menuItems.length} items`)} <span class="arrow">↓</span></a>
+                <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">${tt(`หรือดูเมนูทั้งหมด ${menuItems.length} รายการ`, `Or see the full menu · ${menuItems.length} items`, `或查看完整菜单 · ${menuItems.length} 项`, `ຫຼື ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)} <span class="arrow">↓</span></a>
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
-                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key))}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`)}</span></button>`).join('')}
+                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span></button>`).join('')}
             </div>` : ''}
             ${setGroups.map(g => `
             <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
@@ -895,32 +1118,32 @@ function generateStandaloneLandingHtml(data) {
                     ${r.feature ? `<img class="set-feature-img" src="${r.feature}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === defaultGroup ? 'eager' : 'lazy'}"${g.key === defaultGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
                     <div class="set-feature-body">
                         <div class="set-feature-top">
-                            <h3 class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</h3>
+                            <h3 class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</h3>
                             <div class="set-price">
                                 <span class="num">฿${r.price}</span>
-                                ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn))}</span>` : ''}
+                                ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn), escapeHtml(r.perPersonZh), escapeHtml(r.perPersonLo))}</span>` : ''}
                             </div>
                         </div>
-                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '))}</div>
+                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '), r.dishesZh && phrasesHtml(r.dishesZh, '•', ' • '), r.dishesLo && phrasesHtml(r.dishesLo, '•', ' • '))}</div>
                         ${r.heat}
                     </div>
                 </article>` : `
                 <div class="set-row">
                     ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
-                    <div class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</div>
+                    <div class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</div>
                     <div class="set-price">
                         <span class="num">฿${r.price}</span>
-                        ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn))}</span>` : ''}
+                        ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn), escapeHtml(r.perPersonZh), escapeHtml(r.perPersonLo))}</span>` : ''}
                     </div>
                     <div class="set-row-body">
-                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '))}</div>
+                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '), r.dishesZh && phrasesHtml(r.dishesZh, '•', ' • '), r.dishesLo && phrasesHtml(r.dishesLo, '•', ' • '))}</div>
                         ${r.heat}
                     </div>
                 </div>`).join('')}
             </div>`).join('')}
             <div class="set-ctas">
                 <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">${tt('นำทางมาร้าน', 'Get directions')}</a>
-                <a href="tel:0985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">${tt('โทรสอบถาม', 'Call us')}</a>
+                <a href="tel:+66985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">${tt('โทรสอบถาม', 'Call us')}</a>
             </div>
             <div class="set-more">
                 <span>${tt('อยากได้โต๊ะแน่นอน?', 'Want a table for sure?')}</span>
@@ -946,8 +1169,8 @@ function generateStandaloneLandingHtml(data) {
                     <span class="hg-time">${hoursSplit[1]}</span>
                     <span class="hours-line" id="hours-line" aria-hidden="true"><span class="hl-fill"></span><span class="hl-last"></span><span class="hl-now"><span></span></span></span>
                     <span class="hg-time hg-end">${hoursSplit[2]}</span>
-                </div>` : `<span class="hours-main nb">${tt(hoursMain, hoursMainEn)}</span>`}
-                ${hoursNote ? `<span class="hours-note nb">${tt(hoursNote, hoursNoteEn)}</span>` : ''}
+                </div>` : `<span class="hours-main nb">${tt(hoursMain, hoursMainEn, hoursMainEn, hoursMainEn)}</span>`}
+                ${hoursNote ? `<span class="hours-note nb">${tt(hoursNote, hoursNoteEn, hoursNoteZh, hoursNoteLo)}</span>` : ''}
                 <span class="hours-count" id="hours-count" hidden>
                     <span class="hc-label"></span>
                     <span class="hc-time" aria-hidden="true"></span>
@@ -957,12 +1180,12 @@ function generateStandaloneLandingHtml(data) {
             <div class="fact full">
                 <span class="fact-label">${tt('ที่ตั้ง', 'Location')}</span>
                 <div class="loc-row">
-                    <span class="fact-val flow">${tt(locationShortHtml, locationShortEnHtml)}</span>
+                    <span class="fact-val flow">${tt(locationShortHtml, locationShortEnHtml, locationShortZhHtml, locationShortLoHtml)}</span>
                     <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-map-btn" onclick="handleDirectionsClick(event)">${tt('แผนที่', 'Map')} <span class="arrow">→</span></a>
                 </div>
                 <details class="loc-more">
                     <summary>${tt('วิธีมาที่ร้าน', 'How to get here')}</summary>
-                    <p>${tt(locationText, locationTextEn)}</p>
+                    <p>${tt(locationText, locationTextEn, locationTextZh, locationTextLo)}</p>
                 </details>
             </div>
         </div>
@@ -991,7 +1214,7 @@ function generateStandaloneLandingHtml(data) {
                         <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
-                        <div class="sig-name">${tt(sig1Name, sig1NameEn)}</div>
+                        <div class="sig-name">${tt(sig1Name, sig1NameEn, sigNames[0].zh, sigNames[0].lo)}</div>
                         <div class="sig-price num">฿${sig1Price}</div>
                         ${heatHtml(spiceRange(settings.link_sig_name_1 || DEFAULT_SETTINGS.link_sig_name_1, spiceMap))}
                     </div>
@@ -1001,7 +1224,7 @@ function generateStandaloneLandingHtml(data) {
                         <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
-                        <div class="sig-name">${tt(sig2Name, sig2NameEn)}</div>
+                        <div class="sig-name">${tt(sig2Name, sig2NameEn, sigNames[1].zh, sigNames[1].lo)}</div>
                         <div class="sig-price num">฿${sig2Price}</div>
                         ${heatHtml(spiceRange(settings.link_sig_name_2 || DEFAULT_SETTINGS.link_sig_name_2, spiceMap))}
                     </div>
@@ -1011,7 +1234,7 @@ function generateStandaloneLandingHtml(data) {
                         <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
-                        <div class="sig-name">${tt(sig3Name, sig3NameEn)}</div>
+                        <div class="sig-name">${tt(sig3Name, sig3NameEn, sigNames[2].zh, sigNames[2].lo)}</div>
                         <div class="sig-price num">฿${sig3Price}</div>
                         ${heatHtml(spiceRange(settings.link_sig_name_3 || DEFAULT_SETTINGS.link_sig_name_3, spiceMap))}
                     </div>
@@ -1022,7 +1245,7 @@ function generateStandaloneLandingHtml(data) {
             <button type="button" class="row-link as-button" onclick="openBooklet()">
                 <span class="row-main">
                     <img src="${optImg(bookletImages[0], 120)}" alt="" class="row-thumb" width="44" height="44" loading="lazy">
-                    <span>${tt('เปิดดูเมนูแบบเล่ม', 'Browse the printed menu')}<span class="row-sub">${tt(`เมนูเล่มจริงของร้าน ${bookletImages.length} หน้า`, `Our menu book · ${bookletImages.length} pages`)}</span></span>
+                    <span>${tt('เปิดดูเมนูแบบเล่ม', 'Browse the printed menu')}<span class="row-sub">${tt(`เมนูเล่มจริงของร้าน ${bookletImages.length} หน้า`, `Our menu book · ${bookletImages.length} pages`, `本店的纸质菜单 · ${bookletImages.length} 页`, `ເມນູເຫຼັ້ມແທ້ຂອງຮ້ານ ${bookletImages.length} ໜ້າ`)}</span></span>
                 </span>
                 <span class="arrow">→</span>
             </button>` : ''}
@@ -1030,7 +1253,7 @@ function generateStandaloneLandingHtml(data) {
             ${recommendedItems.length > 0 ? `
             <div class="section-header">
                 <h2 class="section-title">${tt('เมนูแนะนำ', 'Recommended')}</h2>
-                <span class="section-meta">${tt(`${recommendedItems.length} รายการ`, `${recommendedItems.length} items`)}</span>
+                <span class="section-meta">${tt(`${recommendedItems.length} รายการ`, `${recommendedItems.length} items`, `${recommendedItems.length} 项`, `${recommendedItems.length} ລາຍການ`)}</span>
             </div>
             <div>
                 ${recommendedItems.map(item => `
@@ -1045,7 +1268,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
+            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`, `查看完整菜单 · ${menuItems.length} 项`, `ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
             <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
@@ -1055,7 +1278,7 @@ function generateStandaloneLandingHtml(data) {
             ${atmImages.length > 0 ? `
             <div class="section-header">
                 <h2 class="section-title">${tt('บรรยากาศร้านริมโขง', 'By the Mekong')}</h2>
-                <span class="section-meta">${tt(`${atmImages.length} รูป`, `${atmImages.length} photos`)}</span>
+                <span class="section-meta">${tt(`${atmImages.length} รูป`, `${atmImages.length} photos`, `${atmImages.length} 张`, `${atmImages.length} ຮູບ`)}</span>
             </div>
             <div class="gallery-grid">
                 ${atmImages.map((img, i) => `
@@ -1067,7 +1290,7 @@ function generateStandaloneLandingHtml(data) {
             ${diningCheckins.length > 0 ? `
             <div class="section-header">
                 <h2 class="section-title">${tt('มื้อจริงจากลูกค้า', 'Real meals from guests')}</h2>
-                <span class="section-meta">${tt(`${diningCheckins.length} รูป`, `${diningCheckins.length} photos`)}</span>
+                <span class="section-meta">${tt(`${diningCheckins.length} รูป`, `${diningCheckins.length} photos`, `${diningCheckins.length} 张`, `${diningCheckins.length} ຮູບ`)}</span>
             </div>
             <div class="gallery-grid">
                 ${diningCheckins.map((chk, i) => `
@@ -1085,14 +1308,14 @@ function generateStandaloneLandingHtml(data) {
                 <span class="section-meta num">098-528-4217</span>
             </div>
             <a href="${mapUrl}" id="cta-connect-map" target="_blank" rel="noopener noreferrer" class="row-link ink" onclick="handleDirectionsClick(event)">
-                <span>${tt('นำทางมาร้าน', 'Get directions')}<span class="row-sub">${tt(directionsSub, directionsSubEn)}</span></span>
+                <span>${tt('นำทางมาร้าน', 'Get directions')}<span class="row-sub">${tt(directionsSub, directionsSubEn, directionsSubZh, directionsSubLo)}</span></span>
                 <span class="arrow">→</span>
             </a>
             <a href="${lineUrl}" id="cta-connect-line" target="_blank" rel="noopener noreferrer" class="row-link line" onclick="handleLineClick(event)">
                 <span>${tt('แชท LINE', 'Chat on LINE')}<span class="row-sub">${tt('สอบถามหรือสั่งอาหาร', 'Ask us or order')}</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="tel:0985284217" id="cta-connect-call" class="row-link" onclick="handleCallClick(event)">
+            <a href="tel:+66985284217" id="cta-connect-call" class="row-link" onclick="handleCallClick(event)">
                 <span>${tt('โทรหาร้าน', 'Call the shop')}<span class="row-sub num">098-528-4217</span></span>
                 <span class="arrow">→</span>
             </a>
@@ -1153,10 +1376,10 @@ function generateStandaloneLandingHtml(data) {
             <div class="sticky-inner">
                 <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
                     <span>${tt('นำทาง', 'Directions')}</span>
-                    <span class="sticky-sub">${tt(directionsSub, directionsSubEn)}</span>
+                    <span class="sticky-sub">${tt(directionsSub, directionsSubEn, directionsSubZh, directionsSubLo)}</span>
                 </a>
                 <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">${tt('แชท LINE', 'LINE chat')}</a>
-                <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn" onclick="handleCallClick(event)">${tt('โทร', 'Call')}</a>
+                <a href="tel:+66985284217" id="cta-sticky-call" class="sticky-btn" onclick="handleCallClick(event)">${tt('โทร', 'Call')}</a>
                 <a href="/booking" id="cta-sticky-booking" class="sticky-btn" onclick="handleBookingClick(event)">${tt('จองโต๊ะ', 'Book')}</a>
             </div>
         </nav>
@@ -1269,13 +1492,31 @@ function generateStandaloneLandingHtml(data) {
         })();
 
         // ─── LANGUAGE ───
-        function TT(th, en) { return '<span class="l-th">' + th + '</span><span class="l-en">' + en + '</span>'; }
-        function toggleLang() {
-            const en = document.documentElement.lang !== 'en';
-            document.documentElement.lang = en ? 'en' : 'th';
-            try { localStorage.setItem('haus_lang', en ? 'en' : 'th'); } catch (e) {}
-            logAdEvent(en ? 'switch_lang_en' : 'switch_lang_th');
+        const ZH = ${JSON.stringify(ZH)};
+        const LO = ${JSON.stringify(LO)};
+        function TT(th, en, zh, lo) {
+            const z = zh || ZH[en], l = lo || LO[en];
+            return '<span class="l-th">' + th + '</span><span class="l-en' + (z ? '' : ' l-zh') + (l ? '' : ' l-lo') + '">' + en + '</span>'
+                + (z ? '<span class="l-zh">' + z + '</span>' : '') + (l ? '<span class="l-lo">' + l + '</span>' : '');
         }
+        function langOnly(th, en, zh, lo) {
+            const has = { th: !!th, en: !!en, zh: !!(zh || en), lo: !!(lo || en) };
+            const keys = Object.keys(has).filter(function(k) { return has[k]; });
+            return keys.length === 4 ? '' : keys.map(function(k) { return ' l-' + k; }).join('');
+        }
+        function setLang(code) {
+            if (!HAUS_LANGS[code]) return;
+            document.documentElement.lang = HAUS_LANGS[code];
+            if (code === 'lo') loadLaoFont();
+            try { localStorage.setItem('haus_lang', code); } catch (e) {}
+            document.querySelectorAll('.lang-cell').forEach(function(b) { b.setAttribute('aria-pressed', String(b.dataset.lang === code)); });
+            logAdEvent('switch_lang_' + code);
+        }
+        setLang.sync = function() {
+            const cur = Object.keys(HAUS_LANGS).find(function(k) { return HAUS_LANGS[k] === document.documentElement.lang; }) || 'th';
+            document.querySelectorAll('.lang-cell').forEach(function(b) { b.setAttribute('aria-pressed', String(b.dataset.lang === cur)); });
+        };
+        setLang.sync();
 
         // ─── OPEN / CLOSED STATUS (Asia/Bangkok, from the hours text) ───
         // Named so the live countdown can refresh it the moment the shop opens or closes.
@@ -1298,12 +1539,12 @@ function generateStandaloneLandingHtml(data) {
                     : '<span class="dot closed"></span> ' + TT('ปิดอยู่', 'Closed');
                 const hoursState = document.getElementById('hours-state');
                 if (hoursState) {
-                    hoursState.innerHTML = isOpen ? TT('เปิดอยู่ตอนนี้', 'Open now') : TT('ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.', 'Closed · opens ' + m[1] + ':' + m[2]);
+                    hoursState.innerHTML = isOpen ? TT('เปิดอยู่ตอนนี้', 'Open now', '营业中', 'ເປີດຢູ່ຕອນນີ້') : TT('ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.', 'Closed · opens ' + m[1] + ':' + m[2], '已打烊 · ' + m[1] + ':' + m[2] + ' 开门', 'ປິດຢູ່ · ເປີດ ' + m[1] + ':' + m[2]);
                     hoursState.className = 'hours-state' + (isOpen ? '' : ' closed');
                     hoursState.hidden = false;
                 }
                 const hoursLine = document.getElementById('status-hours');
-                if (!isOpen && hoursLine) hoursLine.innerHTML = TT('เปิด ' + m[1] + ':' + m[2] + ' น.', 'Opens ' + m[1] + ':' + m[2]);
+                if (!isOpen && hoursLine) hoursLine.innerHTML = TT('เปิด ' + m[1] + ':' + m[2] + ' น.', 'Opens ' + m[1] + ':' + m[2], m[1] + ':' + m[2] + ' 开门', 'ເປີດ ' + m[1] + ':' + m[2]);
 
                 // Last-order countdown: last 2 hours before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
                 const k = (el.dataset.hours || '').match(/(?:ปิดรับออเดอร์|ครัวปิด)\\s*(\\d{1,2})[:.](\\d{2})/);
@@ -1317,11 +1558,15 @@ function generateStandaloneLandingHtml(data) {
                         const h = Math.floor(left / 60), mm = left % 60;
                         // Each phrase stays on one line ("เหลืออีก 21 นาที" never splits)
                         note.innerHTML = TT('<span class="nb">ปิดรับออเดอร์ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>',
-                            '<span class="nb">Last order ' + k[1] + ':' + k[2] + '</span> · <span class="nb">' + (h ? h + ' h ' : '') + (mm ? mm + ' min' : '') + ' left</span>');
+                            '<span class="nb">Last order ' + k[1] + ':' + k[2] + '</span> · <span class="nb">' + (h ? h + ' h ' : '') + (mm ? mm + ' min' : '') + ' left</span>',
+                            '<span class="nb">最后点餐 ' + k[1] + ':' + k[2] + '</span> · <span class="nb">还剩 ' + (h ? h + ' 小时 ' : '') + (mm ? mm + ' 分钟' : '') + '</span>',
+                            '<span class="nb">ຮັບອໍເດີຮອດ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">ເຫຼືອອີກ ' + (h ? h + ' ຊມ. ' : '') + (mm ? mm + ' ນາທີ' : '') + '</span>');
                         note.hidden = false;
                     } else if (left <= 0) {
                         note.innerHTML = TT('<span class="nb">ปิดรับออเดอร์แล้ว</span> · <span class="nb">ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.</span>',
-                            '<span class="nb">Kitchen closed</span> · <span class="nb">open until ' + m[3] + ':' + m[4] + '</span>');
+                            '<span class="nb">Kitchen closed</span> · <span class="nb">open until ' + m[3] + ':' + m[4] + '</span>',
+                            '<span class="nb">已停止点餐</span> · <span class="nb">营业至 ' + m[3] + ':' + m[4] + '</span>',
+                            '<span class="nb">ປິດຮັບອໍເດີແລ້ວ</span> · <span class="nb">ຮ້ານເປີດຮອດ ' + m[3] + ':' + m[4] + '</span>');
                         note.hidden = false;
                     }
                     if (!note.hidden && hoursLine) hoursLine.hidden = true;
@@ -1541,14 +1786,16 @@ function generateStandaloneLandingHtml(data) {
 
         function clientItemName(item) {
             const th = escapeClientHtml(item.name);
-            const en = String(item.name_en || '').trim();
-            return TT(th, en && en !== item.name ? escapeClientHtml(en) + '<span class="item-name-th">' + th + '</span>' : th);
+            const alt = function(v) { const t = String(v || '').trim(); return t && t !== item.name ? escapeClientHtml(t) + '<span class="item-name-th">' + th + '</span>' : ''; };
+            return TT(th, alt(item.name_en) || th, alt(item.name_zh), alt(item.name_lo));
         }
         function clientItemDesc(item) {
             const th = item.description ? formatClientDescription(item.description) : '';
             const en = item.description_en ? formatClientDescription(item.description_en) : '';
-            if (!th && !en) return '';
-            return '<div class="item-desc' + (th ? '' : ' l-en') + (en ? '' : ' l-th') + '">' + TT(th, en) + '</div>';
+            const zh = item.description_zh ? formatClientDescription(item.description_zh) : '';
+            const lo = item.description_lo ? formatClientDescription(item.description_lo) : '';
+            if (!th && !en && !zh && !lo) return '';
+            return '<div class="item-desc' + langOnly(th, en, zh, lo) + '">' + TT(th, en, zh, lo) + '</div>';
         }
         const HEAT_LABELS = ${JSON.stringify(HEAT_LABELS)};
         const HEAT_LABELS_EN = ${JSON.stringify(HEAT_LABELS_EN)};
@@ -1593,8 +1840,8 @@ function generateStandaloneLandingHtml(data) {
                             const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
                             if (cItems.length === 0) return;
                             const shortTh = String(cat.name || '').replace(/\s*\(.*\)\s*/, '').trim() || cat.name;
-                            index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh)) + '</button>';
-                            html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items') + '</span></div><div>';
+                            index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</button>';
+                            html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items', cItems.length + ' 项', cItems.length + ' ລາຍການ') + '</span></div><div>';
                             cItems.forEach(item => {
                                 const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
@@ -1631,7 +1878,7 @@ function generateStandaloneLandingHtml(data) {
                 logAdEvent('view_full_menu');
             } else {
                 content.style.display = 'none';
-                document.getElementById('full-menu-label').innerHTML = TT('ดูเมนูทั้งหมด ${menuItems.length} รายการ', 'See the full menu · ${menuItems.length} items');
+                document.getElementById('full-menu-label').innerHTML = TT('ดูเมนูทั้งหมด ${menuItems.length} รายการ', 'See the full menu · ${menuItems.length} items', '查看完整菜单 · ${menuItems.length} 项', 'ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ');
                 document.getElementById('full-menu-arrow').textContent = '↓';
                 document.getElementById('btn-full-menu').classList.remove('open');
             }
@@ -1945,8 +2192,8 @@ export default async function handler(req, res) {
             try {
                 const fetchPromise = Promise.all([
                     supabase.from('app_settings').select('key, value').or('key.like.link_%,key.eq.contact_map_url'),
-                    supabase.from('menu_items').select('id, name, name_en, price, description, description_en, image_url, is_available, is_recommended, is_hausmade, category_id, sort_order').eq('is_available', true).order('sort_order'),
-                    supabase.from('menu_categories').select('id, name, name_en, display_order').order('display_order'),
+                    supabase.from('menu_items').select('id, name, name_en, name_zh, name_lo, price, description, description_en, description_zh, description_lo, image_url, is_available, is_recommended, is_hausmade, category_id, sort_order').eq('is_available', true).order('sort_order'),
+                    supabase.from('menu_categories').select('id, name, name_en, name_zh, name_lo, display_order').order('display_order'),
                     supabase.from('haus_checkins').select('id, image_url, text, is_visible').eq('is_visible', true).order('created_at', { ascending: false }).limit(24)
                 ])
 

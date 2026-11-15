@@ -1,7 +1,10 @@
 // Customer QR table ordering (/table/:tableId) strings.
-// Each key has th and en; a language without an entry (e.g. zh for now) reads en.
+// th and en live here; zh and lo sit in customerOrderStrings.zh.js / .lo.js.
+// A key missing from a language reads en.
 // Placeholders use {name} and are filled by tt(key, { name }).
 import { useLanguage } from '../context/LanguageContext';
+import zh from './customerOrderStrings.zh';
+import lo from './customerOrderStrings.lo';
 
 const STRINGS = {
     th: {
@@ -500,12 +503,17 @@ const STRINGS = {
         rvOpenMaps: 'See reviews on Google Maps',
         rvWriteReview: 'Write a 5-star review on Google Maps',
     },
+
+    zh,
+    lo,
 };
 
 // Languages offered by the /table switcher
 export const TABLE_LANGUAGES = [
-    { code: 'th', label: 'TH' },
+    { code: 'th', label: 'ไทย' },
     { code: 'en', label: 'EN' },
+    { code: 'zh', label: '中文' },
+    { code: 'lo', label: 'ລາວ' },
 ];
 
 export const translateTable = (lang, key, vars) => {
@@ -518,7 +526,7 @@ export const translateTable = (lang, key, vars) => {
 };
 
 // Display text for a menu row (item, category, option group or choice) in the chosen language.
-// Reads `${field}_${lang}` (zh falls back to en), then the Thai source field. Display only:
+// Reads `${field}_${lang}` (zh and lo fall back to en), then the Thai source field. Display only:
 // orders and kitchen slips keep using the Thai `name`.
 export const localizeField = (row, field, lang) => {
     if (!row) return '';

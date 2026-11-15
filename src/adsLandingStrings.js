@@ -1,0 +1,236 @@
+// /link landing page strings. Thai keeps the page exactly as it was designed: English mono
+// labels with Thai body lines. English swaps the Thai lines; Chinese and Lao also translate
+// the labels a guest needs to find their way (tabs, section heads, contact bar).
+// Placeholders use {name}. A key missing from a language reads en, then th.
+import { useLanguage } from './context/LanguageContext';
+
+const STRINGS = {
+    th: {
+        tagline: '',
+        shopKind: '',
+        statusLabel: 'STATUS',
+        openDaily: 'OPEN DAILY',
+        hoursLabel: 'HOURS',
+        locLabel: 'LOC',
+        location: '',
+        seeGuestPhotos: 'ดูรูปภาพลูกค้า',
+        bookAhead: 'จองโต๊ะล่วงหน้า',
+        pickupAhead: 'สั่งอาหารรับหน้าร้าน',
+        tabMenu: 'MENU',
+        tabVibe: 'VIBE',
+        tabConnect: 'CONNECT',
+        signatureDishes: 'SIGNATURE DISHES',
+        recommended: 'RECOMMENDED',
+        specialties: 'SPECIALTIES',
+        itemCount: '{n} ITEMS',
+        viewFullMenu: '[+] VIEW FULL MENU',
+        closeFullMenu: '[-] CLOSE FULL MENU',
+        bookletLabel: 'CLASSIC BOOKLET MENU',
+        openBooklet: 'เปิดดูเมนูแบบเล่ม (PDF)',
+        readyPrompt: 'READY TO ORDER OR DINE?',
+        atmosphere: 'ATMOSPHERE IMAGES',
+        viewCount: '{n} VIEWS',
+        diningMoments: 'DINING MOMENTS',
+        realExperiences: 'REAL EXPERIENCES',
+        onlineServices: 'ONLINE SERVICES & BOOKING',
+        linkBooking: 'TABLE BOOKING // จองโต๊ะออนไลน์ ➔',
+        linkPickup: 'PICK UP ONLINE // สั่งอาหารรับหน้าร้าน ➔',
+        lineAndPhone: 'LINE & PHONE CONTACT',
+        linkLine: 'LINE OA // แชทสอบถามหรือสั่งอาหาร',
+        linkPhone: '{phone} // โทรติดต่อร้าน',
+        socialMedia: 'SOCIAL MEDIA',
+        delivery: 'DELIVERY SERVICE',
+        linkLineman: 'ORDER DIRECT ON LINEMAN ➔',
+        infoHub: 'INFORMATION HUB',
+        linkQa: 'RESTAURANT Q&A // คำถามที่พบบ่อย ➔',
+        linkCheckin: 'HAUS CHECK-IN WALL // บอร์ดเช็กอินลูกค้า ➔',
+        locationMap: 'LOCATION & MAP',
+        city: 'NAKHON PHANOM',
+        telLabel: 'TEL',
+        openLabel: 'OPEN',
+        launchMap: 'LAUNCH MAP // นำทางมาร้าน',
+        footerTagline: 'จริตจัด รสชัดเจน · Real Southern Taste',
+        footerAbout: 'ในบ้าน นครพนม · ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่มองหาร้านน่านั่งในนครพนม · อาหารรสชัด กาแฟ และเครื่องดื่ม มื้อกลางวันถึงมื้อค่ำ · ร้านเด็ดนครพนม · ร้านอาหารริมโขงใกล้ฉัน · คาเฟ่ นครพนม · ร้านกาแฟ นครพนม · จริตจัด รสชัดเจน ที่นี่นครพนม',
+        barLine: 'LINE CHAT',
+        barDirections: 'DIRECTIONS',
+        barCall: 'CALL / BOOK',
+        openCheckinWall: 'เข้าสู่บอร์ดเช็กอินแบบลากซูม (ชมรูปเพิ่ม)',
+        languageSwitch: 'เปลี่ยนภาษา',
+        hoursValue: '',
+    },
+
+    en: {
+        seeGuestPhotos: 'See guest photos',
+        bookAhead: 'Reserve a table ahead',
+        pickupAhead: 'Order ahead, collect at the shop',
+        openBooklet: 'Open the menu booklet',
+        linkBooking: 'TABLE BOOKING // RESERVE ONLINE ➔',
+        linkPickup: 'PICK UP ONLINE // ORDER AHEAD ➔',
+        linkLine: 'LINE OA // CHAT OR ORDER',
+        linkPhone: '{phone} // CALL US',
+        linkQa: 'RESTAURANT Q&A // COMMON QUESTIONS ➔',
+        linkCheckin: 'HAUS CHECK-IN WALL // GUEST PHOTOS ➔',
+        launchMap: 'LAUNCH MAP // GET DIRECTIONS',
+        location: 'On Sunthon Wichit Road by the Mekong, near Wat Phra In Plaeng and Wat Mahathat. A 2-minute drive (about 1.1 km) along the river from the Naga Monument.',
+        footerTagline: 'Bold attitude, clear taste · Real Southern Taste',
+        footerAbout: 'In the Haus, Nakhon Phanom · A restaurant and cafe by the Mekong · Real Southern Thai food, coffee and drinks, from lunch to dinner',
+        openCheckinWall: 'Open the check-in wall (more photos)',
+        languageSwitch: 'Change language',
+        hoursValue: '{open} - {close} (last order {lastOrder})',
+    },
+
+    zh: {
+        tagline: 'We Make It Bold · 地道泰南风味，就在那空拍侬',
+        shopKind: '泰南菜餐厅 · 咖啡馆',
+        statusLabel: '营业状态',
+        openDaily: '每日营业',
+        hoursLabel: '营业时间',
+        locLabel: '地址',
+        location: '位于湄公河畔的顺通威集路（Sunthon Wichit Road），靠近帕因布朗寺和玛哈泰寺。从那伽神像广场沿河开车约 2 分钟（约 1.1 公里）。',
+        seeGuestPhotos: '查看顾客照片',
+        bookAhead: '提前订位',
+        pickupAhead: '线上点餐，到店自取',
+        tabMenu: '菜单',
+        tabVibe: '环境',
+        tabConnect: '联系',
+        signatureDishes: '招牌菜',
+        recommended: '推荐',
+        specialties: '特色推荐',
+        itemCount: '{n} 项',
+        viewFullMenu: '[+] 查看完整菜单',
+        closeFullMenu: '[-] 收起完整菜单',
+        bookletLabel: '菜单图册',
+        openBooklet: '打开菜单图册（泰文）',
+        readyPrompt: '想订位或点餐？',
+        atmosphere: '店内环境',
+        viewCount: '{n} 张',
+        diningMoments: '顾客用餐瞬间',
+        realExperiences: '真实分享',
+        onlineServices: '线上服务与订位',
+        linkBooking: 'TABLE BOOKING // 在线订位 ➔',
+        linkPickup: 'PICK UP ONLINE // 点餐到店自取 ➔',
+        lineAndPhone: 'LINE 与电话',
+        linkLine: 'LINE OA // 咨询或点餐',
+        linkPhone: '{phone} // 致电本店',
+        socialMedia: '社交媒体',
+        delivery: '外卖服务',
+        linkLineman: '在 LINE MAN 上点外卖 ➔',
+        infoHub: '更多信息',
+        linkQa: 'RESTAURANT Q&A // 常见问题 ➔',
+        linkCheckin: 'HAUS CHECK-IN WALL // 顾客打卡墙 ➔',
+        locationMap: '位置与地图',
+        city: '那空拍侬',
+        telLabel: '电话',
+        openLabel: '营业',
+        launchMap: 'LAUNCH MAP // 导航到店',
+        footerTagline: '地道泰南风味 · Real Southern Taste',
+        footerAbout: 'In the Haus · 那空拍侬湄公河畔的餐厅与咖啡馆 · 地道泰南菜、咖啡和饮品，午餐到晚餐都供应',
+        barLine: 'LINE 咨询',
+        barDirections: '导航',
+        barCall: '电话订位',
+        openCheckinWall: '进入顾客打卡墙（查看更多照片）',
+        languageSwitch: '切换语言',
+        hoursValue: '{open} - {close}（最后点餐 {lastOrder}）',
+    },
+
+    lo: {
+        tagline: 'We Make It Bold · ອາຫານປັກໃຕ້ລົດຈັດແທ້ໆ ທີ່ນະຄອນພະນົມ',
+        shopKind: 'ຮ້ານອາຫານປັກໃຕ້ · ຄາເຟ່',
+        statusLabel: 'ສະຖານະ',
+        openDaily: 'ເປີດທຸກມື້',
+        hoursLabel: 'ເວລາເປີດ',
+        locLabel: 'ທີ່ຕັ້ງ',
+        location: 'ຮ້ານຕັ້ງຢູ່ຖະໜົນສຸນທອນວິຈິດ ແຄມແມ່ນ້ຳຂອງ ໃກ້ວັດພະອິນແປງ ແລະ ວັດມະຫາທາດ ຂັບລົດລຽບແຄມຂອງຈາກລານພະຍາສີສັດຕະນາຄະລາດພຽງ 2 ນາທີ (ປະມານ 1.1 ກມ.)',
+        seeGuestPhotos: 'ເບິ່ງຮູບລູກຄ້າ',
+        bookAhead: 'ຈອງໂຕະລ່ວງໜ້າ',
+        pickupAhead: 'ສັ່ງອາຫານ ມາຮັບທີ່ຮ້ານ',
+        tabMenu: 'ເມນູ',
+        tabVibe: 'ບັນຍາກາດ',
+        tabConnect: 'ຕິດຕໍ່',
+        signatureDishes: 'ເມນູເດັ່ນ',
+        recommended: 'ແນະນຳ',
+        specialties: 'ເມນູແນະນຳ',
+        itemCount: '{n} ລາຍການ',
+        viewFullMenu: '[+] ເບິ່ງເມນູທັງໝົດ',
+        closeFullMenu: '[-] ປິດເມນູທັງໝົດ',
+        bookletLabel: 'ເມນູແບບເຫຼັ້ມ',
+        openBooklet: 'ເປີດເບິ່ງເມນູແບບເຫຼັ້ມ (ພາສາໄທ)',
+        readyPrompt: 'ຢາກຈອງໂຕະ ຫຼື ສັ່ງອາຫານບໍ?',
+        atmosphere: 'ຮູບບັນຍາກາດ',
+        viewCount: '{n} ຮູບ',
+        diningMoments: 'ຮູບຈາກລູກຄ້າ',
+        realExperiences: 'ລູກຄ້າຈິງ',
+        onlineServices: 'ບໍລິການອອນລາຍ ແລະ ຈອງໂຕະ',
+        linkBooking: 'TABLE BOOKING // ຈອງໂຕະອອນລາຍ ➔',
+        linkPickup: 'PICK UP ONLINE // ສັ່ງແລ້ວມາຮັບທີ່ຮ້ານ ➔',
+        lineAndPhone: 'LINE ແລະ ໂທລະສັບ',
+        linkLine: 'LINE OA // ສອບຖາມ ຫຼື ສັ່ງອາຫານ',
+        linkPhone: '{phone} // ໂທຫາຮ້ານ',
+        socialMedia: 'ໂຊຊຽວມີເດຍ',
+        delivery: 'ບໍລິການສົ່ງອາຫານ',
+        linkLineman: 'ສັ່ງຜ່ານ LINE MAN ➔',
+        infoHub: 'ຂໍ້ມູນເພີ່ມເຕີມ',
+        linkQa: 'RESTAURANT Q&A // ຄຳຖາມທີ່ພົບເລື້ອຍ ➔',
+        linkCheckin: 'HAUS CHECK-IN WALL // ກະດານເຊັກອິນລູກຄ້າ ➔',
+        locationMap: 'ທີ່ຕັ້ງ ແລະ ແຜນທີ່',
+        city: 'ນະຄອນພະນົມ',
+        telLabel: 'ໂທ',
+        openLabel: 'ເປີດ',
+        launchMap: 'LAUNCH MAP // ນຳທາງມາຮ້ານ',
+        footerTagline: 'ລົດຊາດອາຫານປັກໃຕ້ແທ້ໆ · Real Southern Taste',
+        footerAbout: 'In the Haus ນະຄອນພະນົມ · ຮ້ານອາຫານ ແລະ ຄາເຟ່ແຄມແມ່ນ້ຳຂອງ · ອາຫານປັກໃຕ້ລົດຈັດ ກາເຟ ແລະ ເຄື່ອງດື່ມ ຕັ້ງແຕ່ຄາບທ່ຽງຮອດຄາບແລງ',
+        barLine: 'ແຊັດ LINE',
+        barDirections: 'ນຳທາງ',
+        barCall: 'ໂທ / ຈອງ',
+        openCheckinWall: 'ເຂົ້າເບິ່ງກະດານເຊັກອິນ (ເບິ່ງຮູບເພີ່ມ)',
+        languageSwitch: 'ປ່ຽນພາສາ',
+        hoursValue: '{open} - {close} (ຮັບອໍເດີຮອດ {lastOrder})',
+    },
+};
+
+// Signature dish names come from app_settings in Thai. These cover the dishes set today;
+// an admin value in `link_sig_name_<n>_<lang>` wins, and an unknown Thai name stays Thai.
+const SIGNATURE_NAMES = {
+    'แกงไตปลา (รสชัดเจน)': {
+        en: 'Gaeng Tai Pla (Spicy Fish Entrails Curry)',
+        zh: '泰南发酵鱼内脏咖喱（味道浓烈）',
+        lo: 'ແກງໄຕປາ (ລົດຊາດຈັດຈ້ານ)',
+    },
+    'ผัดใบเหลียงในบ้าน': {
+        en: 'Stir-fried Liang Leaves with Egg',
+        zh: '鸡蛋炒良叶（泰南野菜）',
+        lo: 'ໃບຫຼຽງຂົ້ວໃສ່ໄຂ່',
+    },
+    'สะตอผัดกุ้งจริตจัด': {
+        en: 'Stir-fried Stink Beans with Shrimp',
+        zh: '臭豆炒虾',
+        lo: 'ສະຕໍຂົ້ວກຸ້ງລົດຈັດ',
+    },
+};
+
+// Languages offered by the /link switcher
+export const LANDING_LANGUAGES = [
+    { code: 'th', label: 'ไทย' },
+    { code: 'en', label: 'EN' },
+    { code: 'zh', label: '中文' },
+    { code: 'lo', label: 'ລາວ' },
+];
+
+export const translateLanding = (lang, key, vars) => {
+    const template = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? STRINGS.th[key] ?? key;
+    if (!vars) return template;
+    return template.replace(/\{(\w+)\}/g, (match, name) => (vars[name] ?? match));
+};
+
+export const localizeSignature = (settings, index, thaiName, lang) => {
+    if (lang === 'th') return thaiName;
+    const fromSettings = settings?.[`link_sig_name_${index}_${lang}`];
+    if (fromSettings && String(fromSettings).trim()) return fromSettings;
+    return SIGNATURE_NAMES[String(thaiName || '').trim()]?.[lang] || thaiName;
+};
+
+export const useLandingStrings = () => {
+    const { lang, setLanguage, hasChosenLanguage } = useLanguage();
+    const lt = (key, vars) => translateLanding(lang, key, vars);
+    return { lang, setLanguage, hasChosenLanguage, lt };
+};

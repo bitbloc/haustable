@@ -17,8 +17,34 @@ function getLocalIp() {
 
 const localIp = getLocalIp()
 
+// Dev only: /link is rendered by api/link.js in production (see the rewrite in vercel.json),
+// so serve the same function here. Without this, local /link shows the old React page.
+function liveLandingPage() {
+  return {
+    name: 'live-landing-page',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = (req.url || '').split('?')[0]
+        if (pathname !== '/link' && pathname !== '/link/') return next()
+        try {
+          const mod = await server.ssrLoadModule('/api/link.js')
+          const shim = {
+            setHeader: (key, value) => { res.setHeader(key, value); return shim },
+            status: (code) => { res.statusCode = code; return shim },
+            send: (body) => res.end(body),
+          }
+          await mod.default(req, shim)
+        } catch (err) {
+          next(err)
+        }
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), liveLandingPage()],
   define: {
     'process.env.HOST_IP': JSON.stringify(localIp)
   },

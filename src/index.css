@@ -23,6 +23,22 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', monospace;
 }
 
+/* Chinese and Lao views (LanguageContext sets <html lang>). The approved Thai/Latin
+   fonts stay first; these only name the fallback for glyphs those fonts lack. Without
+   it, Chinese inside a mono label drops to the OS `monospace` face, which is a serif
+   (SimSun / Songti) next to sans body text. */
+:root:lang(zh-Hans) {
+  --font-sans: 'IBM Plex Sans Thai', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans Thai', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
+}
+
+:root:lang(lo) {
+  --font-sans: 'IBM Plex Sans Thai', 'Inter', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans Thai', 'Inter', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', sans-serif;
+}
+
 :root {
   /* Thai Modern OKLCH Palette Tokens (Anchor Hue: 28 - Terracotta Clay) */
   --color-paper: oklch(97% 0.008 28);

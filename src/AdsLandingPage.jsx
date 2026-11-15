@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { MessageCircle, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RefreshCw, Compass, Instagram, Facebook, Star } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { getStoreHours } from './utils/storeHours';
+import { detectForeignDeviceLanguage } from './utils/languageHelper';
+import { localizeField } from './pos/customerOrderStrings';
+import { useLandingStrings, localizeSignature, LANDING_LANGUAGES } from './adsLandingStrings';
 import { Analytics } from '@vercel/analytics/react';
 import {
     trackDirectionsClick,
@@ -135,6 +138,18 @@ export default function AdsLandingPage() {
     const [menuImageLoading, setMenuImageLoading] = useState(true);
     const [showAllMenu, setShowAllMenu] = useState(false);
     const [activeSection, setActiveSection] = useState('menu'); // 'menu' | 'atmosphere' | 'connect'
+    const { lang, setLanguage, hasChosenLanguage, lt } = useLandingStrings();
+    // Chinese and Lao labels are full words in a non-Latin script: the 9px wide-tracked
+    // caps used for English labels are too small for them
+    const nativeLabels = lang === 'zh' || lang === 'lo';
+
+    // First visit with no saved choice: a phone set to Chinese or Lao opens in that language
+    useEffect(() => {
+        if (hasChosenLanguage) return;
+        const detected = detectForeignDeviceLanguage();
+        if (detected) setLanguage(detected, { remember: false });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const processSettings = (settingsData) => {
         if (!settingsData) return;
@@ -174,6 +189,7 @@ export default function AdsLandingPage() {
         for (let i = 1; i <= 3; i++) {
             if (map[`link_sig_img_${i}`]) {
                 sigs.push({
+                    index: i,
                     img: map[`link_sig_img_${i}`],
                     name: map[`link_sig_name_${i}`] || '',
                     price: map[`link_sig_price_${i}`] || '',
@@ -226,7 +242,7 @@ export default function AdsLandingPage() {
         try {
             const { data } = await supabase
                 .from('menu_items')
-                .select('id, name, price, description, image_url, is_available, is_recommended, sort_order, display_order, category_id')
+                .select('*')
                 .eq('is_available', true);
             if (data) processMenuItems(data);
         } catch (err) {
@@ -238,7 +254,7 @@ export default function AdsLandingPage() {
         try {
             const { data } = await supabase
                 .from('menu_categories')
-                .select('id, name, display_order')
+                .select('*')
                 .order('display_order');
             if (data) setMenuCategories(data);
         } catch (err) {
@@ -275,8 +291,8 @@ export default function AdsLandingPage() {
         try {
             const [settingsRes, itemsRes, catsRes, checkinsRes] = await Promise.all([
                 supabase.from('app_settings').select('key, value').like('key', 'link_%'),
-                supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, sort_order, display_order, category_id').eq('is_available', true),
-                supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
+                supabase.from('menu_items').select('*').eq('is_available', true),
+                supabase.from('menu_categories').select('*').order('display_order'),
                 supabase.from('haus_checkins').select('id, image_url, source, user_name, user_handle, text, likes, is_visible, created_at').eq('is_visible', true).order('created_at', { ascending: false }).limit(8)
             ]);
 
@@ -330,8 +346,19 @@ export default function AdsLandingPage() {
     const shopName = settings.link_shop_name || 'IN THE HAUS';
     const shopNameTh = settings.link_shop_name_th || 'ในบ้าน';
     const subtitle = settings.link_subtitle || 'จริตจัด รสชัดเจน · Bold Attitude, Clear Taste';
-    const hours = settings.link_hours || getStoreHours().label;
-    const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
+    const thaiHours = settings.link_hours || getStoreHours().label;
+    // Translated views build the hours line from the numbers; the admin text is Thai prose
+    const hours = lt('hoursValue', getStoreHours()) || thaiHours;
+    const hoursShort = lang === 'th' ? thaiHours.replace('เปิดทุกวัน ', '') : hours;
+    const locationText = (lang !== 'th' && (settings[`link_location_text_${lang}`] || lt('location')))
+        || settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
+    const marquee = (lang !== 'th' && (settings[`link_subtitle_${lang}`] || lt('tagline'))) || subtitle;
+    const shopKind = lt('shopKind') || shopNameTh;
+    // Guests on a foreign SIM need the country code to call
+    const phoneDisplay = lang === 'zh' || lang === 'lo' ? '+66 98-528-4217' : '098-528-4217';
+    const lineTitle = (lang === 'th' && settings?.link_title_1) || lt('linkLine');
+    const labelSize = nativeLabels ? 'text-[11px] tracking-wide' : 'text-[9px] tracking-widest';
+    const loc = (row, field = 'name') => localizeField(row, field, lang);
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
 
     const defaultLineUrl = "https://lin.ee/EuzwG7c";
@@ -389,7 +416,7 @@ export default function AdsLandingPage() {
             // Using the optimized Google Ads copy for maximum SEO impact
             document.title = `ร้านในบ้าน นครพนม | อาหารใต้รสจัด ริมโขง | จริตจัด รสชัดเจน`;
             let metaDescription = document.querySelector('meta[name="description"]');
-            const descText = `อาหารใต้รสจัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่ นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น เปิดทุกวัน ${hours}`;
+            const descText = `อาหารใต้รสจัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่ นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น เปิดทุกวัน ${thaiHours}`;
             if (metaDescription) {
                 metaDescription.setAttribute("content", descText);
             } else {
@@ -410,7 +437,7 @@ export default function AdsLandingPage() {
                 document.head.appendChild(canonicalLink);
             }
         }
-    }, [hours, loading]);
+    }, [thaiHours, loading]);
  
     // ─── PRELOAD ADJACENT BOOKLET PAGES FOR SMOOTH PAGE FLIPPING ───
     useEffect(() => {
@@ -445,8 +472,24 @@ export default function AdsLandingPage() {
                     {/* Top Marquee Bar (High Contrast) */}
                     <div className="w-full bg-[#E9F344] text-[var(--color-hallmark-ink)] border-b border-[var(--color-hallmark-rule)] py-1.5 px-3 flex items-center justify-center overflow-hidden">
                         <span className="font-mono text-[9px] font-black uppercase tracking-widest truncate">
-                            // {subtitle} //
+                            // {marquee} //
                         </span>
+                    </div>
+
+                    {/* Language cells */}
+                    <div className="grid grid-cols-4 divide-x divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)]" role="group" aria-label={lt('languageSwitch')}>
+                        {LANDING_LANGUAGES.map(option => (
+                            <button
+                                key={option.code}
+                                type="button"
+                                lang={option.code}
+                                onClick={() => setLanguage(option.code)}
+                                aria-pressed={lang === option.code}
+                                className={`min-h-[40px] py-2 text-xs font-bold leading-normal cursor-pointer transition-colors ${lang === option.code ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Logo & Identity Cell */}
@@ -466,26 +509,26 @@ export default function AdsLandingPage() {
                             <h1 className="text-2xl font-[var(--font-display)] font-bold text-[var(--color-hallmark-ink)] tracking-widest uppercase leading-none">
                                 {shopName}
                             </h1>
-                            <p className="text-[var(--color-hallmark-ink-muted)] font-mono font-bold text-[10px] tracking-widest uppercase mt-2">{shopNameTh}</p>
+                            <p className="text-[var(--color-hallmark-ink-muted)] font-mono font-bold text-[10px] tracking-widest uppercase mt-2 leading-normal">{shopKind}</p>
                         </div>
                     </div>
 
                     {/* Tabular Metadata Grid */}
                     <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)] font-[var(--font-body)] text-[10px] text-[var(--color-hallmark-ink)] uppercase font-semibold tracking-wider">
                         <div className="p-3 flex flex-col gap-1">
-                            <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">STATUS</span>
+                            <span className={`text-[var(--color-hallmark-ink-muted)] font-mono ${nativeLabels ? 'text-[11px]' : 'text-[9px]'}`}>{lt('statusLabel')}</span>
                             <span className="flex items-center gap-1.5 text-xs font-bold">
                                 <span className="w-2 h-2 bg-emerald-500 border border-[var(--color-hallmark-rule)]" />
-                                OPEN DAILY
+                                {lt('openDaily')}
                             </span>
                         </div>
                         <div className="p-3 flex flex-col gap-1">
-                            <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">HOURS</span>
-                            <span className="text-xs font-bold">{hours.replace('เปิดทุกวัน ', '').split(/\s(?=\()/).flatMap((part, i) => [i ? ' ' : null, <span key={i} className="whitespace-nowrap">{part}</span>])}</span>
+                            <span className={`text-[var(--color-hallmark-ink-muted)] font-mono ${nativeLabels ? 'text-[11px]' : 'text-[9px]'}`}>{lt('hoursLabel')}</span>
+                            <span className="text-xs font-bold">{hoursShort.split(/\s?(?=[(（])/).flatMap((part, i) => [i ? ' ' : null, <span key={i} className="whitespace-nowrap">{part}</span>])}</span>
                         </div>
                         <div className="p-3 flex flex-col gap-1 col-span-2 border-t border-[var(--color-hallmark-rule)]">
-                            <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">LOC</span>
-                            <span className="text-xs font-bold">{locationText}</span>
+                            <span className={`text-[var(--color-hallmark-ink-muted)] font-mono ${nativeLabels ? 'text-[11px]' : 'text-[9px]'}`}>{lt('locLabel')}</span>
+                            <span className="text-xs font-bold normal-case leading-relaxed">{locationText}</span>
                         </div>
                     </div>
 
@@ -504,7 +547,7 @@ export default function AdsLandingPage() {
                             </span>
                         </span>
                         <span className="font-[var(--font-body)] font-bold text-xs flex items-center gap-1">
-                            <span>ดูรูปภาพลูกค้า</span> <span className="font-mono font-bold">➔</span>
+                            <span>{lt('seeGuestPhotos')}</span> <span className="font-mono font-bold">➔</span>
                         </span>
                     </a>
 
@@ -524,7 +567,7 @@ export default function AdsLandingPage() {
                             </div>
                             <div>
                                 <span className="font-[var(--font-body)] font-bold text-xs sm:text-[13px] text-[var(--color-hallmark-ink)] block leading-tight">
-                                    จองโต๊ะล่วงหน้า
+                                    {lt('bookAhead')}
                                 </span>
                                 <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] tracking-wider block mt-0.5">
                                     BOOK A TABLE
@@ -546,7 +589,7 @@ export default function AdsLandingPage() {
                             </div>
                             <div>
                                 <span className="font-[var(--font-body)] font-bold text-xs sm:text-[13px] text-[var(--color-hallmark-ink)] block leading-tight">
-                                    สั่งอาหารรับหน้าร้าน
+                                    {lt('pickupAhead')}
                                 </span>
                                 <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] tracking-wider block mt-0.5">
                                     PICK UP ONLINE
@@ -563,7 +606,7 @@ export default function AdsLandingPage() {
                         className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'menu' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'menu' && <span className="text-[var(--color-brand)] font-black">*</span>}
-                        MENU
+                        {lt('tabMenu')}
                     </button>
                     <button
                         onClick={() => {
@@ -573,14 +616,14 @@ export default function AdsLandingPage() {
                         className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'atmosphere' && <span className="text-[var(--color-brand)] font-black">*</span>}
-                        VIBE
+                        {lt('tabVibe')}
                     </button>
                     <button
                         onClick={() => setActiveSection('connect')}
                         className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'connect' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'connect' && <span className="text-[var(--color-brand)] font-black">*</span>}
-                        CONNECT
+                        {lt('tabConnect')}
                     </button>
                 </div>
 
@@ -593,10 +636,10 @@ export default function AdsLandingPage() {
                             <section className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                        SIGNATURE DISHES
+                                        {lt('signatureDishes')}
                                     </h3>
                                     <span className="text-[10px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] px-2 py-0.5 font-bold uppercase tracking-wider border border-[var(--color-hallmark-ink)]">
-                                        RECOMMENDED
+                                        {lt('recommended')}
                                     </span>
                                 </div>
                                 <div className={`grid ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2 divide-x divide-[var(--color-hallmark-rule)]' : 'grid-cols-3 divide-x divide-[var(--color-hallmark-rule)]'}`}>
@@ -609,7 +652,7 @@ export default function AdsLandingPage() {
                                             <div className="aspect-square relative overflow-hidden bg-neutral-100 border-b border-[var(--color-hallmark-rule)]">
                                                 <img 
                                                     src={optimizeImageUrl(dish.img, 400)} 
-                                                    alt={dish.name} 
+                                                    alt={localizeSignature(settings, dish.index, dish.name, lang)} 
                                                     className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" 
                                                     fetchPriority="high"
                                                     loading="eager"
@@ -619,7 +662,7 @@ export default function AdsLandingPage() {
                                                 />
                                             </div>
                                             <div className="p-3 flex-grow flex flex-col justify-between gap-2">
-                                                <p className="font-[var(--font-body)] font-bold text-xs leading-tight text-[var(--color-hallmark-ink)]">{dish.name}</p>
+                                                <p className="font-[var(--font-body)] font-bold text-xs leading-normal text-[var(--color-hallmark-ink)]">{localizeSignature(settings, dish.index, dish.name, lang)}</p>
                                                 <p className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)]">฿{dish.price}</p>
                                             </div>
                                         </div>
@@ -633,16 +676,16 @@ export default function AdsLandingPage() {
                             <section className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                        SPECIALTIES
+                                        {lt('specialties')}
                                     </h3>
                                     <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                                        {featuredMenuItems.length} ITEMS
+                                        {lt('itemCount', { n: featuredMenuItems.length })}
                                     </span>
                                 </div>
                                 
                                 <div className="divide-y divide-[var(--color-hallmark-rule)]">
                                     {featuredMenuItems.map((item, idx) => (
-                                        <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                                        <MenuListItem key={item.id} item={item} index={idx} lang={lang} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
                                     ))}
                                 </div>
                                 
@@ -656,7 +699,7 @@ export default function AdsLandingPage() {
                                         }}
                                         className="w-full p-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[11px] font-bold uppercase tracking-widest cursor-pointer"
                                     >
-                                        {showAllMenu ? "[-] CLOSE FULL MENU" : "[+] VIEW FULL MENU"}
+                                        {showAllMenu ? lt('closeFullMenu') : lt('viewFullMenu')}
                                     </button>
                                 </div>
                             </section>
@@ -673,15 +716,15 @@ export default function AdsLandingPage() {
                                         <div key={category.id} className="border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] animate-fade-in first:border-t-0">
                                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex justify-between items-center">
                                                 <span className="font-mono text-xs font-bold tracking-widest text-[var(--color-hallmark-ink)] uppercase">
-                                                    {category.name}
+                                                    {loc(category)}
                                                 </span>
                                                 <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                                                    {categoryItems.length} ITEMS
+                                                    {lt('itemCount', { n: categoryItems.length })}
                                                 </span>
                                             </div>
                                             <div className="divide-y divide-[var(--color-hallmark-rule)]">
                                                 {categoryItems.map((item, idx) => (
-                                                    <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                                                    <MenuListItem key={item.id} item={item} index={idx} lang={lang} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
                                                 ))}
                                             </div>
                                         </div>
@@ -703,11 +746,11 @@ export default function AdsLandingPage() {
                                     }}
                                     className="w-full bg-[var(--color-hallmark-paper-dark)] p-4 flex flex-col items-center justify-center gap-1 hover:bg-[var(--color-hallmark-ink)] hover:text-[var(--color-hallmark-paper)] group transition-colors cursor-pointer"
                                 >
-                                    <span className="text-[9px] font-mono text-[var(--color-hallmark-ink-muted)] font-bold tracking-widest uppercase group-hover:text-[var(--color-hallmark-paper)] transition-colors">
-                                        CLASSIC BOOKLET MENU
+                                    <span className={`${labelSize} font-mono text-[var(--color-hallmark-ink-muted)] font-bold uppercase group-hover:text-[var(--color-hallmark-paper)] transition-colors`}>
+                                        {lt('bookletLabel')}
                                     </span>
                                     <span className="font-[var(--font-body)] font-bold text-xs flex items-center gap-1.5 mt-1">
-                                        เปิดดูเมนูแบบเล่ม (PDF) <span className="font-mono">➔</span>
+                                        {lt('openBooklet')} <span className="font-mono">➔</span>
                                     </span>
                                 </button>
                             </section>
@@ -717,7 +760,7 @@ export default function AdsLandingPage() {
                         <section className="border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] select-none">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex items-center justify-between">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    READY TO ORDER OR DINE?
+                                    {lt('readyPrompt')}
                                 </h3>
                                 <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)] uppercase">
                                     // DIRECT SERVICES
@@ -730,7 +773,7 @@ export default function AdsLandingPage() {
                                     className="p-3.5 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-center transition-colors cursor-pointer group"
                                 >
                                     <span className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] block">
-                                        จองโต๊ะล่วงหน้า
+                                        {lt('bookAhead')}
                                     </span>
                                     <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)] group-hover:text-[var(--color-hallmark-ink)] font-bold uppercase tracking-wider block mt-0.5">
                                         BOOK TABLE ➔
@@ -742,7 +785,7 @@ export default function AdsLandingPage() {
                                     className="p-3.5 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-center transition-colors cursor-pointer group"
                                 >
                                     <span className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] block">
-                                        สั่งอาหารรับหน้าร้าน
+                                        {lt('pickupAhead')}
                                     </span>
                                     <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)] group-hover:text-[var(--color-hallmark-ink)] font-bold uppercase tracking-wider block mt-0.5">
                                         PICK UP ➔
@@ -762,10 +805,10 @@ export default function AdsLandingPage() {
                             <div className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                        ATMOSPHERE IMAGES
+                                        {lt('atmosphere')}
                                     </h3>
                                     <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                                        {atmImages.length} VIEWS
+                                        {lt('viewCount', { n: atmImages.length })}
                                     </span>
                                 </div>
                                 
@@ -803,10 +846,10 @@ export default function AdsLandingPage() {
                                 <div className="border-b border-[var(--color-hallmark-rule)]">
                                     <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                         <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                            DINING MOMENTS
+                                            {lt('diningMoments')}
                                         </h3>
                                         <span className="font-mono text-[10px] text-white bg-[#10B981] px-2 py-0.5 font-bold uppercase tracking-wider">
-                                            REAL EXPERIENCES
+                                            {lt('realExperiences')}
                                         </span>
                                     </div>
                                     <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)]">
@@ -847,7 +890,7 @@ export default function AdsLandingPage() {
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] flex items-center justify-between">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    ONLINE SERVICES & BOOKING
+                                    {lt('onlineServices')}
                                 </h3>
                                 <span className="text-[9px] font-mono text-[var(--color-brand)] bg-[var(--color-hallmark-ink)] px-2 py-0.5 font-bold uppercase">
                                     DIRECT WEB APP
@@ -857,7 +900,7 @@ export default function AdsLandingPage() {
                             <LinkCard 
                                 href={getPreservedQueryUrl('/booking')}
                                 onClick={handleBookingClick}
-                                title="TABLE BOOKING // จองโต๊ะออนไลน์ ➔" 
+                                title={lt('linkBooking')} 
                                 bg="bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800" 
                                 wide 
                                 internal
@@ -867,7 +910,7 @@ export default function AdsLandingPage() {
                             <LinkCard 
                                 href={getPreservedQueryUrl('/pickup')}
                                 onClick={handlePickupClick}
-                                title="PICK UP ONLINE // สั่งอาหารรับหน้าร้าน ➔" 
+                                title={lt('linkPickup')} 
                                 bg="bg-[#E9F344] text-[var(--color-hallmark-ink)] hover:bg-[#d8e235] font-black" 
                                 wide 
                                 internal
@@ -879,21 +922,21 @@ export default function AdsLandingPage() {
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    LINE & PHONE CONTACT
+                                    {lt('lineAndPhone')}
                                 </h3>
                             </div>
                             
                             <LinkCard 
                                 href={lineUrl} 
-                                title={settings?.link_title_1 || "LINE OA // แชทสอบถามหรือสั่งอาหาร"} 
+                                title={lineTitle} 
                                 bg="bg-[#06C755] text-white hover:bg-[#05b34c]" 
                                 wide 
                                 onClick={handleLineClick}
                             />
                             
                             <LinkCard 
-                                href="tel:0985284217" 
-                                title="098-528-4217 // โทรติดต่อร้าน" 
+                                href="tel:+66985284217" 
+                                title={lt('linkPhone', { phone: phoneDisplay })} 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
                                 onClick={handleCallClick}
@@ -904,7 +947,7 @@ export default function AdsLandingPage() {
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    SOCIAL MEDIA
+                                    {lt('socialMedia')}
                                 </h3>
                             </div>
                             
@@ -927,12 +970,12 @@ export default function AdsLandingPage() {
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    DELIVERY SERVICE
+                                    {lt('delivery')}
                                 </h3>
                             </div>
                             <LinkCard 
                                 href="https://lin.ee/8uqmIzZ" 
-                                title="ORDER DIRECT ON LINEMAN ➔" 
+                                title={lt('linkLineman')} 
                                 bg="bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800" 
                                 wide 
                                 id="cta-lineman" 
@@ -943,12 +986,12 @@ export default function AdsLandingPage() {
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    INFORMATION HUB
+                                    {lt('infoHub')}
                                 </h3>
                             </div>
                             <LinkCard 
                                 href="/qa" 
-                                title="RESTAURANT Q&A // คำถามที่พบบ่อย ➔" 
+                                title={lt('linkQa')} 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
                                 internal 
@@ -956,7 +999,7 @@ export default function AdsLandingPage() {
                             />
                             <LinkCard 
                                 href="/link/hauscheckin" 
-                                title="HAUS CHECK-IN WALL // บอร์ดเช็กอินลูกค้า ➔" 
+                                title={lt('linkCheckin')} 
                                 bg="bg-[var(--color-brand)] text-white hover:opacity-90 font-bold" 
                                 wide 
                                 internal 
@@ -968,17 +1011,17 @@ export default function AdsLandingPage() {
                         <div className="border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] divide-y divide-[var(--color-hallmark-rule)]">
                             <div className="p-3 bg-[var(--color-hallmark-paper-dark)] flex items-center justify-between">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    LOCATION & MAP
+                                    {lt('locationMap')}
                                 </h3>
                                 <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                                    NAKHON PHANOM
+                                    {lt('city')}
                                 </span>
                             </div>
                             <div className="p-4 bg-[var(--color-hallmark-paper)] font-mono text-xs text-[var(--color-hallmark-ink)] space-y-2">
                                 <p className="font-[var(--font-body)] font-bold text-sm leading-relaxed">{locationText}</p>
                                 <div className="pt-2 flex flex-col gap-1 text-[11px] text-[var(--color-hallmark-ink-muted)] font-bold">
-                                    <p>TEL: <a href="tel:0985284217" onClick={handleCallClick} className="underline hover:opacity-80">098-528-4217</a></p>
-                                    <p>OPEN: {hours}</p>
+                                    <p>{lt('telLabel')}: <a href="tel:+66985284217" onClick={handleCallClick} className="underline hover:opacity-80">{phoneDisplay}</a></p>
+                                    <p>{lt('openLabel')}: {lang === 'th' ? thaiHours : hours}</p>
                                 </div>
                             </div>
                             
@@ -989,7 +1032,7 @@ export default function AdsLandingPage() {
                                 onClick={handleDirectionsClick}
                                 className="w-full py-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-mono text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
                             >
-                                <Navigation size={14} /> LAUNCH MAP // นำทางมาร้าน
+                                <Navigation size={14} /> {lt('launchMap')}
                             </a>
                         </div>
                         
@@ -1016,14 +1059,14 @@ export default function AdsLandingPage() {
                         // {shopName}
                     </p>
                     <p className="font-[var(--font-body)] text-[9.5px] text-[var(--color-hallmark-ink-muted)] tracking-wider">
-                        จริตจัด รสชัดเจน · Real Southern Taste
+                        {lt('footerTagline')}
                     </p>
                     
                     <div className="h-px w-8 bg-[var(--color-hallmark-rule)] my-1" />
                     
                     {/* SEO Information (Subtle / Centered / Minimalist Dieter Rams) */}
                     <div className="w-full text-center font-[var(--font-body)] text-[8.5px] leading-relaxed text-[var(--color-hallmark-ink-muted)]">
-                        <p>ในบ้าน นครพนม · ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่มองหาร้านน่านั่งในนครพนม · อาหารรสชัด กาแฟ และเครื่องดื่ม มื้อกลางวันถึงมื้อค่ำ · ร้านเด็ดนครพนม · ร้านอาหารริมโขงใกล้ฉัน · คาเฟ่ นครพนม · ร้านกาแฟ นครพนม · จริตจัด รสชัดเจน ที่นี่นครพนม</p>
+                        <p>{lt('footerAbout')}</p>
                     </div>
 
                     <div className="h-px w-8 bg-[var(--color-hallmark-rule)] my-1" />
@@ -1041,25 +1084,25 @@ export default function AdsLandingPage() {
                     target="_blank" 
                     rel="noopener noreferrer"
                     onClick={handleLineClick}
-                    className="flex-1 bg-[#00873e] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                    className={`flex-1 bg-[#00873e] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 ${nativeLabels ? 'text-[11px]' : 'text-[9px]'} font-mono font-bold tracking-wider uppercase leading-normal transition-colors cursor-pointer`}
                 >
-                    <MessageCircle size={12} /> LINE CHAT
+                    <MessageCircle size={12} /> {lt('barLine')}
                 </a>
                 <a 
                     href={mapUrl}
                     target="_blank" 
                     rel="noopener noreferrer"
                     onClick={handleDirectionsClick}
-                    className="flex-1 bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                    className={`flex-1 bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 ${nativeLabels ? 'text-[11px]' : 'text-[9px]'} font-mono font-bold tracking-wider uppercase leading-normal transition-colors cursor-pointer`}
                 >
-                    <Navigation size={12} /> DIRECTIONS
+                    <Navigation size={12} /> {lt('barDirections')}
                 </a>
                 <a 
-                    href="tel:0985284217" 
+                    href="tel:+66985284217" 
                     onClick={handleCallClick}
-                    className="flex-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                    className={`flex-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 ${nativeLabels ? 'text-[11px]' : 'text-[9px]'} font-mono font-bold tracking-wider uppercase leading-normal transition-colors cursor-pointer`}
                 >
-                    <Phone size={12} /> CALL / BOOK
+                    <Phone size={12} /> {lt('barCall')}
                 </a>
             </div>
 
@@ -1161,7 +1204,7 @@ export default function AdsLandingPage() {
                                 className="w-full bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 flex items-center justify-center gap-1.5 font-mono text-[11px] font-extrabold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer mt-2 text-center"
                             >
                                 <Compass size={13} />
-                                <span>เข้าสู่บอร์ดเช็กอินแบบลากซูม (ชมรูปเพิ่ม)</span>
+                                <span>{lt('openCheckinWall')}</span>
                             </a>
                         </div>
                     ) : (
@@ -1185,8 +1228,11 @@ export default function AdsLandingPage() {
 // ─── HELPER SUB-COMPONENTS ───
 
 // Menu List Item Component (Tabular Version with Strict 1:1 Aspect-Square Images)
-function MenuListItem({ item, index, onImageClick }) {
+function MenuListItem({ item, index, lang = 'th', onImageClick }) {
     const isRecommended = item.is_recommended === true;
+    const name = localizeField(item, 'name', lang);
+    // Thai view shows the Thai description; translated views show only a translated one
+    const description = lang === 'th' ? item.description : (item[`description_${lang}`] || item.description_en || '');
 
     const renderDescription = (desc) => {
         if (!desc) return null;
@@ -1218,7 +1264,7 @@ function MenuListItem({ item, index, onImageClick }) {
             <div className="flex-1 flex flex-col justify-center p-3 sm:p-3.5 border-r border-[var(--color-hallmark-rule)] min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="font-[var(--font-body)] font-bold text-xs sm:text-[13px] text-[var(--color-hallmark-ink)] leading-snug">
-                        {item.name}
+                        {name}
                     </h4>
                     {isRecommended && (
                         <span className="text-[8px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-bold px-1.5 py-0.5 uppercase tracking-wider">
@@ -1226,9 +1272,13 @@ function MenuListItem({ item, index, onImageClick }) {
                         </span>
                     )}
                 </div>
-                {item.description && (
+                {/* Translated view keeps the Thai name so guests can point it out to staff */}
+                {name !== item.name && (
+                    <p lang="th" className="text-[var(--color-hallmark-ink-muted)] text-[10px] leading-normal mt-0.5">{item.name}</p>
+                )}
+                {description && (
                     <div className="text-[var(--color-hallmark-ink-muted)] text-[10px] mt-1 line-clamp-4 leading-relaxed">
-                        {renderDescription(item.description)}
+                        {renderDescription(description)}
                     </div>
                 )}
             </div>
@@ -1247,7 +1297,7 @@ function MenuListItem({ item, index, onImageClick }) {
                     >
                         <img 
                             src={optimizeImageUrl(item.image_url, 180)} 
-                            alt={item.name} 
+                            alt={name} 
                             className="w-full h-full object-cover aspect-square"
                             loading={index !== undefined && index < 4 ? undefined : "lazy"}
                             fetchPriority={index !== undefined && index < 4 ? "high" : undefined}

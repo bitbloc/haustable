@@ -1198,8 +1198,8 @@ export default function CustomerOrderLanding() {
     // Normalized text per item, built once per menu load rather than on every keystroke
     const searchIndex = useMemo(() => visibleMenuItems.map(item => {
         const itemCat = categories.find(c => isItemInCategory(item, c));
-        const name = [item.name, item.name_en].filter(Boolean).join(' ');
-        const full = [item.name, item.name_en, item.description, item.description_en, item.category, itemCat?.name, itemCat?.name_en].filter(Boolean).join(' ');
+        const name = [item.name, item.name_en, item.name_zh, item.name_lo].filter(Boolean).join(' ');
+        const full = [item.name, item.name_en, item.name_zh, item.name_lo, item.description, item.description_en, item.description_zh, item.description_lo, item.category, itemCat?.name, itemCat?.name_en, itemCat?.name_zh, itemCat?.name_lo].filter(Boolean).join(' ');
         return {
             item,
             nameText: normalizeSearch(name),
@@ -1936,25 +1936,6 @@ export default function CustomerOrderLanding() {
                         )}
                     </div>
 
-                    {/* Language switch: one cell, the active language in ink */}
-                    <div className="flex items-stretch" role="group" aria-label={tt('languageSwitch')}>
-                        {TABLE_LANGUAGES.map(option => (
-                            <button
-                                key={option.code}
-                                type="button"
-                                onClick={() => setLanguage(option.code)}
-                                aria-pressed={lang === option.code}
-                                className={`px-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                                    lang === option.code
-                                        ? 'text-[var(--color-ink)] underline underline-offset-4 decoration-2'
-                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
-                                }`}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
-                    </div>
-
                     <div className="flex items-center">
                         <Link
                             to="/member-card"
@@ -1967,6 +1948,27 @@ export default function CustomerOrderLanding() {
                     </div>
                 </div>
             </header>
+
+            {/* Language cells: a row of their own under the header (it scrolls away with the page),
+                so four languages never squeeze the table name on a narrow phone */}
+            <div className="max-w-2xl mx-auto w-full grid grid-cols-4 divide-x divide-[var(--color-rule)] border-b border-[var(--color-rule)]" role="group" aria-label={tt('languageSwitch')}>
+                {TABLE_LANGUAGES.map(option => (
+                    <button
+                        key={option.code}
+                        type="button"
+                        lang={option.code}
+                        onClick={() => setLanguage(option.code)}
+                        aria-pressed={lang === option.code}
+                        className={`min-h-[36px] py-1.5 text-xs font-bold leading-normal transition-colors cursor-pointer ${
+                            lang === option.code
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
+                    >
+                        {option.label}
+                    </button>
+                ))}
+            </div>
 
             {/* GPS Unverified Notice */}
             {settings.qr_gps_enabled === 'true' && gpsStatus === 'failed' && !(activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) && (

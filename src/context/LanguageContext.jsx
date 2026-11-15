@@ -1,5 +1,5 @@
-import { createContext, useState, useContext } from 'react';
-import { SUPPORTED_LANGUAGES, LANG_STORAGE_KEY, readStoredLanguage } from '../utils/languageHelper';
+import { createContext, useState, useContext, useEffect } from 'react';
+import { SUPPORTED_LANGUAGES, LANG_STORAGE_KEY, HTML_LANG, readStoredLanguage } from '../utils/languageHelper';
 
 const LanguageContext = createContext();
 
@@ -388,6 +388,20 @@ export const LanguageProvider = ({ children }) => {
             try { localStorage.setItem(LANG_STORAGE_KEY, code); } catch { /* storage unavailable */ }
         }
     };
+
+    // Keep <html lang> in step so fonts, glyph variants and line breaking follow the language
+    useEffect(() => {
+        document.documentElement.lang = HTML_LANG[lang] || lang;
+        // Lao has no glyphs in IBM Plex Sans Thai and system Lao fonts vary a lot between
+        // phones, so the Lao face is loaded on demand the first time Lao is shown
+        if (lang === 'lo' && !document.getElementById('font-noto-sans-lao')) {
+            const link = document.createElement('link');
+            link.id = 'font-noto-sans-lao';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap';
+            document.head.appendChild(link);
+        }
+    }, [lang]);
 
     const toggleLanguage = () => {
         setLanguage(lang === 'th' ? 'en' : 'th');
