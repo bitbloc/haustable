@@ -513,3 +513,22 @@ input[type="range"]::-moz-range-thumb {
 .animate-rams-heartbeat {
   animation: rams-heartbeat 1.6s ease-in-out infinite;
 }
+/* ------------------------------------------------------------------
+   POS text size (per device): see src/utils/posTextScale.js.
+   Multiplies only the small text sizes used inside the POS; headings
+   (text-lg and up) and layout boxes keep their size. Unitless
+   line-heights scale with the text, so Thai upper/lower marks keep
+   their room. --pos-text-scale defaults to 1 everywhere else.
+   ------------------------------------------------------------------ */
+.pos-container .text-\[7px\]   { font-size: calc(7px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[7\.5px\] { font-size: calc(7.5px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[8px\]   { font-size: calc(8px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[8\.5px\] { font-size: calc(8.5px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[9px\]   { font-size: calc(9px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[9\.5px\] { font-size: calc(9.5px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[10px\]  { font-size: calc(10px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[11px\]  { font-size: calc(11px * var(--pos-text-scale, 1)); }
+.pos-container .text-\[12px\]  { font-size: calc(12px * var(--pos-text-scale, 1)); }
+.pos-container .text-xs        { font-size: calc(0.75rem * var(--pos-text-scale, 1)); }
+.pos-container .text-sm        { font-size: calc(0.875rem * var(--pos-text-scale, 1)); }
+.pos-container .text-base      { font-size: calc(1rem * var(--pos-text-scale, 1)); }

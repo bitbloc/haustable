@@ -1368,7 +1368,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
-                                <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate uppercase leading-tight">
+                                <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate uppercase leading-[1.6]">
                                     {currentMemberProfile?.display_name || 'Anonymous User'}
                                 </span>
                                 {currentMemberProfile?.current_tier && (
@@ -3310,7 +3310,7 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
         >
             <div className="flex-1 min-w-0 mr-3">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    <h5 className="font-bold text-sm leading-tight text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
+                    <h5 className="font-bold text-sm leading-[1.6] text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
                     {isCustomEmergency && (
                         <span className="text-[9px] font-mono font-bold bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 px-1 py-0.2 rounded shrink-0">
                             [เมนูเพิ่มเติม]

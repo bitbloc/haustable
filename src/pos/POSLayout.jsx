@@ -17,6 +17,7 @@ import { supabase } from '../lib/supabaseClient';
 import { openCashDrawer } from '../utils/printerHelper';
 import { toast } from 'sonner';
 import POSVolumeControl from './POSVolumeControl';
+import POSTextSizeControl from './POSTextSizeControl';
 import POSNetworkStatusBanner from './POSNetworkStatusBanner';
 
 const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, selectedTable, onBack, onlinePendingCount = 0 }) {
@@ -257,39 +258,46 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                         )}
 
                         
-                        {/* Active Shift Employee */}
+                        {/* Active Shift Employee: one bordered cell per action, each a full-height
+                            tap target (min 44px). "ปิดรอบ" sits last with extra separation so it is
+                            not hit by accident when reaching for "เบิกจ่าย" or "สลับ". */}
                         {(activeShift || activeStaff) && (
-                            <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3.5 py-1.5 rounded-md text-xs font-bold font-mono shadow-xs">
-                                <Users size={13} className="text-[var(--color-accent)]" />
-                                <span>STAFF: {activeStaff?.display_name || activeShift?.staffName || 'Staff'}</span>
+                            <div className="flex items-stretch bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-md font-mono shadow-xs overflow-hidden">
+                                <div className="flex items-center gap-1.5 px-3 text-xs font-bold">
+                                    <Users size={13} className="text-[var(--color-accent)]" />
+                                    <span>STAFF: {activeStaff?.display_name || activeShift?.staffName || 'Staff'}</span>
+                                </div>
                                 {activeShift && (
-                                    <>
-                                        <button 
-                                            onClick={() => {
-                                                window.dispatchEvent(new Event('pos-trigger-cash-adjustment'));
-                                            }}
-                                            className="ml-1 text-[10px] uppercase font-bold text-[var(--color-muted)] hover:text-[var(--color-ink)] border-l border-[var(--color-rule)] pl-2 cursor-pointer transition-colors touch-manipulation"
-                                        >
-                                            เบิกจ่าย
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                window.dispatchEvent(new Event('pos-trigger-close-shift'));
-                                            }}
-                                            className="ml-1 text-[10px] uppercase font-bold text-[var(--color-accent)] hover:opacity-80 border-l border-[var(--color-rule)] pl-2 cursor-pointer transition-colors touch-manipulation"
-                                        >
-                                            ปิดรอบ
-                                        </button>
-                                    </>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            window.dispatchEvent(new Event('pos-trigger-cash-adjustment'));
+                                        }}
+                                        className="min-h-[44px] px-3.5 text-xs font-bold text-[var(--color-ink)] border-l border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] cursor-pointer transition-colors touch-manipulation"
+                                    >
+                                        เบิกจ่าย
+                                    </button>
                                 )}
-                                <button 
+                                <button
+                                    type="button"
                                     onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-lock'));
                                     }}
-                                    className="ml-1 text-[10px] uppercase font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] border-l border-[var(--color-rule)] pl-2 cursor-pointer transition-colors touch-manipulation"
+                                    className="min-h-[44px] px-3.5 text-xs font-bold text-[var(--color-ink)] border-l border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] cursor-pointer transition-colors touch-manipulation"
                                 >
                                     สลับ
                                 </button>
+                                {activeShift && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            window.dispatchEvent(new Event('pos-trigger-close-shift'));
+                                        }}
+                                        className="ml-2 min-h-[44px] px-3.5 text-xs font-bold text-[var(--color-accent)] border-l border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] cursor-pointer transition-colors touch-manipulation"
+                                    >
+                                        ปิดรอบ
+                                    </button>
+                                )}
                             </div>
                         )}
 
@@ -316,6 +324,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                         </span>
                         
                         {/* POS Audio Volume Control */}
+                        <POSTextSizeControl />
                         <POSVolumeControl />
 
                         {/* Isolated Header Clock */}

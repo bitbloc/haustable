@@ -203,24 +203,36 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
         // Fetch CRM members directly via safe RPC (works for both anon POS terminals & authenticated users)
         fetchMembers(true);
 
-        // Supabase Realtime subscription for live CRM updates
+        // Supabase Realtime subscription for live CRM updates. During service every order, item and
+        // status change updates the bookings table; reloading the full member list and visit history on
+        // each event kept the POS busy. Collapse bursts into one reload 2s after the last change.
+        let refreshTimer = null;
+        let reloadSelected = false;
+        const scheduleRefresh = (includeSelected) => {
+            reloadSelected = reloadSelected || includeSelected;
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+                refreshTimer = null;
+                fetchMembers(false);
+                const curSel = selectedMemberRef.current;
+                if (reloadSelected && curSel?.id) {
+                    handleSelectMember(curSel);
+                }
+                reloadSelected = false;
+            }, 2000);
+        };
         const channel = supabase
             .channel('pos_crm_panel_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                if (isActive) {
-                    fetchMembers(false);
-                    const curSel = selectedMemberRef.current;
-                    if (curSel?.id) {
-                        handleSelectMember(curSel);
-                    }
-                }
+                if (isActive) scheduleRefresh(true);
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-                if (isActive) fetchMembers(false);
+                if (isActive) scheduleRefresh(false);
             })
             .subscribe();
 
         return () => {
+            if (refreshTimer) clearTimeout(refreshTimer);
             supabase.removeChannel(channel);
         };
     }, [isActive, fetchMembers, handleSelectMember]);

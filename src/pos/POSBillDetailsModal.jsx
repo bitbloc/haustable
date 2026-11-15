@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { FileText, X, Loader2, Receipt, Printer, Edit3 } from 'lucide-react';
 import { getShortBookingId, extractCashDetails } from '../utils/printerHelper';
 import { supabase } from '../lib/supabaseClient';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 import { getBookingPaymentBreakdown } from '../utils/shiftHelper';
 import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
-import TaxInvoiceModal from '../components/admin/tax/TaxInvoiceModal';
-import TaxInvoicePrintView from '../components/admin/tax/TaxInvoicePrintView';
+// Loaded only when staff open "issue / print tax invoice". They pull in the PDF library (~680 KB),
+// which otherwise had to be parsed every time REPORTS, CRM or a bill opened on the Sunmi.
+const TaxInvoiceModal = lazy(() => import('../components/admin/tax/TaxInvoiceModal'));
+const TaxInvoicePrintView = lazy(() => import('../components/admin/tax/TaxInvoicePrintView'));
 
 const getBookingPaymentMethod = (b) => {
     if (!b) return 'CASH';
@@ -555,6 +557,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 </div>
             </div>
 
+            <Suspense fallback={null}>
             {/* Modal: Issue / Edit Tax Invoice from this bill */}
             {showTaxModal && (
                 <TaxInvoiceModal
@@ -585,6 +588,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                     }}
                 />
             )}
+            </Suspense>
         </div>
     );
 }

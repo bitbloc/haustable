@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase, IS_POS_READONLY_PREVIEW } from '../lib/supabaseClient';
+import { applyPosTextScale } from '../utils/posTextScale';
 
 // Local-dev read-only preview (npm run dev:pos-preview): enter the POS without a PIN or an open
 // shift. Writes are blocked in supabaseClient. IS_POS_READONLY_PREVIEW is always false in builds.
@@ -35,7 +36,7 @@ import {
 } from '../utils/staffAuthHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip, prewarmPrintOptionMap } from '../utils/printerHelper';
 import { filterLocallyUnprinted, addLocallyPrintedIds, carryOverLocallyPrinted, pruneLocalPrintTracker, isDbPrinted, claimItemsForPrint, markItemsPrinted, releasePrintClaim } from '../utils/printClaim';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
 import { getBookingHoldMinutes, isHoldExpired, isAdvanceUnseatedReservation, isPayAtStoreOrder, isCallConfirmOrder, refundBookingLoyaltyIfNeeded, formatPosDateTime } from '../utils/availabilityUtils';
@@ -1509,6 +1510,10 @@ export default function POSDashboard() {
 
         // Drop print trackers of bills older than 3 days so localStorage never fills up
         pruneLocalPrintTracker();
+
+        // Apply this device's POS text size (bigger by default on the 1920px Sunmi screen)
+        applyPosTextScale();
+        prewarmPrintOptionMap();
 
         // 1. Initial pending & unprinted orders safety heartbeat
         const isHeartbeatRunningRef = { current: false };

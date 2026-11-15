@@ -459,7 +459,10 @@ const MenuItemCard = memo(function MenuItemCard({ item, cachedImg, onClick }) {
             </div>
             
             <div className="flex flex-col flex-1 min-h-[56px] justify-between">
-                <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-tight py-0.5 tracking-tight">{item.name}</h4>
+                {/* line-clamp hides ink outside the line box. Measured IBM Plex Sans Thai bold: the
+                    tallest stack (upper vowel + tone mark + lower vowel) is 1.51em, so 1.25 cut tone
+                    marks and 1.5 was still short; 1.6 clears it. */}
+                <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-[1.6] tracking-tight">{item.name}</h4>
                 <div className="mt-1 pt-1.5 flex items-center justify-between border-t border-[var(--color-rule)] text-xs font-mono font-bold uppercase tracking-wider">
                     <span className="text-[var(--color-accent)]">฿{item.price}</span>
                     {item.stock_quantity !== null && (

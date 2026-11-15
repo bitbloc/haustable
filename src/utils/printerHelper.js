@@ -3382,17 +3382,40 @@ export async function resolveBillingQrCode(booking, config = {}, customAmount = 
     }
 }
 
+// Option id -> name map used to label slip options. Cached for 5 minutes so a print does not wait
+// on a network round trip (~0.2s+ on shop Wi-Fi) every time; a stale map only affects option labels
+// for items saved with bare option ids, and refreshes on the next print after expiry.
+const OPTION_MAP_TTL_MS = 5 * 60 * 1000;
+let optionMapCache = { map: null, at: 0, pending: null };
+
+async function getCachedOptionMap() {
+    const now = Date.now();
+    if (optionMapCache.map && now - optionMapCache.at < OPTION_MAP_TTL_MS) return optionMapCache.map;
+    if (optionMapCache.pending) return optionMapCache.pending;
+    optionMapCache.pending = (async () => {
+        try {
+            const { data } = await supabase.from('option_choices').select('id, name');
+            if (data) {
+                optionMapCache.map = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {});
+                optionMapCache.at = Date.now();
+            }
+        } catch (e) {}
+        optionMapCache.pending = null;
+        return optionMapCache.map || {};
+    })();
+    return optionMapCache.pending;
+}
+
+// Call once when the POS opens so even the first print of the day skips the network wait.
+export function prewarmPrintOptionMap() {
+    return getCachedOptionMap();
+}
+
 export async function silentPrintSlip(booking, slipType = 'receipt', optionMap = {}, result = null) {
     if (!booking) return false;
     try {
         if (Object.keys(optionMap).length === 0) {
-            try {
-                const { supabase } = await import('../lib/supabaseClient');
-                const { data } = await supabase.from('option_choices').select('id, name');
-                if (data) {
-                    optionMap = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {});
-                }
-            } catch(e) {}
+            optionMap = await getCachedOptionMap();
         }
         
         const config = getPrinterConfig() || {};

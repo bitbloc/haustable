@@ -822,7 +822,7 @@ export default function POSCustomerDisplay() {
                                             <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
                                                 IN THE HAUS MEMBER
                                             </span>
-                                            <h2 className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate leading-tight uppercase">
+                                            <h2 className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate leading-[1.6] uppercase">
                                                 {mp.display_name || mp.name || orderData.customer}
                                             </h2>
                                         </div>
@@ -964,7 +964,7 @@ export default function POSCustomerDisplay() {
                                         </span>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)] uppercase leading-tight truncate">
+                                                <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)] uppercase leading-[1.6] truncate">
                                                     {item.name}
                                                 </h3>
                                                 {item.destination && (
