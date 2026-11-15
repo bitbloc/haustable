@@ -51,7 +51,7 @@ export default function WithholdingTaxTab({
     const [payeeName, setPayeeName] = useState('');
     const [payeeTaxId, setPayeeTaxId] = useState('');
     const [payeeAddress, setPayeeAddress] = useState('');
-    const [incomeType, setIncomeType] = useState('ค่าบริการ (Service Fee) 3%');
+    const [incomeType, setIncomeType] = useState('ค่าบริการ 3%');
     const [taxRate, setTaxRate] = useState(3);
     const [grossAmount, setGrossAmount] = useState('');
     const [formType, setFormType] = useState('PND53'); // 'PND1' | 'PND3' | 'PND53'
@@ -273,7 +273,7 @@ export default function WithholdingTaxTab({
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(50%_0.010_28)]" />
                         <input
                             type="text"
-                            placeholder="ค้นหาชื่อผู้รับ / Tax ID / เลขที่..."
+                            placeholder="ค้นหาชื่อผู้รับ เลขผู้เสียภาษี หรือเลขที่"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-8 pr-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-lg text-xs tabular-nums w-48 sm:w-64 focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
@@ -287,7 +287,7 @@ export default function WithholdingTaxTab({
                         className="px-3.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
                     >
                         <Download size={14} />
-                        <span>Export CSV</span>
+                        <span>ส่งออก CSV</span>
                     </button>
 
                     <button
@@ -304,7 +304,7 @@ export default function WithholdingTaxTab({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-xl p-4 ">
                     <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
-                        ยอดจ่ายค่าจ้าง / บริการทั้งหมด (Gross)
+                        ยอดจ่ายค่าจ้าง / บริการทั้งหมด
                     </span>
                     <div className="tabular-nums font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
                         ฿{totals.gross.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -316,7 +316,7 @@ export default function WithholdingTaxTab({
 
                 <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-xl p-4 ">
                     <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
-                        ภาษีที่หักและต้องนำส่ง (Total Tax Withheld)
+                        ภาษีที่หักและต้องนำส่ง
                     </span>
                     <div className="tabular-nums font-black text-xl text-[oklch(52%_0.16_28)] mt-1">
                         ฿{totals.tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -328,7 +328,7 @@ export default function WithholdingTaxTab({
 
                 <div className="bg-[#1A1A1A] text-[oklch(97%_0.008_28)] rounded-xl p-4 ">
                     <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
-                        ยอดจ่ายสุทธิหลังหักภาษี (Net Paid)
+                        ยอดจ่ายสุทธิหลังหักภาษี
                     </span>
                     <div className="tabular-nums font-black text-xl text-emerald-400 mt-1">
                         ฿{totals.net.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -343,7 +343,7 @@ export default function WithholdingTaxTab({
             <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl overflow-hidden ">
                 <div className="px-5 py-4 border-b border-[oklch(90%_0.008_28)] bg-zinc-50/50">
                     <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
-                        สมุดบันทึกรายการภาษีหัก ณ ที่จ่าย (Withholding Tax Ledger)
+                        สมุดบันทึกรายการภาษีหัก ณ ที่จ่าย
                     </h3>
                 </div>
 
@@ -355,7 +355,7 @@ export default function WithholdingTaxTab({
                                 <th className="p-3 w-24">วันที่จ่าย</th>
                                 <th className="p-3 w-32">เลขที่ 50 ทวิ</th>
                                 <th className="p-3 w-20">แบบยื่น</th>
-                                <th className="p-3">ผู้ถูกหักภาษี (Payee)</th>
+                                <th className="p-3">ผู้ถูกหักภาษี</th>
                                 <th className="p-3 w-32">เลขประจำตัว 13 หลัก</th>
                                 <th className="p-3">ประเภทเงินได้</th>
                                 <th className="p-3 text-right w-24">อัตรา</th>
@@ -530,11 +530,11 @@ export default function WithholdingTaxTab({
                                         onChange={handleIncomeTypeChange}
                                         className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)] font-medium"
                                     >
-                                        <option value="ค่าบริการ (Service Fee) 3%">ค่าบริการ (Service) 3%</option>
-                                        <option value="ค่าจ้างทำของ (Contract Work) 3%">ค่าจ้างทำของ 3%</option>
-                                        <option value="ค่าเช่าทรัพย์สิน (Rent) 5%">ค่าเช่าสถานที่ / ทรัพย์สิน 5%</option>
-                                        <option value="ค่าโฆษณา (Advertising) 2%">ค่าโฆษณา 2%</option>
-                                        <option value="ค่าขนส่ง (Transportation) 1%">ค่าขนส่ง 1%</option>
+                                        <option value="ค่าบริการ 3%">ค่าบริการ 3%</option>
+                                        <option value="ค่าจ้างทำของ 3%">ค่าจ้างทำของ 3%</option>
+                                        <option value="ค่าเช่าทรัพย์สิน 5%">ค่าเช่าสถานที่ / ทรัพย์สิน 5%</option>
+                                        <option value="ค่าโฆษณา 2%">ค่าโฆษณา 2%</option>
+                                        <option value="ค่าขนส่ง 1%">ค่าขนส่ง 1%</option>
                                     </select>
                                 </div>
 
@@ -557,7 +557,7 @@ export default function WithholdingTaxTab({
                             {grossAmount && Number(grossAmount) > 0 && (
                                 <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(90%_0.008_28)] rounded-xl p-3.5 space-y-1.5 tabular-nums text-xs">
                                     <div className="flex justify-between text-[oklch(42%_0.010_28)]">
-                                        <span>จำนวนเงินจ่าย (Gross):</span>
+                                        <span>จำนวนเงินจ่าย:</span>
                                         <span>฿{Number(grossAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between text-red-600 font-bold">
@@ -565,7 +565,7 @@ export default function WithholdingTaxTab({
                                         <span>-฿{((Number(grossAmount || 0) * taxRate) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between text-[oklch(18%_0.012_28)] font-black border-t border-[oklch(90%_0.008_28)] pt-1.5 text-sm">
-                                        <span>ยอดจ่ายสุทธิ (Net Paid):</span>
+                                        <span>ยอดจ่ายสุทธิ:</span>
                                         <span className="text-emerald-700">฿{(Number(grossAmount || 0) - ((Number(grossAmount || 0) * taxRate) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
@@ -656,7 +656,7 @@ export default function WithholdingTaxTab({
 
                         {/* Payer Box */}
                         <div className="border-2 border-zinc-950 p-3.5 bg-[oklch(97%_0.008_28)] space-y-1 tabular-nums text-[11.5pt]">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] text-[10pt] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer):</span>
+                            <span className="font-bold text-[oklch(42%_0.010_28)] text-[10pt] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย:</span>
                             <div className="font-bold text-[14pt] text-[oklch(18%_0.012_28)]">{companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'}</div>
                             <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-[oklch(18%_0.012_28)] font-bold">{formatTaxId(companySettings?.tax_id)}</strong></div>
                             <div>ที่อยู่: {companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</div>
@@ -664,7 +664,7 @@ export default function WithholdingTaxTab({
 
                         {/* Payee Box */}
                         <div className="border-2 border-zinc-950 p-3.5 bg-[oklch(99%_0.004_28)] space-y-1 tabular-nums text-[11.5pt]">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] text-[10pt] block">2. ผู้ถูกหักภาษี ณ ที่จ่าย (Payee):</span>
+                            <span className="font-bold text-[oklch(42%_0.010_28)] text-[10pt] block">2. ผู้ถูกหักภาษี ณ ที่จ่าย:</span>
                             <div className="font-bold text-[14pt] text-[oklch(18%_0.012_28)]">{activePrintRecord.payee_name}</div>
                             <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-[oklch(18%_0.012_28)] font-bold">{formatTaxId(activePrintRecord.payee_tax_id)}</strong></div>
                             <div>ที่อยู่: {activePrintRecord.payee_address || '-'}</div>

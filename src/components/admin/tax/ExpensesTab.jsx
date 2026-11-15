@@ -301,16 +301,16 @@ export default function ExpensesTab({
         }
 
         const headers = [
-            'ลำดับ (No.)',
-            'วันที่จ่าย (Date)',
-            'รายการค่าใช้จ่าย (Title)',
-            'หมวดหมู่ (Category)',
-            'ร้านค้า / ผู้รับเงิน (Vendor)',
-            'ชนิดเอกสาร (Doc Type)',
-            'จำนวนเงิน (Amount THB)',
-            'วิธีชำระเงิน (Pay Method)',
-            'หมายเหตุ (Notes)',
-            'มีรูปใบเสร็จ (Has Photo)'
+            'ลำดับ',
+            'วันที่จ่าย',
+            'รายการค่าใช้จ่าย',
+            'หมวดหมู่',
+            'ร้านค้า / ผู้รับเงิน',
+            'ชนิดเอกสาร',
+            'จำนวนเงิน',
+            'วิธีชำระเงิน',
+            'หมายเหตุ',
+            'มีรูปใบเสร็จ'
         ];
 
         const rows = filteredExpenses.map((exp, idx) => {
@@ -336,7 +336,7 @@ export default function ExpensesTab({
         ];
 
         const csvLines = [
-            `"รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน (Store Expenses & COGS Ledger) - ประจำงวด ${periodLabel}"`,
+            `"รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน - ประจำงวด ${periodLabel}"`,
             headers.join(','),
             ...rows.map(r => r.join(',')),
             summaryRow.join(',')
@@ -423,15 +423,15 @@ export default function ExpensesTab({
                     </span>
                     <div className="space-y-2 tabular-nums text-xs">
                         <div className="flex justify-between items-center py-1 border-b border-[var(--color-rule)]/60">
-                            <span className="text-[var(--color-neutral)]">GRADE A (FULL TAX INV):</span>
+                            <span className="text-[var(--color-neutral)]">เกรด A ใบกำกับภาษี:</span>
                             <span className="font-bold">฿{monthlyStats.gradeA.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center py-1 border-b border-[var(--color-rule)]/60">
-                            <span className="text-[var(--color-neutral)]">GRADE B (CASH BILL + SLIP):</span>
+                            <span className="text-[var(--color-neutral)]">เกรด B บิลเงินสด:</span>
                             <span className="font-bold">฿{monthlyStats.gradeB.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center py-1">
-                            <span className="text-[var(--color-neutral)]">GRADE C (PAYMENT VOUCHER):</span>
+                            <span className="text-[var(--color-neutral)]">เกรด C สลิป / ใบสำคัญจ่าย:</span>
                             <span className="font-bold">฿{monthlyStats.gradeC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
                     </div>
@@ -502,7 +502,7 @@ export default function ExpensesTab({
                             }}
                             className={`px-3 py-1.5 transition-colors cursor-pointer ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            รายวัน (DAY)
+                            รายวัน
                         </button>
                         <button
                             type="button"
@@ -514,7 +514,7 @@ export default function ExpensesTab({
                             }}
                             className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] cursor-pointer ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            รายเดือน (MONTH)
+                            รายเดือน
                         </button>
                         <button
                             type="button"
@@ -586,7 +586,7 @@ export default function ExpensesTab({
                         onChange={(e) => setCategoryFilter(e.target.value)}
                         className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs focus:border-[var(--color-ink)] focus:outline-none"
                     >
-                        <option value="all">ALL CATEGORIES</option>
+                        <option value="all">ทุกหมวด</option>
                         {EXPENSE_CATEGORIES.map(c => (
                             <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
@@ -596,7 +596,7 @@ export default function ExpensesTab({
                         <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                         <input
                             type="text"
-                            placeholder="FILTER VENDOR / NOTES..."
+                            placeholder="ค้นหาร้านค้าหรือหมายเหตุ"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-7 pr-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs w-48 sm:w-60 focus:border-[var(--color-ink)] focus:outline-none"
@@ -612,7 +612,7 @@ export default function ExpensesTab({
                         title="โหลดข้อมูลใหม่จากเซิร์ฟเวอร์"
                     >
                         <RotateCcw size={12} className={loading ? 'animate-spin' : ''} />
-                        <span>RELOAD</span>
+                        <span>โหลดใหม่</span>
                     </button>
 
                     <button
@@ -646,7 +646,7 @@ export default function ExpensesTab({
                         className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs "
                     >
                         <Plus size={14} />
-                        <span>+ LOG EXPENSE</span>
+                        <span>บันทึกค่าใช้จ่าย</span>
                     </button>
                 </div>
             </div>
@@ -666,7 +666,7 @@ export default function ExpensesTab({
                         }}
                         className="px-3 py-1 bg-amber-900 text-[oklch(97%_0.008_28)] font-bold rounded text-xs cursor-pointer hover:bg-[oklch(18%_0.012_28)]"
                     >
-                        ดูรายการทั้งหมด (VIEW ALL) &rarr;
+                        ดูรายการทั้งหมด &rarr;
                     </button>
                 </div>
             )}
@@ -677,20 +677,20 @@ export default function ExpensesTab({
                     <table className="w-full text-left border-collapse tabular-nums text-[13px]">
                         <thead>
                             <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-xs text-[var(--color-neutral)] font-bold">
-                                <th className="p-3 border-r border-[var(--color-rule)] w-28">DATE</th>
-                                <th className="p-3 border-r border-[var(--color-rule)] min-w-[180px]">TITLE / VENDOR</th>
-                                <th className="p-3 border-r border-[var(--color-rule)] w-36">CATEGORY</th>
-                                <th className="p-3 border-r border-[var(--color-rule)] w-28 text-center">PROOF GRADE</th>
-                                <th className="p-3 border-r border-[var(--color-rule)] w-24 text-center">RECEIPT</th>
-                                <th className="p-3 border-r border-[var(--color-rule)] w-32 text-right">AMOUNT (THB)</th>
-                                <th className="p-3 w-20 text-center">ACTIONS</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-28">วันที่</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] min-w-[180px]">รายการ / ร้านค้า</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-36">หมวด</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-28 text-center">เกรดหลักฐาน</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-24 text-center">รูปใบเสร็จ</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-32 text-right">จำนวนเงิน</th>
+                                <th className="p-3 w-20 text-center">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-rule)]">
                             {filteredExpenses.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="p-12 text-center text-[var(--color-muted)] tabular-nums text-[13px]">
-                                        {loading ? 'LOADING EXPENSE LEDGER...' : `NO EXPENSE RECORDS FOUND FOR PERIOD [${showOnlyDuplicates ? 'DUPLICATES' : (isAllPeriods ? 'ALL TIME' : (periodMode === 'day' ? selectedDate : selectedMonth))}]`}
+                                        {loading ? 'กำลังโหลด…' : (showOnlyDuplicates ? 'ไม่พบบิลที่อาจซ้ำ' : `ไม่มีค่าใช้จ่ายใน${isAllPeriods ? 'ทุกช่วง' : ` ${periodMode === 'day' ? selectedDate : selectedMonth}`}`)}
                                     </td>
                                 </tr>
                             ) : (
@@ -715,7 +715,7 @@ export default function ExpensesTab({
                                                 <div className="text-xs text-[var(--color-muted)] flex items-center gap-2 mt-0.5">
                                                     <span>{exp.vendor_name || 'ไม่ระบุผู้ขาย'}</span>
                                                     {exp.vendor_tax_id && (
-                                                        <span>• TAX: {exp.vendor_tax_id}</span>
+                                                        <span>· เลขผู้เสียภาษี {exp.vendor_tax_id}</span>
                                                     )}
                                                 </div>
                                                 {exp.notes && (
@@ -731,13 +731,13 @@ export default function ExpensesTab({
                                             </td>
                                             <td className="p-3 border-r border-[var(--color-rule)] text-center text-[13px]">
                                                 {exp.doc_type === 'tax_invoice' && (
-                                                    <span className="text-[var(--color-ink)] font-bold">GRADE A (INV)</span>
+                                                    <span className="text-[var(--color-ink)] font-bold">เกรด A</span>
                                                 )}
                                                 {exp.doc_type === 'cash_bill' && (
-                                                    <span className="text-[var(--color-neutral)]">GRADE B (CASH)</span>
+                                                    <span className="text-[var(--color-neutral)]">เกรด B</span>
                                                 )}
                                                 {(exp.doc_type === 'receipt_voucher' || exp.doc_type === 'slip_only') && (
-                                                    <span className="text-[var(--color-muted)]">GRADE C (SLIP)</span>
+                                                    <span className="text-[var(--color-muted)]">เกรด C</span>
                                                 )}
                                             </td>
                                             <td className="p-3 border-r border-[var(--color-rule)] text-center">
@@ -756,7 +756,7 @@ export default function ExpensesTab({
                                                             }}
                                                             className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 bg-[oklch(99%_0.004_28)]"
                                                         >
-                                                            VIEW
+                                                            ดูรูป
                                                             {urls.length > 1 && (
                                                                 <span className="bg-[var(--color-ink)] text-[oklch(97%_0.008_28)] text-[11px] px-1 py-0.2 rounded-xs tabular-nums">
                                                                     {urls.length}P
@@ -813,7 +813,7 @@ export default function ExpensesTab({
                     >
                         <div className="p-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800">
                             <div className="flex items-center gap-3">
-                                <span>RECEIPT OPTICAL INSPECTOR</span>
+                                <span>ดูรูปใบเสร็จ</span>
                                 {previewUrls.length > 1 && (
                                     <span className="bg-[oklch(18%_0.012_28)] text-emerald-400 px-2 py-0.5 text-[11px] font-bold border border-zinc-700">
                                         PAGE {previewPageIndex + 1} OF {previewUrls.length}

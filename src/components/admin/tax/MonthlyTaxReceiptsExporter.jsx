@@ -291,18 +291,18 @@ export default function MonthlyTaxReceiptsExporter({
         }
 
         const headers = [
-            'ลำดับ (No.)',
-            'วันที่จ่าย (Date)',
-            'รายการค่าใช้จ่าย (Title)',
-            'ร้านค้า / ผู้ขาย (Vendor)',
-            'เลขประจำตัวผู้เสียภาษี (Tax ID)',
-            'หมวดหมู่ (Category)',
-            'ระดับหลักฐานภาษี (Proof Grade)',
-            'จำนวนเงิน (Amount THB)',
-            'ภาษีมูลค่าเพิ่ม (VAT THB)',
-            'วิธีชำระเงิน (Payment Method)',
-            'หมายเหตุ (Notes)',
-            'สถานะรูปภาพ (Image Status)'
+            'ลำดับ',
+            'วันที่จ่าย',
+            'รายการค่าใช้จ่าย',
+            'ร้านค้า / ผู้ขาย',
+            'เลขประจำตัวผู้เสียภาษี',
+            'หมวดหมู่',
+            'ระดับหลักฐานภาษี',
+            'จำนวนเงิน',
+            'ภาษีมูลค่าเพิ่ม',
+            'วิธีชำระเงิน',
+            'หมายเหตุ',
+            'สถานะรูปภาพ'
         ];
 
         const rows = selectedExpensesList.map((exp, idx) => {
@@ -328,7 +328,7 @@ export default function MonthlyTaxReceiptsExporter({
         const totalVat = selectedExpensesList.reduce((s, e) => s + Number(e.vat_amount || 0), 0);
 
         const summaryRow = [
-            'รวมทั้งสิ้น (GRAND TOTAL)',
+            'รวมทั้งสิ้น',
             '',
             '',
             '',
@@ -343,7 +343,7 @@ export default function MonthlyTaxReceiptsExporter({
         ];
 
         const csvContent = [
-            `"รายงานสรุปค่าใช้จ่ายและใบเสร็จภาษีประจำงวด (Tax Receipts Dossier) - ${selectedMonth}"`,
+            `"รายงานสรุปค่าใช้จ่ายและใบเสร็จภาษีประจำงวด - ${selectedMonth}"`,
             headers.join(','),
             ...rows.map(r => r.join(',')),
             summaryRow.join(',')
@@ -369,11 +369,11 @@ export default function MonthlyTaxReceiptsExporter({
                 <div className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 py-3.5 flex flex-wrap items-center justify-between font-mono gap-3">
                     <div className="flex items-center gap-3">
                         <span className="px-2.5 py-1 bg-[var(--color-ink)] text-[var(--color-paper)] font-bold text-[9px] uppercase tracking-widest">
-                            TAX//EXPORTER
+                            หลักฐานรายเดือน
                         </span>
                         <div>
                             <h1 className="font-bold text-base text-[var(--color-ink)] uppercase">
-                                MONTHLY TAX RECEIPTS DOSSIER WORKBENCH
+                                พิมพ์หลักฐานค่าใช้จ่ายทั้งเดือน
                             </h1>
                             <p className="text-[11px] text-[var(--color-neutral)]">
                                 รวมใบเสร็จทั้งเดือน ปรับภาพขาว-ดำ คมชัด ตัดขอบอัตโนมัติ พร้อมส่งออกพิมพ์ A4 สรรพากร/บัญชี
@@ -410,7 +410,7 @@ export default function MonthlyTaxReceiptsExporter({
                             title="ดาวน์โหลดรูปภาพทั้งหมดที่แต่งแล้ว"
                         >
                             <Download size={13} />
-                            <span>DOWNLOAD IMAGES</span>
+                            <span>ดาวน์โหลดรูปทั้งหมด</span>
                         </button>
 
                         <button
@@ -435,7 +435,7 @@ export default function MonthlyTaxReceiptsExporter({
                 {/* Batch Progress Indicator */}
                 {batchProcessing && (
                     <div className="bg-amber-500 text-black px-4 py-2 font-mono text-xs flex items-center justify-between font-bold animate-pulse">
-                        <span>⚡ กำลังประมวลผลภาพอัตโนมัติ (AUTO-ENHANCING RECEIPTS)... {batchProgress}%</span>
+                        <span>⚡ กำลังประมวลผลภาพอัตโนมัติ... {batchProgress}%</span>
                         <div className="w-48 bg-black/20 h-2 rounded-full overflow-hidden">
                             <div className="bg-black h-full transition-all duration-150" style={{ width: `${batchProgress}%` }} />
                         </div>
@@ -448,7 +448,7 @@ export default function MonthlyTaxReceiptsExporter({
                     {/* Batch Actions Group */}
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)]">
-                            BATCH COMMANDS:
+                            จัดการทุกใบ:
                         </span>
 
                         <button
@@ -459,7 +459,7 @@ export default function MonthlyTaxReceiptsExporter({
                             title="แปลงภาพใบเสร็จทั้งหมดที่เลือกเป็น ขาว-ดำ คมชัด"
                         >
                             <Sparkles size={13} className="text-amber-300" />
-                            <span>ปรับขาว-ดำ ทุกใบ (MAGIC B&amp;W)</span>
+                            <span>ปรับขาว-ดำ ทุกใบ</span>
                         </button>
 
                         <button
@@ -573,7 +573,7 @@ export default function MonthlyTaxReceiptsExporter({
                         <div className="py-16 text-center border-2 border-dashed border-[var(--color-rule)] p-6 font-mono text-xs text-[var(--color-neutral)] space-y-2">
                             <AlertCircle size={28} className="mx-auto text-[var(--color-muted)]" />
                             <div className="font-bold text-[var(--color-ink)]">ไม่พบรายการใบเสร็จในงวดเดือน {selectedMonth}</div>
-                            <p className="text-[11px] text-[var(--color-muted)]">ลองเปลี่ยนเดือน หรือบันทึกค่าใช้จ่ายใหม่ผ่านแท็บ Log Expense</p>
+                            <p className="text-[11px] text-[var(--color-muted)]">ลองเปลี่ยนเดือน หรือบันทึกค่าใช้จ่ายใหม่ในแท็บค่าใช้จ่าย</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -647,7 +647,7 @@ export default function MonthlyTaxReceiptsExporter({
                                                     </span>
                                                 ) : displaySrc ? (
                                                     <span className="px-1.5 py-0.5 bg-zinc-800 text-zinc-300 font-bold text-[8px] uppercase tracking-wider">
-                                                        RAW IMAGE
+                                                        รูปต้นฉบับ
                                                     </span>
                                                 ) : null}
                                                 {enhancedItem?.options?.cropRect && (
@@ -683,7 +683,7 @@ export default function MonthlyTaxReceiptsExporter({
                                                     className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] font-bold flex items-center gap-1 cursor-pointer"
                                                 >
                                                     <Sliders size={11} />
-                                                    <span>TUNE</span>
+                                                    <span>ปรับ</span>
                                                 </button>
                                             )}
                                         </div>
@@ -700,7 +700,7 @@ export default function MonthlyTaxReceiptsExporter({
                     {/* Layout Format Selector */}
                     <div className="flex flex-wrap items-center gap-3">
                         <span className="text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
-                            A4 PRINT LAYOUT:
+                            จัดหน้า A4:
                         </span>
 
                         <div className="flex border border-[var(--color-rule)] bg-[var(--color-paper)]">
@@ -749,7 +749,7 @@ export default function MonthlyTaxReceiptsExporter({
                                 onChange={(e) => setIncludeCover(e.target.checked)}
                                 className="accent-[var(--color-ink)]"
                             />
-                            <span>พิมพ์ใบปะหน้าสรุป (Cover Sheet)</span>
+                            <span>พิมพ์ใบปะหน้าสรุป</span>
                         </label>
                     </div>
 
@@ -760,7 +760,7 @@ export default function MonthlyTaxReceiptsExporter({
                             onClick={onClose}
                             className="px-4 py-2 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold text-xs cursor-pointer"
                         >
-                            CLOSE
+                            ปิด
                         </button>
 
                         <button

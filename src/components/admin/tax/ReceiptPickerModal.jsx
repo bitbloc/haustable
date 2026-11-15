@@ -133,7 +133,7 @@ export default function ReceiptPickerModal({
 
         // 2. Explicit Credit Card Check
         if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
-            return { label: 'CREDIT', icon: CreditCard };
+            return { label: 'บัตรเครดิต', icon: CreditCard };
         }
 
         // 3. QR / PromptPay / Bank Transfer Check
@@ -209,11 +209,11 @@ export default function ReceiptPickerModal({
                 <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-3 sm:px-6 flex items-center justify-between border-b border-[var(--color-rule)] shrink-0 font-mono">
                     <div className="flex items-center gap-3">
                         <div className="text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-white">
-                            POS//RECEIPTS
+                            บิล POS
                         </div>
                         <div>
                             <h2 className="font-bold text-sm sm:text-base tracking-wider uppercase">
-                                SELECT RECEIPT / POS BILL (เลือกจากใบเสร็จ)
+                                เลือกบิล POS
                             </h2>
                             <p className="text-[10px] text-[var(--color-paper)]/70">
                                 [เลือกบิลเพื่อดึงรายการสินค้า ยอดชำระ และข้อมูลลูกค้าเข้าสู่ใบกำกับภาษีทันที]
@@ -260,7 +260,7 @@ export default function ReceiptPickerModal({
                             className="px-3 py-2 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] disabled:opacity-50"
                         >
                             <RotateCcw size={12} className={loading ? 'animate-spin' : ''} />
-                            <span>RELOAD</span>
+                            <span>โหลดใหม่</span>
                         </button>
                     </div>
 
@@ -272,7 +272,7 @@ export default function ReceiptPickerModal({
                                 onClick={() => setDateFilter('today')}
                                 className={`px-2.5 py-1 text-[11px] transition-colors ${dateFilter === 'today' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
-                                วันนี้ (Today)
+                                วันนี้
                             </button>
                             <button
                                 onClick={() => setDateFilter('yesterday')}
@@ -337,7 +337,7 @@ export default function ReceiptPickerModal({
                         <div className="divide-y divide-[var(--color-rule)] border border-[var(--color-rule)] bg-white">
                             {filteredBookings.map((booking) => {
                                 const shortId = getShortBookingId(booking);
-                                const tableName = booking.tables_layout?.table_name || (booking.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN');
+                                const tableName = booking.tables_layout?.table_name || (booking.booking_type === 'pickup' ? 'กลับบ้าน' : 'หน้าร้าน');
                                 const customerName = booking.pickup_contact_name || booking.guest_name || booking.profiles?.display_name || '';
                                 const customerPhone = booking.pickup_contact_phone || booking.phone_number || booking.profiles?.phone_number || '';
                                 const itemsCount = (booking.order_items || []).reduce((sum, item) => sum + Number(item.quantity || 1), 0);
@@ -480,7 +480,7 @@ export default function ReceiptPickerModal({
                         onClick={onClose}
                         className="px-4 py-1.5 border border-[var(--color-rule)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-bold transition-colors cursor-pointer"
                     >
-                        ปิดหน้าต่าง (CLOSE)
+                        ปิดหน้าต่าง
                     </button>
                 </div>
             </div>

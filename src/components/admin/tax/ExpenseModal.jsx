@@ -339,15 +339,15 @@ export default function ExpenseModal({
                 <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-3 sm:px-6 flex items-center justify-between border-b border-[var(--color-rule)] shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="tabular-nums text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-[oklch(97%_0.008_28)]">
-                            EXP//01
+                            ค่าใช้จ่าย
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="tabular-nums font-bold text-sm  ">
-                                    {existingExpense ? 'EDIT EXPENSE RECORD' : 'STORE EXPENSE & RECEIPT CAPTURE'}
+                                    {existingExpense ? 'แก้ไขค่าใช้จ่าย' : 'บันทึกค่าใช้จ่ายและใบเสร็จ'}
                                 </h2>
                                 <span className="tabular-nums text-xs text-[var(--color-muted)]">
-                                    // {isAiScanning ? 'SCANNING...' : aiScannedSuccess ? `CONFIDENCE: ${aiConfidence}%` : 'READY'}
+                                    // {isAiScanning ? 'กำลังอ่านใบเสร็จ…' : aiScannedSuccess ? `ความมั่นใจ ${aiConfidence}%` : 'พร้อม'}
                                 </span>
                             </div>
                         </div>
@@ -359,7 +359,7 @@ export default function ExpenseModal({
                             onClick={() => setShowApiKeyModal(true)}
                             className="tabular-nums text-xs font-bold px-2.5 py-1 text-[var(--color-paper)]/80 hover:text-[oklch(97%_0.008_28)] border border-white/20 hover:border-white/40 transition-colors"
                         >
-                            AI CONFIG
+                            ตั้งค่า AI
                         </button>
                         <button 
                             onClick={onClose} 
@@ -380,7 +380,7 @@ export default function ExpenseModal({
                             <div className="flex items-center justify-between tabular-nums text-xs pb-1 border-b border-[var(--color-rule)]">
                                 <span className="font-bold text-[var(--color-neutral)] flex items-center gap-1.5">
                                     <Camera size={12} />
-                                    OPTICAL_SCANNER // ATTACHMENT
+                                    รูปใบเสร็จ
                                 </span>
                                 <div className="flex items-center gap-2">
                                     {receiptImage && (
@@ -401,7 +401,7 @@ export default function ExpenseModal({
                                             onChange={(e) => setAutoScanEnabled(e.target.checked)}
                                             className="accent-[var(--color-accent)] w-3 h-3"
                                         />
-                                        <span>AUTO SCAN</span>
+                                        <span>อ่านอัตโนมัติ</span>
                                     </label>
                                 </div>
                             </div>
@@ -433,7 +433,7 @@ export default function ExpenseModal({
                                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent)]/30 to-transparent border-y-2 border-[var(--color-accent)] pointer-events-none flex items-center justify-center">
                                                 <div className="bg-black/80 text-[oklch(97%_0.008_28)] tabular-nums text-xs font-bold px-3 py-1 tracking-widest flex items-center gap-2 shadow-2xl">
                                                     <Loader2 size={13} className="animate-spin text-[var(--color-accent)]" />
-                                                    <span>GEMINI_VISION_OCR_ACTIVE</span>
+                                                    <span>กำลังอ่านด้วย AI…</span>
                                                 </div>
                                             </div>
                                         )}
@@ -451,7 +451,7 @@ export default function ExpenseModal({
                                                         className="px-2 py-1 text-xs tabular-nums font-bold text-[oklch(97%_0.008_28)] hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors cursor-pointer"
                                                     >
                                                         <ZoomIn size={12} />
-                                                        <span>INSPECT</span>
+                                                        <span>ขยาย</span>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -470,14 +470,14 @@ export default function ExpenseModal({
                                                         className="px-2.5 py-1 text-xs tabular-nums font-bold bg-[var(--color-accent)] text-[oklch(97%_0.008_28)] hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors cursor-pointer"
                                                     >
                                                         <Sparkles size={11} />
-                                                        <span>RE-SCAN</span>
+                                                        <span>อ่านใหม่</span>
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => fileInputRef.current?.click()}
                                                         className="px-2 py-1 text-xs tabular-nums font-bold text-[oklch(50%_0.010_28)] hover:text-[oklch(97%_0.008_28)] border border-white/20 transition-colors cursor-pointer"
                                                     >
-                                                        REPLACE
+                                                        เปลี่ยนรูป
                                                     </button>
                                                 </div>
                                             </div>
@@ -491,10 +491,10 @@ export default function ExpenseModal({
                                     </div>
                                     <div>
                                         <span className="tabular-nums text-xs font-bold text-[var(--color-ink)] block ">
-                                            SNAP OR DROP RECEIPT
+                                            ถ่ายรูปหรือวางไฟล์ใบเสร็จ
                                         </span>
                                         <span className="tabular-nums text-xs text-[var(--color-muted)] mt-1 block">
-                                            MAKRO / FUEL / UTILITY / SLIP (รองรับทั้งแนวตั้ง &amp; แนวนอน)
+                                            Makro น้ำมัน ค่าน้ำค่าไฟ หรือสลิป (แนวตั้งหรือแนวนอนก็ได้)
                                         </span>
                                     </div>
 
@@ -519,7 +519,7 @@ export default function ExpenseModal({
                                     </div>
 
                                     <div className="tabular-nums text-xs text-[var(--color-accent)] font-bold border-t border-[var(--color-rule)] pt-2 mt-1">
-                                        + GEMINI AUTO-CATEGORIZATION &amp; AUTO-ROTATION
+                                        AI แยกหมวดและหมุนรูปให้อัตโนมัติ
                                     </div>
                                 </div>
                             )}
@@ -546,17 +546,17 @@ export default function ExpenseModal({
                         {/* Telemetry / Readout Strip */}
                         <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] tabular-nums text-xs space-y-1.5">
                             <div className="flex justify-between text-[var(--color-neutral)]">
-                                <span>TAX_COMPLIANCE:</span>
-                                <span className="font-bold text-[var(--color-ink)]">SEC 86/4 &amp; 105</span>
+                                <span>อ้างอิงกฎหมาย:</span>
+                                <span className="font-bold text-[var(--color-ink)]">ม.86/4 และ ม.105</span>
                             </div>
                             <div className="flex justify-between text-[var(--color-neutral)]">
-                                <span>IMAGE_COMPRESSION:</span>
-                                <span className="font-bold text-[var(--color-ink)]">CANVAS FAST JPG</span>
+                                <span>บีบอัดรูป:</span>
+                                <span className="font-bold text-[var(--color-ink)]">JPG</span>
                             </div>
                             {aiScannedSuccess && (
                                 <div className="flex justify-between text-[var(--color-emerald)] font-bold pt-1 border-t border-[var(--color-rule)]">
-                                    <span>AI_CLASSIFICATION:</span>
-                                    <span>VERIFIED</span>
+                                    <span>AI แยกหมวด:</span>
+                                    <span>อ่านสำเร็จ</span>
                                 </div>
                             )}
                         </div>
@@ -568,11 +568,11 @@ export default function ExpenseModal({
                         {/* Section Tag */}
                         <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2">
                             <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)]">
-                                [02] TRANSACTION ENTRY &amp; TAX ATTRIBUTES
+                                รายละเอียดค่าใช้จ่าย
                             </span>
                             {docType === 'tax_invoice' && (
                                 <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)]">
-                                    FULL TAX INVOICE (GRADE A)
+                                    ใบกำกับภาษีเต็มรูป (เกรด A)
                                 </span>
                             )}
                         </div>
@@ -581,7 +581,7 @@ export default function ExpenseModal({
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                             <div className="sm:col-span-7 border border-[var(--color-rule)] p-3 bg-[var(--color-paper-2)]">
                                 <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                    PAYABLE AMOUNT (THB) *
+                                    จำนวนเงิน (บาท) *
                                 </label>
                                 <div className="relative flex items-center">
                                     <span className="tabular-nums font-black text-xl text-[var(--color-ink)] mr-2 select-none">฿</span>
@@ -598,7 +598,7 @@ export default function ExpenseModal({
                                 </div>
                                 {conversionNotice && (
                                     <div className="mt-2 pt-1.5 border-t border-[var(--color-rule)] flex items-center justify-between text-xs tabular-nums text-[var(--color-accent)]">
-                                        <span>AUTO-CONVERTED:</span>
+                                        <span>แปลงสกุลเงินอัตโนมัติ:</span>
                                         <span className="font-bold">
                                             {conversionNotice.symbol}{conversionNotice.originalAmount} {conversionNotice.currency} @ ~{conversionNotice.rate} ฿/{conversionNotice.currency}
                                         </span>
@@ -608,7 +608,7 @@ export default function ExpenseModal({
 
                             <div className="sm:col-span-5 border border-[var(--color-rule)] p-3 bg-[var(--color-paper-2)]">
                                 <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                    PAYMENT DATE *
+                                    วันที่จ่าย *
                                 </label>
                                 <input
                                     type="date"
@@ -622,7 +622,7 @@ export default function ExpenseModal({
                         {/* Category Selector Grid (Neo-Brutalist Cells) */}
                         <div>
                             <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-2">
-                                EXPENSE CATEGORY (AI AUTO-CLASSIFIED) *
+                                หมวดค่าใช้จ่าย *
                             </label>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 tabular-nums text-xs">
                                 {EXPENSE_CATEGORIES.map((cat, idx) => {
@@ -650,7 +650,7 @@ export default function ExpenseModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                             <div className="sm:col-span-2">
                                 <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                    TRANSACTION TITLE / DESCRIPTION *
+                                    รายการ / คำอธิบาย *
                                 </label>
                                 <input
                                     type="text"
@@ -664,7 +664,7 @@ export default function ExpenseModal({
                             {/* Vendor Name & Quick Presets */}
                             <div>
                                 <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                    VENDOR / PAYEE NAME
+                                    ร้านค้า / ผู้รับเงิน
                                 </label>
                                 <input
                                     type="text"
@@ -690,24 +690,24 @@ export default function ExpenseModal({
                             {/* Proof Grade & Vendor Tax ID */}
                             <div className="space-y-1.5">
                                 <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block">
-                                    TAX PROOF TYPE &amp; TAX ID
+                                    ประเภทหลักฐานและเลขผู้เสียภาษี
                                 </label>
                                 <select
                                     value={docType}
                                     onChange={(e) => setDocType(e.target.value)}
                                     className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs tabular-nums font-medium focus:border-[var(--color-ink)] focus:outline-none"
                                 >
-                                    <option value="tax_invoice">GRADE A: FULL TAX INVOICE (ใบกำกับภาษีเต็มรูป)</option>
-                                    <option value="cash_bill">GRADE B: CASH BILL + SLIP (บิลเงินสด + สลิป)</option>
-                                    <option value="receipt_voucher">GRADE C: PAYMENT VOUCHER (ใบสำคัญรับเงิน)</option>
-                                    <option value="slip_only">TRANSFER SLIP ONLY (สลิปโอนเงิน)</option>
+                                    <option value="tax_invoice">เกรด A: ใบกำกับภาษีเต็มรูป</option>
+                                    <option value="cash_bill">เกรด B: บิลเงินสด + สลิป</option>
+                                    <option value="receipt_voucher">เกรด C: ใบสำคัญรับเงิน</option>
+                                    <option value="slip_only">สลิปโอนเงินอย่างเดียว</option>
                                 </select>
                                 <input
                                     type="text"
                                     maxLength={17}
                                     value={vendorTaxId}
                                     onChange={(e) => setVendorTaxId(e.target.value)}
-                                    placeholder="13-Digit Tax ID (e.g. 0105531044471)"
+                                    placeholder="เลขผู้เสียภาษี 13 หลัก เช่น 0105531044471"
                                     className="w-full px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] tabular-nums text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                 />
                             </div>
@@ -717,16 +717,16 @@ export default function ExpenseModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 border-t border-[var(--color-rule)]">
                             <div>
                                 <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                    PAYMENT SETTLEMENT METHOD
+                                    วิธีจ่ายเงิน
                                 </label>
                                 <select
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
                                     className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] tabular-nums text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                 >
-                                    <option value="TRANSFER">BANK TRANSFER (โอนเงิน)</option>
-                                    <option value="CASH">CASH (เงินสด)</option>
-                                    <option value="CREDIT">CORPORATE CREDIT (บัตรเครดิต)</option>
+                                    <option value="TRANSFER">โอนเงิน</option>
+                                    <option value="CASH">เงินสด</option>
+                                    <option value="CREDIT">บัตรเครดิต</option>
                                 </select>
                             </div>
 
@@ -738,7 +738,7 @@ export default function ExpenseModal({
                                         onChange={(e) => setVatIncluded(e.target.checked)}
                                         className="accent-[var(--color-accent)] w-4 h-4"
                                     />
-                                    <span>VAT 7% INCLUDED IN TOTAL</span>
+                                    <span>ยอดนี้รวม VAT 7% แล้ว</span>
                                 </label>
                             </div>
                         </div>
@@ -746,7 +746,7 @@ export default function ExpenseModal({
                         {/* Notes */}
                         <div>
                             <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                ITEMIZED AUDIT NOTES (EXTRACTED ITEMS)
+                                รายการในบิล / หมายเหตุ
                             </label>
                             <input
                                 type="text"
@@ -763,7 +763,7 @@ export default function ExpenseModal({
                                 <div className="flex items-center justify-between font-bold text-xs text-amber-900 border-b border-amber-500/20 pb-1.5">
                                     <span className="flex items-center gap-1.5">
                                         <AlertTriangle size={15} className="text-amber-600" />
-                                        DUPLICATE DETECTED // ตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว
+                                        ตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว
                                     </span>
                                     <span className="px-1.5 py-0.5 bg-amber-600 text-[oklch(97%_0.008_28)] text-[11px] font-bold">
                                         {duplicateCheckResult.confidence} CONFIDENCE
@@ -779,7 +779,7 @@ export default function ExpenseModal({
                                             onClick={() => setCompareImage(duplicateCheckResult.matchedRecord.receipt_image_url)}
                                             className="px-2 py-1 bg-amber-200/80 hover:bg-amber-300 text-amber-900 font-bold underline cursor-pointer border border-amber-400"
                                         >
-                                            &rarr; กดดูรูปบิลเดิมเทียบกับรูปใหม่ (COMPARE RECEIPT)
+                                            &rarr; กดดูรูปบิลเดิมเทียบกับรูปใหม่
                                         </button>
                                     )}
                                     <span className="text-amber-800 text-xs">
@@ -798,7 +798,7 @@ export default function ExpenseModal({
                         onClick={onClose}
                         className="px-4 py-2 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold transition-colors cursor-pointer text-xs"
                     >
-                        CANCEL (ESC)
+                        ยกเลิก
                     </button>
 
                     <button
@@ -807,7 +807,7 @@ export default function ExpenseModal({
                         onClick={handleSave}
                         className="px-6 py-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2 text-xs"
                     >
-                        <span>{saving ? 'COMMITTING...' : 'SAVE EXPENSE RECORD'}</span>
+                        <span>{saving ? 'กำลังบันทึก…' : 'บันทึกค่าใช้จ่าย'}</span>
                     </button>
                 </div>
             </div>
@@ -918,7 +918,7 @@ export default function ExpenseModal({
                             <div className="p-3.5 bg-[oklch(18%_0.012_28)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800">
                                 <span className="font-bold flex items-center gap-2 text-amber-400">
                                     <AlertTriangle size={15} />
-                                    SIDE-BY-SIDE RECEIPT COMPARISON (เปรียบเทียบบิลเดิม vs บิลใหม่)
+                                    เปรียบเทียบบิลเดิมกับบิลใหม่
                                 </span>
                                 <button onClick={() => setCompareImage(null)} className="text-[oklch(97%_0.008_28)] hover:text-red-400 p-1 cursor-pointer">
                                     <X size={18} />
@@ -929,7 +929,7 @@ export default function ExpenseModal({
                                 {/* Left: Previous Saved Receipt */}
                                 <div className="border border-zinc-800 bg-[oklch(18%_0.012_28)] p-3 flex flex-col items-center">
                                     <span className="tabular-nums text-xs text-[oklch(50%_0.010_28)] font-bold mb-2">
-                                        [1] บิลเดิมที่เคยบันทึกไว้ในระบบ (EXISTING RECORD)
+                                        [1] บิลเดิมที่เคยบันทึกไว้ในระบบ
                                     </span>
                                     <div className="flex-1 flex items-center justify-center w-full min-h-[300px]">
                                         <img src={compUrls[0]} alt="Old Receipt" className="max-w-full max-h-[60vh] object-contain" />
@@ -939,7 +939,7 @@ export default function ExpenseModal({
                                 {/* Right: Current Candidate Receipt */}
                                 <div className="border border-zinc-800 bg-[oklch(18%_0.012_28)] p-3 flex flex-col items-center">
                                     <span className="tabular-nums text-xs text-amber-400 font-bold mb-2">
-                                        [2] บิลใหม่ที่กำลังสแกน / กรอกอยู่ (CURRENT CANDIDATE)
+                                        [2] บิลใหม่ที่กำลังสแกน / กรอกอยู่
                                     </span>
                                     <div className="flex-1 flex items-center justify-center w-full min-h-[300px]">
                                         {currentUrls[0] ? (
@@ -953,14 +953,14 @@ export default function ExpenseModal({
 
                             <div className="p-3 bg-[oklch(18%_0.012_28)] border-t border-zinc-800 flex justify-between items-center tabular-nums">
                                 <span className="text-[oklch(50%_0.010_28)] text-xs">
-                                    หากเป็นคนละใบเสร็จ ให้กดปิดหน้าต่างนี้แล้วกด &quot;SAVE EXPENSE RECORD&quot; ได้ตามปกติ
+                                    หากเป็นคนละใบเสร็จ ให้กดปิดหน้าต่างนี้แล้วกด &quot;บันทึกค่าใช้จ่าย&quot; ได้ตามปกติ
                                 </span>
                                 <button
                                     type="button"
                                     onClick={() => setCompareImage(null)}
                                     className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-[oklch(18%_0.012_28)] font-bold text-xs cursor-pointer"
                                 >
-                                    เข้าใจแล้ว / ปิดหน้าต่าง (CLOSE)
+                                    เข้าใจแล้ว / ปิดหน้าต่าง
                                 </button>
                             </div>
                         </div>
@@ -974,10 +974,10 @@ export default function ExpenseModal({
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 space-y-4 shadow-2xl">
                         <div className="border-b border-[var(--color-rule)] pb-3">
                             <div className="tabular-nums text-xs font-bold text-[var(--color-accent)] ">
-                                CONFIGURATION // AI OCR
+                                ตั้งค่า AI อ่านใบเสร็จ
                             </div>
                             <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)] mt-0.5">
-                                GOOGLE GEMINI VISION API KEY
+                                Gemini API Key
                             </h3>
                         </div>
 
@@ -993,13 +993,13 @@ export default function ExpenseModal({
                                 rel="noreferrer"
                                 className="text-[var(--color-accent)] font-bold underline block"
                             >
-                                &rarr; GET FREE GEMINI API KEY (aistudio.google.com)
+                                &rarr; ขอ API Key ฟรีที่ aistudio.google.com
                             </a>
                         </div>
 
                         <div>
                             <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                PASTE YOUR GEMINI API KEY:
+                                วาง API Key:
                             </label>
                             <input
                                 type="password"
@@ -1013,7 +1013,7 @@ export default function ExpenseModal({
 
                         <div>
                             <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                GEMINI AI MODEL:
+                                รุ่น AI:
                             </label>
                             <select
                                 value={geminiModel}
@@ -1038,7 +1038,7 @@ export default function ExpenseModal({
                                 onClick={() => setShowApiKeyModal(false)}
                                 className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-neutral)] tabular-nums font-bold text-xs hover:text-[var(--color-ink)] cursor-pointer"
                             >
-                                CANCEL
+                                ยกเลิก
                             </button>
                             <button
                                 type="button"

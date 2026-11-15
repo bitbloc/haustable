@@ -123,7 +123,7 @@ export default function TaxInvoiceModal({
             });
         }
         return [
-            { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: Number(b?.total_amount || 0), selected_options: '' }
+            { name: 'อาหารและเครื่องดื่ม', quantity: 1, price: Number(b?.total_amount || 0), selected_options: '' }
         ];
     };
 
@@ -144,7 +144,7 @@ export default function TaxInvoiceModal({
             return mapBookingOrderItems(booking);
         }
         return [
-            { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 0, selected_options: '' }
+            { name: 'อาหารและเครื่องดื่ม', quantity: 1, price: 0, selected_options: '' }
         ];
     });
 
@@ -578,16 +578,16 @@ export default function TaxInvoiceModal({
                 <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-3 sm:px-6 flex items-center justify-between border-b border-[var(--color-rule)] shrink-0 font-mono">
                     <div className="flex items-center gap-3">
                         <div className="text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-white">
-                            DOC//TAX
+                            เอกสาร
                         </div>
                         <div>
                             <h2 className="font-bold text-sm sm:text-base tracking-wider uppercase">
-                                {existingInvoice ? 'EDIT DOCUMENT // TAX INVOICE' : 'ISSUE RECEIPT & TAX INVOICE'}
+                                {existingInvoice ? 'แก้ไขเอกสาร (ออกใบใหม่แทน)' : 'ออกใบเสร็จ / ใบกำกับภาษี'}
                             </h2>
                             <p className="text-[10px] text-[var(--color-paper)]/70">
                                 {isCompanyVatRegistered 
-                                    ? '[STATUS: VAT 7% COMPLIANT (SEC 86/4)]' 
-                                    : '[STATUS: NON-VAT OFFICIAL RECEIPT (SEC 105)]'}
+                                    ? 'จดทะเบียน VAT 7% · ใบกำกับภาษีตาม ม.86/4' 
+                                    : 'ไม่ได้จด VAT · ใบเสร็จรับเงินตาม ม.105'}
                             </p>
                         </div>
                     </div>
@@ -603,10 +603,10 @@ export default function TaxInvoiceModal({
                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
                         <div>
                             <span className="text-[9px] font-bold text-[var(--color-neutral)] uppercase tracking-wider block">
-                                DOCUMENT TYPE CLASSIFICATION
+                                ประเภทเอกสาร
                             </span>
                             <span className="font-bold text-xs text-[var(--color-ink)] mt-0.5 block">
-                                {docType === 'tax_invoice' ? 'FULL TAX INVOICE / RECEIPT (ใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูป)' : 'OFFICIAL RECEIPT (ใบเสร็จรับเงิน)'}
+                                {docType === 'tax_invoice' ? 'ใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูป' : 'ใบเสร็จรับเงิน'}
                             </span>
                         </div>
 
@@ -625,7 +625,7 @@ export default function TaxInvoiceModal({
                                 onClick={() => setDocType('receipt')}
                                 className={`px-3 py-1.5 font-bold text-xs transition-all cursor-pointer border ${docType === 'receipt' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'}`}
                             >
-                                OFFICIAL RECEIPT
+                                ใบเสร็จรับเงิน
                             </button>
                             {/* Only a VAT-registered seller may issue a tax invoice (ม.86/13) */}
                             {(isCompanyVatRegistered || docType === 'tax_invoice') && <button
@@ -633,7 +633,7 @@ export default function TaxInvoiceModal({
                                 onClick={() => setDocType('tax_invoice')}
                                 className={`px-3 py-1.5 font-bold text-xs transition-all cursor-pointer border ${docType === 'tax_invoice' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'}`}
                             >
-                                TAX INVOICE (VAT 7%)
+                                ใบกำกับภาษี (VAT 7%)
                             </button>}
                         </div>
                     </div>
@@ -651,7 +651,7 @@ export default function TaxInvoiceModal({
                                             เชื่อมโยงกับบิล POS #{getShortBookingId(linkedBooking)}
                                         </span>
                                         <span className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white text-[10px] font-bold">
-                                            โต๊ะ {linkedBooking.tables_layout?.table_name || (linkedBooking.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')}
+                                            โต๊ะ {linkedBooking.tables_layout?.table_name || (linkedBooking.booking_type === 'pickup' ? 'กลับบ้าน' : 'หน้าร้าน')}
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-[var(--color-neutral)] mt-0.5">
@@ -667,7 +667,7 @@ export default function TaxInvoiceModal({
                                     className="px-3 py-1.5 bg-[var(--color-paper)] hover:bg-white text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                                 >
                                     <Receipt size={13} />
-                                    <span>เปลี่ยนบิล (CHANGE)</span>
+                                    <span>เปลี่ยนบิล</span>
                                 </button>
                                 <button
                                     type="button"
@@ -702,7 +702,7 @@ export default function TaxInvoiceModal({
                                 className="px-3.5 py-2 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
                             >
                                 <Receipt size={13} />
-                                <span>เลือกจากใบเสร็จ (SELECT RECEIPT)</span>
+                                <span>เลือกจากใบเสร็จ</span>
                             </button>
                         </div>
                     )}
@@ -713,7 +713,7 @@ export default function TaxInvoiceModal({
                             <div className="flex items-center gap-2">
                                 <Building2 size={16} className="text-[oklch(52%_0.16_28)]" />
                                 <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-800">
-                                    ข้อมูลผู้ซื้อ / ผู้รับบริการ (Customer Info)
+                                    ข้อมูลผู้ซื้อ / ผู้รับบริการ
                                 </span>
                             </div>
 
@@ -794,7 +794,7 @@ export default function TaxInvoiceModal({
                                     onChange={() => setCustomerType('individual')}
                                     className="accent-[oklch(52%_0.16_28)]"
                                 />
-                                <span className="font-bold text-zinc-800">บุคคลธรรมดา (Individual)</span>
+                                <span className="font-bold text-zinc-800">บุคคลธรรมดา</span>
                             </label>
                         </div>
 
@@ -848,8 +848,8 @@ export default function TaxInvoiceModal({
                                         onChange={(e) => setCustomerBranchType(e.target.value)}
                                         className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-white"
                                     >
-                                        <option value="head_office">สำนักงานใหญ่ (Head Office)</option>
-                                        <option value="branch">สาขา (Branch Code)</option>
+                                        <option value="head_office">สำนักงานใหญ่</option>
+                                        <option value="branch">สาขา</option>
                                     </select>
                                 </div>
                                 {customerBranchType === 'branch' && (
@@ -927,7 +927,7 @@ export default function TaxInvoiceModal({
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-2.5">
                             <div>
                                 <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-800 block">
-                                    รายการสินค้าและบริการ (Line Items)
+                                    รายการสินค้าและบริการ
                                 </span>
                                 <span className="text-[10px] text-zinc-500 font-mono">
                                     {items.length === 1 
@@ -995,7 +995,7 @@ export default function TaxInvoiceModal({
                                 {[
                                     'อาหารและเครื่องดื่ม',
                                     'ค่าอาหารและเครื่องดื่ม',
-                                    'อาหารและเครื่องดื่ม (Food & Beverage)',
+                                    'อาหารและเครื่องดื่ม',
                                     'ค่าบริการอาหารและเครื่องดื่ม'
                                 ].map((preset) => (
                                     <button
@@ -1075,7 +1075,7 @@ export default function TaxInvoiceModal({
                             </span>
 
                             <div className="flex justify-between items-center">
-                                <label className="font-mono text-xs text-zinc-600">หักส่วนลด (Discount THB):</label>
+                                <label className="font-mono text-xs text-zinc-600">หักส่วนลด:</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -1087,7 +1087,7 @@ export default function TaxInvoiceModal({
 
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <label className="font-mono text-xs text-zinc-600 block">ภาษีหัก ณ ที่จ่าย (WHT):</label>
+                                    <label className="font-mono text-xs text-zinc-600 block">ภาษีหัก ณ ที่จ่าย:</label>
                                     <span className="text-[10px] text-zinc-400 font-mono">(กรณีนิติบุคคลหัก ณ ที่จ่าย)</span>
                                 </div>
                                 <select
@@ -1110,15 +1110,15 @@ export default function TaxInvoiceModal({
                                     onChange={(e) => setPaymentMethod(e.target.value)}
                                     className="w-36 px-2 py-1 border border-zinc-300 rounded text-xs font-mono focus:border-zinc-900 focus:outline-none bg-white"
                                 >
-                                    <option value="CASH">เงินสด (CASH)</option>
+                                    <option value="CASH">เงินสด</option>
                                     <option value="QR">โอนเงิน QR Transfer</option>
-                                    <option value="CREDIT">บัตรเครดิต (CREDIT)</option>
+                                    <option value="CREDIT">บัตรเครดิต</option>
                                 </select>
                             </div>
 
                             <div>
                                 <label className="font-mono text-[10px] text-zinc-500 uppercase block mb-1">
-                                    หมายเหตุท้ายเอกสาร (Remarks):
+                                    หมายเหตุท้ายเอกสาร:
                                 </label>
                                 <input
                                     type="text"
@@ -1134,19 +1134,19 @@ export default function TaxInvoiceModal({
                         <div className="bg-[#1A1A1A] text-white rounded-xl p-4 sm:p-5 flex flex-col justify-between shadow-sm font-mono">
                             <div className="space-y-2 border-b border-zinc-700 pb-3 text-xs">
                                 <div className="flex justify-between text-zinc-400">
-                                    <span>ยอดรวมสินค้า (Subtotal):</span>
+                                    <span>ยอดรวมสินค้า:</span>
                                     <span>฿{totals.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 {totals.discountAmount > 0 && (
                                     <div className="flex justify-between text-amber-400">
-                                        <span>ส่วนลด (Discount):</span>
+                                        <span>ส่วนลด:</span>
                                         <span>-฿{totals.discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 )}
                                 {isDocVat && (
                                     <>
                                         <div className="flex justify-between text-zinc-400">
-                                            <span>มูลค่าก่อนภาษี (Pre-VAT):</span>
+                                            <span>มูลค่าก่อนภาษี:</span>
                                             <span>฿{totals.preVatAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="flex justify-between text-emerald-400 font-bold">
@@ -1156,7 +1156,7 @@ export default function TaxInvoiceModal({
                                     </>
                                 )}
                                 <div className="flex justify-between text-sm font-bold text-white pt-1">
-                                    <span>ยอดรวมทั้งสิ้น (Grand Total):</span>
+                                    <span>ยอดรวมทั้งสิ้น:</span>
                                     <span className="text-emerald-400 font-black">
                                         ฿{totals.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
@@ -1204,7 +1204,7 @@ export default function TaxInvoiceModal({
                         onClick={onClose}
                         className="px-4 py-2.5 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 rounded-lg font-mono font-bold text-xs transition-colors cursor-pointer"
                     >
-                        ยกเลิก (CANCEL)
+                        ยกเลิก
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -1215,7 +1215,7 @@ export default function TaxInvoiceModal({
                             className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-mono font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
                         >
                             <Printer size={15} />
-                            <span>บันทึกและพิมพ์เอกสาร (Save & Print)</span>
+                            <span>บันทึกและพิมพ์เอกสาร</span>
                         </button>
 
                         <button
@@ -1225,7 +1225,7 @@ export default function TaxInvoiceModal({
                             className="px-5 py-2.5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg font-mono font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
                         >
                             <Save size={15} />
-                            <span>{saving ? 'กำลังบันทึก...' : (isReissue ? 'ยกเลิกใบเดิมและออกใบใหม่' : 'บันทึกเอกสาร (SAVE)')}</span>
+                            <span>{saving ? 'กำลังบันทึก...' : (isReissue ? 'ยกเลิกใบเดิมและออกใบใหม่' : 'บันทึกเอกสาร')}</span>
                         </button>
                     </div>
                 </div>

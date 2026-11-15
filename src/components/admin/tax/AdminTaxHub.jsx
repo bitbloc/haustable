@@ -839,7 +839,7 @@ export default function AdminTaxHub() {
 
                         <div>
                             <label className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block mb-1">
-                                CANCELLATION REASON (สาเหตุการยกเลิก) *
+                                เหตุผลการยกเลิก *
                             </label>
                             <input
                                 type="text"
@@ -882,7 +882,7 @@ export default function AdminTaxHub() {
                                 onClick={() => setCancellationTarget(null)}
                                 className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold cursor-pointer disabled:opacity-50"
                             >
-                                CANCEL
+                                ไม่ยกเลิก
                             </button>
                             <button
                                 type="button"
@@ -890,7 +890,7 @@ export default function AdminTaxHub() {
                                 onClick={handleConfirmCancel}
                                 className="px-5 py-2 bg-red-600 hover:bg-red-700 text-[oklch(97%_0.008_28)] font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                             >
-                                <span>{voiding ? 'กำลังยกเลิก...' : 'CONFIRM VOID'}</span>
+                                <span>{voiding ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกเอกสาร'}</span>
                             </button>
                         </div>
                     </div>

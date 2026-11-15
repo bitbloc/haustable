@@ -187,7 +187,7 @@ export default function CashTaxLedgerTab({
         if (b.customer_name && b.customer_name !== 'Walk-in Customer' && b.customer_name !== 'Walk-in Guest') {
             return `ยอดขายหน้าร้าน (${b.customer_name})`;
         }
-        return `ยอดขายหน้าร้าน (POS Walk-in)`;
+        return `ยอดขายหน้าร้าน`;
     };
 
     // 1. Process Income Items (Inflow from Bookings / POS Bills)
@@ -481,7 +481,7 @@ export default function CashTaxLedgerTab({
                         <span>•</span>
                         <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-[var(--color-ink)]">{formatTaxId(companySettings.tax_id || '1120100144907')}</strong></span>
                         <span>•</span>
-                        <span>สถานะภาษี: <strong className="text-[var(--color-ink)]">{isVatRegistered ? '[จดทะเบียน VAT 7%]' : '[บุคคลธรรมดา (NON-VAT)]'}</strong></span>
+                        <span>สถานะภาษี: <strong className="text-[var(--color-ink)]">{isVatRegistered ? 'จดทะเบียน VAT 7%' : '[บุคคลธรรมดา]'}</strong></span>
                     </div>
                 </div>
 
@@ -569,7 +569,7 @@ export default function CashTaxLedgerTab({
                         ฿{totals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                     <div className="text-xs tabular-nums text-[var(--color-muted)] flex items-center justify-between">
-                        <span>อัตรากำไร (Margin):</span>
+                        <span>อัตรากำไร:</span>
                         <span className="font-bold text-[var(--color-ink)]">
                             {totals.totalRevenue > 0 ? ((totals.netProfit / totals.totalRevenue) * 100).toFixed(1) : 0}%
                         </span>
@@ -610,11 +610,11 @@ export default function CashTaxLedgerTab({
                 {isVatRegistered && (<>
                 <div className="px-3 py-1.5 flex items-center justify-between">
                     <div>
-                        <div className="text-xs text-[var(--color-neutral)] ">ภาษีขาย (OUTPUT VAT 7%)</div>
+                        <div className="text-xs text-[var(--color-neutral)] ">ภาษีขาย 7%</div>
                         <div className="text-sm font-bold text-[var(--color-ink)]">฿{totals.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                     </div>
                     <div className="text-right">
-                        <div className="text-xs text-[var(--color-neutral)] ">ภาษีซื้อ (INPUT VAT 7%)</div>
+                        <div className="text-xs text-[var(--color-neutral)] ">ภาษีซื้อ 7%</div>
                         <div className="text-sm font-bold text-[var(--color-ink)]">฿{totals.inputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                     </div>
                 </div>
@@ -934,7 +934,7 @@ export default function CashTaxLedgerTab({
                                 <FileSpreadsheet className="text-emerald-700" size={20} />
                                 <div>
                                     <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)] ">
-                                        ส่งออก EXCEL รายงานเงินสด รับ - จ่าย (ม.161)
+                                        ส่งออก Excel รายงานเงินสด รับ - จ่าย (ม.161)
                                     </h3>
                                     <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                                         แบบฟอร์มบุคคลธรรมดา กรมสรรพากร
@@ -986,7 +986,7 @@ export default function CashTaxLedgerTab({
                                     </div>
                                     <div className="space-y-0.5">
                                         <div className="font-bold text-xs text-[var(--color-ink)] flex items-center gap-2">
-                                            <span>1. สรุปยอดรายวัน (Daily Summary)</span>
+                                            <span>1. สรุปยอดรายวัน</span>
                                             <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[11px] tabular-nums font-bold">แนะนำสำหรับยื่นภาษี</span>
                                         </div>
                                         <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
@@ -1005,7 +1005,7 @@ export default function CashTaxLedgerTab({
                                     </div>
                                     <div className="space-y-0.5">
                                         <div className="font-bold text-xs text-[var(--color-ink)]">
-                                            2. แยกรายบิลละเอียด (Detailed Transactions)
+                                            2. แยกรายบิลละเอียด
                                         </div>
                                         <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
                                             แสดงทุกบิล POS ทุกโต๊ะ ทุกออเดอร์ และทุกบิลรายจ่าย เหมาะสำหรับการตรวจสอบบัญชีภายในอย่างละเอียด
@@ -1048,7 +1048,7 @@ export default function CashTaxLedgerTab({
                                 className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] tabular-nums text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                             >
                                 <Download size={15} />
-                                <span>{isExportingExcel ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลดไฟล์ EXCEL (.xlsx)'}</span>
+                                <span>{isExportingExcel ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลด Excel (.xlsx)'}</span>
                             </button>
                         </div>
                     </div>

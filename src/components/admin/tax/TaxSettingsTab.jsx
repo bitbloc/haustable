@@ -39,7 +39,7 @@ export default function TaxSettingsTab({
         tax_company_name_en: 'IN THE HAUS NAKHON PHANOM',
         tax_proprietor_name: 'นายธนภัทร บุญเจริญ',
         tax_citizen_id: '1120100144907',
-        tax_establishment_name: 'ร้านในบ้าน นครพนม (IN THE HAUS)',
+        tax_establishment_name: 'ร้านในบ้าน นครพนม',
         tax_id: '1120100144907',
         tax_branch_type: 'head_office',
         tax_branch_code: '00000',
@@ -181,7 +181,7 @@ export default function TaxSettingsTab({
         const file = e.target.files?.[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) {
-            toast.error('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, SVG)');
+            toast.error('กรุณาเลือกไฟล์รูปภาพ');
             return;
         }
         const reader = new FileReader();
@@ -317,11 +317,11 @@ export default function TaxSettingsTab({
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className={`p-2.5 rounded-xl tabular-nums font-bold text-sm ${isVatOn ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'}`}>
-                            {isVatOn ? 'VAT 7%' : 'NON-VAT'}
+                            {isVatOn ? 'VAT 7%' : 'ไม่จด VAT'}
                         </div>
                         <div>
                             <h3 className="font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)]">
-                                สถานะการจดทะเบียนภาษีมูลค่าเพิ่ม (VAT Registration Status)
+                                สถานะการจดทะเบียนภาษีมูลค่าเพิ่ม
                             </h3>
                             <p className="text-[13px] text-[oklch(42%_0.010_28)] mt-0.5">
                                 {isVatOn 
@@ -349,7 +349,7 @@ export default function TaxSettingsTab({
                     <Building2 size={18} className="text-[oklch(52%_0.16_28)]" />
                     <div>
                         <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
-                            ข้อมูลผู้ประกอบการ / ร้านค้า (Seller Enterprise Profile)
+                            ข้อมูลผู้ประกอบการ / ร้านค้า
                         </h3>
                         <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
                             ข้อมูลส่วนนี้จะถูกพิมพ์ลงบนหัวเอกสารใบเสร็จรับเงิน และใบกำกับภาษีเต็มรูปแบบทุกฉบับ
@@ -379,7 +379,7 @@ export default function TaxSettingsTab({
                             type="text"
                             value={settings.tax_company_name_en}
                             onChange={(e) => handleSettingChange('tax_company_name_en', e.target.value)}
-                            placeholder="e.g. IN THE HAUS CO., LTD."
+                            placeholder="เช่น IN THE HAUS CO., LTD."
                             className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
@@ -388,7 +388,7 @@ export default function TaxSettingsTab({
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] ">
-                                เลขประจำตัวผู้เสียภาษี 13 หลัก (Tax ID)
+                                เลขประจำตัวผู้เสียภาษี 13 หลัก
                             </label>
                             {settings.tax_id && (
                                 <span className={`tabular-nums text-xs font-bold ${isCompanyTaxIdValid ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -417,8 +417,8 @@ export default function TaxSettingsTab({
                                 onChange={(e) => handleSettingChange('tax_branch_type', e.target.value)}
                                 className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
                             >
-                                <option value="head_office">สำนักงานใหญ่ (Head Office)</option>
-                                <option value="branch">สาขา (Branch Code)</option>
+                                <option value="head_office">สำนักงานใหญ่</option>
+                                <option value="branch">สาขา</option>
                             </select>
                         </div>
                         {settings.tax_branch_type === 'branch' && (
@@ -525,13 +525,13 @@ export default function TaxSettingsTab({
 
                     <div className="sm:col-span-2">
                         <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
-                            ชื่อสถานประกอบการ (Trade Name)
+                            ชื่อสถานประกอบการ
                         </label>
                         <input
                             type="text"
                             value={settings.tax_establishment_name}
                             onChange={(e) => handleSettingChange('tax_establishment_name', e.target.value)}
-                            placeholder="เช่น ร้านในบ้าน นครพนม (IN THE HAUS)"
+                            placeholder="เช่น ร้านในบ้าน นครพนม"
                             className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
@@ -543,14 +543,14 @@ export default function TaxSettingsTab({
                 <div className="flex items-center gap-2 border-b border-[oklch(90%_0.008_28)] pb-3">
                     <FileText size={18} className="text-[oklch(42%_0.010_28)]" />
                     <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
-                        การกำหนดรหัสเอกสาร & การคำนวณภาษี (Document & VAT Rules)
+                        การกำหนดรหัสเอกสาร & การคำนวณภาษี
                     </h3>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
-                            คำนำหน้าใบเสร็จรับเงิน (Non-VAT Prefix)
+                            คำนำหน้าใบเสร็จรับเงิน
                         </label>
                         <input
                             type="text"
@@ -564,7 +564,7 @@ export default function TaxSettingsTab({
 
                     <div>
                         <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
-                            คำนำหน้าใบกำกับภาษี (VAT Prefix)
+                            คำนำหน้าใบกำกับภาษี
                         </label>
                         <input
                             type="text"
@@ -585,10 +585,10 @@ export default function TaxSettingsTab({
                             onChange={(e) => handleSettingChange('tax_vat_model', e.target.value)}
                             className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
                         >
-                            <option value="inclusive">รวมภาษีในราคาแล้ว (Inclusive 7%)</option>
-                            <option value="exclusive">ยังไม่รวมภาษี (Exclusive +7%)</option>
+                            <option value="inclusive">รวมภาษีในราคาแล้ว</option>
+                            <option value="exclusive">ยังไม่รวมภาษี (บวกเพิ่ม 7%)</option>
                         </select>
-                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">ร้านอาหารส่วนใหญ่นิยมใช้ Inclusive</span>
+                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">ร้านอาหารส่วนใหญ่ใช้แบบรวมภาษีในราคา</span>
                     </div>
                 </div>
 
@@ -600,7 +600,7 @@ export default function TaxSettingsTab({
                         className="px-6 py-2.5 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-md disabled:opacity-50"
                     >
                         <Save size={15} />
-                        <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า (SAVE SETTINGS)'}</span>
+                        <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
                     </button>
                 </div>
             </div>
@@ -614,7 +614,7 @@ export default function TaxSettingsTab({
                         </div>
                         <div>
                             <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)] flex items-center gap-2">
-                                ระบบลายเซ็นดิจิทัล &amp; ตรายางประจำร้าน (Digital Signature &amp; Stamp)
+                                ระบบลายเซ็นดิจิทัล &amp; ตรายางประจำร้าน
                             </h3>
                             <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
                                 เพิ่มลายเซ็นผู้มีอำนาจลงนาม เพื่อพิมพ์ลงในช่องผู้รับเงินของใบเสร็จรับเงินและใบกำกับภาษีอัตโนมัติ
@@ -642,7 +642,7 @@ export default function TaxSettingsTab({
                     <div className="lg:col-span-5 space-y-4">
                         <div>
                             <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
-                                ชื่อผู้มีอำนาจลงนาม / ผู้รับเงิน (Signer Name) *
+                                ชื่อผู้มีอำนาจลงนาม / ผู้รับเงิน *
                             </label>
                             <input
                                 type="text"
@@ -655,7 +655,7 @@ export default function TaxSettingsTab({
 
                         <div>
                             <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
-                                ตำแหน่งผู้ลงนาม (Signer Position)
+                                ตำแหน่งผู้ลงนาม
                             </label>
                             <input
                                 type="text"
@@ -721,7 +721,7 @@ export default function TaxSettingsTab({
                                 }`}
                             >
                                 <PenTool size={13} />
-                                <span>1. วาดลายเซ็นสด (Draw with Finger/Pen)</span>
+                                <span>1. วาดลายเซ็นสด</span>
                             </button>
                             <button
                                 type="button"
@@ -733,7 +733,7 @@ export default function TaxSettingsTab({
                                 }`}
                             >
                                 <Upload size={13} />
-                                <span>2. อัปโหลดรูปภาพ (PNG / JPG / Stamp)</span>
+                                <span>2. อัปโหลดรูปภาพ</span>
                             </button>
                         </div>
 
@@ -761,7 +761,7 @@ export default function TaxSettingsTab({
                                     />
                                     {/* Baseline guide line */}
                                     <div className="absolute bottom-7 left-8 right-8 border-b border-[oklch(90%_0.008_28)] pointer-events-none text-xs tabular-nums text-[oklch(50%_0.010_28)] flex justify-between">
-                                        <span>เส้นฐานลายเซ็น (Baseline)</span>
+                                        <span>เส้นฐานลายเซ็น</span>
                                         <span>IN THE HAUS</span>
                                     </div>
                                 </div>
@@ -773,7 +773,7 @@ export default function TaxSettingsTab({
                                         className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] rounded-lg tabular-nums text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
                                         <RotateCcw size={13} />
-                                        <span>ล้างผ้าใบ (Clear)</span>
+                                        <span>ล้างผ้าใบ</span>
                                     </button>
 
                                     <button
@@ -782,7 +782,7 @@ export default function TaxSettingsTab({
                                         className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                                     >
                                         <Check size={14} />
-                                        <span>นำลายเซ็นที่วาดไปใช้งาน (Apply)</span>
+                                        <span>นำลายเซ็นที่วาดไปใช้งาน</span>
                                     </button>
                                 </div>
                             </div>
@@ -812,7 +812,7 @@ export default function TaxSettingsTab({
                         {/* Live Document Preview Box */}
                         <div className="border border-[oklch(85%_0.012_28)] rounded-xl p-4 bg-[oklch(97%_0.008_28)] space-y-2">
                             <div className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] flex items-center justify-between">
-                                <span>ตัวอย่างการแสดงผลบนเอกสารจริง (Official Document Preview)</span>
+                                <span>ตัวอย่างการแสดงผลบนเอกสารจริง</span>
                                 <span className="text-xs text-[oklch(50%_0.010_28)]">มาตรา 86/4 &amp; 105</span>
                             </div>
 
@@ -924,7 +924,7 @@ export default function TaxSettingsTab({
                         <Users size={18} className="text-[oklch(42%_0.010_28)]" />
                         <div>
                             <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
-                                สมุดรายชื่อลูกค้าประจำสำหรับออกบิล (Customer Tax Directory)
+                                สมุดรายชื่อลูกค้าประจำสำหรับออกบิล
                             </h3>
                             <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
                                 บันทึกข้อมูลบริษัทคู่ค้า / ลูกค้าประจำ เพื่อเลือกดึงข้อมูลมาออกเอกสารได้ใน 1 คลิก

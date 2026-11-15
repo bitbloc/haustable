@@ -120,7 +120,7 @@ export default function SalesTaxReportTab({
             const thYear = parseInt(year, 10) + 543;
             return `ประจำเดือน ${monthNames[mIdx] || month} ${thYear}`;
         }
-        return 'ทุกช่วงเวลา (All Time)';
+        return 'ทุกช่วงเวลา';
     }, [timeFilterMode, selectedDate, selectedMonth]);
 
     // Helper: Detect Payment Method from booking & remark
@@ -152,7 +152,7 @@ export default function SalesTaxReportTab({
 
     // Helper: Extract Customer / Guest Name
     const getCustomerDisplayName = (b) => {
-        if (!b) return 'ลูกค้าทั่วไป (Walk-in)';
+        if (!b) return 'ลูกค้าทั่วไป';
         if (b.pickup_contact_name) return b.pickup_contact_name;
         if (b.profiles?.display_name) return b.profiles.display_name;
         if (b.profiles?.nickname) return b.profiles.nickname;
@@ -162,7 +162,7 @@ export default function SalesTaxReportTab({
         if (b.tables_layout?.table_name) {
             return `ลูกค้าโต๊ะ ${b.tables_layout.table_name}`;
         }
-        return 'ลูกค้าหน้าร้าน (Walk-in)';
+        return 'ลูกค้าหน้าร้าน';
     };
 
     // Helper: Build Itemized Summary
@@ -431,7 +431,7 @@ export default function SalesTaxReportTab({
     const handleExecuteDeleteBill = async () => {
         if (!billToDelete) return;
         setDeleting(true);
-        const toastId = toast.loading('กำลังลบบิลและจัดเรียงลำดับใหม่...');
+        const toastId = toast.loading('กำลังยกเลิกบิล…');
         try {
             if (billToDelete.source_type === 'pos_bill') {
                 const { error } = await supabase
@@ -464,7 +464,7 @@ export default function SalesTaxReportTab({
                 }
             }
 
-            toast.success(`ลบบิล ${billToDelete.bill_number || billToDelete.invoice_number || ''} สำเร็จ! จัดเรียงเลขบิลใหม่อัตโนมัติแล้ว`, { id: toastId });
+            toast.success(`ยกเลิกบิล ${billToDelete.bill_number || billToDelete.invoice_number || ''} แล้ว`, { id: toastId });
             setBillToDelete(null);
         } catch (err) {
             console.error('Failed to delete bill:', err);
@@ -544,7 +544,7 @@ export default function SalesTaxReportTab({
                                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'day' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
                             >
                                 <Clock size={12} />
-                                <span>รายวัน (Day)</span>
+                                <span>รายวัน</span>
                             </button>
 
                             <button
@@ -552,14 +552,14 @@ export default function SalesTaxReportTab({
                                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'month' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
                             >
                                 <Calendar size={12} />
-                                <span>รายเดือน (Month)</span>
+                                <span>รายเดือน</span>
                             </button>
 
                             <button
                                 onClick={() => setTimeFilterMode('all')}
                                 className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'all' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
                             >
-                                <span>ทุกช่วง (All)</span>
+                                <span>ทุกช่วง</span>
                             </button>
                         </div>
 
@@ -656,25 +656,25 @@ export default function SalesTaxReportTab({
                         <select
                             value={paymentFilter}
                             onChange={(e) => setPaymentFilter(e.target.value)}
-                            aria-label="Filter by Payment Method"
+                            aria-label="กรองตามวิธีชำระเงิน"
                             className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl text-xs tabular-nums font-medium focus:border-zinc-900 focus:outline-none cursor-pointer"
                         >
                             <option value="all">ทุกช่องทางชำระเงิน</option>
-                            <option value="cash">เฉพาะ เงินสด (Cash)</option>
-                            <option value="promptpay">เฉพาะ พร้อมเพย์ / โอน (PromptPay)</option>
-                            <option value="credit_card">เฉพาะ บัตรเครดิต (Credit Card)</option>
+                            <option value="cash">เฉพาะ เงินสด</option>
+                            <option value="promptpay">เฉพาะ พร้อมเพย์ / โอน</option>
+                            <option value="credit_card">เฉพาะ บัตรเครดิต</option>
                         </select>
 
                         {/* Channel Filter (Dine-in / Pickup) */}
                         <select
                             value={channelFilter}
                             onChange={(e) => setChannelFilter(e.target.value)}
-                            aria-label="Filter by Channel"
+                            aria-label="กรองตามช่องทาง"
                             className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl text-xs tabular-nums font-medium focus:border-zinc-900 focus:outline-none cursor-pointer"
                         >
-                            <option value="all">ทุกรูปแบบ (Dine-in & Pickup)</option>
-                            <option value="dine_in">ทานที่ร้าน (Dine-in / Tables)</option>
-                            <option value="pickup">สั่งกลับบ้าน (Takeaway / Pickup)</option>
+                            <option value="all">ทุกรูปแบบ</option>
+                            <option value="dine_in">ทานที่ร้าน</option>
+                            <option value="pickup">สั่งกลับบ้าน</option>
                         </select>
 
                         {/* Search */}
@@ -697,7 +697,7 @@ export default function SalesTaxReportTab({
                             className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] rounded-xl tabular-nums font-bold text-xs flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] transition-colors cursor-pointer "
                         >
                             <FileSpreadsheet size={15} className="text-emerald-700" />
-                            <span>Export Excel (.csv)</span>
+                            <span>ส่งออก CSV</span>
                         </button>
 
                         <button
@@ -716,7 +716,7 @@ export default function SalesTaxReportTab({
                 {/* Card 1: Gross Sales */}
                 <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-4 ">
                     <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
-                        ยอดขายรวมทั้งสิ้น (Gross Sales)
+                        ยอดขายรวมทั้งสิ้น
                     </span>
                     <div className="tabular-nums font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
                         ฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -729,7 +729,7 @@ export default function SalesTaxReportTab({
                 {/* Card 2: Taxable Base */}
                 <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-4 ">
                     <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
-                        มูลค่าฐานภาษี (Taxable Base)
+                        มูลค่าฐานภาษี
                     </span>
                     <div className="tabular-nums font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
                         ฿{periodStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -745,7 +745,7 @@ export default function SalesTaxReportTab({
                         ภาษีขายที่ต้องนำส่ง (Output VAT 7%)
                     </span>
                     <div className={`tabular-nums font-black text-xl mt-1 ${isVatRegistered ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(50%_0.010_28)]'}`}>
-                        {isVatRegistered ? `฿${periodStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00 (Non-VAT)'}
+                        {isVatRegistered ? `฿${periodStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00'}
                     </div>
                     <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
                         {isVatRegistered ? 'สำหรับยื่นแบบ ภ.พ.30' : 'ยังไม่จด VAT ไม่ต้องนำส่งภาษีขาย'}
@@ -759,7 +759,7 @@ export default function SalesTaxReportTab({
                             แบบแสดงรายการบัญชี
                         </span>
                         <div className="font-bold text-sm text-emerald-400 mt-1">
-                            {isVatRegistered ? 'แบบ ภ.พ.30 (รายงานภาษีขาย)' : 'สมุดรายรับรายบิล (Sales Ledger)'}
+                            {isVatRegistered ? 'แบบ ภ.พ.30 (รายงานภาษีขาย)' : 'สมุดรายรับรายบิล'}
                         </div>
                     </div>
                     <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums">
@@ -773,7 +773,7 @@ export default function SalesTaxReportTab({
                 <div className="px-5 py-4 border-b border-[oklch(90%_0.008_28)] flex flex-wrap justify-between items-center bg-zinc-50/70 gap-2">
                     <div>
                         <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
-                            {isVatRegistered ? 'รายงานภาษีขาย (Sales Tax Report ภ.พ.30)' : 'สมุดรายงานยอดขายและรายรับรายบิล (Sales & POS Bill Ledger)'}
+                            {isVatRegistered ? 'รายงานภาษีขาย (Sales Tax Report ภ.พ.30)' : 'สมุดรายงานยอดขายและรายรับรายบิล'}
                         </h3>
                         <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
                             {activePeriodLabel} • จำนวน {filteredRecords.length} รายการ (คลิกที่แถวเพื่อดูรายละเอียดบิล / ออกใบกำกับภาษี)
@@ -848,7 +848,7 @@ export default function SalesTaxReportTab({
                                                         className="px-1.5 py-0.2 rounded text-[11px] tabular-nums font-bold bg-blue-100 hover:bg-blue-200 text-blue-800 cursor-pointer transition-colors"
                                                         title="คลิกเพื่อเปิดดู/ดาวน์โหลด PDF ใบเสร็จรับเงิน/ใบกำกับภาษี"
                                                     >
-                                                        TAX
+                                                        ใบเสร็จ
                                                     </button>
                                                 )}
                                             </div>
@@ -904,7 +904,7 @@ export default function SalesTaxReportTab({
                                                                 type="button"
                                                                 onClick={() => setActivePrintInvoice(item.tax_invoice_record)}
                                                                 className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 tabular-nums text-[11px] font-bold border border-emerald-200 transition-colors flex items-center gap-0.5 cursor-pointer"
-                                                                title="ดู/พิมพ์เอกสารใบเสร็จ/ใบกำกับภาษี (PDF)"
+                                                                title="ดู/พิมพ์เอกสารใบเสร็จ/ใบกำกับภาษี"
                                                             >
                                                                 <FileText size={10} />
                                                                 <span>PDF</span>
@@ -917,7 +917,7 @@ export default function SalesTaxReportTab({
                                                                 title="ออกใบกำกับภาษีเต็มรูปจากบิลนี้"
                                                             >
                                                                 <Plus size={10} />
-                                                                <span>TAX</span>
+                                                                <span>ออกใบเสร็จ</span>
                                                             </button>
                                                         )}
 
@@ -925,7 +925,7 @@ export default function SalesTaxReportTab({
                                                             type="button"
                                                             onClick={() => setBillToDelete(item)}
                                                             className="p-1 rounded hover:bg-red-100 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer ml-0.5"
-                                                            title="ลบบิลและจัดเรียงเลขใหม่ (Auto-Resequence)"
+                                                            title="ยกเลิกบิลนี้ (ไม่นับเป็นยอดขาย)"
                                                         >
                                                             <Trash2 size={14} />
                                                         </button>
@@ -939,7 +939,7 @@ export default function SalesTaxReportTab({
                                                             type="button"
                                                             onClick={() => setBillToDelete(item)}
                                                             className="p-1 rounded hover:bg-red-100 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer"
-                                                            title="ลบเอกสารภาษีนี้และจัดเรียงเลขใหม่"
+                                                            title="ยกเลิกเอกสารนี้"
                                                         >
                                                             <Trash2 size={14} />
                                                         </button>
@@ -963,7 +963,7 @@ export default function SalesTaxReportTab({
                             <tfoot>
                                 <tr className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] tabular-nums font-bold text-xs">
                                     <td colSpan={6} className="p-3 text-right">
-                                        รวมทั้งสิ้น (TOTAL):
+                                        รวมทั้งสิ้น:
                                     </td>
                                     <td className="p-3 text-right">
                                         ฿{periodStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -1045,10 +1045,10 @@ export default function SalesTaxReportTab({
                             </div>
                             <div>
                                 <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] ">
-                                    ยืนยันการลบบิลขาย
+                                    ยืนยันการยกเลิกบิลขาย
                                 </h3>
                                 <p className="text-[13px] text-[oklch(50%_0.010_28)]">
-                                    ลบบิลออกจากรายงานและจัดเรียงเลขบิลใหม่อัตโนมัติ
+                                    บิลจะถูกยกเลิกและไม่นับเป็นยอดขาย
                                 </p>
                             </div>
                         </div>
@@ -1071,7 +1071,7 @@ export default function SalesTaxReportTab({
                         <div className="text-xs text-[oklch(42%_0.010_28)] bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed flex items-start gap-2">
                             <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
                             <div>
-                                <strong>ระบบ Auto-Resequence:</strong> เมื่อลบบิลนี้แล้ว ระบบจะปรับสถานะบิลเป็น Void และจะทำการเรียงลำดับเลขที่บิล (BILL-YYYYMM-XXXX) ที่เหลือใหม่ทั้งหมดให้ต่อเนื่องกันทันทีโดยไม่มีช่องว่าง
+                                <strong>หมายเหตุ:</strong> บิลจะเปลี่ยนสถานะเป็นยกเลิก (ไม่ได้ลบออกจากระบบ) และเลขบิลของเดือนนั้นจะรันต่อเนื่องใหม่
                             </div>
                         </div>
 
@@ -1082,7 +1082,7 @@ export default function SalesTaxReportTab({
                                 onClick={() => setBillToDelete(null)}
                                 className="py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xl font-bold text-xs transition-colors cursor-pointer"
                             >
-                                ยกเลิก (Cancel)
+                                ยกเลิก
                             </button>
                             <button
                                 type="button"
@@ -1091,7 +1091,7 @@ export default function SalesTaxReportTab({
                                 className="py-2.5 bg-red-600 hover:bg-red-700 text-[oklch(97%_0.008_28)] rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 "
                             >
                                 {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                                <span>{deleting ? 'กำลังลบบิล...' : 'ยืนยันลบบิล'}</span>
+                                <span>{deleting ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิกบิล'}</span>
                             </button>
                         </div>
                     </div>
