@@ -321,3 +321,7 @@
   .sr-floor { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .sr-table:nth-child(3) { border-top: 0; }
 }
+
+/* A bill line cannot be corrected while no shift is open */
+.sr-line--tap:disabled { cursor: default; }
+.sr-line--tap:disabled:hover .sr-line__name { text-decoration: none; }

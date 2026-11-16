@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { summariseTables, formatBaht, formatDwell } from '../utils/staffOrder'
+import { useShiftOpen, SHIFT_CLOSED_TEXT } from '../hooks/useShiftOpen'
 import './StaffRemote.css'
 
 const clock = (date) => date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
@@ -21,6 +22,7 @@ export default function StaffTableList({ onOpenTable }) {
     const [filter, setFilter] = useState('all')
     const [now, setNow] = useState(() => new Date())
     const mountedRef = useRef(true)
+    const shiftOpen = useShiftOpen()
 
     const load = useCallback(async () => {
         try {
@@ -85,6 +87,7 @@ export default function StaffTableList({ onOpenTable }) {
 
     return (
         <main className="sd-wrap sr-main sr-main--floor">
+            {shiftOpen === false && <p className="sr-notice is-warn" role="status">{SHIFT_CLOSED_TEXT}</p>}
             {!loading && !failed && <p className={`sr-lede ${calling.length > 0 ? 'is-strong' : ''}`}>{lede}</p>}
 
             <div className="sd-tabs" role="tablist" aria-label="กรองโต๊ะ">

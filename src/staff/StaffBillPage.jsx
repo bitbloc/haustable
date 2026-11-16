@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import generatePayload from 'promptpay-qr'
 import { supabase } from '../lib/supabaseClient'
 import { useStaffBill } from '../hooks/useStaffBill'
+import { useShiftOpen, SHIFT_CLOSED_TEXT } from '../hooks/useShiftOpen'
 import {
     billBalance, formatBaht, isAwaitingPrint, isPrintOverdue, isSentToKitchen,
     normalizePromptPayId, formatPromptPayId, readAdjustResult,
@@ -28,6 +29,7 @@ export default function StaffBillPage() {
     const { table, bill, loading, error, live, updatedAt, reload } = useStaffBill(tableId)
     const [notice, setNotice] = useState(() => (location.state?.sent ? `ส่ง ${location.state.sent.count} รายการแล้ว สลิปครัวและบาร์พิมพ์ที่เครื่อง POS` : null))
     const [now, setNow] = useState(() => new Date())
+    const shiftClosed = useShiftOpen() === false
     const [edit, setEdit] = useState(null) // { item, qty, reason, note, saving, problem }
     const [qr, setQr] = useState(null) // { loading, payeeId, problem }
 
@@ -52,7 +54,7 @@ export default function StaffBillPage() {
     } else if (waiting.length > 0) {
         lede = { warn: false, text: `${waiting.length} รายการกำลังรอพิมพ์สลิปที่เครื่อง POS` }
     } else if (bill && items.length > 0) {
-        lede = { warn: false, text: 'ทุกรายการพิมพ์สลิปแล้ว แตะรายการเพื่อลดจำนวนหรือยกเลิก' }
+        lede = { warn: false, text: shiftClosed ? 'ทุกรายการพิมพ์สลิปแล้ว' : 'ทุกรายการพิมพ์สลิปแล้ว แตะรายการเพื่อลดจำนวนหรือยกเลิก' }
     }
 
     /* ── Correct a line: lower its quantity or remove it ── */
@@ -127,6 +129,7 @@ export default function StaffBillPage() {
             </header>
 
             <main className="sd-wrap sr-main sr-main--bill">
+                {shiftClosed && <p className="sr-notice is-warn" role="status">{SHIFT_CLOSED_TEXT}</p>}
                 {notice && <p className="sr-notice" role="status">{notice}</p>}
 
                 {loading && (
@@ -197,7 +200,7 @@ export default function StaffBillPage() {
                                         const sub = [tidy(options.join(' · ')), item.ordered_by_name ? `สั่งโดย ${item.ordered_by_name}` : ''].filter(Boolean).join(' · ')
                                         return (
                                             <li key={item.id}>
-                                                <button type="button" className="sd-row sr-line sr-line--tap" onClick={() => openEdit(item)} aria-label={`แก้ ${itemName(item)}`}>
+                                                <button type="button" className="sd-row sr-line sr-line--tap" disabled={shiftClosed} onClick={() => openEdit(item)} aria-label={`แก้ ${itemName(item)}`}>
                                                     <span className="sr-line__qty">{item.quantity}×</span>
                                                     <span className="sd-row__main">
                                                         <span className="sr-line__name">{itemName(item)}</span>
@@ -228,9 +231,9 @@ export default function StaffBillPage() {
                 <div className="sr-dock">
                     <div className="sd-wrap sr-dock__row sr-main--bill">
                         {bill && items.length > 0 && (
-                            <button type="button" className="sr-btn sr-btn--ghost" onClick={openQr}>QR รับเงิน</button>
+                            <button type="button" className="sr-btn sr-btn--ghost" disabled={shiftClosed} onClick={openQr}>QR รับเงิน</button>
                         )}
-                        <button type="button" className="sr-btn" onClick={goOrder}>
+                        <button type="button" className="sr-btn" disabled={shiftClosed} onClick={goOrder}>
                             {bill ? 'สั่งเพิ่ม' : 'เปิดบิลและสั่ง'}
                         </button>
                     </div>

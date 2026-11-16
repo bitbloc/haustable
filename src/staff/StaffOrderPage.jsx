@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 import { useMenuData } from '../hooks/useMenuData'
 import { useStaffBill } from '../hooks/useStaffBill'
+import { useShiftOpen, SHIFT_CLOSED_TEXT } from '../hooks/useShiftOpen'
 import OptionSelectionModal from '../components/shared/OptionSelectionModal'
 import { formatOrderItemOptions } from '../utils/menuHelper'
 import {
@@ -53,6 +54,7 @@ export default function StaffOrderPage() {
     const [reviewOpen, setReview] = useState(false)
     const [sending, setSending] = useState(false)
     const [problem, setProblem] = useState(null)
+    const shiftClosed = useShiftOpen() === false
     // The bill this order was started for. null = the table was empty; undefined = not known yet.
     const expectedRef = useRef(location.state && 'bookingId' in location.state ? location.state.bookingId : undefined)
 
@@ -181,7 +183,7 @@ export default function StaffOrderPage() {
             )}
 
             <div className="sr-cart__actions">
-                <button type="button" className="sr-btn sr-btn--send sr-btn--block" disabled={sending || count === 0} onClick={() => send()}>
+                <button type="button" className="sr-btn sr-btn--send sr-btn--block" disabled={sending || count === 0 || shiftClosed} onClick={() => send()}>
                     <span>{sending ? 'กำลังส่ง' : 'ส่งเข้าครัว'}</span>
                     <span className="sr-num">{formatBaht(total)}</span>
                 </button>
@@ -209,6 +211,7 @@ export default function StaffOrderPage() {
             </header>
 
             <main className="sd-wrap sr-main sr-main--order">
+                {shiftClosed && <p className="sr-notice is-warn" role="status">{SHIFT_CLOSED_TEXT}</p>}
                 {billError === 'TABLE_NOT_FOUND' ? (
                     <div className="sr-notice is-warn" role="alert">
                         ไม่พบโต๊ะนี้

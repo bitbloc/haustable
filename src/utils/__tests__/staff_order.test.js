@@ -154,6 +154,10 @@ describe('readSubmitResult', () => {
         expect(res).toMatchObject({ ok: false, code: 'BILL_CLOSED' })
         expect(res.message).toContain('ปิดไปแล้ว')
     })
+    it('says so when no shift is open at the POS', () => {
+        expect(readSubmitResult({ data: { success: false, code: 'NO_OPEN_SHIFT' }, error: null }).message).toContain('เปิดกะ')
+        expect(readAdjustResult({ data: { success: false, code: 'NO_OPEN_SHIFT' }, error: null }).message).toContain('เปิดกะ')
+    })
     it('names the sold-out item', () => {
         const res = readSubmitResult({ data: { success: false, code: 'ITEM_UNAVAILABLE', detail: 'ชาไทย' }, error: null })
         expect(res.message).toContain('ชาไทย')
