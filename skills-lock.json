@@ -1,23 +1,37 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
-      "computedHash": "53590ee9325bee34d7888bf0d81bd3941a108b1e7850df46802d93104e3f2b90"
+      "computedHash": ""
     },
     "hallmark": {
       "source": "nutlope/hallmark",
       "sourceType": "github",
       "skillPath": "skills/hallmark/SKILL.md",
-      "computedHash": "c25595fa30b123e0cf6f8bb4e2c584bd592c9ada9a4b5b4a1d161d97ff8105e3"
+      "computedHash": "21dd43ff72ea3aaef39289d464fe942a9673a9138264c814b21339b67756c261"
     },
     "minimalist": {
       "source": "tasteskill/tasteskill",
       "sourceType": "github",
       "skillPath": "minimalist/SKILL.md",
-      "computedHash": "503dacc845f8d19d48e38e637477a03dcd7f32b94877c0f10d01a0c336ff5b1e"
+      "computedHash": "686a76e93f66717827041d65eb273a821d2a7da25187e44afad3f240789c8062"
+    },
+    "transitions-dev": {
+      "source": "Jakubantalik/transitions.dev",
+      "commit": "738de6da39c042fd71ae10c8d819b42630880a29",
+      "sourceType": "github",
+      "skillPath": "skills/transitions-dev/SKILL.md",
+      "computedHash": "c7bc25bf1998615c73188bfcef6deca06c43f1b6f64538a456d446ca9d3911cd"
+    },
+    "transitions-polish": {
+      "source": "Jakubantalik/transitions.dev",
+      "commit": "738de6da39c042fd71ae10c8d819b42630880a29",
+      "sourceType": "github",
+      "skillPath": "skills/transitions-polish/SKILL.md",
+      "computedHash": "37a0842bfb0d9778b9a01fdd83947749476a9549addc60b31c9b8bfe2b2d9aae"
     }
   }
 }
