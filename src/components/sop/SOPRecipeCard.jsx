@@ -1,6 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { getActionByKey } from '../../hooks/useBarSOP';
+import { defaultSweetLevel, factorPercent } from '../../utils/sopLinks';
+
+// Sweetness of an SOP that is not linked to a menu (its own table, 4 fixed levels)
+const LEGACY_SWEET = [
+    { key: '0%', label: 'ไม่หวาน', sub: '0%' },
+    { key: '50%', label: 'หวานน้อย', sub: '50%' },
+    { key: '100%', label: 'หวานปกติ', sub: '100%' },
+    { key: '120%', label: 'หวานมาก', sub: '120%' }
+];
 
 /**
  * SOPRecipeCard — Expandable SOP recipe card
@@ -19,9 +28,16 @@ export default function SOPRecipeCard({
         return isCustomMode ? (recipe?.scaling_rules?.presets || []) : [];
     }, [isCustomMode, recipe?.scaling_rules?.presets]);
 
+    // Linked to a menu: the levels are the menu's sweetness choices (the same ones a sale deducts by)
+    const menuLevels = Array.isArray(recipe?.sweetness_levels) ? recipe.sweetness_levels : null;
+    const sweetOptions = useMemo(() => (menuLevels
+        ? menuLevels.map(l => ({ key: l.id, label: l.label, sub: factorPercent(l.factor) }))
+        : LEGACY_SWEET), [menuLevels]);
+    const baseSweet = menuLevels ? (defaultSweetLevel(menuLevels)?.id ?? null) : '100%';
+
     const [expanded, setExpanded] = useState(defaultExpanded);
     const [cups, setCups] = useState(1);
-    const [sweetness, setSweetness] = useState('100%');
+    const [sweetness, setSweetness] = useState(baseSweet);
     const [selectedSizeOz, setSelectedSizeOz] = useState(
         isCustomMode 
             ? (customPresets.find(p => p.isBase)?.name || customPresets[0]?.name || 'Base')
@@ -31,13 +47,13 @@ export default function SOPRecipeCard({
     // Reset selection if recipe changes
     React.useEffect(() => {
         setCups(1);
-        setSweetness('100%');
+        setSweetness(baseSweet);
         if (isCustomMode) {
             setSelectedSizeOz(customPresets.find(p => p.isBase)?.name || customPresets[0]?.name || 'Base');
         } else {
             setSelectedSizeOz(recipe?.base_glass_size_oz || 16);
         }
-    }, [recipe?.id, isCustomMode, customPresets, recipe?.base_glass_size_oz]);
+    }, [recipe?.id, isCustomMode, customPresets, recipe?.base_glass_size_oz, baseSweet]);
 
     // Scale ingredients based on selected glass size, cups and sweetness
     const scaledIngredients = useMemo(() => {
@@ -231,28 +247,25 @@ export default function SOPRecipeCard({
                     </div>
 
                     {/* Sweetness Selector: only when the recipe has something to sweeten with,
-                        otherwise the four levels change nothing on screen */}
-                    {visibleIngredients.some(i => i.is_sweetener) && (
+                        otherwise the levels change nothing on screen. For a menu-linked SOP the levels
+                        are the menu's own sweetness choices, so the sheet matches what a sale deducts. */}
+                    {visibleIngredients.some(i => i.is_sweetener) && sweetOptions.length > 0 && (
                     <div>
                         <div className={`text-xs tabular-nums font-bold mb-2 ${t.sectionLabel}`}>
                             ระดับความหวาน
                         </div>
                         <div className="p-1 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] inline-flex flex-wrap gap-1">
-                            {[
-                                { key: '0%', label: 'ไม่หวาน', sub: '0%' },
-                                { key: '50%', label: 'หวานน้อย', sub: '50%' },
-                                { key: '100%', label: 'หวานปกติ', sub: '100%' },
-                                { key: '120%', label: 'หวานมาก', sub: '120%' }
-                            ].map(opt => {
+                            {sweetOptions.map(opt => {
                                 const isActive = sweetness === opt.key;
                                 return (
                                     <button
                                         key={opt.key}
                                         type="button"
                                         onClick={() => setSweetness(opt.key)}
+                                        aria-pressed={isActive}
                                         className={`px-3 py-1.5 text-xs tabular-nums font-bold transition-all flex items-center gap-1.5 cursor-pointer rounded-xs ${
-                                            isActive 
-                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ' 
+                                            isActive
+                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
                                                 : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                                         }`}
                                     >
@@ -289,16 +302,16 @@ export default function SOPRecipeCard({
                         <div>
                             <div className={`text-xs tabular-nums font-bold mb-4 flex items-center justify-between ${t.sectionLabel}`}>
                                 <span>ส่วนผสม</span>
-                                {(!isBaseSize || cups > 1 || sweetness !== '100%') && (
+                                {(!isBaseSize || cups > 1 || sweetness !== baseSweet) && (
                                     <div className="flex flex-wrap gap-1.5 tabular-nums">
                                         {(!isBaseSize || cups > 1) && (
                                             <span className="text-[11px] px-2 py-0.5 rounded-xs font-bold bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
                                                 ปรับตาม {cups > 1 ? `${cups} แก้ว ` : ''}({isCustomMode ? selectedSizeOz : `${selectedSizeOz} oz`})
                                             </span>
                                         )}
-                                        {sweetness !== '100%' && (
+                                        {sweetness !== baseSweet && (
                                             <span className="text-[11px] px-2 py-0.5 rounded-xs font-bold bg-[oklch(95%_0.02_45)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                                                หวาน: {sweetness === '120%' ? 'หวานมาก (120%)' : sweetness === '50%' ? 'หวานน้อย (50%)' : sweetness === '0%' ? 'ไม่หวาน (0%)' : sweetness}
+                                                หวาน: {(() => { const o = sweetOptions.find(x => x.key === sweetness); return o ? `${o.label} (${o.sub})` : sweetness; })()}
                                             </span>
                                         )}
                                     </div>
@@ -332,47 +345,53 @@ export default function SOPRecipeCard({
                                 ))}
                             </div>
 
-                            {/* Quick Sweetness Reference Table for Baristas */}
-                            {visibleIngredients.some(i => i.is_sweetener) && (
+                            {/* Quick Sweetness Reference Table for Baristas: every level, at the chosen size */}
+                            {visibleIngredients.some(i => i.is_sweetener) && sweetOptions.length > 0 && scaleIngredients && (() => {
+                                const byLevel = sweetOptions.map(opt => ({ opt, rows: scaleIngredients(recipe, selectedSizeOz, 1, opt.key) }));
+                                const sweeteners = visibleIngredients.filter(i => i.is_sweetener);
+                                return (
                                 <div className="mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
                                     <div className="text-xs tabular-nums font-medium text-[oklch(42%_0.010_28)] mb-2 flex justify-between items-center gap-2">
                                         <span>ปริมาณตามระดับความหวาน</span>
-                                        <span className="text-xs text-[oklch(52%_0.16_28)] font-bold">ขนาด {selectedSizeOz}{isCustomMode ? '' : 'oz'}</span>
+                                        <span className="text-xs font-bold">ขนาด {selectedSizeOz}{isCustomMode ? '' : ' oz'} · 1 แก้ว</span>
                                     </div>
                                     <div className="overflow-x-auto border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
                                         <table className="w-full text-center tabular-nums text-xs divide-y divide-[oklch(85%_0.012_28)]">
                                             <thead>
                                                 <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-xs">
                                                     <th className="p-1.5 text-left pl-2.5">สารหวาน</th>
-                                                    <th className={`p-1.5 ${sweetness === '0%' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : ''}`}>ไม่หวาน (0%)</th>
-                                                    <th className={`p-1.5 ${sweetness === '50%' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : ''}`}>หวานน้อย (50%)</th>
-                                                    <th className={`p-1.5 ${sweetness === '100%' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : ''}`}>หวานปกติ (100%)</th>
-                                                    <th className={`p-1.5 ${sweetness === '120%' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : ''}`}>หวานมาก (120%)</th>
+                                                    {sweetOptions.map(opt => (
+                                                        <th key={opt.key} className={`p-1.5 ${sweetness === opt.key ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : ''}`}>
+                                                            {opt.label} ({opt.sub})
+                                                        </th>
+                                                    ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
-                                                {visibleIngredients.filter(i => i.is_sweetener).map((sw, idx) => {
-                                                    const custom = recipe?.advanced_details?.sweetness_matrix?.levels?.[sw.name] || {};
-                                                    const noneVal = custom.none !== undefined ? custom.none : 0;
-                                                    const lessVal = custom.less !== undefined ? custom.less : Math.round(sw.qty * 0.5 * 10) / 10;
-                                                    const normVal = custom.normal !== undefined ? custom.normal : sw.qty;
-                                                    const extraVal = custom.extra !== undefined ? custom.extra : Math.round(sw.qty * 1.2 * 10) / 10;
-
-                                                    return (
-                                                        <tr key={idx}>
-                                                            <td className="p-1.5 text-left pl-2.5 font-sans font-bold text-[oklch(18%_0.012_28)] truncate max-w-[120px]">{sw.name}</td>
-                                                            <td className={`p-1.5 tabular-nums ${sweetness === '0%' ? 'font-bold bg-[oklch(90%_0.015_28)]/50' : ''}`}>{noneVal} {sw.unit}</td>
-                                                            <td className={`p-1.5 tabular-nums font-bold text-[oklch(52%_0.16_28)] ${sweetness === '50%' ? 'bg-[oklch(90%_0.015_28)]/50' : ''}`}>{lessVal} {sw.unit}</td>
-                                                            <td className={`p-1.5 tabular-nums font-bold ${sweetness === '100%' ? 'bg-[oklch(90%_0.015_28)]/50' : ''}`}>{normVal} {sw.unit}</td>
-                                                            <td className={`p-1.5 tabular-nums ${sweetness === '120%' ? 'font-bold bg-[oklch(90%_0.015_28)]/50' : ''}`}>{extraVal} {sw.unit}</td>
-                                                        </tr>
-                                                    );
-                                                })}
+                                                {sweeteners.map((sw, idx) => (
+                                                    <tr key={idx}>
+                                                        <td className="p-1.5 text-left pl-2.5 font-sans font-bold text-[oklch(18%_0.012_28)] truncate max-w-[120px]">{sw.name}</td>
+                                                        {byLevel.map(({ opt, rows }) => {
+                                                            const hit = rows.find(r => r.name === sw.name && r.is_sweetener);
+                                                            return (
+                                                                <td key={opt.key} className={`p-1.5 tabular-nums ${sweetness === opt.key ? 'font-bold bg-[oklch(90%_0.015_28)]/50' : ''}`}>
+                                                                    {hit ? (hit.scaledQty ?? hit.qty) : '–'} {sw.unit}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
+                                    {menuLevels && (
+                                        <p className="mt-1.5 text-[11px] leading-4 text-[oklch(50%_0.010_28)]">
+                                            ระดับและปริมาณเดียวกับที่ระบบตัดสต๊อกเมื่อขาย
+                                        </p>
+                                    )}
                                 </div>
-                            )}
+                                );
+                            })()}
                         </div>
                     )}
 

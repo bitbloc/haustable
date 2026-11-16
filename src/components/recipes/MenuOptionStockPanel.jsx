@@ -138,7 +138,10 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
             {/* Sweetness */}
             {sweetGroups.map(g => (
                 <div key={g.id} className={`px-3 py-3 border-b ${RULE} space-y-2.5`}>
-                    <div className={`text-sm font-medium ${INK}`}>{g.name}</div>
+                    <div>
+                        <div className={`text-sm font-medium ${INK}`}>{g.name}</div>
+                        <div className={`text-xs ${NEUTRAL}`}>ตั้งที่นี่ที่เดียว ใช้ทั้งตัดสต๊อกตอนขายและสูตรที่บาร์เห็น (สูตรบาร์ที่ผูกกับเมนูนี้)</div>
+                    </div>
                     <div>
                         <div className={`text-xs ${MUTED} mb-1`}>วัตถุดิบในสูตรที่นับเป็นสารให้ความหวาน (มีผลทุกเมนูที่ใช้)</div>
                         {recipeLines.length === 0 ? (

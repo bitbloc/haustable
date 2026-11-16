@@ -2,14 +2,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AdminFilterChips } from './AdminKit';
 import RecipeBuilder from '../recipes/RecipeBuilder';
-import { mergeLinkedIngredients } from '../../utils/sopLinks';
+import { mergeLinkedIngredients, factorPercent } from '../../utils/sopLinks';
 import { 
     ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, 
     Settings, RefreshCw, Link as LinkIcon, Download, Copy, FileText, 
     ChevronRight, Check, SlidersHorizontal, Sparkles, BookOpen 
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import useBarSOP, { SOP_ACTIONS } from '../../hooks/useBarSOP';
+import useBarSOP, { SOP_ACTIONS, fetchMenuSweetness } from '../../hooks/useBarSOP';
 import SOPRecipeCard from '../sop/SOPRecipeCard';
 import SOPCategoryManager from '../sop/SOPCategoryManager';
 import SOPExportModal from '../sop/SOPExportModal';
@@ -260,7 +260,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
 }
 
 // ── Ingredient Row (Dieter Rams Tabular Cell) ──
-function IngredientRow({ ing, index, onUpdate, onDelete }) {
+function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }) {
     const isStandard = THAI_UNITS.some(u => u.value.toLowerCase() === (ing.unit || '').trim().toLowerCase());
     const showWarning = ing.unit && !isStandard;
 
@@ -325,10 +325,16 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
                         <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded-xs text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-xs">ปรับตามขนาดแก้ว</span>
                     </label>
+                    {sweetFromMenu && ing.isLinked ? (
+                        <span className="text-xs text-[oklch(42%_0.010_28)]" title="ตั้งที่สูตรของเมนู ในส่วนตัวเลือกความหวาน">
+                            {ing.is_sweetener ? 'สารหวาน (จากสูตรเมนู)' : ''}
+                        </span>
+                    ) : (
                     <label className="flex items-center gap-1.5 text-xs text-[oklch(52%_0.16_28)] font-bold cursor-pointer select-none">
                         <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded-xs text-[oklch(52%_0.16_28)] border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-xs">ตัวให้ความหวาน</span>
                     </label>
+                    )}
                     <label className="flex items-center gap-1.5 text-xs text-[oklch(55%_0.010_28)] cursor-pointer select-none">
                         <input type="checkbox" checked={ing.isHidden === true} onChange={e => onUpdate(index, { ...ing, isHidden: e.target.checked })} className="rounded-xs border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-xs">ซ่อน</span>
@@ -686,6 +692,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
     const [expandedStepIndex, setExpandedStepIndex] = useState(0);
     const [activeAnchor, setActiveAnchor] = useState('basic');
     const [recipeEditorFor, setRecipeEditorFor] = useState(null); // { type, id }
+    // Sweetness levels of the linked menu (its sweetness option group); null while loading
+    const [menuSweet, setMenuSweet] = useState(null);
     const focusOpenedRef = React.useRef(false);
 
     // ── Create new empty recipe ──
@@ -739,6 +747,17 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
         if (focus && focusOpenedRef.current && editing === null && onClose) onClose();
     }, [focus, editing, onClose]);
 
+    const linkedMenuId = editing?.source_menu_item_id || null;
+    useEffect(() => {
+        if (!linkedMenuId || recipeEditorFor) return undefined;
+        let cancelled = false;
+        setMenuSweet(null);
+        fetchMenuSweetness([linkedMenuId])
+            .then(map => { if (!cancelled) setMenuSweet(map.get(String(linkedMenuId)) || []); })
+            .catch(() => { if (!cancelled) setMenuSweet([]); });
+        return () => { cancelled = true; };
+    }, [linkedMenuId, recipeEditorFor]);
+
     // Ingredients come from the linked recipe; after editing it, take the new rows.
     const reloadLinkedIngredients = async () => {
         if (!editing) return;
@@ -748,7 +767,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
         const linked = await fetchRecipeLabSummary(id, type);
         setEditing(prev => prev && ({
             ...prev,
-            ingredients: mergeLinkedIngredients(prev.ingredients || [], (linked || []).map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name } })))
+            ingredients: mergeLinkedIngredients(prev.ingredients || [], (linked || []).map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name, is_sweetener: i.is_sweetener } })), { stockSweetener: type === 'menu' })
         }));
     };
 
@@ -837,7 +856,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
             source_stock_item_id: sourceType === 'stock' ? sourceId : null,
             ingredients: mergeLinkedIngredients(
                 (prev.ingredients || []).filter(i => i.isLinked || !linkedIngs.some(l => (l.name || '').trim() === (i.name || '').trim())),
-                linkedIngs.map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name } }))
+                linkedIngs.map(i => ({ quantity: i.qty, unit: i.unit, ingredient: { id: i.id, name: i.name, is_sweetener: i.is_sweetener } })),
+                { stockSweetener: sourceType === 'menu' }
             )
         }));
 
@@ -1086,7 +1106,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                             {(recipe.steps || []).length > 0
                                                 ? <span>{(recipe.steps || []).length} ขั้นตอน</span>
                                                 : <span className="text-[oklch(45%_0.12_60)] font-medium">ยังไม่มีขั้นตอน</span>}
-                                            {recipe.advanced_details?.sweetness_matrix && (
+                                            {!recipe.source_menu_item_id && recipe.advanced_details?.sweetness_matrix && (
                                                 <>
                                                     <span>•</span>
                                                     <span>ตั้งระดับความหวานแล้ว</span>
@@ -1310,7 +1330,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             recipe={{ 
                                 ...editing, 
                                 category: categories.find(c => c.id === editing.category_id),
-                                display_ingredients: editing.ingredients || []
+                                display_ingredients: editing.ingredients || [],
+                                sweetness_levels: editing.source_menu_item_id ? (menuSweet || []) : null
                             }} 
                             glassSizes={glassSizes} 
                             scaleIngredients={scaleIngredients} 
@@ -1533,7 +1554,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                     {/* Integrated Ingredients List */}
                     <div className="space-y-2.5">
                         {(editing.ingredients || []).map((ing, i) => (
-                            <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} />
+                            <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} sweetFromMenu={!!editing.source_menu_item_id} />
                         ))}
                         {(editing.ingredients || []).length === 0 && (
                             <div className="text-center py-6 tabular-nums text-xs text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] p-4">
@@ -1549,8 +1570,58 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         </button>
                     </div>
 
-                    {/* ── SWEETNESS MATRIX SUB-PANEL ── */}
-                    {sweetenersList.length > 0 && (
+                    {/* ── SWEETNESS: owned by the linked menu (one place: its recipe and sweetness option) ── */}
+                    {editing.source_menu_item_id && (
+                        <div className="mt-5 pt-4 border-t border-[oklch(85%_0.012_28)] space-y-3">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-[oklch(18%_0.012_28)]">ระดับความหวาน</h4>
+                                    <p className="text-[13px] leading-6 text-[oklch(42%_0.010_28)]">
+                                        ตั้งที่สูตรของเมนูที่เดียว (สารหวาน และตัวคูณของแต่ละระดับ) ใช้ทั้งตัดสต๊อกตอนขายและสูตรที่บาร์เห็น
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => setRecipeEditorFor({ type: 'menu', id: editing.source_menu_item_id })} className="admin-btn h-9 shrink-0">
+                                    เปิดสูตรของเมนู
+                                </button>
+                            </div>
+                            {menuSweet === null ? (
+                                <p className="text-[13px] text-[oklch(55%_0.010_28)]">กำลังโหลด...</p>
+                            ) : menuSweet.length === 0 ? (
+                                <p className="text-[13px] leading-6 text-[oklch(42%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] px-3 py-2.5">
+                                    เมนูนี้ยังไม่มีตัวเลือกความหวาน บาร์จะไม่เห็นปุ่มเลือกระดับ ผูกกลุ่มความหวานกับเมนูที่ Modifiers &amp; Options ก่อน แล้วตั้งตัวคูณที่สูตรของเมนู
+                                </p>
+                            ) : sweetenersList.length === 0 ? (
+                                <p className="text-[13px] leading-6 text-[oklch(42%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] px-3 py-2.5">
+                                    ระดับ: {menuSweet.map(l => `${l.label} ${factorPercent(l.factor)}`).join(' · ')}
+                                    <span className="block">ยังไม่มีส่วนผสมที่เป็นสารหวาน กดเลือกสารหวานในสูตรของเมนู</span>
+                                </p>
+                            ) : (
+                                <div className="overflow-x-auto border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
+                                    <table className="w-full text-center tabular-nums text-[13px] divide-y divide-[oklch(85%_0.012_28)]">
+                                        <thead>
+                                            <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-xs">
+                                                <th className="p-2 text-left pl-3">สารหวาน (ขนาดหลัก)</th>
+                                                {menuSweet.map(l => <th key={l.id} className="p-2">{l.label} ({factorPercent(l.factor)})</th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                                            {sweetenersList.map((sw, sIdx) => (
+                                                <tr key={sIdx}>
+                                                    <td className="p-2 text-left pl-3 font-sans font-bold text-[oklch(18%_0.012_28)]">{sw.name}</td>
+                                                    {menuSweet.map(l => (
+                                                        <td key={l.id} className="p-2">{Math.round((Number(sw.qty) || 0) * l.factor * 100) / 100} {sw.unit}</td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── SWEETNESS MATRIX SUB-PANEL (SOPs not linked to a menu) ── */}
+                    {!editing.source_menu_item_id && sweetenersList.length > 0 && (
                         <div className="mt-5 pt-4 border-t border-[oklch(85%_0.012_28)] space-y-3">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <div>

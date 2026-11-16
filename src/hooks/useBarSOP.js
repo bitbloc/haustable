@@ -2,7 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { logStaffActivity } from '../utils/auditLogger';
-import { groupRecipeRows, rowsForSop, mergeLinkedIngredients, ingredientsToStore } from '../utils/sopLinks';
+import { groupRecipeRows, rowsForSop, mergeLinkedIngredients, ingredientsToStore, sweetnessLevelsByMenu } from '../utils/sopLinks';
+
+/** Sweetness levels of each menu, from its sweetness option group: Map(menu id -> levels). */
+export const fetchMenuSweetness = async (menuIds = []) => {
+    const ids = [...new Set((menuIds || []).filter(Boolean).map(String))];
+    if (!ids.length) return new Map();
+    const { data: links, error } = await supabase.from('menu_item_options').select('menu_item_id, option_group_id').in('menu_item_id', ids);
+    if (error) throw error;
+    const groupIds = [...new Set((links || []).map((l) => l.option_group_id).filter(Boolean))];
+    if (!groupIds.length) return new Map();
+    const { data: groups, error: groupError } = await supabase.from('option_groups')
+        .select('id, name, option_choices ( id, name, sweetener_factor, display_order )').in('id', groupIds);
+    if (groupError) throw groupError;
+    return sweetnessLevelsByMenu(links || [], groups || []);
+};
 
 /**
  * useBarSOP — Data layer hook for Bar SOP system
@@ -136,23 +150,30 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             const menuIds = [...menuAlive];
             const stockIds = [...stockAlive];
             const select = `parent_menu_item_id, parent_stock_item_id, quantity, unit, layer_order,
-                        ingredient:stock_items!recipe_ingredients_ingredient_id_fkey ( id, name, usage_unit )`;
+                        ingredient:stock_items!recipe_ingredients_ingredient_id_fkey ( id, name, usage_unit, is_sweetener )`;
             const [menuRows, stockRows] = await Promise.all([
                 menuIds.length ? supabase.from('recipe_ingredients').select(select).in('parent_menu_item_id', menuIds).order('layer_order') : { data: [] },
                 stockIds.length ? supabase.from('recipe_ingredients').select(select).in('parent_stock_item_id', stockIds).order('layer_order') : { data: [] }
             ]);
             const grouped = groupRecipeRows([...(menuRows.data || []), ...(stockRows.data || [])]);
+            // Sweetness of a menu-linked SOP comes from the menu's sweetness options, never the SOP.
+            const sweetByMenu = await fetchMenuSweetness(menuIds).catch((err) => {
+                console.warn('[SOP] sweetness options not loaded', err);
+                return new Map();
+            });
 
             const populatedData = liveSops.map(r => {
                 const rows = rowsForSop(r, grouped);
                 // Not linked: whatever was written stays as plain text lines (never dropped on save).
                 const currentIngs = rows
-                    ? mergeLinkedIngredients(r.ingredients || [], rows)
+                    ? mergeLinkedIngredients(r.ingredients || [], rows, { stockSweetener: !!r.source_menu_item_id })
                     : (r.ingredients || []).map(i => ({ ...i, isLinked: false }));
                 return {
                     ...r,
                     ingredients: currentIngs,
-                    display_ingredients: currentIngs
+                    display_ingredients: currentIngs,
+                    // [] = linked to a menu that has no sweetness option; null = not linked to a menu
+                    sweetness_levels: r.source_menu_item_id ? (sweetByMenu.get(String(r.source_menu_item_id)) || []) : null
                 };
             });
 
@@ -228,6 +249,13 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         else if (sweetnessLevel === '100%' || sweetnessLevel === 'normal' || sweetnessLevel === 'หวานปกติ') sweetKey = 'normal';
         else if (sweetnessLevel === '120%' || sweetnessLevel === 'extra' || sweetnessLevel === 'หวานมาก') sweetKey = 'extra';
 
+        // Menu-linked: the level is a choice of the menu's sweetness option and its factor is what a
+        // sale deducts. The SOP's own sweetness table does not apply.
+        const menuLevels = Array.isArray(recipe.sweetness_levels) ? recipe.sweetness_levels : null;
+        const menuLevel = menuLevels
+            ? (menuLevels.find(l => l.id === String(sweetnessLevel?.id ?? sweetnessLevel)) || null)
+            : null;
+
         const customRules = recipe.advanced_details?.sweetness_rules || {};
         const customMatrix = recipe.advanced_details?.sweetness_matrix;
         
@@ -264,7 +292,10 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             const isSweet = ing.is_sweetener === true;
             let finalCalculatedQty = ing.qty;
 
-            if (isSweet) {
+            if (isSweet && menuLevels) {
+                const factor = menuLevel ? menuLevel.factor : 1;
+                finalCalculatedQty = Math.round((ing.qty * finalMultiplier * factor) * 100) / 100;
+            } else if (isSweet) {
                 // Check if custom matrix has an exact override for this sweetener at this level
                 if (customMatrix && customMatrix.levels && customMatrix.levels[ing.name] && customMatrix.levels[ing.name][sweetKey] !== undefined) {
                     const customExactVal = parseFloat(customMatrix.levels[ing.name][sweetKey]);
@@ -289,7 +320,9 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 name,
                 scaledQty: finalCalculatedQty,
                 isScaled: (ing.scalable !== false && finalMultiplier !== 1),
-                isSweetScaled: isSweet && (sweetKey !== 'normal' || sweetnessMultiplier !== 1.0)
+                isSweetScaled: isSweet && (menuLevels
+                    ? (menuLevel ? menuLevel.factor !== 1 : false)
+                    : (sweetKey !== 'normal' || sweetnessMultiplier !== 1.0))
             };
         });
     }, []);
@@ -322,7 +355,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                     quantity,
                     unit,
                     ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
-                        id, name, usage_unit
+                        id, name, usage_unit, is_sweetener
                     )
                 `)
                 .eq(queryField, sourceId);
@@ -335,6 +368,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 qty: r.quantity || 0,
                 unit: r.unit || r.ingredient?.usage_unit || 'unit',
                 scalable: true,
+                is_sweetener: sourceType === 'menu' ? r.ingredient?.is_sweetener === true : false,
                 isLinked: true,
                 isHidden: false
             }));

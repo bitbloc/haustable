@@ -5,6 +5,13 @@
  *   source_stock_item_id  a base / prep's recipe (Food & Drink -> เบส)
  * The SOP keeps only per-ingredient display flags (sweetener, scalable, hidden, remark)
  * and any extra lines that are not stock (e.g. "ice to the rim").
+ *
+ * Sweetness of an SOP linked to a menu has one home: the menu's stock setup.
+ *   which ingredients are sweeteners  stock_items.is_sweetener
+ *   the levels and how much each uses  the menu's sweetness option group
+ *                                      (option_choices.sweetener_factor: 0, 0.5, 1, 1.2 ...)
+ * The bar sheet shows exactly what a sale deducts. The SOP's own sweetness table is used only
+ * by SOPs that are not linked to a menu (bases, or unlinked notes).
  */
 
 export const sopLinkOf = (sop) => {
@@ -20,7 +27,7 @@ const key = (v) => String(v ?? '').trim().toLowerCase();
  * keeping the flags the SOP already had for the same ingredient, then the manual lines.
  * rows: [{ quantity, unit, ingredient: { id, name, usage_unit } }]
  */
-export const mergeLinkedIngredients = (sopIngredients = [], rows = []) => {
+export const mergeLinkedIngredients = (sopIngredients = [], rows = [], options = {}) => {
     const previous = sopIngredients || [];
     const linked = rows.map((r) => {
         const ing = r.ingredient || {};
@@ -32,7 +39,11 @@ export const mergeLinkedIngredients = (sopIngredients = [], rows = []) => {
             qty: Number(r.quantity) || 0,
             unit: r.unit && r.unit !== 'unit' ? r.unit : (ing.usage_unit || 'unit'),
             scalable: was ? was.scalable !== false : true,
-            is_sweetener: was?.is_sweetener === true,
+            // A menu link takes the flag of the stock item (the one place it is set); a base link
+            // keeps the flag the SOP had.
+            is_sweetener: options.stockSweetener && typeof ing.is_sweetener === 'boolean'
+                ? ing.is_sweetener
+                : was?.is_sweetener === true,
             isHidden: was?.isHidden === true,
             remark: was?.remark || '',
             isLinked: true
@@ -70,3 +81,42 @@ export const rowsForSop = (sop, grouped) => {
     if (!link) return null;
     return (link.type === 'menu' ? grouped.byMenu.get(link.id) : grouped.byStock.get(link.id)) || [];
 };
+
+/** A sweetness option group: one whose choices carry a sweetener factor. */
+export const isSweetGroup = (group) => (group?.option_choices || [])
+    .some((c) => c.sweetener_factor !== null && c.sweetener_factor !== undefined);
+
+/**
+ * menu id -> its sweetness levels, from the option groups linked to each menu:
+ * [{ id, label, factor }] in the order the choices are shown at the till. A choice of a
+ * sweetness group with no factor counts as normal (1), as the stock deduction does.
+ * links: [{ menu_item_id, option_group_id }]
+ * groups: [{ id, name, option_choices: [{ id, name, sweetener_factor, display_order }] }]
+ */
+export const sweetnessLevelsByMenu = (links = [], groups = []) => {
+    const groupById = new Map((groups || []).map((g) => [String(g.id), g]));
+    const out = new Map();
+    for (const link of links || []) {
+        const menuId = String(link.menu_item_id);
+        if (out.has(menuId)) continue;
+        const group = groupById.get(String(link.option_group_id));
+        if (!isSweetGroup(group)) continue;
+        out.set(menuId, [...group.option_choices]
+            .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+            .map((c) => ({
+                id: String(c.id),
+                label: c.name || '',
+                factor: c.sweetener_factor === null || c.sweetener_factor === undefined ? 1 : Number(c.sweetener_factor)
+            })));
+    }
+    return out;
+};
+
+/** The level a drink is made at unless asked otherwise: the normal one (factor 1), else the nearest. */
+export const defaultSweetLevel = (levels = []) => {
+    if (!levels?.length) return null;
+    return [...levels].sort((a, b) => Math.abs(a.factor - 1) - Math.abs(b.factor - 1))[0];
+};
+
+/** "100%", "50%", "120%" for a factor. */
+export const factorPercent = (factor) => `${Math.round((Number(factor) || 0) * 100)}%`;
