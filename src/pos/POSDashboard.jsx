@@ -38,6 +38,7 @@ import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } fr
 import POSPinPad from './POSPinPad';
 import { printStaffRemovalSlips } from '../utils/staffRemovalSlips';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip, prewarmPrintOptionMap } from '../utils/printerHelper';
+import { fetchOpenTableStaffCalls, clearTableStaffCalls } from '../utils/tableStaffCalls';
 import { filterLocallyUnprinted, addLocallyPrintedIds, carryOverLocallyPrinted, pruneLocalPrintTracker, isDbPrinted, claimItemsForPrint, markItemsPrinted, releasePrintClaim } from '../utils/printClaim';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
 import { getBookingHoldMinutes, isHoldExpired, isAdvanceUnseatedReservation, isPayAtStoreOrder, isCallConfirmOrder, refundBookingLoyaltyIfNeeded, formatPosDateTime } from '../utils/availabilityUtils';
@@ -59,7 +60,8 @@ import {
     getCanonicalOrderAlertKey,
     getCanonicalTableAlertKey,
     getCanonicalSlipAlertKey,
-    playSystemAlertSound as playSystemAlertSoundUtil 
+    isStaffCallActiveFor,
+    playSystemAlertSound as playSystemAlertSoundUtil
 } from '../utils/audioHelper';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText, AlertCircle, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
@@ -1435,6 +1437,44 @@ export default function POSDashboard() {
 
         isCheckingCallsRef.current = true;
         try {
+            // Free tables (no bill): recover staff calls the realtime broadcast may have missed
+            try {
+                const openCalls = await fetchOpenTableStaffCalls();
+                if (openCalls.length > 0) {
+                    let ackTimes = {};
+                    try {
+                        ackTimes = JSON.parse(localStorage.getItem('pos_ack_table_times') || '{}');
+                    } catch (e) {}
+                    for (const call of openCalls) {
+                        const callTableId = call.table_id;
+                        if (!callTableId || isStaffCallActiveFor(callTableId)) continue;
+                        if (Date.now() - (ackTimes[callTableId] || 0) < 45000) continue;
+                        const callTableName = call.table_name || `#${callTableId}`;
+                        const callStaffKey = getCanonicalTableAlertKey('call_staff', callTableId, callTableId);
+                        if (checkEventDeduplication(callStaffKey, 5000)) {
+                            console.log(`🔊 [Safety Heartbeat] Recovered staff call from free table ${callTableName}`);
+                            toast.custom((t) => renderPosToast(t, {
+                                badge: 'CALL STAFF · เรียกพนักงาน',
+                                title: `โต๊ะ ${callTableName} เรียกพนักงาน`,
+                                subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                dot: 'terracotta',
+                                onClick: () => {
+                                    stopStaffCallLoop(callTableId);
+                                    supabase.from('tables_layout').select('*').eq('id', callTableId).single().then(({ data }) => {
+                                        if (data && handleSelectTableRef.current) handleSelectTableRef.current(data);
+                                    });
+                                }
+                            }), { id: callStaffKey, duration: Infinity });
+                            pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${callTableName} เรียกพนักงาน`, callTableId);
+                            startStaffCallLoop(callTableId);
+                            window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId: callTableId } }));
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[Safety Heartbeat] Free-table staff call check failed:', e);
+            }
+
             const today = new Date();
             const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
 
@@ -1460,7 +1500,7 @@ export default function POSDashboard() {
                 const isRecentlyAcked = Date.now() - lastAck < 45000;
 
                 // Check Call Staff
-                if (remark.includes('[CALL_STAFF]') && !isRecentlyAcked) {
+                if (remark.includes('[CALL_STAFF]') && !isRecentlyAcked && !isStaffCallActiveFor(tableId || b.id)) {
                     const callStaffKey = getCanonicalTableAlertKey('call_staff', tableId, b.id || tableId);
                     if (checkEventDeduplication(callStaffKey, 5000)) {
                         console.log(`🔊 [Safety Heartbeat] Recovered active Call Staff for Table ${tName}`);
@@ -1478,7 +1518,7 @@ export default function POSDashboard() {
                                     });
                                 }
                             }
-                        }), { id: callStaffKey, duration: 10000 });
+                        }), { id: callStaffKey, duration: Infinity });
                         pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tableId);
                         startStaffCallLoop(tableId || b.id);
                     }
@@ -1951,7 +1991,7 @@ export default function POSDashboard() {
                                 });
                             }
                         }
-                    }), { id: callStaffKey, duration: 10000 });
+                    }), { id: callStaffKey, duration: Infinity });
                     pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
                     startStaffCallLoop(tId || bId);
                 }
@@ -2392,7 +2432,7 @@ export default function POSDashboard() {
                                             });
                                         }
                                     }
-                                }), { id: callStaffKey, duration: 10000 });
+                                }), { id: callStaffKey, duration: Infinity });
                                 pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
                                 startStaffCallLoop(tableId || bookingId);
                             }
@@ -2985,6 +3025,12 @@ export default function POSDashboard() {
                 stored[table.id] = Date.now();
                 localStorage.setItem('pos_ack_table_times', JSON.stringify(stored));
                 window.dispatchEvent(new CustomEvent('pos_table_acknowledged', { detail: { tableId: table.id } }));
+                // Opening the table IS the acknowledgement of its staff call: stop the ring at once.
+                // (It used to keep ringing until the small Clear button was found, and on a free table
+                // that button sat behind the open-table dialog.)
+                stopStaffCallLoop(table.id);
+                toast.dismiss(getCanonicalTableAlertKey('call_staff', table.id, table.id));
+                clearTableStaffCalls(table.id);
                 const tableAlertKey = getCanonicalTableAlertKey('table_order', table.id);
                 if (tableAlertKey) toast.dismiss(tableAlertKey);
             } catch (e) {}

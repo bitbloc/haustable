@@ -18,7 +18,8 @@ import {
     isStaffCallLooping,
     playSynthBellTing,
     playAdminOrderAlert,
-    tryPlayNativeSound
+    tryPlayNativeSound,
+    __resetAlertScheduler
 } from '../audioHelper';
 
 describe('Audio Engine & Notification Resilience', () => {
@@ -26,6 +27,8 @@ describe('Audio Engine & Notification Resilience', () => {
 
     beforeEach(() => {
         vi.useFakeTimers();
+        // Alerts are queued behind whatever rang last; start each test with an idle scheduler
+        __resetAlertScheduler();
         mockLocalStorage = {};
         global.localStorage = {
             getItem: vi.fn((key) => mockLocalStorage[key] !== undefined ? mockLocalStorage[key] : null),
@@ -580,6 +583,10 @@ describe('Audio Engine & Notification Resilience', () => {
             vi.advanceTimersByTime(1000);
             startStaffCallLoop('H8');
             expect(isStaffCallLooping()).toBe(true);
+            // The previous ring started 1000ms ago; alerts keep a 1200ms gap, so this ring is
+            // queued and starts 200ms later instead of cutting the previous one off.
+            expect(playAlertSoundMock).toHaveBeenCalledTimes(3);
+            vi.advanceTimersByTime(200);
             expect(playAlertSoundMock).toHaveBeenCalledTimes(4);
 
             stopStaffCallLoop(null, true);

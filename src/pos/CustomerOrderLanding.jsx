@@ -18,6 +18,7 @@ import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeNotifier';
+import { recordTableStaffCall } from '../utils/tableStaffCalls';
 import { isValidUuid, safeUuid } from '../utils/urlHelper';
 import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
@@ -986,6 +987,16 @@ export default function CustomerOrderLanding() {
                     ...currentBooking,
                     staff_remark: newRemark
                 });
+            }
+
+            // A table without a bill has no booking to tag, so the broadcast below used to be the
+            // only signal: if the POS missed it, the call was gone. Record it so the POS heartbeat
+            // can recover it. (Tables with a bill are covered by the [CALL_STAFF] tag above.)
+            if (!currentBooking && effectiveNumericTableId) {
+                await Promise.race([
+                    recordTableStaffCall(effectiveNumericTableId, table?.table_name || null),
+                    new Promise((resolve) => setTimeout(resolve, 2500))
+                ]);
             }
 
             // Instant Realtime Broadcast to POS (< 50ms) with timeout protection

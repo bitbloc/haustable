@@ -24,7 +24,64 @@ let notiadminAudioBuffer = null;
 let isPreloadingNoti1 = false;
 let isPreloadingNotibill = false;
 let isPreloadingNotiadmin = false;
-let lastAlertPlayedTime = 0;
+// ── Alert scheduler ────────────────────────────────────────────────────
+// Alerts used to share one "last played" timestamp, so a second alert arriving within ~1s of
+// any other alert was dropped: a bill call 0.4s after a new order made no sound, and while the
+// staff-call loop was ringing about one in three new orders was silent. Now:
+//   - the SAME sound requested again within its throttle window still rings once (burst), and
+//   - a DIFFERENT sound is queued and starts as soon as the current one has had
+//     MIN_ALERT_GAP_MS, so nothing is lost and nothing overlaps.
+const MIN_ALERT_GAP_MS = 1200;
+let alertBusyUntil = 0;
+const lastAlertStartByType = { noti1: 0, notibill: 0, notiadmin: 0 };
+const pendingAlertTimers = { noti1: null, notibill: null, notiadmin: null };
+
+/**
+ * @param {'noti1'|'notibill'|'notiadmin'} soundType
+ * @param {number} sameTypeThrottleMs - ignore a repeat of this sound within this window
+ * @param {Function} play - starts the sound (called now or when its turn comes)
+ * @returns {boolean} true if the sound plays now or is queued; false if covered by a burst
+ */
+/** Test hook: forget queued alerts and timing state. */
+export function __resetAlertScheduler() {
+    alertBusyUntil = 0;
+    Object.keys(pendingAlertTimers).forEach(k => {
+        if (pendingAlertTimers[k]) clearTimeout(pendingAlertTimers[k]);
+        pendingAlertTimers[k] = null;
+        lastAlertStartByType[k] = 0;
+    });
+}
+
+function scheduleAlert(soundType, sameTypeThrottleMs, play) {
+    const now = Date.now();
+    // Clock moved backwards (device time sync): forget stale timestamps. A start time slightly in
+    // the future is normal (a queued alert), so only a jump of more than a minute counts.
+    if (lastAlertStartByType[soundType] > now + 60000) lastAlertStartByType[soundType] = 0;
+    if (alertBusyUntil > now + 60000) alertBusyUntil = 0;
+
+    if (now - lastAlertStartByType[soundType] < sameTypeThrottleMs) return false;
+    if (pendingAlertTimers[soundType]) return true; // already queued, it will ring
+
+    const startAt = Math.max(now, alertBusyUntil);
+    alertBusyUntil = startAt + MIN_ALERT_GAP_MS;
+    lastAlertStartByType[soundType] = startAt;
+
+    const run = () => {
+        pendingAlertTimers[soundType] = null;
+        try {
+            play();
+        } catch (e) {
+            console.warn('[AudioEngine] scheduled alert failed:', e);
+        }
+    };
+    if (startAt <= now) {
+        run();
+    } else {
+        pendingAlertTimers[soundType] = setTimeout(run, startAt - now);
+    }
+    return true;
+}
+
 let isAudioEngineUnlocked = false;
 const eventDeduplicationMap = new Map(); // key -> timestamp
 
@@ -850,40 +907,30 @@ export function playDoorbellChime() {
  * @returns {boolean} - Whether audio playback was triggered
  */
 export function playAdminOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.2) {
-    const effectiveGain = getEffectiveGainFactor();
-    if (effectiveGain <= 0) return false;
-
-    const now = Date.now();
-    if (now < lastAlertPlayedTime) {
-        lastAlertPlayedTime = 0;
-    }
-    if (now - lastAlertPlayedTime < throttleMs) {
-        return false;
-    }
+    if (getEffectiveGainFactor() <= 0) return false;
 
     if (eventKey) {
         if (!checkEventDeduplication(eventKey, 1500)) return false;
     }
-    lastAlertPlayedTime = now;
 
-    // 1. Native Android Hardware Audio (APK priority with 0ms latency)
-    if (tryPlayNativeSound('notiadmin', effectiveGain)) {
-        return true;
-    }
+    return scheduleAlert('notiadmin', throttleMs, () => {
+        const effectiveGain = getEffectiveGainFactor();
+        if (effectiveGain <= 0) return;
 
-    // 2. Primary Playback: Decoded notiadmin.mp3 buffer through Web Audio
-    if (notiadminAudioBuffer) {
-        const played = playAudioBufferDirectly(notiadminAudioBuffer, boostLevel);
-        if (played) return true;
-    }
+        // 1. Native Android Hardware Audio (APK priority with 0ms latency)
+        if (tryPlayNativeSound('notiadmin', effectiveGain)) return;
 
-    // If buffer is still loading, trigger preload
-    if (!notiadminAudioBuffer && !isPreloadingNotiadmin) {
-        preloadNotificationAudio();
-    }
+        // 2. Primary Playback: Decoded notiadmin.mp3 buffer through Web Audio
+        if (notiadminAudioBuffer && playAudioBufferDirectly(notiadminAudioBuffer, boostLevel)) return;
 
-    // 3. Secondary Playback: Direct HTML5 Audio with bundled notiadmin.mp3
-    return playHtml5AudioDirectly('notiadmin', effectiveGain);
+        // If buffer is still loading, trigger preload
+        if (!notiadminAudioBuffer && !isPreloadingNotiadmin) {
+            preloadNotificationAudio();
+        }
+
+        // 3. Secondary Playback: Direct HTML5 Audio with bundled notiadmin.mp3
+        playHtml5AudioDirectly('notiadmin', effectiveGain);
+    });
 }
 
 /**
@@ -944,20 +991,11 @@ export function playUrgentTone() {
  * @returns {boolean} - Whether audio playback was triggered
  */
 export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 3.4) {
-    const effectiveGain = getEffectiveGainFactor();
-    if (effectiveGain <= 0) {
+    if (getEffectiveGainFactor() <= 0) {
         return false; // Sound muted or volume 0
     }
 
     const now = Date.now();
-
-    // 1. Global Burst Throttle: If multiple orders arrive simultaneously, ring ONCE cleanly without stutter
-    if (now < lastAlertPlayedTime) {
-        lastAlertPlayedTime = 0; // Handle clock jumps backwards or timer resets
-    }
-    if (now - lastAlertPlayedTime < throttleMs) {
-        return false;
-    }
 
     // Deduplication check: suppress identical event keys if triggered within 4000ms cooldown window
     // (Allows immediate same-tick caller checkEventDeduplication within 100ms)
@@ -969,31 +1007,29 @@ export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 
         eventDeduplicationMap.set(eventKey, now);
     }
 
-    lastAlertPlayedTime = now;
+    // Several orders in the same moment ring ONCE (throttleMs); after another kind of alert
+    // (bill call, staff call) this one is queued instead of dropped.
+    return scheduleAlert('noti1', throttleMs, () => {
+        const effectiveGain = getEffectiveGainFactor();
+        if (effectiveGain <= 0) return;
 
-    // 2. Native Android Hardware Audio (APK priority with 0ms latency)
-    if (tryPlayNativeSound('noti1', effectiveGain)) {
-        return true;
-    }
+        // 1. Native Android Hardware Audio (APK priority with 0ms latency)
+        if (tryPlayNativeSound('noti1', effectiveGain)) return;
 
-    // 3. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
-    if (noti1AudioBuffer) {
-        const played = playAudioBufferDirectly(noti1AudioBuffer, boostLevel);
-        if (played) return true;
-    }
+        // 2. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
+        if (noti1AudioBuffer && playAudioBufferDirectly(noti1AudioBuffer, boostLevel)) return;
 
-    // If buffer is still loading, trigger preload
-    if (!noti1AudioBuffer && !isPreloadingNoti1) {
-        preloadNotificationAudio();
-    }
+        // If buffer is still loading, trigger preload
+        if (!noti1AudioBuffer && !isPreloadingNoti1) {
+            preloadNotificationAudio();
+        }
 
-    // 4. Secondary Playback: Direct HTML5 Audio with bundled noti1.mp3
-    const html5Played = playHtml5AudioDirectly('noti1', effectiveGain);
-    if (html5Played) return true;
+        // 3. Secondary Playback: Direct HTML5 Audio with bundled noti1.mp3
+        if (playHtml5AudioDirectly('noti1', effectiveGain)) return;
 
-    // 5. Ultimate Fallback: Synthesized Bell Chime
-    playSynthChime();
-    return true;
+        // 4. Ultimate Fallback: Synthesized Bell Chime
+        playSynthChime();
+    });
 }
 
 let lastTestAlertPlayedTime = 0;
@@ -1073,20 +1109,11 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundTy
  * @returns {boolean} - Whether audio playback was triggered
  */
 export function playBillSoundAlert(eventKey = null, throttleMs = 1000, boostLevel = 3.4) {
-    const effectiveGain = getEffectiveGainFactor();
-    if (effectiveGain <= 0) {
+    if (getEffectiveGainFactor() <= 0) {
         return false; // Sound muted or volume 0
     }
 
     const now = Date.now();
-
-    // 1. Global Burst Throttle: If multiple alerts arrive simultaneously, ring ONCE cleanly without stutter
-    if (now < lastAlertPlayedTime) {
-        lastAlertPlayedTime = 0; // Handle clock jumps backwards or timer resets
-    }
-    if (now - lastAlertPlayedTime < throttleMs) {
-        return false;
-    }
 
     // Deduplication check: suppress identical event keys if triggered within 4000ms cooldown window
     // (Allows immediate same-tick caller checkEventDeduplication within 100ms)
@@ -1098,31 +1125,28 @@ export function playBillSoundAlert(eventKey = null, throttleMs = 1000, boostLeve
         eventDeduplicationMap.set(eventKey, now);
     }
 
-    lastAlertPlayedTime = now;
+    // Queued behind any alert that just started, never dropped (see scheduleAlert)
+    return scheduleAlert('notibill', throttleMs, () => {
+        const effectiveGain = getEffectiveGainFactor();
+        if (effectiveGain <= 0) return;
 
-    // 2. Native Android Hardware Audio (APK priority with 0ms latency)
-    if (tryPlayNativeSound('notibill', effectiveGain)) {
-        return true;
-    }
+        // 1. Native Android Hardware Audio (APK priority with 0ms latency)
+        if (tryPlayNativeSound('notibill', effectiveGain)) return;
 
-    // 3. Primary Playback: Decoded notibill.mp3 buffer through High-Gain Web Audio
-    if (notibillAudioBuffer) {
-        const played = playAudioBufferDirectly(notibillAudioBuffer, boostLevel);
-        if (played) return true;
-    }
+        // 2. Primary Playback: Decoded notibill.mp3 buffer through High-Gain Web Audio
+        if (notibillAudioBuffer && playAudioBufferDirectly(notibillAudioBuffer, boostLevel)) return;
 
-    // If buffer is still loading, trigger preload
-    if (!notibillAudioBuffer && !isPreloadingNotibill) {
-        preloadNotificationAudio();
-    }
+        // If buffer is still loading, trigger preload
+        if (!notibillAudioBuffer && !isPreloadingNotibill) {
+            preloadNotificationAudio();
+        }
 
-    // 4. Secondary Playback: Direct HTML5 Audio with bundled notibill.mp3
-    const html5Played = playHtml5AudioDirectly('notibill', effectiveGain);
-    if (html5Played) return true;
+        // 3. Secondary Playback: Direct HTML5 Audio with bundled notibill.mp3
+        if (playHtml5AudioDirectly('notibill', effectiveGain)) return;
 
-    // 5. Ultimate Fallback: Synthesized Bell Chime
-    playSynthChime();
-    return true;
+        // 4. Ultimate Fallback: Synthesized Bell Chime
+        playSynthChime();
+    });
 }
 
 /**
@@ -1152,8 +1176,9 @@ export function startStaffCallLoop(tableId = null) {
     if (_staffCallLoopActive) return; // Already looping — singleton guard
     _staffCallLoopActive = true;
 
-    // Play immediately on first trigger (null eventKey so 4000ms dedup map never blocks 3500ms loop ticks)
-    lastAlertPlayedTime = 0;
+    // Play immediately on first trigger (null eventKey so the dedup map never blocks loop ticks).
+    // Ticks go through the alert scheduler: if a new-order chime has just started, the tick waits
+    // for its turn instead of cutting the chime off or silencing the next order.
     playBillSoundAlert(null, 100, 3.4);
 
     // Then repeat every 3.5 seconds
@@ -1163,8 +1188,6 @@ export function startStaffCallLoop(tableId = null) {
             _staffCallLoopIntervalId = null;
             return;
         }
-        // Reset throttle timestamp so repeated loop ticks are never suppressed
-        lastAlertPlayedTime = 0;
         playBillSoundAlert(null, 100, 3.4);
     }, 3500);
 }
@@ -1188,6 +1211,14 @@ export function stopStaffCallLoop(tableId = null, force = false) {
             _staffCallLoopIntervalId = null;
         }
     }
+}
+
+/**
+ * Whether the staff-call loop is already ringing for this table (or booking) id.
+ * Lets the safety heartbeat skip calls it has already announced instead of re-announcing them.
+ */
+export function isStaffCallActiveFor(id) {
+    return Boolean(id) && _callingTableIds.has(String(id));
 }
 
 /**

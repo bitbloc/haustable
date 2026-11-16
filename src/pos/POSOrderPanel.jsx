@@ -13,6 +13,7 @@ import { formatOrderItemOptions } from '../utils/menuHelper';
 import { calculateTierDiscount } from '../utils/crmHelper';
 import { getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import { stopStaffCallLoop } from '../utils/audioHelper';
+import { clearTableStaffCalls } from '../utils/tableStaffCalls';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -1273,6 +1274,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             // 1. Immediately stop loop sound for this table
                             if (targetTableId) {
                                 stopStaffCallLoop(targetTableId);
+                                toast.dismiss(`call_staff_${targetTableId}`);
+                                clearTableStaffCalls(targetTableId);
                                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { 
                                     detail: { tableId: targetTableId, bookingId: booking?.id } 
                                 }));
@@ -1306,7 +1309,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             }
                             toast.success("เคลียร์แจ้งเตือนเรียบร้อยแล้ว");
                         }}
-                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm active:scale-98"
+                        className="w-full min-h-[44px] bg-yellow-500 hover:bg-yellow-600 text-black py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 touch-manipulation"
                     >
                         <Check size={10} /> เคลียร์แจ้งเตือน / Clear Alert
                     </button>
