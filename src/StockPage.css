@@ -51,7 +51,11 @@
 
 .stock-page *, .stock-page *::before, .stock-page *::after { box-sizing: border-box; }
 .stock-page ::selection { background: var(--sp-accent); color: var(--sp-on-ink); }
-.stock-page :where(button) { font: inherit; color: inherit; cursor: pointer; }
+/* In the base layer, like Tailwind's own preflight: unlayered, this reset beat every text-* utility inside
+   the stock page and its dialogs (the item form's Save label went ink on ink). */
+@layer base {
+  .stock-page :where(button) { font: inherit; color: inherit; cursor: pointer; }
+}
 .stock-page :focus-visible { outline: 2px solid var(--sp-focus); outline-offset: 2px; }
 .stock-page :where(h1, h3, p) { margin: 0; }
 
