@@ -64,23 +64,51 @@ export const resolveScan = (index, rawCode, knownIds = null) => {
 
 /**
  * Camera decoders report the same code many times a second while it is in view.
- * accept(code) is true for a new code, or for the same code once it has been out
+ * accept(code) is true for a code not seen lately, or for the same code once it has been out
  * of view for `quietMs` (each sighting restarts the wait), so holding a bottle in
  * front of the camera counts once and showing it again counts again.
+ *
+ * Every code keeps its own wait. Remembering only the last code let two codes in one picture
+ * (a shop QR label beside the barcode printed by the maker) take turns being "new" on every
+ * frame, and the count ran up for as long as the item was held there.
  */
 export const createScanGate = (quietMs = 1200, now = () => Date.now()) => {
-    let lastCode = null;
-    let lastSeen = 0;
+    const lastSeen = new Map();
     return {
         accept(code) {
             const t = now();
-            const same = code === lastCode && t - lastSeen < quietMs;
-            lastCode = code;
-            lastSeen = t;
-            return !same;
+            const seen = lastSeen.get(code);
+            lastSeen.set(code, t);
+            if (lastSeen.size > 50) {
+                for (const [c, at] of lastSeen) if (t - at >= quietMs) lastSeen.delete(c);
+            }
+            return seen === undefined || t - seen >= quietMs;
         },
-        reset() { lastCode = null; lastSeen = 0; }
+        reset() { lastSeen.clear(); }
     };
+};
+
+/**
+ * Of the codes a frame holds, the one being aimed at: its centre inside `region` and nearest
+ * the centre of the region. null when none is inside. One code per frame, so an item with two
+ * codes on it is one scan. codes: [{ rawValue, boundingBox: { x, y, width, height } }];
+ * a code without a box (some readers give none) counts as centred.
+ */
+export const pickAimedCode = (codes = [], region) => {
+    const cx = region.x + region.width / 2;
+    const cy = region.y + region.height / 2;
+    let best = null;
+    let bestDist = Infinity;
+    for (const code of codes) {
+        if (!code?.rawValue) continue;
+        const box = code.boundingBox;
+        const x = box ? box.x + box.width / 2 : cx;
+        const y = box ? box.y + box.height / 2 : cy;
+        if (x < region.x || x > region.x + region.width || y < region.y || y > region.y + region.height) continue;
+        const dist = (x - cx) ** 2 + (y - cy) ** 2;
+        if (dist < bestDist) { best = code; bestDist = dist; }
+    }
+    return best;
 };
 
 /** New count text after a scan: adds perScan to what is typed (empty or invalid counts as 0). */

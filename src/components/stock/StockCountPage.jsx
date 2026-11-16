@@ -106,6 +106,17 @@ const scanFeedback = (ok) => {
     } catch { /* sound is optional */ }
 };
 
+// iPhone only lets a page make sound once the sound has been started from a tap. Called from the
+// scan button, so the beep of the first scan is heard.
+scanFeedback.prime = () => {
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        scanFeedback.ctx = scanFeedback.ctx || new Ctx();
+        if (scanFeedback.ctx.state === 'suspended') scanFeedback.ctx.resume();
+    } catch { /* sound is optional */ }
+};
+
 const capacityOf = packCapacity;
 
 // Count fields: 16px so phones do not zoom on focus; border colour is added per state.
@@ -598,7 +609,7 @@ export default function StockCountPage() {
                                     aria-label="ค้นหาชื่อวัตถุดิบ"
                                     className={`${ui.input} flex-1 min-w-0`}
                                 />
-                                <button type="button" onClick={() => { scanFeedback.ctx?.resume?.(); setScanning(s => !s); gateRef.current.reset(); }}
+                                <button type="button" onClick={() => { scanFeedback.prime(); setScanning(s => !s); gateRef.current.reset(); }}
                                     aria-pressed={scanning}
                                     className={`h-11 px-4 shrink-0 rounded-md border text-sm font-semibold transition-colors cursor-pointer ${scanning
                                         ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'

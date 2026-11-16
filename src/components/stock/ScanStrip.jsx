@@ -2,6 +2,11 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { getCodeDetector } from '../../utils/codeDetector';
+import { pickAimedCode } from '../../utils/stockBarcode';
+
+// The aim box, as a share of the camera picture. Only a code inside it is read, and the corner
+// marks drawn over the picture show the same box.
+const AIM = { x: 0.12, y: 0.14, width: 0.76, height: 0.72 };
 
 // Only what shop stock carries: retail barcodes (EAN / UPC), CODE 128 on cases, and our
 // own QR labels. Every extra format is one more decoder tried on every frame, which is
@@ -40,6 +45,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
     const videoRef = useRef(null);
     const [state, setState] = useState('starting'); // starting | running | error
     const [engine, setEngine] = useState(null); // 'native' | 'wasm' | 'lib'
+    const [aimed, setAimed] = useState(false); // a code is inside the aim box right now
     const [error, setError] = useState('');
     const [attempt, setAttempt] = useState(0);
 
@@ -52,6 +58,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
         let frameHandle = null;
         setState('starting');
         setError('');
+        setAimed(false);
 
         const stopStream = () => {
             const video = videoRef.current;
@@ -80,23 +87,32 @@ export default function ScanStrip({ onCode, onClose, status }) {
             setEngine(kind);
             setState('running');
 
-            // The WebAssembly reader takes pixels, not a video element: copy each frame to a canvas.
-            // The browser's own reader takes the video as it is.
-            let frame = null;
+            // Only the aim box is read. The WebAssembly reader takes pixels, so it is handed just that part
+            // of the frame (fewer pixels, faster too); the reader built into the browser takes the whole
+            // video and the codes outside the box are dropped afterwards.
+            const aimBox = () => {
+                const w = video.videoWidth;
+                const h = video.videoHeight;
+                return { x: Math.round(w * AIM.x), y: Math.round(h * AIM.y), width: Math.round(w * AIM.width), height: Math.round(h * AIM.height) };
+            };
+            let read;
             if (kind === 'wasm') {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                frame = () => {
-                    const w = video.videoWidth;
-                    const h = video.videoHeight;
-                    if (!w || !h) return null;
-                    if (canvas.width !== w) canvas.width = w;
-                    if (canvas.height !== h) canvas.height = h;
-                    ctx.drawImage(video, 0, 0, w, h);
-                    return ctx.getImageData(0, 0, w, h);
+                read = async () => {
+                    const box = aimBox();
+                    if (!box.width || !box.height) return null;
+                    if (canvas.width !== box.width) canvas.width = box.width;
+                    if (canvas.height !== box.height) canvas.height = box.height;
+                    ctx.drawImage(video, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+                    const codes = await detector.detect(ctx.getImageData(0, 0, box.width, box.height));
+                    return pickAimedCode(codes, { x: 0, y: 0, width: box.width, height: box.height });
                 };
+            } else {
+                read = async () => pickAimedCode(await detector.detect(video), aimBox());
             }
 
+            let wasAimed = false;
             let busy = false;
             const schedule = () => {
                 if (cancelled) return;
@@ -109,9 +125,12 @@ export default function ScanStrip({ onCode, onClose, status }) {
                 if (!busy && video.readyState >= 2) {
                     busy = true;
                     try {
-                        const source = frame ? frame() : video;
-                        const codes = source ? await detector.detect(source) : [];
-                        if (!cancelled) for (const code of codes) if (code.rawValue) onCodeRef.current?.(code.rawValue);
+                        // One code per frame: the one aimed at. An item with a shop label and a printed
+                        // barcode side by side is one scan, not two.
+                        const code = await read();
+                        if (cancelled) return;
+                        if (!!code !== wasAimed) { wasAimed = !!code; setAimed(wasAimed); }
+                        if (code) onCodeRef.current?.(code.rawValue);
                     } catch { /* a frame that could not be read: the next one will be */ }
                     busy = false;
                 }
@@ -199,6 +218,14 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     className={`w-full aspect-[16/9] max-h-[38vh] object-cover ${engine && engine !== 'lib' ? 'block' : 'hidden'}`}
                 />
                 <div id={elementId} className={`w-full aspect-[16/9] max-h-[38vh] overflow-hidden [&_video]:w-full [&_video]:h-full [&_video]:object-cover ${engine && engine !== 'lib' ? 'hidden' : ''}`} />
+                {state === 'running' && engine !== 'lib' && (
+                    <div aria-hidden="true" className="pointer-events-none absolute"
+                        style={{ left: `${AIM.x * 100}%`, top: `${AIM.y * 100}%`, width: `${AIM.width * 100}%`, height: `${AIM.height * 100}%` }}>
+                        {['top-0 left-0 border-t-[3px] border-l-[3px]', 'top-0 right-0 border-t-[3px] border-r-[3px]', 'bottom-0 left-0 border-b-[3px] border-l-[3px]', 'bottom-0 right-0 border-b-[3px] border-r-[3px]'].map(corner => (
+                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed ? 'border-[oklch(93%_0.22_118)]' : 'border-[oklch(97%_0.008_28)]'}`} />
+                        ))}
+                    </div>
+                )}
                 {state !== 'running' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
                         <p className="font-sans text-[14px] leading-6 text-[oklch(94%_0.010_28)] max-w-xs">
@@ -215,7 +242,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
             </div>
             <div className="grid grid-cols-[1fr_auto] items-center divide-x divide-[oklch(42%_0.010_28)] border-t border-[oklch(42%_0.010_28)]">
                 <p className="px-3 py-2 font-sans text-[13px] leading-5 text-[oklch(94%_0.010_28)] min-w-0 break-words" aria-live="polite">
-                    {status || 'ส่องบาร์โค้ดทีละชิ้น สแกน 1 ครั้ง = นับเพิ่ม 1'}
+                    {status || 'เล็งโค้ดให้อยู่ในกรอบ ทีละชิ้น สแกน 1 ครั้ง = นับเพิ่ม 1'}
                 </p>
                 <button type="button" onClick={onClose}
                     className="px-4 py-2 font-sans font-bold text-[13px] text-[oklch(97%_0.008_28)] hover:bg-[oklch(25%_0.012_28)] cursor-pointer">

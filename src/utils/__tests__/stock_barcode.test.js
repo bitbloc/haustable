@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    normalizeBarcode, parseShopLabel, shopLabelFor, buildBarcodeIndex, resolveScan, createScanGate, addScanToCount
+    normalizeBarcode, parseShopLabel, shopLabelFor, buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, pickAimedCode
 } from '../stockBarcode';
 
 const ID = '2c2c49d6-8765-464f-94d4-4cdf924006f2';
@@ -57,7 +57,38 @@ describe('createScanGate', () => {
         t = 900; expect(gate.accept('A')).toBe(false); // still in view, wait restarts
         t = 2000; expect(gate.accept('A')).toBe(true);
         t = 2100; expect(gate.accept('B')).toBe(true);
-        t = 2200; expect(gate.accept('A')).toBe(true);
+    });
+
+    it('two codes in one picture are each counted once, not in turns', () => {
+        let t = 0;
+        const gate = createScanGate(1000, () => t);
+        expect(gate.accept('QR')).toBe(true);
+        expect(gate.accept('EAN')).toBe(true);
+        for (t = 30; t < 3000; t += 30) {
+            expect(gate.accept('QR')).toBe(false);
+            expect(gate.accept('EAN')).toBe(false);
+        }
+        t = 5000; expect(gate.accept('QR')).toBe(true); // shown again after leaving the view
+        gate.reset();
+        expect(gate.accept('QR')).toBe(true);
+    });
+});
+
+describe('pickAimedCode', () => {
+    const region = { x: 100, y: 100, width: 400, height: 200 };
+    const at = (rawValue, x, y) => ({ rawValue, boundingBox: { x: x - 10, y: y - 10, width: 20, height: 20 } });
+
+    it('takes the code nearest the middle of the aim box', () => {
+        expect(pickAimedCode([at('edge', 120, 120), at('middle', 310, 190)], region).rawValue).toBe('middle');
+    });
+
+    it('ignores codes outside the aim box', () => {
+        expect(pickAimedCode([at('outside', 50, 50), at('below', 300, 400)], region)).toBeNull();
+        expect(pickAimedCode([], region)).toBeNull();
+    });
+
+    it('treats a code with no box as centred', () => {
+        expect(pickAimedCode([{ rawValue: 'x' }], region).rawValue).toBe('x');
     });
 });
 
