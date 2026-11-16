@@ -360,11 +360,25 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         }).slice(0, 50);
     }, [crmMembers, crmSearchTerm]);
 
-    const [crmSettings, setCrmSettings] = React.useState({
-        crm_redeem_rate_xhaus: 1.0,
-        crm_min_redeem_xhaus: 10.0,
-        crm_base_spend_amount: 100.0,
-        crm_max_redeem_percent: 100
+    // Start from the settings this device loaded last time. Before, a checkout made while the
+    // settings were still loading (or offline) used a hard-coded 100 baht per coin.
+    const [crmSettings, setCrmSettings] = React.useState(() => {
+        const defaults = {
+            crm_redeem_rate_xhaus: 1.0,
+            crm_min_redeem_xhaus: 10.0,
+            crm_base_spend_amount: 100.0,
+            crm_max_redeem_percent: 100
+        };
+        try {
+            const cached = JSON.parse(localStorage.getItem('pos_crm_settings_cache') || 'null');
+            if (cached && typeof cached === 'object') {
+                Object.keys(defaults).forEach(k => {
+                    const n = parseFloat(cached[k]);
+                    if (Number.isFinite(n) && n > 0) defaults[k] = n;
+                });
+            }
+        } catch (e) {}
+        return defaults;
     });
 
 
@@ -506,7 +520,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     ['crm_redeem_rate_xhaus', 'crm_min_redeem_xhaus', 'crm_base_spend_amount', 'crm_max_redeem_percent'].forEach(k => {
                         if (settingsObj[k] !== undefined) numObj[k] = parseFloat(settingsObj[k]);
                     });
-                    setCrmSettings(prev => ({ ...prev, ...numObj }));
+                    setCrmSettings(prev => {
+                        const next = { ...prev, ...numObj };
+                        try { localStorage.setItem('pos_crm_settings_cache', JSON.stringify(next)); } catch (e) {}
+                        return next;
+                    });
                 }
             } catch (err) {
                 console.error("Error loading CRM/PromptPay settings:", err);

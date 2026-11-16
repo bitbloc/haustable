@@ -23,6 +23,21 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const selectedMemberRef = useRef(selectedMember);
     selectedMemberRef.current = selectedMember;
 
+    // The list shows the most recent members only; a search asks the database so older members are found too
+    const [remoteMatches, setRemoteMatches] = useState([]);
+    const visitStatsRef = useRef({ byUser: new Map(), byPhone: new Map() });
+    const withVisitStats = useCallback((p) => {
+        const { byUser, byPhone } = visitStatsRef.current;
+        const normPPhone = p.phone_number ? p.phone_number.replace(/\D/g, '') : '';
+        const userStat = byUser.get(p.id);
+        const phoneStat = normPPhone ? byPhone.get(normPPhone) : null;
+        return {
+            ...p,
+            total_bookings: userStat?.total || phoneStat?.total || 0,
+            completed_bookings: userStat?.completed || phoneStat?.completed || 0
+        };
+    }, []);
+
     const fetchMembers = useCallback(async (isInitial = false) => {
         if (isInitial) setLoading(true);
         try {
@@ -108,7 +123,9 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                 };
             });
 
+            visitStatsRef.current = { byUser: bookingMapByUser, byPhone: bookingMapByPhone };
             setMembers(merged);
+            setRemoteMatches(prev => prev.map(withVisitStats));
 
             // Keep selected member stats updated silently
             const curSel = selectedMemberRef.current;
@@ -123,7 +140,30 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
         } finally {
             if (isInitial) setLoading(false);
         }
-    }, []);
+    }, [withVisitStats]);
+
+    // Search the full member list in the database (the loaded list is only the newest members)
+    useEffect(() => {
+        const term = searchTerm.trim();
+        if (!isActive || term.length < 2) {
+            setRemoteMatches([]);
+            return;
+        }
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            try {
+                const { data, error } = await supabase.rpc('search_member_crm_pos', { p_term: term });
+                if (cancelled || error || !Array.isArray(data)) return;
+                setRemoteMatches(data.map(withVisitStats));
+            } catch (err) {
+                console.warn('[POS CRM] Member search failed:', err);
+            }
+        }, 300);
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [searchTerm, isActive, withVisitStats]);
 
     const handleSelectMember = useCallback(async (member) => {
         if (!member?.id) return;
@@ -241,14 +281,16 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const filteredMembers = useMemo(() => {
         if (!searchTerm.trim()) return members;
         const term = searchTerm.toLowerCase().trim();
-        return members.filter(m => {
+        const local = members.filter(m => {
             const nameMatch = (m.display_name || '').toLowerCase().includes(term);
             const phoneMatch = (m.phone_number || '').includes(term);
             const nicknameMatch = (m.nickname || '').toLowerCase().includes(term);
             const idMatch = (m.id || '').toLowerCase().includes(term);
             return nameMatch || phoneMatch || nicknameMatch || idMatch;
         });
-    }, [members, searchTerm]);
+        const seen = new Set(local.map(m => m.id));
+        return local.concat(remoteMatches.filter(m => !seen.has(m.id)));
+    }, [members, searchTerm, remoteMatches]);
 
     return (
         <div className="h-full flex bg-[#ECECE9] text-[#1A1A1A] font-sans overflow-hidden select-none">

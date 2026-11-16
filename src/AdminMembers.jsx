@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { ADMIN_MODULES, ROLE_PERMISSIONS } from './utils/rbacHelper'
+import { logStaffActivity } from './utils/auditLogger'
 
 const THAI_MONTHS = [
     'มกราคม (Jan)', 'กุมภาพันธ์ (Feb)', 'มีนาคม (Mar)', 'เมษายน (Apr)',
@@ -345,19 +346,42 @@ export default function AdminMembers() {
 
         setIsAdjusting(true)
         try {
-            const currentBal = Number(adjustingMember.xhaus_balance || 0)
+            // Read the live balance first: the list on screen may be minutes old, and writing from it
+            // would wipe out coins the member earned or spent in the meantime
+            const { data: fresh, error: freshErr } = await supabase
+                .from('profiles')
+                .select('xhaus_balance, total_earned_xhaus')
+                .eq('id', adjustingMember.id)
+                .single()
+            if (freshErr) throw freshErr
+
+            const currentBal = Number(fresh.xhaus_balance || 0)
             const delta = adjustType === 'add' ? amountNum : -amountNum
             const newBal = Math.max(0, currentBal + delta)
+            const updates = { xhaus_balance: newBal }
+            if (adjustType === 'add') {
+                updates.total_earned_xhaus = Number(fresh.total_earned_xhaus || 0) + amountNum
+            }
 
-            const { error } = await supabase
+            const { data: updatedRows, error } = await supabase
                 .from('profiles')
-                .update({ 
-                    xhaus_balance: newBal,
-                    total_earned_xhaus: adjustType === 'add' ? Number(adjustingMember.total_earned_xhaus || currentBal) + amountNum : adjustingMember.total_earned_xhaus
-                })
+                .update(updates)
                 .eq('id', adjustingMember.id)
+                .select('id')
 
             if (error) throw error
+            if (!updatedRows || updatedRows.length === 0) throw new Error('ไม่มีสิทธิ์ปรับแต้มของสมาชิกรายนี้')
+
+            await logStaffActivity('crm', 'xhaus_manual_adjust', {
+                amount: newBal - currentBal,
+                reason: adjustReason.trim(),
+                metadata: {
+                    member_id: adjustingMember.id,
+                    member_name: adjustingMember.display_name || adjustingMember.nickname || null,
+                    balance_before: currentBal,
+                    balance_after: newBal
+                }
+            })
 
             setMembers(prev => prev.map(m => m.id === adjustingMember.id ? { ...m, xhaus_balance: newBal } : m))
             toast.success(`${adjustType === 'add' ? 'เพิ่ม' : 'หัก'} ${amountNum} xhaus เรียบร้อย (ยอดใหม่: ${newBal})`)
