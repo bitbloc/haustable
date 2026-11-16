@@ -44,7 +44,6 @@ const AdminMarketingPage = lazy(() => import('./pages/admin/AdminMarketingPage')
 
 const MemberCard = lazy(() => import('./pages/MemberCard'))
 const StaffDashboard = lazy(() => import('./StaffDashboard'))
-const StaffLiveOrders = lazy(() => import('./StaffLiveOrders'))
 const StaffTablesPage = lazy(() => import('./StaffTablesPage'))
 const StaffBillPage = lazy(() => import('./staff/StaffBillPage'))
 const StaffOrderPage = lazy(() => import('./staff/StaffOrderPage'))
@@ -257,9 +256,10 @@ function App() {
                   <Route path="/staff/tables" element={<StaffTablesPage />} />
                   <Route path="/staff/tables/:tableId" element={<StaffBillPage />} />
                   <Route path="/staff/tables/:tableId/order" element={<StaffOrderPage />} />
-                  <Route path="/staff/orders" element={<StaffLiveOrders />} />
-                  <Route path="/staff/history" element={<StaffLiveOrders />} />
-                  <Route path="/staff/checkin" element={<StaffLiveOrders />} />
+                  {/* Retired KDS / history / QR check-in: old bookmarks and already-sent tickets still land somewhere useful */}
+                  <Route path="/staff/orders" element={<Navigate to="/staff" replace />} />
+                  <Route path="/staff/history" element={<Navigate to="/staff" replace />} />
+                  <Route path="/staff/checkin" element={<Navigate to="/staff/tables" replace />} />
                   <Route path="/staff/stock" element={<StockPage />} />
                   <Route path="/staff/stock/count" element={<StockCountPage />} />
                   <Route path="/staff/stock/labels" element={<StockLabelsPage />} />

@@ -109,7 +109,16 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                     tabs={tabs.map(t => ({ id: t.id, label: t.label, count: t.count > 0 ? t.count : undefined }))}
                     active={FOOD_TABS[activeTab] ? 'food' : activeTab}
                     onChange={handleTabChange}
-                    trailing={
+                    trailing={activeTab === 'stock' ? (
+                        <Link
+                            to="/staff/stock"
+                            state={{ from: '/admin/menu?tab=stock' }}
+                            className="text-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors whitespace-nowrap"
+                            title="ไปที่คลังวัตถุดิบของพนักงาน: นับ รับของ ปรับยอด"
+                        >
+                            คลังวัตถุดิบ ↗
+                        </Link>
+                    ) : (
                         <Link
                             to="/admin/hausmade?tab=catalog"
                             className="text-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors whitespace-nowrap"
@@ -117,7 +126,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         >
                             HAUSMADE catalog ↗
                         </Link>
-                    }
+                    )}
                 />
             </AdminPageHeader>
 

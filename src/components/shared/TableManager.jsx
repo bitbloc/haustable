@@ -14,7 +14,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
     const [bookings, setBookings] = useState([]);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState('floorplan'); // 'floorplan' | 'matrix'
+    // Staff work on phones and small tablets: the registry list only, no 2D floor map to pan around.
+    const [viewMode, setViewMode] = useState(isStaffView ? 'matrix' : 'floorplan'); // 'floorplan' | 'matrix'
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'free' | 'occupied' | 'calling' | 'upcoming'
     
@@ -529,6 +530,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
                 {/* View Mode Toggle */}
                 <div className="flex items-center gap-2 self-end md:self-auto">
+                    {!isStaffView && (
                     <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-[10px] font-bold uppercase tracking-wider">
                         <button
                             type="button"
@@ -553,6 +555,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             REGISTRY LIST
                         </button>
                     </div>
+                    )}
 
                     <button
                         type="button"

@@ -20,8 +20,7 @@ serve(async (req) => {
       tableName, 
       itemsSummary, 
       totalAmount,
-      shopLogoUrl,
-      checkInUrl
+      shopLogoUrl
     } = await req.json()
 
     if (!lineUserId) {
@@ -220,31 +219,6 @@ serve(async (req) => {
           type: "box",
           layout: "vertical",
           contents: [
-             {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                {
-                  type: "text",
-                  text: "Scan at the store to Check-in",
-                  size: "xxs",
-                  color: "#666666",
-                  align: "center",
-                  weight: "bold",
-                  margin: "sm"
-                }
-              ],
-              margin: "md"
-            },
-            {
-               type: "image",
-               url: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(checkInUrl || bookingId)}`,
-               size: "md",
-               margin: "md",
-               aspectMode: "fit",
-               aspectRatio: "1:1",
-               align: "center"
-            },
             {
               type: "text",
               text: `Ref: #${trackingToken || bookingId}`,

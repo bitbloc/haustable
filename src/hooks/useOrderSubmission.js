@@ -422,7 +422,6 @@ export function useOrderSubmission() {
                     if (lineUserId) {
                         const origin = getAppOrigin()
                         const shopLogoUrl = `${origin}/logo.png`
-                        const checkInUrl = `${origin}/staff/checkin?id=${resultData.tracking_token || resultData.id}`
                         
                         const itemsSummary = orderItemsPayload && orderItemsPayload.length > 0
                             ? orderItemsPayload.map(i => `${i.quantity || i.qty || 1}x ${i.name || i.custom_name || 'Item'}`).join(', ') 
@@ -438,8 +437,7 @@ export function useOrderSubmission() {
                                 tableName: resultData.table_name || 'TBA',
                                 itemsSummary,
                                 totalAmount: resultData.total_amount,
-                                shopLogoUrl,
-                                checkInUrl
+                                shopLogoUrl
                             }
                         })
                     }

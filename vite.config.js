@@ -58,9 +58,6 @@ export default defineConfig({
             if (id.includes('phaser')) {
               return 'vendor-phaser';
             }
-            if (id.includes('firebase')) {
-              return 'vendor-firebase';
-            }
             if (id.includes('@dnd-kit') || id.includes('dnd-kit')) {
               return 'vendor-dnd';
             }

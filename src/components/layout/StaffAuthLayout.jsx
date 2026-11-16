@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import AuthModal from '../AuthModal';
 
 export default function StaffAuthLayout() {
     const location = useLocation();
     const [authStatus, setAuthStatus] = useState('loading');
     const [userEmail, setUserEmail] = useState(null); 
-    const [showLogin, setShowLogin] = useState(true);
 
     useEffect(() => {
         checkUser();

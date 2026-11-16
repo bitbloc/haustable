@@ -6,7 +6,7 @@
 import React from 'react'
 import { formatOptionName } from '../../utils/menuHelper'
 
-export default function BookingSlip({ data, qrCodeUrl, optionMap = {} }) {
+export default function BookingSlip({ data, optionMap = {} }) {
   if (!data) return null
   const isPickup = data.booking_type === 'pickup'
 
@@ -116,20 +116,6 @@ export default function BookingSlip({ data, qrCodeUrl, optionMap = {} }) {
                 <span className="text-lg">฿{Number(data.total_amount || 0).toLocaleString()}.-</span>
             </div>
         </div>
-
-        {/* 6. QR Code for Staff Check-in */}
-        {qrCodeUrl && (
-            <div className="pt-4 text-center">
-                <img 
-                    src={qrCodeUrl} 
-                    className="w-24 h-24 mx-auto mix-blend-multiply border border-black p-1"
-                    alt="Staff Check-in QR"
-                />
-                <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-bold mt-1.5">
-                    // STAFF SCAN TO CHECK-IN
-                </p>
-            </div>
-        )}
 
         <div className="mt-4 pt-3 border-t border-neutral-200 text-center text-[9px] text-neutral-400">
             IN THE HAUS · NAKHON PHANOM · {new Date().toLocaleString('th-TH')}

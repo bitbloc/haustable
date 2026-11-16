@@ -258,7 +258,7 @@ export default function AdminLayout() {
             path: '/admin/menu', 
             icon: Utensils, 
             label: 'Menu & Lab',
-            isActive: (pathname) => pathname.startsWith('/admin/menu') || pathname.startsWith('/admin/costing') || pathname.startsWith('/admin/lab') || pathname.startsWith('/admin/sop')
+            isActive: (pathname) => pathname.startsWith('/admin/menu') || pathname.startsWith('/admin/costing') || pathname.startsWith('/admin/lab') || pathname.startsWith('/admin/sop') || pathname.startsWith('/admin/stock-recon')
         },
         { 
             key: 'financial',
@@ -401,6 +401,9 @@ export default function AdminLayout() {
                             <span className="tabular-nums font-semibold">{pendingCount}</span>
                         </Link>
                     )}
+                    <Link to="/staff/stock" state={{ from: location.pathname }} className="admin-link-btn" title="เปิดคลังวัตถุดิบ (Staff · Stock)">
+                        <span>Stock</span>
+                    </Link>
                     <a href="/pos" target="_blank" rel="noreferrer" className="admin-link-btn">
                         <span>POS</span>
                         <ArrowUpRight size={13} strokeWidth={1.5} />
@@ -482,6 +485,9 @@ export default function AdminLayout() {
                                 <span className="tabular-nums font-semibold">{pendingCount}</span>
                             </Link>
                         )}
+                        <Link to="/staff/stock" state={{ from: location.pathname }} className="admin-link-btn" title="เปิดคลังวัตถุดิบ (Staff · Stock)">
+                            <span>Stock</span>
+                        </Link>
                         <a href="/pos" target="_blank" rel="noreferrer" className="admin-link-btn" title="เปิดหน้า POS ในแท็บใหม่">
                             <span>POS Terminal</span>
                             <ArrowUpRight size={13} strokeWidth={1.5} />

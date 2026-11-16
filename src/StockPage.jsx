@@ -8,7 +8,7 @@ import { postStockMovement, recordSpotCount, STOCK_REASONS } from './utils/stock
 // Per-glass recipes and templates live in stock_items for costing but are never counted.
 // Only hidden once the database marks them explicitly, so nothing disappears before that.
 const isShelfItem = (item) => item?.item_type !== 'recipe';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
 import StockListItem from './components/stock/StockListItem';
 import AdjustmentModal from './components/stock/AdjustmentModal';
@@ -24,6 +24,8 @@ import './StockPage.css';
 
 export default function StockPage() {
     const navigate = useNavigate();
+    // Opened from the backoffice: "กลับ" returns there instead of the staff dashboard.
+    const backTo = useLocation().state?.from || '/staff';
     const [activeCategory, setActiveCategory] = useState('restock'); // Default to Restock for utility? Or 'veg'? Let's keep 'veg' or switch to 'restock' if urgent.
     // User probably wants to see problems first. Let's try 'restock' as default? 
     // Or keep 'veg'. Let's stick to 'veg' for stability, user can click Restock.
@@ -768,7 +770,7 @@ export default function StockPage() {
         <div className="stock-page">
             <header className="sp-header">
                 <div className="sp-wrap sp-header__top">
-                    <button type="button" onClick={() => navigate('/staff')} className="sp-btn sp-btn--quiet">กลับ</button>
+                    <button type="button" onClick={() => navigate(backTo)} className="sp-btn sp-btn--quiet">กลับ</button>
                     <div className="sp-header__title">
                         <h1>คลังวัตถุดิบ</h1>
                         <p>{currentUser?.user_metadata?.full_name || 'พนักงาน'}</p>

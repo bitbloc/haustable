@@ -1,140 +1,85 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from './lib/supabaseClient';
-import { 
-    ClipboardList, 
-    Package, 
-    ExternalLink,
-    LogOut,
-    Calendar,
-    ArrowRight,
-    UserCircle,
-    Bell,
-    CheckCircle2,
-    TrendingUp,
-    AlertTriangle,
-    RefreshCw,
-    Users,
-    UtensilsCrossed,
-    BookOpen,
-    Shield
-} from 'lucide-react';
-import usePushNotifications from './hooks/usePushNotifications';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · app style: achromatic ledger (shared with the Stock page) */
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import StaffAttendanceModal from './components/staff/StaffAttendanceModal';
-import './StaffDashboard.css';
-import { toast } from 'sonner';
+import { supabase } from './lib/supabaseClient';
 import { getShortBookingId } from './utils/printerHelper';
+import { stockStatus } from './utils/stockUtils';
+import './StaffDashboard.css';
 
-// --- Sub-Components ---
+// The screen's question: what needs doing on the floor right now?
 
-const StatBlock = ({ label, value, subtext, alert, loading }) => (
-    <div className={`sd-stat ${alert ? 'sd-stat--alert' : ''}`}>
-        <span className="sd-stat__label">{label}</span>
-        {loading ? (
-            <div className="sd-skeleton__block sd-skeleton__block--stat" />
-        ) : (
-            <motion.span 
-                key={value}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.15 }}
-                className="sd-stat__value"
-            >
-                {value}
-            </motion.span>
-        )}
-        <span className="sd-stat__sub">{subtext}</span>
-    </div>
-);
-
-const FunctionButton = ({ onClick, icon: Icon, title, desc, badge }) => (
-    <button className="sd-fn" onClick={onClick}>
-        <span className="sd-fn__icon">
-            <Icon />
-        </span>
-        <span className="sd-fn__info">
-            <span className="sd-fn__title">{title}</span>
-            <span className="sd-fn__desc">{desc}</span>
-        </span>
-        {badge && <span className="sd-fn__badge">{badge}</span>}
-    </button>
-);
-
-const SkeletonLoader = () => (
-    <div className="staff-dash sd-skeleton">
-        <div className="sd-skeleton__bar" />
-        <div className="sd-skeleton__stats">
-            {[1, 2, 3].map(i => (
-                <div key={i} className="sd-skeleton__stat">
-                    <div className="sd-skeleton__block sd-skeleton__block--wide" />
-                    <div className="sd-skeleton__block sd-skeleton__block--stat" />
-                </div>
-            ))}
-        </div>
-        <div style={{ padding: '16px 24px 8px' }}>
-            <div className="sd-skeleton__block" style={{ width: '80px', marginBottom: '12px' }} />
-        </div>
-        <div className="sd-skeleton__grid">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="sd-skeleton__cell">
-                    <div className="sd-skeleton__block" style={{ width: '70%', marginBottom: '6px' }} />
-                    <div className="sd-skeleton__block" style={{ width: '40%' }} />
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
-const getStatusClass = (status) => {
-    switch(status) {
-        case 'pending': return 'sd-activity__status--pending';
-        case 'confirmed': return 'sd-activity__status--confirmed';
-        case 'completed': return 'sd-activity__status--completed';
-        case 'cancelled': return 'sd-activity__status--cancelled';
-        default: return 'sd-activity__status--pending';
-    }
+const ORDER_STATUS_LABEL = {
+    pending: 'รอรับ',
+    confirmed: 'ยืนยันแล้ว',
+    approved: 'ยืนยันแล้ว',
+    seated: 'นั่งแล้ว',
+    preparing: 'กำลังทำ',
+    ready: 'พร้อมเสิร์ฟ',
+    paid: 'จ่ายแล้ว',
+    completed: 'เสร็จ',
+    cancelled: 'ยกเลิก',
+    void: 'ยกเลิก',
 };
 
-const getStatusColor = (status) => {
-    switch(status) {
-        case 'pending': return 'bg-yellow-100 text-yellow-700';
-        case 'confirmed': return 'bg-blue-100 text-blue-700';
-        case 'completed': return 'bg-green-100 text-green-700';
-        case 'cancelled': return 'bg-red-100 text-red-700';
-        default: return 'bg-gray-100 text-gray-600';
-    }
+const JOBS = [
+    { to: '/staff/stock', title: 'คลังวัตถุดิบ', desc: 'นับ รับของ ปรับยอด' },
+    { to: '/staff/tables', title: 'โต๊ะ', desc: 'จัดที่นั่ง ปล่อยโต๊ะ' },
+    { to: '/staff/sop', title: 'สูตรบาร์', desc: 'สูตรและขั้นตอน' },
+];
+
+const clock = (d) => d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+/** "21:00" today, "15 พ.ย. 21:00" for anything older, so a time never reads as today's by mistake. */
+const stamp = (iso) => {
+    const d = new Date(iso);
+    if (d.toDateString() === new Date().toDateString()) return clock(d);
+    return `${d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${clock(d)}`;
 };
 
-// --- Main Realtime Dashboard ---
+const signed = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
+
+const stockVerb = (t) => (t.transaction_type === 'set' ? 'ปรับยอด' : Number(t.quantity_change) > 0 ? 'รับเข้า' : 'ใช้');
+
+function Figure({ loading, hot, signal, children }) {
+    if (loading) return <span className="sd-bar sd-bar--figure" aria-hidden="true" />;
+    return <span className={`sd-stat__n ${hot ? 'is-hot' : ''} ${signal ? 'is-signal' : ''}`}>{children}</span>;
+}
+
+function Rows({ loading, error, rows, empty, onRetry, render }) {
+    if (loading) {
+        return (
+            <ul className="sd-rows" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map(i => (
+                    <li key={i} className="sd-row">
+                        <span className="sd-row__main"><span className="sd-bar sd-bar--line" /><span className="sd-bar sd-bar--sub" /></span>
+                    </li>
+                ))}
+            </ul>
+        );
+    }
+    if (error) {
+        return (
+            <p className="sd-note">
+                โหลดรายการไม่ได้ <button type="button" className="sd-link" onClick={onRetry}>ลองอีกครั้ง</button>
+            </p>
+        );
+    }
+    if (rows.length === 0) return <p className="sd-note">{empty}</p>;
+    return <ul className="sd-rows">{rows.map(render)}</ul>;
+}
 
 export default function StaffDashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
-    const [stats, setStats] = useState({ pendingOrders: 0, upcomingBookings: 0, lowStock: 0 });
-    const [recentActivity, setRecentActivity] = useState([]);
+    const [stats, setStats] = useState({ pendingOrders: 0, upcomingBookings: 0, stock: { out: 0, low: 0, reorder: 0 } });
+    const [stockMoves, setStockMoves] = useState([]);
+    const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false); 
-    const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-    const { permission, isSubscribed, requestPermission } = usePushNotifications(); 
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState(false);
+    const [updatedAt, setUpdatedAt] = useState(null);
+    const [isLive, setIsLive] = useState(false);
 
-    const [tablesMap, setTablesMap] = useState({});
-
-    useEffect(() => {
-        const loadTablesMap = async () => {
-            const { data } = await supabase.from('tables_layout').select('id, table_name');
-            if (data) {
-                const mapping = {};
-                data.forEach(t => {
-                    mapping[t.id] = t.table_name;
-                });
-                setTablesMap(mapping);
-            }
-        };
-        loadTablesMap();
-    }, []);
-
-    // 1. Fetch Stats & Activity Logic 
     const fetchStats = useCallback(async (isBackgroundRefresh = false) => {
         if (!isBackgroundRefresh) setRefreshing(true);
         try {
@@ -142,362 +87,226 @@ export default function StaffDashboard() {
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
 
-            // Parallel Fetch: Stats + Activity
-            const [pendingResult, bookingResult, stockResult, recentStock, recentOrders] = await Promise.all([
-                // 1. Stats
+            const results = await Promise.all([
                 supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
                 supabase.from('bookings').select('*', { count: 'exact', head: true })
-                    .in('status', ['confirmed', 'approved']) 
+                    .in('status', ['confirmed', 'approved'])
                     .gte('booking_time', now.toISOString())
                     .lte('booking_time', tomorrow.toISOString()),
-                supabase.from('stock_items').select('current_quantity, min_stock_threshold, reorder_point'),
-                
-                // 2. Activity - Stock (Last 5)
+                supabase.from('stock_items').select('item_type, current_quantity, min_stock_threshold, reorder_point'),
                 supabase.from('stock_transactions').select('*, stock_items(name)').order('created_at', { ascending: false }).limit(5),
-                
-                // 3. Activity - Orders (Last 5) - Using created_at for relevance (updated_at might be missing)
-                supabase.from('bookings').select('*').order('created_at', { ascending: false }).limit(5)
+                supabase.from('bookings').select('*, tables_layout(table_name)').order('created_at', { ascending: false }).limit(5),
             ]);
+            const failed = results.find(r => r.error);
+            if (failed) throw failed.error;
+            const [pendingResult, bookingResult, stockResult, recentStock, recentOrders] = results;
 
-            // Process Stats
-            let lowStockCount = 0;
-            if (stockResult.data) {
-                lowStockCount = stockResult.data.filter(i => {
-                    const qty = Number(i.current_quantity) || 0;
-                    const min = Number(i.min_stock_threshold) || 0;
-                    const reorder = Number(i.reorder_point) || 0;
-                    
-                    // Match the logic in StockPage.jsx (Restock Tab)
-                    // Trigger if stock reaches or falls below either set threshold, or is out of stock
-                    return (reorder > 0 && qty <= reorder + 0.0001) || 
-                           (min > 0 && qty <= min + 0.0001) || 
-                           (qty <= 0);
-                }).length;
+            // Same rule and same item set as the Stock page's "ต้องสั่งซื้อ" tab (recipes are not shelf items).
+            const stock = { out: 0, low: 0, reorder: 0, ok: 0 };
+            for (const item of stockResult.data || []) {
+                if (item.item_type !== 'recipe') stock[stockStatus(item)] += 1;
             }
-            setStats({
-                pendingOrders: pendingResult.count || 0,
-                upcomingBookings: bookingResult.count || 0,
-                lowStock: lowStockCount
-            });
 
-            // Process Activity Feed
-            const stockActivities = (recentStock.data || []).map(s => ({
-                id: s.id,
-                type: 'stock',
-                title: `${s.transaction_type === 'set' ? 'Set' : (s.quantity_change > 0 ? 'Added' : 'Used')} ${s.stock_items?.name || 'Item'}`,
-                subtitle: `by ${s.performed_by || 'Staff'}`,
-                status: `${s.quantity_change > 0 ? '+' : ''}${s.quantity_change}`,
-                statusType: s.quantity_change > 0 ? 'positive' : 'negative',
-                time: new Date(s.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                timestamp: new Date(s.created_at)
-            }));
-
-            const orderActivities = (recentOrders.data || []).map(o => ({
-                id: o.id,
-                type: 'order',
-                title: `Table ${o.tables_layout?.table_name || 'Pickup'}`,
-                subtitle: `Order #${getShortBookingId(o)}`,
-                status: o.status,
-                statusType: o.status,
-                statusColor: getStatusColor(o.status),
-                time: new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                timestamp: new Date(o.created_at)
-            }));
-
-            // Merge & Sort
-            const merged = [...stockActivities, ...orderActivities]
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .slice(0, 10); // Show top 10
-
-            setRecentActivity(merged);
-
-        } catch (error) {
-            console.error("Stats Fetch Error:", error);
+            setStats({ pendingOrders: pendingResult.count || 0, upcomingBookings: bookingResult.count || 0, stock });
+            setStockMoves(recentStock.data || []);
+            setOrders(recentOrders.data || []);
+            setUpdatedAt(new Date());
+            setError(false);
+        } catch (err) {
+            console.error('Staff dashboard fetch error:', err);
+            setError(true);
         } finally {
             if (!isBackgroundRefresh) setRefreshing(false);
             setLoading(false);
         }
     }, []);
 
-    // 2. Initial User Load & Setup
     useEffect(() => {
         const initUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setUser(user);
-                fetchStats(); // Initial stats fetch
-            } 
-            // Layout handles redirect if not logged in
+                fetchStats();
+            }
+            // StaffAuthLayout handles the redirect when there is no session
         };
         initUser();
     }, [fetchStats]);
 
-    // 3. REALTIME SUBSCRIPTION ⚡️
     useEffect(() => {
-        // Create a channel for dashboard updates
-        const dashboardChannel = supabase
+        const channel = supabase
             .channel('dashboard-realtime')
-            .on(
-                'postgres_changes', 
-                { event: '*', schema: 'public', table: 'bookings' }, 
-                (payload) => {
-                    console.log('Booking change detected:', payload);
-                    fetchStats(true); // Refetch stats quietly
-                }
-            )
-            .on(
-                'postgres_changes', 
-                { event: '*', schema: 'public', table: 'stock_items' }, 
-                (payload) => {
-                    console.log('Stock change detected:', payload);
-                    fetchStats(true); 
-                }
-            )
-            .on(
-                'postgres_changes', 
-                { event: 'INSERT', schema: 'public', table: 'stock_transactions' }, 
-                (payload) => {
-                    console.log('Transaction detected:', payload);
-                    fetchStats(true); 
-                }
-            )
-            .subscribe();
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchStats(true))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, () => fetchStats(true))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_transactions' }, () => fetchStats(true))
+            .subscribe((status) => setIsLive(status === 'SUBSCRIBED'));
 
-        // Cleanup on unmount
         return () => {
-            supabase.removeChannel(dashboardChannel);
+            supabase.removeChannel(channel);
         };
     }, [fetchStats]);
 
     const handleLogout = async () => {
-        setLoading(true);
-        localStorage.clear();
+        // Only the staff session keys: this device also holds POS offline data, printer and tax settings.
+        localStorage.removeItem('staff_role');
+        localStorage.removeItem('staff_id');
         await supabase.auth.signOut();
         navigate('/login');
     };
 
-    if (loading && !user) return <SkeletonLoader />;
-
-    const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Staff';
+    const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'พนักงาน';
+    const { pendingOrders, upcomingBookings, stock } = stats;
+    const restock = stock.out + stock.low + stock.reorder;
 
     return (
         <div className="staff-dash">
-            
-            {/* ── Header Bar ── */}
-            <header className="sd-header">
-                <div className="sd-header__left">
-                    <img 
-                        src="/logo-staff-light.png" 
-                        alt="In the haus Staff" 
-                        className="sd-header__logo" 
-                    />
-                    <span className="sd-header__divider" aria-hidden="true" />
-                    <div className="sd-header__user">
-                        <span className="sd-header__label">Dashboard</span>
-                        <span className="sd-header__name">{firstName}</span>
+            <header className="sd-top">
+                <div className="sd-top__bar">
+                    <div className="sd-wrap sd-top__row">
+                        <div className="sd-brand">
+                            <img src="/logo-staff-dark.png" alt="In the haus" className="sd-brand__logo" />
+                            <span className="sd-brand__scope">Staff</span>
+                        </div>
+                        <nav className="sd-top__links" aria-label="บัญชีและทางลัด">
+                            <span className="sd-top__user">{firstName}</span>
+                            <button type="button" className="sd-quiet" onClick={() => navigate('/admin')}>Backoffice</button>
+                            <a className="sd-quiet sd-top__wide" href="/booking">หน้าจองของลูกค้า</a>
+                            <button type="button" className="sd-quiet" onClick={handleLogout}>ออกจากระบบ</button>
+                        </nav>
                     </div>
-                </div>
-
-                <div className="sd-header__actions">
-                    <button 
-                        className="sd-header__btn"
-                        onClick={() => navigate('/admin')}
-                        title="Admin Hub"
-                        aria-label="Go to Admin Hub"
-                    >
-                        <Shield />
-                    </button>
-                    <button 
-                        className="sd-header__btn"
-                        onClick={() => window.location.href = '/booking'}
-                        title="Live Booking"
-                        aria-label="Go to live booking page"
-                    >
-                        <ExternalLink />
-                    </button>
-                    <button 
-                        className="sd-header__btn sd-header__btn--danger"
-                        onClick={handleLogout}
-                        title="Sign Out"
-                        aria-label="Sign out"
-                    >
-                        <LogOut />
-                    </button>
                 </div>
             </header>
 
-            {/* ── Live Indicator ── */}
-            <div className="sd-live">
-                <span className="sd-live__dot sd-live__dot--pulse" aria-hidden="true" />
-                <span className="sd-live__text">System Online</span>
-                <button 
-                    className={`sd-live__refresh ${refreshing ? 'sd-live__refresh--spinning' : ''}`}
-                    onClick={() => fetchStats(false)}
-                    title="Refresh data"
-                    aria-label="Refresh dashboard data"
-                >
-                    <RefreshCw />
-                </button>
-            </div>
-
-            {/* ── Stats Strip ── */}
-            <div className="sd-stats" role="region" aria-label="Dashboard statistics">
-                <StatBlock 
-                    label="Orders" 
-                    value={stats.pendingOrders} 
-                    subtext="Pending" 
-                    loading={refreshing && stats.pendingOrders === 0}
-                />
-                <StatBlock 
-                    label="Bookings" 
-                    value={stats.upcomingBookings} 
-                    subtext="Next 24h" 
-                    loading={refreshing && stats.upcomingBookings === 0}
-                />
-                <StatBlock 
-                    label="Low Stock" 
-                    value={stats.lowStock} 
-                    subtext="Need Restock" 
-                    alert={stats.lowStock > 0}
-                    loading={refreshing && stats.lowStock === 0}
-                />
-            </div>
-
-            {/* ── Functions ── */}
-            <div className="sd-section-label">Functions</div>
-            <nav className="sd-functions" role="navigation" aria-label="Staff functions">
-                <FunctionButton 
-                    title="KDS" 
-                    desc="Kitchen Display" 
-                    icon={ClipboardList} 
-                    onClick={() => navigate('/staff/orders')}
-                />
-                <FunctionButton 
-                    title="POS" 
-                    desc="Point of Sale" 
-                    icon={UtensilsCrossed} 
-                    onClick={() => navigate('/pos')}
-                />
-                <FunctionButton 
-                    title="Inventory" 
-                    desc="Stock Levels" 
-                    icon={Package} 
-                    onClick={() => navigate('/staff/stock')}
-                />
-                <FunctionButton 
-                    title="Check-in" 
-                    desc="Scan QR" 
-                    icon={CheckCircle2} 
-                    onClick={() => navigate('/staff/checkin')}
-                />
-                <FunctionButton 
-                    title="Attendance" 
-                    desc="Time & Leaves" 
-                    icon={Users} 
-                    onClick={() => setShowAttendanceModal(true)}
-                />
-                <FunctionButton 
-                    title="History" 
-                    desc="Past Records" 
-                    icon={TrendingUp} 
-                    onClick={() => navigate('/staff/history')}
-                />
-                <FunctionButton 
-                    title="Bar SOP" 
-                    desc="Recipes" 
-                    icon={BookOpen} 
-                    onClick={() => navigate('/staff/sop')}
-                />
-                <FunctionButton 
-                    title="Admin Hub" 
-                    desc="Backoffice" 
-                    icon={Shield} 
-                    onClick={() => navigate('/admin')}
-                />
-                <FunctionButton 
-                    title="Notifications" 
-                    desc={isSubscribed ? 'Active' : 'Enable'} 
-                    icon={Bell} 
-                    onClick={requestPermission}
-                    badge={isSubscribed ? '●' : null}
-                />
-            </nav>
-
-            {/* ── Recent Activity ── */}
-            <div className="sd-activity">
-                <div className="sd-section-label">Activity Log</div>
-                
-                {loading && recentActivity.length === 0 ? (
-                    <div style={{ padding: '0 24px' }}>
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="sd-activity__item">
-                                <div className="sd-skeleton__block" style={{ width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0 }} />
-                                <div style={{ flex: 1 }}>
-                                    <div className="sd-skeleton__block" style={{ width: '60%', marginBottom: '4px' }} />
-                                    <div className="sd-skeleton__block" style={{ width: '30%' }} />
-                                </div>
-                            </div>
-                        ))}
+            <main className="sd-wrap sd-main">
+                <div className="sd-title">
+                    <div className="sd-title__text">
+                        <h1>ภาพรวมหน้าร้าน</h1>
+                        <p>
+                            {loading
+                                ? 'กำลังโหลด'
+                                : pendingOrders > 0
+                                    ? `มี ${pendingOrders.toLocaleString('th-TH')} ออเดอร์รอรับ`
+                                    : 'ไม่มีออเดอร์รอรับ'}
+                        </p>
                     </div>
-                ) : recentActivity.length === 0 ? (
-                    <div className="sd-activity__empty">No recent activity</div>
-                ) : (
-                    <ul className="sd-activity__list">
-                        {recentActivity.map((item) => (
-                            <li key={`${item.type}-${item.id}`} className="sd-activity__item">
-                                <span 
-                                    className={`sd-activity__type sd-activity__type--${item.type}`} 
-                                    aria-hidden="true" 
-                                />
-                                <div className="sd-activity__content">
-                                    <div className="sd-activity__title">{item.title}</div>
-                                    <div className="sd-activity__subtitle">{item.subtitle}</div>
-                                </div>
-                                <div className="sd-activity__meta">
-                                    <span className={`sd-activity__status ${
-                                        item.type === 'stock' 
-                                            ? (item.statusType === 'positive' ? 'sd-activity__status--positive' : 'sd-activity__status--negative')
-                                            : getStatusClass(item.statusType)
-                                    }`}>
-                                        {item.status}
-                                    </span>
-                                    <span className="sd-activity__time">{item.time}</span>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            {/* ── Floating Alert for Pending Orders ── */}
-            <AnimatePresence>
-                {stats.pendingOrders > 0 && (
-                    <motion.div 
-                        initial={{ y: 80, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 80, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                        className="sd-alert-bar"
-                    >
-                        <button 
-                            onClick={() => navigate('/pos?autoSelect=pending')}
-                            className="sd-alert-bar__btn"
-                        >
-                            <span className="sd-alert-bar__left">
-                                <span className="sd-alert-bar__ping" aria-hidden="true" />
-                                <span>{stats.pendingOrders} Orders Waiting</span>
-                            </span>
-                            <ArrowRight className="sd-alert-bar__arrow" />
+                    <div className="sd-title__side">
+                        <span className="sd-fresh" role="status">
+                            <span className={`sd-fresh__dot ${isLive ? 'is-live' : ''}`} aria-hidden="true" />
+                            {isLive ? 'สด' : 'กำลังเชื่อมต่อ'}
+                            {updatedAt && <span className="sd-fresh__time"> · อัปเดต {clock(updatedAt)}</span>}
+                        </span>
+                        <button type="button" className="sd-quiet" onClick={() => fetchStats(false)} disabled={refreshing}>
+                            {refreshing ? 'กำลังโหลด' : 'รีเฟรช'}
                         </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    </div>
+                </div>
 
-            {/* Modals */}
-            <StaffAttendanceModal 
-                isOpen={showAttendanceModal} 
-                onClose={() => setShowAttendanceModal(false)} 
-            />
+                {error && !loading && (
+                    <p className="sd-note sd-note--block">
+                        โหลดข้อมูลล่าสุดไม่ได้{updatedAt ? ` ตัวเลขด้านล่างเป็นของ ${clock(updatedAt)}` : ''}{' '}
+                        <button type="button" className="sd-link" onClick={() => fetchStats(false)}>ลองอีกครั้ง</button>
+                    </p>
+                )}
+
+                {/* What needs doing: one container, three figures. This screen is used on a phone, so nothing links to the POS terminal. */}
+                <section className="sd-stats" aria-label="สิ่งที่ต้องทำตอนนี้">
+                    <div className="sd-stat">
+                        <span className="sd-stat__label">ออเดอร์รอรับ</span>
+                        <Figure loading={loading} hot={pendingOrders > 0} signal={pendingOrders > 0}>{pendingOrders.toLocaleString('th-TH')}</Figure>
+                        <span className="sd-stat__sub">รอยืนยันที่เครื่อง POS</span>
+                    </div>
+                    <button type="button" className="sd-stat" onClick={() => navigate('/staff/tables')}>
+                        <span className="sd-stat__label">จองใน 24 ชม. ข้างหน้า</span>
+                        <Figure loading={loading} hot={upcomingBookings > 0}>{upcomingBookings.toLocaleString('th-TH')}</Figure>
+                        <span className="sd-stat__sub">ยืนยันแล้ว ดูที่ผังโต๊ะ</span>
+                    </button>
+                    <button type="button" className="sd-stat" onClick={() => navigate('/staff/stock')}>
+                        <span className="sd-stat__label">วัตถุดิบต้องสั่งซื้อ</span>
+                        <Figure loading={loading} hot={restock > 0}>{restock.toLocaleString('th-TH')}</Figure>
+                        <span className="sd-stat__sub">
+                            {loading ? ' ' : restock === 0 ? 'ครบทุกรายการ' : (
+                                <>
+                                    <span className={stock.out > 0 ? 'sd-signal' : ''}>หมด {stock.out}</span>
+                                    <span className="sd-nowrap"> · เหลือน้อย {stock.low}</span>
+                                    <span className="sd-nowrap"> · ควรสั่ง {stock.reorder}</span>
+                                </>
+                            )}
+                        </span>
+                    </button>
+                </section>
+
+                {/* Where the work happens */}
+                <nav className="sd-jobs" aria-label="หน้าทำงาน">
+                    {JOBS.map(job => (
+                        <button
+                            key={job.to}
+                            type="button"
+                            className="sd-job"
+                            onClick={() => navigate(job.to)}
+                        >
+                            <span className="sd-job__title">{job.title}</span>
+                            <span className="sd-job__desc">{job.desc}</span>
+                        </button>
+                    ))}
+                </nav>
+
+                <div className="sd-lists">
+                    <section className="sd-panel" aria-labelledby="sd-orders-h">
+                        <header className="sd-panel__head">
+                            <h2 id="sd-orders-h">ออเดอร์ล่าสุด</h2>
+                        </header>
+                        <Rows
+                            loading={loading}
+                            error={error && orders.length === 0}
+                            rows={orders}
+                            empty="ยังไม่มีออเดอร์"
+                            onRetry={() => fetchStats(false)}
+                            render={(o) => (
+                                <li key={o.id} className="sd-row">
+                                    <span className="sd-row__main">
+                                        <span className="sd-row__title">
+                                            {o.tables_layout?.table_name ? `โต๊ะ ${o.tables_layout.table_name}` : 'รับกลับบ้าน'}
+                                        </span>
+                                        <span className="sd-row__sub">#{getShortBookingId(o)}</span>
+                                    </span>
+                                    <span className="sd-row__side">
+                                        <span className={o.status === 'pending' ? 'sd-pill' : 'sd-row__state'}>
+                                            {ORDER_STATUS_LABEL[o.status] || o.status}
+                                        </span>
+                                        <span className="sd-row__time">{stamp(o.created_at)}</span>
+                                    </span>
+                                </li>
+                            )}
+                        />
+                    </section>
+
+                    <section className="sd-panel" aria-labelledby="sd-stock-h">
+                        <header className="sd-panel__head">
+                            <h2 id="sd-stock-h">สต๊อกเคลื่อนไหวล่าสุด</h2>
+                            <button type="button" className="sd-link" onClick={() => navigate('/staff/stock')}>เปิดคลัง</button>
+                        </header>
+                        <Rows
+                            loading={loading}
+                            error={error && stockMoves.length === 0}
+                            rows={stockMoves}
+                            empty="ยังไม่มีการเคลื่อนไหวของสต๊อก"
+                            onRetry={() => fetchStats(false)}
+                            render={(t) => (
+                                <li key={t.id} className="sd-row">
+                                    <span className="sd-row__main">
+                                        <span className="sd-row__title">{t.stock_items?.name || 'ไม่ระบุรายการ'}</span>
+                                        <span className="sd-row__sub">{stockVerb(t)} · {t.performed_by || 'พนักงาน'}</span>
+                                    </span>
+                                    <span className="sd-row__side">
+                                        <span className="sd-row__qty">{signed(Number(t.quantity_change) || 0)}</span>
+                                        <span className="sd-row__time">{stamp(t.created_at)}</span>
+                                    </span>
+                                </li>
+                            )}
+                        />
+                    </section>
+                </div>
+            </main>
         </div>
     );
 }
