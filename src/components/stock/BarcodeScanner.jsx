@@ -290,7 +290,10 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
 
         setIsLoadingData(true);
         try {
-            const productInfo = await fetchThaiProductData(barcode);
+            // Only factory barcodes are looked up. A shop label QR ("INHAUS:STOCK:<id>") is our own
+            // code: there is nothing to find outside, and it must not be sent there.
+            const isRetailCode = /^\d{8,14}$/.test(String(barcode).trim());
+            const productInfo = isRetailCode ? await fetchThaiProductData(barcode) : null;
             if (productInfo) {
                 toast.success(`พบสินค้า: ${productInfo.name}`);
                 onScan({ barcode, ...productInfo }); 

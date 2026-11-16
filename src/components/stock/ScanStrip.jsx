@@ -50,8 +50,9 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     { facingMode: 'environment' },
                     {
                         fps: 20,
-                        // Barcodes are wide: a wide, short box means fewer pixels to decode per frame.
-                        qrbox: (w, h) => ({ width: Math.floor(w * 0.86), height: Math.floor(Math.min(h * 0.5, w * 0.36)) }),
+                        // Nearly the whole picture. A short, wide box read barcodes quickly but cut the shop's
+                        // square QR labels in half whenever the label was held close enough to fill the view.
+                        qrbox: (w, h) => ({ width: Math.max(50, Math.floor(w * 0.9)), height: Math.max(50, Math.floor(h * 0.86)) }),
                         // Printed codes are never mirrored: skip the second, flipped decode of every frame.
                         disableFlip: true,
                         // Sharper picture so thin bars are read on the first frames (iPhone defaults to a low resolution).
