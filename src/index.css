@@ -406,13 +406,85 @@ input[type="range"]::-moz-range-thumb {
   z-index: 99999 !important;
 }
 
+/* Toast surface: one flat, solid block. No border and no shadow: the ink fill against the paper
+   UI is what separates it, so nothing decorative is needed (owner request 2026-11-16). */
 [data-sonner-toast] {
-  border-radius: 12px !important;
-  font-size: 14px !important;
+  /* The Toaster sets a Latin-only inline font; without this, Thai text in toasts fell back to
+     the OS font instead of IBM Plex Sans Thai. */
+  font-family: 'IBM Plex Sans Thai', 'Inter', sans-serif !important;
+  line-height: 1.6 !important;
+  border-radius: 10px !important;
   font-weight: 600 !important;
-  padding: 12px 18px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid oklch(85% 0.012 28) !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  /* Soft spring entrance: the toast travels in and settles with a small overshoot. Only transform
+     and opacity animate, so it stays smooth on the Sunmi's GPU. */
+  transition:
+    transform 560ms cubic-bezier(0.22, 1.28, 0.36, 1),
+    opacity 280ms ease-out,
+    height 380ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  will-change: transform, opacity;
+}
+
+/* Custom POS alerts draw their own ink block: the wrapper must add nothing around it
+   (the Toaster's inline paper background and padding showed as a pale frame). */
+[data-sonner-toast][data-styled='false'] {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Built-in toasts (toast.success / error / info): ink surface, paper text */
+[data-sonner-toast][data-styled='true'] {
+  padding: 12px 16px !important;
+  background: oklch(18% 0.012 28) !important;
+  color: oklch(97% 0.008 28) !important;
+}
+[data-sonner-toast][data-styled='true'] [data-title] {
+  color: oklch(97% 0.008 28) !important;
+  line-height: 1.6 !important;
+}
+[data-sonner-toast][data-styled='true'] [data-description] {
+  color: oklch(85% 0.012 28) !important;
+}
+/* Type is carried by one small marker bar, not by a border or an icon */
+[data-sonner-toast][data-styled='true'] [data-icon] {
+  display: none !important;
+}
+[data-sonner-toast][data-styled='true']::before {
+  content: '';
+  flex: none;
+  align-self: stretch;
+  width: 3px;
+  margin-right: 12px;
+  border-radius: 2px;
+  background: oklch(55% 0.010 28);
+}
+[data-sonner-toast][data-styled='true'][data-type='success']::before { background: oklch(62% 0.11 140); }
+[data-sonner-toast][data-styled='true'][data-type='error']::before,
+[data-sonner-toast][data-styled='true'][data-type='warning']::before { background: oklch(62% 0.17 28); }
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  background: oklch(28% 0.012 28) !important;
+  border: 0 !important;
+  color: oklch(85% 0.012 28) !important;
+  box-shadow: none !important;
+}
+
+/* Toasts live outside .pos-container, so they follow the POS text size (the Aa control)
+   through the same variable: width and text grow together. Scale is 1 outside the POS. */
+[data-sonner-toaster] {
+  --width: calc(356px * var(--pos-text-scale, 1)) !important;
+}
+[data-sonner-toast] {
+  font-size: calc(14px * var(--pos-text-scale, 1)) !important;
+}
+[data-sonner-toast] .text-\[10px\] { font-size: calc(10px * var(--pos-text-scale, 1)); }
+[data-sonner-toast] .text-\[11px\] { font-size: calc(11px * var(--pos-text-scale, 1)); }
+[data-sonner-toast] .text-sm        { font-size: calc(0.875rem * var(--pos-text-scale, 1)); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast] {
+    transition: opacity 200ms linear !important;
+  }
 }
 
 /* 15.6 Inch Full HD (1920x1080) POS Touch Enhancements */

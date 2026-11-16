@@ -1773,37 +1773,34 @@ export default function POSDashboard() {
         dot = 'emerald',
         onClick
     }) => {
+        // Flat ink block: no border, no shadow. The dot carries the alert type
+        // (terracotta = needs staff now, olive = new order / info, neutral = cancelled).
         const dotColor = dot === 'terracotta'
-            ? 'bg-[oklch(52%_0.16_28)]'
+            ? 'bg-[oklch(62%_0.17_28)]'
             : dot === 'neutral'
-                ? 'bg-[oklch(42%_0.010_28)]'
-                : 'bg-[oklch(45%_0.08_140)]';
-
-        const hoverBorder = dot === 'terracotta'
-            ? 'hover:border-[oklch(52%_0.16_28)]'
-            : 'hover:border-[oklch(45%_0.08_140)]';
+                ? 'bg-[oklch(55%_0.010_28)]'
+                : 'bg-[oklch(62%_0.11_140)]';
 
         return (
-            <div 
-                className={`w-full max-w-[340px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xs flex flex-col gap-2 font-sans select-none transition-all duration-150 cursor-pointer active:scale-[0.98] ${hoverBorder}`}
+            <div
+                className="w-[var(--width)] max-w-[calc(100vw-32px)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-[10px] px-4 py-3 flex flex-col gap-1.5 font-sans select-none cursor-pointer transition-transform duration-150 active:scale-[0.98] touch-manipulation"
                 onClick={() => {
                     toast.dismiss(t);
                     if (onClick) onClick();
                 }}
             >
-                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)]/80 pb-1.5">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">
+                <div className="flex justify-between items-center gap-3">
+                    <span className="text-[10px] leading-[1.6] font-mono font-bold uppercase tracking-widest text-[oklch(85%_0.012_28)]">
                         {badge}
                     </span>
-                    <span className={`w-2 h-2 rounded-full ${dotColor} animate-pulse shrink-0`} />
+                    <span className={`w-2 h-2 rounded-full ${dotColor} shrink-0`} />
                 </div>
-                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] leading-snug">
+                <div className="text-sm font-bold leading-[1.6]">
                     {title}
                 </div>
                 {subtitle && (
-                    <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)] flex items-center justify-between pt-0.5">
-                        <span>{subtitle}</span>
-                        <span className="text-[10px] text-[oklch(42%_0.010_28)] opacity-60">✕ ปิด</span>
+                    <div className="text-[11px] font-mono text-[oklch(85%_0.012_28)] leading-[1.6]">
+                        {subtitle}
                     </div>
                 )}
             </div>
