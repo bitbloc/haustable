@@ -869,7 +869,9 @@ function generateStandaloneLandingHtml(data) {
         .tab-btn { min-height: 48px; padding: var(--space-3) var(--space-2); font-size: var(--text-md); font-weight: 600; text-align: center; color: var(--color-muted); box-shadow: inset 0 0 0 var(--color-ink); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out); }
         .tab-btn + .tab-btn { border-left: 1px solid var(--color-rule); }
         .tab-btn:hover { background: var(--color-paper-2); }
-        .tab-btn.active { color: var(--color-ink); box-shadow: inset 0 -3px 0 var(--color-ink); }
+        .tab-btn.active { color: var(--color-ink); }
+        /* One marker slides between the three equal cells (--tab-i is set by markSection) */
+        .tab-bar::after { content: ''; position: absolute; left: 0; bottom: 0; width: calc(100% / 3); height: 3px; background: var(--color-ink); transform: translateX(calc(var(--tab-i, 0) * 100%)); transition: transform 250ms var(--ease-out); pointer-events: none; }
 
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
@@ -995,6 +997,9 @@ function generateStandaloneLandingHtml(data) {
         .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.985); }
         .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out); }
         .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); }
+        /* Lazy gallery photos resolve out of a soft blur when they arrive (class is added by script only) */
+        .gallery-item img { transition: transform 600ms var(--ease-out), opacity 400ms ease-in-out, filter 400ms ease-in-out; }
+        .gallery-item img.img-wait { opacity: 0; filter: blur(2px); }
         .row-link:hover .arrow { transform: translateX(3px); }
         .row-link .arrow { transition: transform var(--dur) var(--ease-out); }
 
@@ -1003,12 +1008,19 @@ function generateStandaloneLandingHtml(data) {
         .modal.open .modal-content { animation: modal-pic 320ms var(--ease-out); }
         @keyframes modal-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modal-pic { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+        /* Closing is quicker and quieter than opening; hideModal() drops the class after 150ms */
+        .modal.closing { display: flex; pointer-events: none; animation: modal-out 150ms var(--ease-out) forwards; }
+        .modal.closing .modal-content { animation: modal-pic-out 150ms var(--ease-out) forwards; }
+        @keyframes modal-out { to { opacity: 0; } }
+        @keyframes modal-pic-out { to { opacity: 0; transform: scale(0.96); } }
 
         /* Reveal on scroll: added by script only to things below the first screen, so nothing is hidden without JS and the first paint is untouched */
         .reveal { opacity: 0; transform: translateY(16px); }
         .reveal.in { opacity: 1; transform: none; transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); transition-delay: var(--d, 0ms); }
         #full-menu-content.opening { animation: menu-open 360ms var(--ease-out); }
         @keyframes menu-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+        /* Closing folds the menu up so what follows slides into place instead of jumping (height is set by toggleFullMenu) */
+        #full-menu-content.closing { overflow: clip; opacity: 0; transition: height 250ms var(--ease-out), opacity 250ms var(--ease-out); }
 
         @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; animation-duration: 0ms !important; scroll-behavior: auto !important; } .reveal { opacity: 1; transform: none; } }
     </style>
@@ -1268,7 +1280,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`, `查看完整菜单 · ${menuItems.length} 项`, `ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
+            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu(true)"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`, `查看完整菜单 · ${menuItems.length} 项`, `ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
             <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
@@ -1455,6 +1467,8 @@ function generateStandaloneLandingHtml(data) {
                 const b = document.getElementById('tab-btn-' + s);
                 if (b) b.className = 'tab-btn' + (s === name ? ' active' : '');
             });
+            const bar = document.querySelector('.tab-bar');
+            if (bar && SECTIONS.indexOf(name) !== -1) bar.style.setProperty('--tab-i', SECTIONS.indexOf(name));
         }
         function switchSection(name) {
             markSection(name);
@@ -1491,8 +1505,20 @@ function generateStandaloneLandingHtml(data) {
             });
         })();
 
+        // ─── LAZY PHOTOS FADE IN ───
+        // Only photos still loading are touched, so nothing is hidden without JS or when already cached
+        (function() {
+            document.querySelectorAll('.gallery-item img[loading="lazy"]').forEach(function(img) {
+                if (img.complete) return;
+                img.classList.add('img-wait');
+                const done = function() { img.classList.remove('img-wait'); };
+                img.addEventListener('load', done, { once: true });
+                img.addEventListener('error', done, { once: true });
+            });
+        })();
+
         // ─── LANGUAGE ───
-        const ZH = ${JSON.stringify(ZH)};
+        const ZH =${JSON.stringify(ZH)};
         const LO = ${JSON.stringify(LO)};
         function TT(th, en, zh, lo) {
             const z = zh || ZH[en], l = lo || LO[en];
@@ -1743,9 +1769,22 @@ function generateStandaloneLandingHtml(data) {
         function popModalState() {
             if (history.state && history.state.hausModal) history.back();
         }
+        // Close with a short fade; the modal stays laid out for 150ms while .closing plays
+        function hideModal(m) {
+            if (!m.classList.contains('open')) return;
+            m.classList.remove('open');
+            m.classList.add('closing');
+            clearTimeout(m._closeTimer);
+            m._closeTimer = setTimeout(function() { m.classList.remove('closing'); }, 150);
+        }
+        function showModal(m) {
+            clearTimeout(m._closeTimer);
+            m.classList.remove('closing');
+            m.classList.add('open');
+        }
         function closeAllModals() {
-            document.getElementById('lightbox-modal').classList.remove('open');
-            document.getElementById('booklet-modal').classList.remove('open');
+            hideModal(document.getElementById('lightbox-modal'));
+            hideModal(document.getElementById('booklet-modal'));
         }
         window.addEventListener('popstate', closeAllModals);
         document.addEventListener('keydown', function(e) {
@@ -1827,9 +1866,18 @@ function generateStandaloneLandingHtml(data) {
             window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - offset + 1, behavior: 'smooth' });
         }
 
-        function toggleFullMenu() {
+        function finishFullMenuClose(content) {
+            clearTimeout(content._closeTimer);
+            content._closing = false;
+            content.classList.remove('closing');
+            content.style.height = '';
+            content.style.display = 'none';
+        }
+        // animate: only the button passes true. Other callers toggle twice in a row and need the state to flip at once.
+        function toggleFullMenu(animate) {
             const content = document.getElementById('full-menu-content');
             const btn = document.getElementById('btn-full-menu');
+            if (content._closing) finishFullMenuClose(content);
             if (content.style.display === 'none') {
                 if (!content.hasChildNodes()) {
                     try {
@@ -1877,7 +1925,16 @@ function generateStandaloneLandingHtml(data) {
                 if (window.gtag) gtag('event', 'view_full_menu', { event_category: 'engagement', page_path: '/link' });
                 logAdEvent('view_full_menu');
             } else {
-                content.style.display = 'none';
+                if (animate === true && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    content._closing = true;
+                    content.style.height = content.offsetHeight + 'px';
+                    void content.offsetHeight;
+                    content.classList.add('closing');
+                    content.style.height = '0px';
+                    content._closeTimer = setTimeout(function() { finishFullMenuClose(content); }, 260);
+                } else {
+                    content.style.display = 'none';
+                }
                 document.getElementById('full-menu-label').innerHTML = TT('ดูเมนูทั้งหมด ${menuItems.length} รายการ', 'See the full menu · ${menuItems.length} items', '查看完整菜单 · ${menuItems.length} 项', 'ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ');
                 document.getElementById('full-menu-arrow').textContent = '↓';
                 document.getElementById('btn-full-menu').classList.remove('open');
@@ -1890,7 +1947,7 @@ function generateStandaloneLandingHtml(data) {
             const m = document.getElementById('lightbox-modal');
             const img = document.getElementById('lightbox-img');
             img.src = url;
-            m.classList.add('open');
+            showModal(m);
             pushModalState();
             logAdEvent('view_atmosphere');
         }
@@ -1898,14 +1955,14 @@ function generateStandaloneLandingHtml(data) {
             // The close button's click also bubbles to the backdrop; only the first call may go back
             const m = document.getElementById('lightbox-modal');
             if (!m.classList.contains('open')) return;
-            m.classList.remove('open');
+            hideModal(m);
             popModalState();
         }
 
         // ─── BOOKLET MODAL ───
         function openBooklet() {
             if (bookletPages.length === 0) return;
-            document.getElementById('booklet-modal').classList.add('open');
+            showModal(document.getElementById('booklet-modal'));
             pushModalState();
             if (window.gtag) gtag('event', 'click_booklet', { event_category: 'engagement', page_path: '/link' });
             logAdEvent('view_booklet_menu');
@@ -1914,7 +1971,7 @@ function generateStandaloneLandingHtml(data) {
             if (e && e.target !== e.currentTarget && !e.target.classList.contains('modal-close')) return;
             const m = document.getElementById('booklet-modal');
             if (!m.classList.contains('open')) return;
-            m.classList.remove('open');
+            hideModal(m);
             popModalState();
         }
         function updateBooklet() {
