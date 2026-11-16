@@ -50,6 +50,7 @@ const StaffOrderPage = lazy(() => import('./staff/StaffOrderPage'))
 const StockPage = lazy(() => import('./StockPage'))
 const StockCountPage = lazy(() => import('./components/stock/StockCountPage'))
 const StockLabelsPage = lazy(() => import('./components/stock/StockLabelsPage'))
+const StockCheckPage = lazy(() => import('./components/stock/StockCheckPage'))
 const StockReceivePage = lazy(() => import('./components/stock/StockReceivePage'))
 const MenuCostPage = lazy(() => import('./components/admin/MenuCostPage'))
 const RecipeLabPage = lazy(() => import('./components/admin/RecipeLabPage'))
@@ -263,6 +264,7 @@ function App() {
                   <Route path="/staff/stock" element={<StockPage />} />
                   <Route path="/staff/stock/count" element={<StockCountPage />} />
                   <Route path="/staff/stock/labels" element={<StockLabelsPage />} />
+                  <Route path="/staff/stock/check" element={<StockCheckPage />} />
                   <Route path="/staff/stock/receive" element={<StockReceivePage />} />
                   <Route path="/staff/sop" element={<BarSOPPage />} />
                 </Route>

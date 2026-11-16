@@ -8,6 +8,7 @@ import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatibl
 import { calculateRealUnitCost } from '../../utils/costUtils';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
+import { unitSetupWarnings } from '../../utils/stockHealth';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
@@ -426,6 +427,11 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             </div>
                         );
                     })()}
+
+                    {/* Unit set-ups that are almost certainly a mistake; saving is still allowed */}
+                    {unitSetupWarnings(formData).map(text => (
+                        <div key={text} className={`border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] pl-3 pr-3 py-2.5 text-sm leading-6 ${ink}`} role="status">{text}</div>
+                    ))}
 
                     {/* Counting unit differs from buying unit */}
                     {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (

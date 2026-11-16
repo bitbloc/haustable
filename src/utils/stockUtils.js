@@ -107,6 +107,15 @@ const CONTAINER_UNITS = ['pack', 'box', 'crate', 'carton', 'bag', 'can', 'bottle
 
 export function stockQtyParts(item) {
     const unit = displayUnit(item.unit || item.pack_unit);
+    // Counted by weight or volume (กิโลกรัม, ลิตร): there is no "opened pack", the amount is the amount.
+    // 0.35 kg is "0.35 กิโลกรัม", never "1 กิโลกรัม with one open".
+    if (['mass', 'volume'].includes(getUnitType(item.unit || item.pack_unit))) {
+        const qty = Number(Number(item.current_quantity).toFixed(4)) || 0;
+        return {
+            main: qty.toLocaleString('th-TH', { maximumFractionDigits: 2 }),
+            unit, open: null, openPercent: 0, total: null
+        };
+    }
     const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
         item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor
     );
@@ -124,7 +133,7 @@ export function stockQtyParts(item) {
     const countedInPieces = factor > 1
         && (getUnitType(item.usage_unit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(item.usage_unit))
         && (isContainer(item.pack_unit) || isContainer(item.unit))
-        && !isContainer(item.usage_unit);
+        && String(item.usage_unit) !== String(item.unit || item.pack_unit);
     const pieces = countedInPieces ? Math.round((Number(item.current_quantity) || 0) * factor) : 0;
     const total = pieces > 0 ? `${pieces.toLocaleString('th-TH')} ${displayUnit(item.usage_unit)}` : null;
     return { main: onShelf.toLocaleString('th-TH'), unit, open, openPercent: hasOpen ? percent : 0, total };

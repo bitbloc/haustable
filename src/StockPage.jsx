@@ -784,6 +784,7 @@ export default function StockPage() {
                     <button type="button" onClick={() => setShowReport(true)} title="สรุปการเบิกออก 7 / 30 วัน">สรุปเบิก</button>
                     <button type="button" onClick={() => setShowHistory(true)}>ประวัติ</button>
                     <button type="button" onClick={() => setShowCategoryManager(true)}>หมวดหมู่</button>
+                    <button type="button" onClick={() => navigate('/staff/stock/check')} title="หน่วยที่ตั้งผิด ต้นทุนที่ยังไม่ใส่ และรายการซ้ำ">ตรวจหน่วย</button>
                     <button type="button" onClick={fetchItems}>{loading ? 'กำลังโหลด' : 'โหลดใหม่'}</button>
                 </nav>
             </header>
