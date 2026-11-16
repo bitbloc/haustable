@@ -16,6 +16,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     
     // Tab State: 'basic' | 'costing'
     const [activeTab, setActiveTab] = useState('basic');
+    // A makro pick whose units were not applied because the item already has units of its own
+    // ({ units, recipeCount }): shown as a notice with a one-tap way to take makro's units.
+    const [makroUnitsOffer, setMakroUnitsOffer] = useState(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -210,7 +213,33 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     // only filled when this item has none yet, or when makro uses the same usage unit: changing
     // the usage unit of an item already in recipes would change what those quantities mean.
     const handleSelectPrice = (product) => {
-        const pick = makroPickPatch(product, formData, { unitsUnset: !isEdit || unitsLookUnset(formData) });
+        let pick = makroPickPatch(product, formData, { unitsUnset: !isEdit || unitsLookUnset(formData) });
+        const previous = {
+            pack_size: formData.pack_size,
+            pack_unit: formData.pack_unit,
+            unit: formData.unit,
+            usage_unit: formData.usage_unit,
+            conversion_factor: formData.conversion_factor
+        };
+        // makro counts it in another kind of unit than the item (cups set up in kilograms): makro's
+        // units are the right ones, so they are taken, with a way back. Saving converts or flags
+        // any recipe quantities, as it does for every usage unit change.
+        const otherKind = Boolean(pick.units && !pick.appliedUnits
+            && !areUnitTypesCompatible(pick.units.usageUnit, formData.usage_unit));
+        if (otherKind) {
+            pick = {
+                ...pick,
+                appliedUnits: true,
+                patch: {
+                    ...pick.patch,
+                    pack_size: 1,
+                    pack_unit: pick.units.packUnit,
+                    unit: pick.units.packUnit,
+                    usage_unit: pick.units.usageUnit,
+                    conversion_factor: pick.units.conversionFactor
+                }
+            };
+        }
         setFormData(prev => ({
             ...prev,
             name: prev.name?.trim() ? prev.name : product.title,
@@ -218,6 +247,46 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         }));
         toast.success(describeMakroPick(product, pick));
         setShowPriceSearch(false);
+
+        // Same kind of unit, other numbers (an item counted in litres, makro in ml): ask, do not change
+        const sameKindDiffers = Boolean(pick.units && !pick.appliedUnits && (
+            pick.units.usageUnit !== formData.usage_unit
+            || pick.units.packUnit !== formData.pack_unit
+            || Number(pick.units.conversionFactor) !== Number(formData.conversion_factor)
+        ));
+        if (!otherKind && !sameKindDiffers) {
+            setMakroUnitsOffer(null);
+            return;
+        }
+        setMakroUnitsOffer({ mode: otherKind ? 'applied' : 'offer', units: pick.units, previous, recipeCount: null });
+        if (isEdit && item?.id) {
+            supabase
+                .from('recipe_ingredients')
+                .select('id', { count: 'exact', head: true })
+                .eq('ingredient_id', item.id)
+                .then(({ count }) => setMakroUnitsOffer(o => (o ? { ...o, recipeCount: count ?? null } : o)));
+        }
+    };
+
+    const applyMakroUnits = () => {
+        if (!makroUnitsOffer) return;
+        const { units } = makroUnitsOffer;
+        setFormData(prev => ({
+            ...prev,
+            pack_size: 1,
+            pack_unit: units.packUnit,
+            unit: units.packUnit,
+            usage_unit: units.usageUnit,
+            conversion_factor: units.conversionFactor
+        }));
+        setMakroUnitsOffer(null);
+        toast.success(`ใช้หน่วยจาก makro: ${units.summary} · กดบันทึกเพื่อเก็บ`);
+    };
+
+    const restoreUnits = () => {
+        if (!makroUnitsOffer) return;
+        setFormData(prev => ({ ...prev, ...makroUnitsOffer.previous }));
+        setMakroUnitsOffer(null);
     };
 
     /* const handleSelectMakroProduct = (product) => {
@@ -322,6 +391,41 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+
+                    {/* makro sells this in other units than the item had */}
+                    {makroUnitsOffer && (() => {
+                        const { mode, units, previous, recipeCount } = makroUnitsOffer;
+                        const before = `1 ${unitLabel(previous.pack_unit)} = ${Number(previous.conversion_factor || 1).toLocaleString('th-TH')} ${unitLabel(previous.usage_unit)}`;
+                        return (
+                            <div className="border-l-2 border-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)] pl-3 pr-3 py-2.5 space-y-2" role="status">
+                                <p className={`text-sm leading-6 ${ink}`}>
+                                    {mode === 'applied'
+                                        ? <>ใช้หน่วยจาก makro แล้ว: <strong>{units.summary}</strong> (เดิม {before})</>
+                                        : <>makro ขายเป็น <strong>{units.summary}</strong> แต่รายการนี้ตั้งไว้ <strong>{before}</strong></>}
+                                </p>
+                                <p className="text-xs leading-5 text-[oklch(42%_0.010_28)]">
+                                    คงเหลือและจุดสั่งซื้อนับเป็น{unitLabel(mode === 'applied' ? units.packUnit : previous.pack_unit)} ตรวจตัวเลขก่อนกดบันทึก
+                                    {recipeCount > 0 && <> · รายการนี้อยู่ในสูตร {recipeCount} สูตร ถ้าเปลี่ยนหน่วย ระบบจะแจ้งสูตรที่ต้องแก้จำนวนหลังบันทึก</>}
+                                </p>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                    {mode === 'applied' ? (
+                                        <button type="button" onClick={restoreUnits} className="text-sm text-[oklch(42%_0.010_28)] underline underline-offset-4 decoration-[oklch(80%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                                            คืนหน่วยเดิม
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button type="button" onClick={applyMakroUnits} className={`text-sm font-semibold ${ink} underline underline-offset-4 decoration-[oklch(70%_0.010_28)] hover:decoration-[oklch(18%_0.012_28)]`}>
+                                                ใช้หน่วยจาก makro
+                                            </button>
+                                            <button type="button" onClick={() => setMakroUnitsOffer(null)} className="text-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                                                คงหน่วยเดิม
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Counting unit differs from buying unit */}
                     {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (
