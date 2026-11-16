@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import { logStaffActivity } from '../../utils/auditLogger';
-import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
+import { packCapacity } from '../../utils/stockUtils';
 import {
     COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines, addDays, carryOverClosing, stepCount,
     countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft
@@ -92,7 +92,7 @@ const scanFeedback = (ok) => {
     } catch { /* sound is optional */ }
 };
 
-const capacityOf = fullUnitCapacity;
+const capacityOf = packCapacity;
 
 // Count fields: 16px so phones do not zoom on focus; border colour is added per state.
 const numInput = `h-11 px-2 rounded-md border ${ui.PAPER} ${ui.INK} text-base font-semibold tabular-nums text-right outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`;
@@ -119,7 +119,7 @@ function OpenUnitHelper({ item, onApply, onClose }) {
                 </label>
                 <label className="block min-w-0">
                     <span className={ui.label}>
-                        {cap ? `เปิดแล้วเหลือ (${cap.unit} จาก ${cap.amount.toLocaleString()})` : 'เปิดแล้วเหลือ (%)'}
+                        {cap ? `เปิดแล้วเหลือ (${displayUnit(cap.unit)} จาก ${cap.amount.toLocaleString()})` : 'เปิดแล้วเหลือ (%)'}
                     </span>
                     <input type="text" inputMode="decimal" value={left} onChange={e => setLeft(e.target.value)}
                         className={`w-full ${numInput} ${ui.RULE}`} />
@@ -571,6 +571,11 @@ export default function StockCountPage() {
                                                         <span className={`text-[12px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด</span>
                                                         <span className="font-semibold text-base leading-6 break-words">{it.name}</span>
                                                         <span className={`text-[12px] leading-5 ${ui.NEUTRAL} block`}>นับเป็น{displayUnit(it.unit)}</span>
+                                                        {Number(openLeft[it.id]) > 0 && (
+                                                            <span className={`text-[14px] leading-6 font-semibold ${ui.INK} block`}>
+                                                                + เปิดอยู่ 1 เหลือ <span className="tabular-nums">{openLeftText(Number(openLeft[it.id]), capacityOf(it))}</span>
+                                                            </span>
+                                                        )}
                                                     </motion.div>
                                                 </AnimatePresence>
                                                 <div className="flex items-center gap-2">

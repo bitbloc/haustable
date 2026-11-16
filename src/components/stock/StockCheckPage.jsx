@@ -6,12 +6,12 @@ import { supabase } from '../../lib/supabaseClient';
 import StockItemForm from './StockItemForm';
 import { stockHealth, readMergeResult, unitLine, sameUnitSetup, suggestMergeRatio, parseRatio, mergedQuantity } from '../../utils/stockHealth';
 import { displayUnit, qtyInWords } from '../../utils/stockCount';
-import { fullUnitCapacity } from '../../utils/recipeGraph';
+import { packCapacity } from '../../utils/stockUtils';
 import '../../StockPage.css';
 
 const SHOWN = 8;
 const baht = (n) => `฿${Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
-const qtyText = (item) => qtyInWords(item, item.current_quantity, fullUnitCapacity(item));
+const qtyText = (item) => qtyInWords(item, item.current_quantity, packCapacity(item));
 const unitOf = (item) => displayUnit(item.unit || item.pack_unit || 'unit');
 // One ratio per item that will be removed, prefilled when the set-up already says it
 const ratiosFor = (group, keepId) => {
@@ -245,7 +245,7 @@ export default function StockCheckPage() {
                             </label>
                         ))}
                         <p className="sk-total">
-                            ยอดหลังรวม <strong>{mergeReady ? qtyInWords(mergeKeep, mergedQuantity(mergeKeep, mergeOthers, Object.fromEntries(Object.entries(merge.ratios).map(([id, v]) => [id, parseRatio(v) ?? 0]))), fullUnitCapacity(mergeKeep)) : 'ใส่ตัวแปลงก่อน'}</strong>
+                            ยอดหลังรวม <strong>{mergeReady ? qtyInWords(mergeKeep, mergedQuantity(mergeKeep, mergeOthers, Object.fromEntries(Object.entries(merge.ratios).map(([id, v]) => [id, parseRatio(v) ?? 0]))), packCapacity(mergeKeep)) : 'ใส่ตัวแปลงก่อน'}</strong>
                         </p>
                         <p className="sk-why">
                             รายการที่ไม่ได้เลือกจะถูกลบ ยอดคงเหลือ ประวัติ การนับ และบาร์โค้ดของมันจะถูกแปลงเป็นหน่วยของรายการที่เก็บไว้ สูตรที่ใช้มันจะย้ายมาด้วย ย้อนกลับไม่ได้

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { stockQtyParts, stockStatus } from '../stockUtils';
+import { stockQtyParts, stockStatus, packCapacity } from '../stockUtils';
+import { qtyInWords } from '../stockCount';
 
 const item = (over) => ({ unit: 'bottle', pack_unit: 'bottle', usage_unit: 'ml', conversion_factor: 700, current_quantity: 0, ...over });
 
@@ -43,5 +44,18 @@ describe('What a stock card shows', () => {
     it('keeps the status on the stored quantity: an open bottle is not "out"', () => {
         expect(stockStatus(item({ current_quantity: 0.5 }))).toBe('ok');
         expect(stockStatus(item({ current_quantity: 0 }))).toBe('out');
+    });
+});
+
+describe('packCapacity (what is left in the opened one)', () => {
+    const bags = { unit: 'pack', pack_unit: 'pack', usage_unit: 'pcs', conversion_factor: 110 };
+    it('gives millilitres for a bottle and pieces for a pack', () => {
+        expect(packCapacity({ unit: 'bottle', pack_unit: 'bottle', usage_unit: 'ml', conversion_factor: 700 })).toEqual({ amount: 700, unit: 'ml' });
+        expect(packCapacity(bags)).toEqual({ amount: 110, unit: 'pcs' });
+        expect(qtyInWords(bags, 1.3, packCapacity(bags))).toBe('1 แพ็ค + เปิดอยู่ 1 เหลือ 33 ชิ้น');
+    });
+    it('gives nothing for 1:1 items and for converters that cannot be true', () => {
+        expect(packCapacity({ unit: 'unit', pack_unit: 'unit', usage_unit: 'unit', conversion_factor: 1 })).toBeNull();
+        expect(packCapacity({ unit: 'unit', pack_unit: 'unit', usage_unit: 'bottle', conversion_factor: 1000 })).toBeNull();
     });
 });

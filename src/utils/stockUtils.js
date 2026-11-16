@@ -1,5 +1,6 @@
 import { displayUnit } from './stockCount';
 import { getUnitType } from './unitUtils';
+import { fullUnitCapacity } from './recipeGraph';
 
 /**
  * Formats stock quantity into a structured object for display.
@@ -107,6 +108,25 @@ const CONTAINER_UNITS = ['pack', 'box', 'crate', 'carton', 'bag', 'can', 'bottle
 
 // The generic unit reads as "ชิ้น" on cards; "หน่วย/ชิ้น" is the form's name for it
 const cardUnit = (u) => { const label = displayUnit(u); return label === 'หน่วย/ชิ้น' ? 'ชิ้น' : label; };
+
+/**
+ * What one full counted unit holds, for saying how much is left in the opened one:
+ * a 700 ml bottle -> { amount: 700, unit: 'ml' }, a pack of 110 bags -> { amount: 110, unit: 'pcs' }.
+ * Pieces only from a real container, so "1 ชิ้น = 1,000 ขวด" never turns into a count of bottles.
+ * null when unknown (the opened one is then said as a percentage).
+ */
+export function packCapacity(item) {
+    const measured = fullUnitCapacity(item);
+    if (measured) return measured;
+    const low = (v) => String(v || '').trim().toLowerCase();
+    const factor = Number(item?.conversion_factor) || 0;
+    const usage = low(item?.usage_unit);
+    const usageCounts = getUnitType(usage) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(usage);
+    const packHolds = CONTAINER_UNITS.includes(low(item?.unit)) || CONTAINER_UNITS.includes(low(item?.pack_unit));
+    return factor > 1 && usageCounts && packHolds && usage !== low(item?.unit || item?.pack_unit)
+        ? { amount: factor, unit: usage }
+        : null;
+}
 
 export function stockQtyParts(item) {
     const unit = cardUnit(item.unit || item.pack_unit);

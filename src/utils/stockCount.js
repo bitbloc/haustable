@@ -163,7 +163,7 @@ export const thresholdsFromSettings = (rows = []) => {
 };
 
 /** Short labels for amounts written inside a table cell. */
-const SHORT_UNITS = { g: 'ก.', kg: 'กก.', ml: 'มล.', l: 'ล.' };
+const SHORT_UNITS = { g: 'ก.', kg: 'กก.', ml: 'มล.', l: 'ล.', unit: 'ชิ้น' };
 const shortUnit = (u) => SHORT_UNITS[u] || displayUnit(u);
 
 /**
