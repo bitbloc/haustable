@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { logger } from './utils/logger.js'
 import { initWmaNativeBridge } from './utils/wmaNativeBridge.js'
+import { nextChunkReload, isChunkLoadError } from './utils/chunkReload.js'
 
 // Initialize local crash reporting and debug logs
 logger.init();
@@ -31,54 +32,45 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
-// Auto-recover from stale chunks / MIME type errors after new deployments
+// Auto-recover from stale chunks / MIME type errors after new deployments.
+// The policy (reload now, then after 2 s, then 5 s, then stop) lives in utils/chunkReload.js.
 if (typeof window !== 'undefined') {
+  const KEY = 'chunk_reload_state';
+  let pending = false;
   const triggerAutoReload = (reason) => {
     console.warn('[Vite/App] Chunk / MIME load error detected:', reason);
-    const lastReload = sessionStorage.getItem('chunk_reload_retry_ts');
-    const now = Date.now();
-    // Guard against reload loops: allow max 1 auto-reload every 10 seconds
-    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-      sessionStorage.setItem('chunk_reload_retry_ts', now.toString());
+    if (pending) return;
+    let state = null;
+    try { state = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch { /* start over */ }
+    const step = nextChunkReload(state);
+    if (!step.reload) return; // tried three times: the error screen takes over
+    pending = true;
+    try { sessionStorage.setItem(KEY, JSON.stringify(step.next)); } catch { /* storage unavailable */ }
+    const reload = () => {
+      const go = () => window.location.reload();
       if ('caches' in window) {
-        caches.keys().then((keys) => {
-          return Promise.all(keys.map((k) => caches.delete(k)));
-        }).finally(() => {
-          window.location.reload();
-        });
+        caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(go);
       } else {
-        window.location.reload();
+        go();
       }
-    }
+    };
+    setTimeout(reload, step.delay);
   };
+  window.__chunkAutoReload = triggerAutoReload;
 
-  window.addEventListener('vite:preloadError', (event) => {
+  window.addEventListener('vite:preloadError', () => {
     triggerAutoReload('vite:preloadError');
   });
 
   window.addEventListener('error', (event) => {
     const msg = event?.message || '';
-    if (
-      msg.includes('text/html') ||
-      msg.includes('is not a valid JavaScript MIME type') ||
-      msg.includes('Failed to fetch dynamically imported module') ||
-      msg.includes('error loading dynamically imported module')
-    ) {
-      triggerAutoReload(msg);
-    }
+    if (isChunkLoadError(msg)) triggerAutoReload(msg);
   });
 
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event?.reason?.message || event?.reason || '';
     const reasonStr = typeof reason === 'string' ? reason : JSON.stringify(reason);
-    if (
-      reasonStr.includes('text/html') ||
-      reasonStr.includes('is not a valid JavaScript MIME type') ||
-      reasonStr.includes('Failed to fetch dynamically imported module') ||
-      reasonStr.includes('error loading dynamically imported module')
-    ) {
-      triggerAutoReload(reasonStr);
-    }
+    if (isChunkLoadError(reasonStr)) triggerAutoReload(reasonStr);
   });
 }
 

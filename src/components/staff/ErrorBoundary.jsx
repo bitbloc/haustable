@@ -1,4 +1,5 @@
 import React from 'react'
+import { isChunkLoadError } from '../../utils/chunkReload'
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,6 +13,9 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo)
+    // A file of the app that would not load (just after a deploy): reload by itself, a few times,
+    // before asking anyone to press a button. React reports these here, not as a window error.
+    if (isChunkLoadError(error)) window.__chunkAutoReload?.(error?.message || 'chunk load error')
   }
 
   handleReload = async () => {
