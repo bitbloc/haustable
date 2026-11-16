@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     shopDayOf, addDays, defaultCountKind, displayUnit, parseCount, buildCountLines, stepCount,
     countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft,
+    countsInPieces, splitPieces, mergeLoosePieces,
     isAbnormal, summarizeReconciliation, sortReconciliation, carryOverClosing, thresholdsFromSettings
 } from '../stockCount';
 
@@ -177,5 +178,37 @@ describe('amounts in words, no decimals', () => {
         expect(mergeOpenLeft({ a: '2', b: '', c: 'x', d: '5' }, { a: 0.2, b: 0.5, c: 0.3 }))
             .toEqual({ a: '2.2', b: '0.5', c: 'x', d: '5' });
         expect(buildCountLines(mergeOpenLeft({}, { b: 0.5 }))).toEqual([{ stock_item_id: 'b', counted_qty: 0.5 }]);
+    });
+});
+
+describe('packs counted as packs, pieces, or both', () => {
+    const cups = { unit: 'pack', usage_unit: 'แก้ว', conversion_factor: 50 };
+
+    it('only packs of countable pieces get the two fields', () => {
+        expect(countsInPieces(cups, { amount: 50, unit: 'แก้ว' })).toBe(true);
+        expect(countsInPieces({ unit: 'bottle' }, { amount: 700, unit: 'ml' })).toBe(false); // a bottle is poured, not counted out
+        expect(countsInPieces({ unit: 'kg' }, { amount: 1000, unit: 'g' })).toBe(false);
+        expect(countsInPieces(cups, null)).toBe(false);
+    });
+
+    it('full packs and loose pieces add up to one count in packs', () => {
+        expect(mergeLoosePieces({ a: '14' }, { a: '20' }, { a: 50 })).toEqual({ a: '14.4' });
+    });
+
+    it('everything may be counted in pieces with the packs field left empty', () => {
+        expect(mergeLoosePieces({}, { a: '720' }, { a: 50 })).toEqual({ a: '14.4' });
+        expect(buildCountLines(mergeLoosePieces({}, { a: '975' }, { a: 25 }))).toEqual([{ stock_item_id: 'a', counted_qty: 39 }]);
+    });
+
+    it('an empty or unreadable pieces field changes nothing', () => {
+        expect(mergeLoosePieces({ a: '14' }, { a: '' }, { a: 50 })).toEqual({ a: '14' });
+        expect(mergeLoosePieces({ a: '14' }, { a: 'x' }, { a: 50 })).toEqual({ a: '14' });
+        expect(mergeLoosePieces({ a: '14' }, { b: '5' }, { a: 50 })).toEqual({ a: '14' }); // not a pack item
+    });
+
+    it('says a count back as packs and pieces', () => {
+        expect(splitPieces(14.4, 50)).toEqual({ packs: 14, rest: 20, pieces: 720 });
+        expect(splitPieces(39, 25)).toEqual({ packs: 39, rest: 0, pieces: 975 });
+        expect(splitPieces(7 / 110, 110)).toEqual({ packs: 0, rest: 7, pieces: 7 });
     });
 });

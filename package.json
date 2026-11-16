@@ -33,6 +33,7 @@
     "@supabase/supabase-js": "^2.90.1",
     "@vercel/analytics": "^2.0.1",
     "axios": "^1.13.6",
+    "barcode-detector": "^3.2.4",
     "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",

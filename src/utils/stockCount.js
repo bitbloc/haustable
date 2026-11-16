@@ -251,6 +251,43 @@ export const diffInWords = (item, diff, capacity = null) => {
 };
 
 /**
+ * True for a pack of countable pieces (a pack of 50 cups, a sleeve of 100 lids). Staff count these
+ * as full packs, as loose pieces, or both, so the sheet gives them one field for each.
+ * capacity: packCapacity(item).
+ */
+export const countsInPieces = (item, capacity) => !!capacity && Number(capacity.amount) > 1
+    && countsWholeUnits(item) && !['mass', 'volume'].includes(getUnitType(capacity.unit));
+
+/** A count in packs said as packs and pieces: 14.4 packs of 50 -> { packs: 14, rest: 20, pieces: 720 }. */
+export const splitPieces = (qty, capAmount) => {
+    const cap = Number(capAmount) || 0;
+    const pieces = Math.max(0, Math.round((Number(qty) || 0) * cap));
+    const packs = cap > 0 ? Math.floor(pieces / cap) : 0;
+    return { packs, rest: pieces - packs * cap, pieces };
+};
+
+/**
+ * Full packs + loose pieces -> the counts to save, in packs. `loose` holds what was typed in the
+ * pieces field (any number: all 720 cups may be typed there with the packs field left empty);
+ * `capacities` maps item id -> pieces per pack. A pieces field that cannot be read is skipped
+ * (the screen flags it), and so is an unreadable packs field.
+ */
+export const mergeLoosePieces = (counts = {}, loose = {}, capacities = {}) => {
+    const out = { ...counts };
+    for (const [id, raw] of Object.entries(loose)) {
+        if (String(raw ?? '').trim() === '') continue;
+        const cap = Number(capacities[id]);
+        const pieces = parseCount(raw);
+        if (!(cap > 1) || pieces === null) continue;
+        const blank = String(counts[id] ?? '').trim() === '';
+        const packs = blank ? 0 : parseCount(counts[id]);
+        if (packs === null) continue;
+        out[id] = String(round4(packs + pieces / cap));
+    }
+    return out;
+};
+
+/**
  * Field values + opened fractions -> the counts to save. An item with only an opened unit counts
  * as zero full ones. A field that cannot be read is passed through so it is still flagged.
  */

@@ -7,10 +7,12 @@ import { logStaffActivity } from '../../utils/auditLogger';
 import { packCapacity } from '../../utils/stockUtils';
 import {
     COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines, addDays, carryOverClosing, stepCount,
-    countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft
+    countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft,
+    countsInPieces, splitPieces, mergeLoosePieces
 } from '../../utils/stockCount';
 import { buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, normalizeBarcode } from '../../utils/stockBarcode';
 import ScanStrip from './ScanStrip';
+import { preloadCodeDetector } from '../../utils/codeDetector';
 import { rankVariance, shopDayRange, suggestSpotCount } from '../../utils/stockReports';
 import { countUnitCost } from '../../utils/stockReceiving';
 import BarcodeLinkSheet from './BarcodeLinkSheet';
@@ -40,6 +42,18 @@ const writeOpenDraft = (day, openLeft) => {
     try {
         if (Object.keys(openLeft).length) localStorage.setItem(OPEN_KEY(day), JSON.stringify(openLeft));
         else localStorage.removeItem(OPEN_KEY(day));
+    } catch { /* storage unavailable */ }
+};
+
+// Loose pieces typed beside the full packs (cups out of an opened pack), as typed.
+const LOOSE_KEY = (day) => `${DRAFT_KEY(day)}:loose`;
+const readLooseDraft = (day) => {
+    try { return JSON.parse(localStorage.getItem(LOOSE_KEY(day)) || '{}'); } catch { return {}; }
+};
+const writeLooseDraft = (day, loose) => {
+    try {
+        if (Object.values(loose).some(v => String(v ?? '').trim() !== '')) localStorage.setItem(LOOSE_KEY(day), JSON.stringify(loose));
+        else localStorage.removeItem(LOOSE_KEY(day));
     } catch { /* storage unavailable */ }
 };
 
@@ -95,7 +109,7 @@ const scanFeedback = (ok) => {
 const capacityOf = packCapacity;
 
 // Count fields: 16px so phones do not zoom on focus; border colour is added per state.
-const numInput = `h-11 px-2 rounded-md border ${ui.PAPER} ${ui.INK} text-base font-semibold tabular-nums text-right outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`;
+const numInput = `h-11 px-2 rounded-md border ${ui.PAPER} ${ui.INK} text-base font-semibold tabular-nums text-right outline-none transition-colors focus:border-[oklch(18%_0.012_28)] placeholder:font-normal placeholder:text-[oklch(62%_0.010_28)]`;
 const stepBtn = `w-11 h-11 shrink-0 rounded-md border ${ui.RULE} ${ui.PAPER} text-xl leading-none ${ui.INK} flex items-center justify-center select-none touch-manipulation transition-[background-color,border-color,transform] hover:bg-[oklch(94%_0.010_28)] hover:border-[oklch(42%_0.010_28)] active:scale-95 cursor-pointer`;
 const smallPrimary = 'h-9 px-3 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-[oklch(25%_0.012_28)] cursor-pointer';
 
@@ -148,6 +162,44 @@ function OpenUnitHelper({ item, onApply, onClose }) {
     );
 }
 
+const num = (n) => Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+
+/**
+ * What will be saved for one row, said in full, so nobody has to guess whether the number typed is
+ * the whole amount or an addition: it is the whole amount and it replaces the one in the system.
+ */
+function CountOutcome({ item, total, cap, pieces, showSystem }) {
+    const unit = displayUnit(item.unit);
+    const system = Number(item.current_quantity) || 0;
+    let amount;
+    if (pieces) {
+        const sp = splitPieces(total, cap.amount);
+        const pu = displayUnit(cap.unit);
+        amount = sp.packs > 0 && sp.rest > 0
+            ? `${num(sp.packs)} ${unit} ${num(sp.rest)} ${pu} (รวม ${num(sp.pieces)} ${pu})`
+            : sp.packs > 0 ? `${num(sp.packs)} ${unit} (${num(sp.pieces)} ${pu})` : `${num(sp.pieces)} ${pu}`;
+    } else {
+        amount = qtyInWords(item, total, cap);
+    }
+    const diff = total - system;
+    let versus = null;
+    if (showSystem) {
+        if (Math.abs(diff) < 0.00005) versus = 'ตรงกับในระบบ';
+        else if (pieces) {
+            const d = Math.round(Math.abs(diff) * cap.amount);
+            versus = `${diff > 0 ? 'มากกว่า' : 'น้อยกว่า'}ในระบบ ${num(d)} ${displayUnit(cap.unit)}`;
+        } else {
+            versus = `${diff > 0 ? 'มากกว่า' : 'น้อยกว่า'}ในระบบ ${diffInWords(item, Math.abs(diff), cap).replace(/^[+-]/, '')}`;
+        }
+    }
+    return (
+        <p className={`mt-2 text-[12px] leading-5 ${ui.MUTED}`} role="status">
+            จะบันทึกยอดทั้งหมดเป็น <span className={`font-semibold text-[14px] tabular-nums ${ui.INK}`}>{amount}</span>
+            {versus && <span className={`block tabular-nums ${showSystem && diff < -0.00005 ? ui.ACCENT : ''}`}>{versus}</span>}
+        </p>
+    );
+}
+
 export default function StockCountPage() {
     const navigate = useNavigate();
     const reduceMotion = useReducedMotion();
@@ -168,6 +220,8 @@ export default function StockCountPage() {
     // The opened unit of an item, as a fraction of a full one. Kept beside the field, which holds
     // the unopened units, so nobody reads or types "2.2 bottles".
     const [openLeft, setOpenLeft] = useState(() => readOpenDraft(shopDayOf(new Date())));
+    // Loose pieces of pack items (cups out of an opened pack), as typed. Any number: all the cups may go here.
+    const [loose, setLoose] = useState(() => readLooseDraft(shopDayOf(new Date())));
     const [saving, setSaving] = useState(false);
     const [result, setResult] = useState(null);
     const [user, setUser] = useState(null);
@@ -196,6 +250,7 @@ export default function StockCountPage() {
             })
             .finally(() => setLoading(false));
         loadExtraBarcodes().then(setExtraBarcodes);
+        preloadCodeDetector(); // the reader is ready by the time "สแกน" is pressed
     }, []);
 
     useEffect(() => {
@@ -314,19 +369,31 @@ export default function StockCountPage() {
 
     useEffect(() => { writeDraft(shopDay, counts); }, [shopDay, counts]);
     useEffect(() => { writeOpenDraft(shopDay, openLeft); }, [shopDay, openLeft]);
+    useEffect(() => { writeLooseDraft(shopDay, loose); }, [shopDay, loose]);
 
-    // Plus / minus: a field left empty starts from the amount in the system when it is on show.
-    // For bottles and packs the field takes the full ones and the opened one is carried beside it.
+    // Plus / minus on an empty field: the first tap starts from the amount in the system (when it is on
+    // show), so a count that is nearly right is two taps, not retyping. The field itself stays empty until
+    // touched: a prefilled number would be saved as "counted" for shelves nobody looked at.
+    // Whole things (bottles, packs) put the full ones in the field and carry the opened one beside it.
     const step = (item, delta) => {
         const blank = String(counts[item.id] ?? '').trim() === '';
         const system = showSystem ? Math.max(0, Number(item.current_quantity) || 0) : 0;
         if (blank && countsWholeUnits(item)) {
             const { whole, frac } = splitQty(system);
             setCounts(prev => ({ ...prev, [item.id]: stepCount('', delta, whole) }));
-            if (frac > 0 && openLeft[item.id] === undefined) setOpenLeft(prev => ({ ...prev, [item.id]: frac }));
+            if (frac > 0 && openLeft[item.id] === undefined && loose[item.id] === undefined) setOpenLeft(prev => ({ ...prev, [item.id]: frac }));
             return;
         }
         setCounts(prev => ({ ...prev, [item.id]: stepCount(prev[item.id], delta, system) }));
+    };
+    // "It is exactly what the system says": one deliberate tap instead of + then -
+    const fillSystem = (item) => {
+        const system = Math.max(0, Number(item.current_quantity) || 0);
+        if (!countsWholeUnits(item)) { setCounts(prev => ({ ...prev, [item.id]: String(system) })); return; }
+        const { whole, frac } = splitQty(system);
+        setCounts(prev => ({ ...prev, [item.id]: String(whole) }));
+        setLoose(prev => { const next = { ...prev }; delete next[item.id]; return next; });
+        setOpenLeft(prev => { const next = { ...prev }; if (frac > 0) next[item.id] = frac; else delete next[item.id]; return next; });
     };
     const clearOpen = (id) => setOpenLeft(prev => {
         const next = { ...prev };
@@ -342,9 +409,33 @@ export default function StockCountPage() {
             .filter(i => !q || i.name.toLowerCase().includes(q));
     }, [items, scope, search, suggestedIds]);
 
-    const lines = buildCountLines(mergeOpenLeft(counts, openLeft));
+    // Pieces per pack for the items counted as packs + pieces
+    const pieceCaps = useMemo(() => {
+        const caps = {};
+        for (const item of items) {
+            const cap = capacityOf(item);
+            if (countsInPieces(item, cap)) caps[item.id] = cap.amount;
+        }
+        return caps;
+    }, [items]);
+    // What the pieces field shows: what was typed, else the opened pack carried in from the system or a scan
+    const looseShown = (item) => {
+        if (loose[item.id] !== undefined) return loose[item.id];
+        const frac = Number(openLeft[item.id]);
+        return frac > 0 && pieceCaps[item.id] ? String(Math.round(frac * pieceCaps[item.id])) : '';
+    };
+    const setLoosePieces = (id, value) => {
+        setLoose(prev => ({ ...prev, [id]: value }));
+        clearOpen(id);
+    };
+
+    const merged = mergeLoosePieces(mergeOpenLeft(counts, openLeft), loose, pieceCaps);
+    const lines = buildCountLines(merged);
     const filled = lines.length;
-    const invalidCount = Object.values(counts).filter(v => String(v ?? '').trim() !== '' && parseCount(v) === null).length;
+    const totalsById = new Map(lines.map(l => [l.stock_item_id, l.counted_qty]));
+    const unreadable = (v) => String(v ?? '').trim() !== '' && parseCount(v) === null;
+    const invalidCount = Object.values(counts).filter(unreadable).length
+        + Object.entries(loose).filter(([id, v]) => pieceCaps[id] && unreadable(v)).length;
 
     const toggleDaily = async (item) => {
         const next = item.track_mode === 'daily' ? 'weekly' : 'daily';
@@ -384,6 +475,7 @@ export default function StockCountPage() {
             setResult(data);
             setCounts({});
             setOpenLeft({});
+            setLoose({});
             writeDraft(shopDay, {});
             const fresh = await loadItems().catch(() => null);
             if (fresh) setItems(fresh);
@@ -514,6 +606,15 @@ export default function StockCountPage() {
                                     {scanning ? 'กำลังสแกน' : 'สแกน'}
                                 </button>
                             </div>
+                            <p className={`rounded-md border ${ui.RULE} ${ui.PAPER2} px-3 py-2.5 text-[14px] leading-6 ${ui.INK}`}>
+                                <span className="font-semibold">ใส่จำนวนที่มีอยู่จริงทั้งหมด</span> ไม่ใช่จำนวนที่เพิ่มเข้ามา
+                                <span className={`block text-[12px] leading-5 ${ui.MUTED}`}>
+                                    {showSystem
+                                        ? 'ตัวเลขสีเทาในช่องคือยอดในระบบ ยังไม่ถือว่านับ กด − + เพื่อปรับจากยอดนั้น พิมพ์ทับ หรือกด "ตรงกับในระบบ"'
+                                        : 'ยอดที่ใส่จะแทนยอดในระบบ'}
+                                    {' '}ของที่มาเป็นแพ็คนับเป็นแพ็ค เป็นชิ้น หรือทั้งสองอย่างก็ได้
+                                </span>
+                            </p>
                             <AnimatePresence initial={false}>
                                 {!showSystem && (
                                     <motion.p key="blind" {...fade} className={`text-[12px] leading-5 ${ui.MUTED}`}>
@@ -606,62 +707,134 @@ export default function StockCountPage() {
                                 {visible.map(item => {
                                     const raw = counts[item.id] ?? '';
                                     const cap = capacityOf(item);
-                                    const opened = Number(openLeft[item.id]) > 0 ? Number(openLeft[item.id]) : 0;
+                                    const pieces = !!pieceCaps[item.id];
+                                    const looseRaw = pieces ? looseShown(item) : '';
+                                    const opened = !pieces && Number(openLeft[item.id]) > 0 ? Number(openLeft[item.id]) : 0;
                                     const typed = String(raw).trim() !== '';
                                     const invalid = typed && parseCount(raw) === null;
-                                    const entered = typed || opened > 0;
+                                    const looseInvalid = pieces && unreadable(looseRaw);
+                                    const entered = typed || opened > 0 || String(looseRaw).trim() !== '';
+                                    const total = totalsById.get(item.id);
+                                    const unit = displayUnit(item.unit);
+                                    const pieceUnit = pieces ? displayUnit(cap.unit) : '';
+                                    const linkCls = 'font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer';
+                                    const meta = (
+                                        <div className={`flex flex-wrap gap-x-3 text-[12px] leading-5 ${ui.NEUTRAL}`}>
+                                            <span>
+                                                {showSystem
+                                                    ? <>ในระบบ <span className="tabular-nums">{qtyInWords(item, item.current_quantity, cap)}{pieces && Number(item.current_quantity) > 0 ? ` (${num(splitPieces(item.current_quantity, cap.amount).pieces)} ${pieceUnit})` : ''}</span></>
+                                                    : <>นับเป็น{unit}{pieces ? `หรือ${pieceUnit}` : ''}</>}
+                                            </span>
+                                            {pieces && <span className="tabular-nums whitespace-nowrap">1 {unit} = {num(cap.amount)} {pieceUnit}</span>}
+                                            {showSystem && !entered && Number(item.current_quantity) > 0 && (
+                                                <button type="button" onClick={() => fillSystem(item)} className={linkCls}>
+                                                    ตรงกับในระบบ
+                                                </button>
+                                            )}
+                                            {!pieces && (
+                                                <button type="button" onClick={() => setHelperFor(helperFor === item.id ? null : item.id)}
+                                                    aria-expanded={helperFor === item.id}
+                                                    className={`${linkCls} ${helperFor === item.id ? ui.INK : ''}`}>
+                                                    มีของเปิดแล้ว
+                                                </button>
+                                            )}
+                                            {scope === 'all' && (
+                                                <button type="button" onClick={() => toggleDaily(item)} className={linkCls}>
+                                                    {item.track_mode === 'daily' ? 'เลิกนับทุกวัน' : 'นับทุกวัน'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                    // The amount in the system sits in the empty field in grey: seen, not yet counted.
+                                    // It turns to ink (and is saved) once the row is touched.
+                                    const sys = Math.max(0, Number(item.current_quantity) || 0);
+                                    const sysSplit = splitQty(sys);
+                                    const hint = !showSystem ? '' : countsWholeUnits(item) ? String(sysSplit.whole) : String(Number(sys.toFixed(2)));
+                                    const looseHint = !showSystem || !pieces ? '' : String(Math.round(sysSplit.frac * cap.amount));
+                                    const fieldBorder = (bad, on) => bad ? 'border-[oklch(52%_0.16_28)]' : on ? 'border-[oklch(42%_0.010_28)]' : ui.RULE;
                                     return (
-                                        <li key={item.id} className={`px-3 py-3 transition-colors ${entered && !invalid ? 'bg-[oklch(97.5%_0.006_28)]' : ''}`}>
+                                        <li key={item.id} className={`px-3 py-3 transition-colors ${entered && !invalid && !looseInvalid ? 'bg-[oklch(97.5%_0.006_28)]' : ''}`}>
+                                            {pieces ? (
+                                                <>
+                                                    <span className="font-semibold text-base leading-6 block break-words">{item.name}</span>
+                                                    {meta}
+                                                    {/* 375px: 44 + 64 + 44 + 2 × 6 = 164 for the packs, 16 for the plus, the rest for the pieces */}
+                                                    <div className="mt-2 grid grid-cols-[auto_auto_minmax(0,1fr)] gap-x-2 items-end">
+                                                        <div>
+                                                            <label htmlFor={`count-${item.id}`} className={`block text-[12px] leading-5 font-medium ${ui.MUTED}`}>{unit}เต็ม</label>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <button type="button" aria-label={`ลด ${item.name} 1 ${unit}`} onClick={() => step(item, -1)} className={stepBtn}>−</button>
+                                                                <input
+                                                                    id={`count-${item.id}`}
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    autoComplete="off"
+                                                                    value={raw}
+                                                                    placeholder={hint}
+                                                                    onChange={e => setCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                                                    aria-invalid={invalid}
+                                                                    className={`w-16 ${numInput} ${fieldBorder(invalid, typed)}`}
+                                                                />
+                                                                <button type="button" aria-label={`เพิ่ม ${item.name} 1 ${unit}`} onClick={() => step(item, 1)} className={stepBtn}>+</button>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`h-11 flex items-center text-base ${ui.NEUTRAL}`} aria-hidden="true">+</span>
+                                                        <div className="min-w-0 max-w-[200px]">
+                                                            <label htmlFor={`loose-${item.id}`} className={`block text-[12px] leading-5 font-medium ${ui.MUTED} truncate`}>{pieceUnit} (เศษ หรือนับทั้งหมด)</label>
+                                                            <input
+                                                                id={`loose-${item.id}`}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                autoComplete="off"
+                                                                value={looseRaw}
+                                                                placeholder={entered ? '' : looseHint}
+                                                                onChange={e => setLoosePieces(item.id, e.target.value)}
+                                                                aria-invalid={looseInvalid}
+                                                                className={`w-full ${numInput} ${fieldBorder(looseInvalid, String(looseRaw).trim() !== '')}`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
                                             <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center">
                                                 <div className="min-w-0">
                                                     <label htmlFor={`count-${item.id}`} className="font-semibold text-base leading-6 block break-words">
                                                         {item.name}
                                                     </label>
-                                                    <div className={`flex flex-wrap gap-x-3 text-[12px] leading-5 ${ui.NEUTRAL}`}>
-                                                        <span>
-                                                            {showSystem
-                                                                ? <>ในระบบ <span className="tabular-nums">{qtyInWords(item, item.current_quantity, cap)}</span></>
-                                                                : <>นับเป็น{displayUnit(item.unit)}</>}
-                                                        </span>
-                                                        <button type="button" onClick={() => setHelperFor(helperFor === item.id ? null : item.id)}
-                                                            aria-expanded={helperFor === item.id}
-                                                            className={`font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer ${helperFor === item.id ? ui.INK : ''}`}>
-                                                            มีของเปิดแล้ว
-                                                        </button>
-                                                        {scope === 'all' && (
-                                                            <button type="button" onClick={() => toggleDaily(item)}
-                                                                className="font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer">
-                                                                {item.track_mode === 'daily' ? 'เลิกนับทุกวัน' : 'นับทุกวัน'}
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    {meta}
                                                     {opened > 0 && (
                                                         <div className={`flex flex-wrap gap-x-3 text-[14px] leading-6 ${ui.INK}`}>
                                                             <span className="font-semibold">+ เปิดอยู่ 1 เหลือ <span className="tabular-nums">{openLeftText(opened, cap)}</span></span>
                                                             <button type="button" onClick={() => clearOpen(item.id)}
-                                                                className={`text-[12px] font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] ${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer`}>
+                                                                className={`text-[12px] ${ui.NEUTRAL} ${linkCls}`}>
                                                                 ไม่มีของเปิด
                                                             </button>
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 sm:gap-2">
-                                                    <button type="button" aria-label={`ลด ${item.name} 1`} onClick={() => step(item, -1)} className={stepBtn}>−</button>
-                                                    <input
-                                                        id={`count-${item.id}`}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        autoComplete="off"
-                                                        value={raw}
-                                                        onChange={e => setCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
-                                                        aria-invalid={invalid}
-                                                        className={`w-16 sm:w-20 ${numInput} ${invalid
-                                                            ? 'border-[oklch(52%_0.16_28)]'
-                                                            : entered ? 'border-[oklch(42%_0.010_28)]' : ui.RULE}`}
-                                                    />
-                                                    <button type="button" aria-label={`เพิ่ม ${item.name} 1`} onClick={() => step(item, 1)} className={stepBtn}>+</button>
+                                                <div>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                        <button type="button" aria-label={`ลด ${item.name} 1`} onClick={() => step(item, -1)} className={stepBtn}>−</button>
+                                                        <input
+                                                            id={`count-${item.id}`}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            autoComplete="off"
+                                                            value={raw}
+                                                            placeholder={hint}
+                                                            onChange={e => setCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                                            aria-invalid={invalid}
+                                                            className={`w-16 sm:w-20 ${numInput} ${fieldBorder(invalid, entered)}`}
+                                                        />
+                                                        <button type="button" aria-label={`เพิ่ม ${item.name} 1`} onClick={() => step(item, 1)} className={stepBtn}>+</button>
+                                                    </div>
+                                                    <span className={`block text-center text-[12px] leading-5 ${ui.NEUTRAL}`}>{unit}</span>
                                                 </div>
                                             </div>
+                                            )}
+                                            {total !== undefined && !invalid && !looseInvalid && (
+                                                <CountOutcome item={item} total={total} cap={cap} pieces={pieces} showSystem={showSystem} />
+                                            )}
                                             <AnimatePresence initial={false}>
                                                 {helperFor === item.id && (
                                                     <motion.div key="helper"
