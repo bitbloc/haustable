@@ -180,6 +180,34 @@ export const parseRatio = (raw) => {
     return String(raw ?? '').trim() !== '' && Number.isFinite(n) && n > 0 ? n : null;
 };
 
+/**
+ * Units the converter may be answered in: the kept item's counting unit, plus the units that
+ * convert into it for certain. Counted by weight -> kg and g. A bottle known to hold 700 ml ->
+ * bottle, ml and l. A piece with no size -> only itself.
+ */
+export function ratioUnitOptions(keep) {
+    const own = stockUnitOf(keep) || 'unit';
+    const family = (kind) => Object.keys(BASE).filter(u => BASE[u][0] === kind);
+    if (BASE[own]) return [own, ...family(BASE[own][0]).filter(u => u !== own)];
+    const usage = BASE[lower(keep?.usage_unit)];
+    if (usage && factorOf(keep) > 1 && !hasBrokenFactor(keep)) return [own, ...family(usage[0])];
+    return [own];
+}
+
+/** A converter typed in one of ratioUnitOptions -> kept counting units, or null. */
+export function ratioInKeepUnits(raw, unit, keep) {
+    const n = parseRatio(raw);
+    if (n === null) return null;
+    const own = stockUnitOf(keep) || 'unit';
+    const u = lower(unit) || own;
+    if (u === own) return n;
+    if (!ratioUnitOptions(keep).includes(u)) return null;
+    const out = BASE[own]
+        ? (n * BASE[u][1]) / BASE[own][1]
+        : (n * BASE[u][1]) / (factorOf(keep) * BASE[lower(keep.usage_unit)][1]);
+    return out > 0 ? Math.round(out * 1000000) / 1000000 : null;
+}
+
 /** The kept item's balance after the merge, in its own counting unit. */
 export const mergedQuantity = (keep, others = [], ratios = {}) => Math.round(others.reduce(
     (sum, o) => sum + (Number(o.current_quantity) || 0) * (sameUnitSetup(keep, o) ? 1 : (Number(ratios[o.id]) || 0)),

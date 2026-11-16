@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     stockHealth, findDuplicateNames, unitSetupWarnings, readMergeResult,
     isPackagingByWeight, hasBrokenFactor, isOneUnitOneGram, unitsNeverSet,
-    sameUnitSetup, suggestMergeRatio, parseRatio, mergedQuantity,
+    sameUnitSetup, suggestMergeRatio, parseRatio, mergedQuantity, ratioUnitOptions, ratioInKeepUnits,
 } from '../stockHealth';
 
 const it_ = (over) => ({ id: over.name, unit: over.pack_unit, cost_price: 10, conversion_factor: 1, ...over });
@@ -127,5 +127,29 @@ describe('merging items set up in different units', () => {
         expect(parseRatio('')).toBeNull();
         expect(parseRatio('0')).toBeNull();
         expect(parseRatio('abc')).toBeNull();
+    });
+});
+
+describe('answering the converter in a handier unit', () => {
+    const kg = it_({ name: 'ซอสฝาเขียว/แกลอน', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000 });
+    const gin = it_({ name: 'Gin', pack_unit: 'bottle', usage_unit: 'ml', conversion_factor: 700 });
+    const piece = it_({ name: 'ซอสฝาเขียว', pack_unit: 'bottle', usage_unit: 'unit', conversion_factor: 1 });
+    const junk = it_({ name: 'น้ำมันงา/ขวด', pack_unit: 'unit', usage_unit: 'bottle', conversion_factor: 1000 });
+
+    it('offers only units that convert for certain', () => {
+        expect(ratioUnitOptions(kg)).toEqual(['kg', 'g']);
+        expect(ratioUnitOptions(gin)).toEqual(['bottle', 'ml', 'l']);
+        expect(ratioUnitOptions(piece)).toEqual(['bottle']);
+        expect(ratioUnitOptions(junk)).toEqual(['unit']);
+    });
+    it('turns the answer into the kept counting unit', () => {
+        expect(ratioInKeepUnits('700', 'g', kg)).toBe(0.7);
+        expect(ratioInKeepUnits('0,7', 'kg', kg)).toBe(0.7);
+        expect(ratioInKeepUnits('0.7', undefined, kg)).toBe(0.7);
+        expect(ratioInKeepUnits('350', 'ml', gin)).toBe(0.5);
+        expect(ratioInKeepUnits('1.4', 'l', gin)).toBe(2);
+        expect(ratioInKeepUnits('2', 'bottle', gin)).toBe(2);
+        expect(ratioInKeepUnits('5', 'g', gin)).toBeNull();
+        expect(ratioInKeepUnits('', 'g', kg)).toBeNull();
     });
 });
