@@ -164,6 +164,8 @@ describe('amounts in words, no decimals', () => {
         expect(qtyInWords(lager, 0.5)).toBe('เปิดอยู่ 1 เหลือ 50%');
         expect(qtyInWords(acid, 1.7)).toBe('1 กก. 700 ก.');
         expect(qtyInWords(acid, 0)).toBe('0 กิโลกรัม');
+        expect(qtyInWords(gin, -2, ml700)).toBe('ติดลบ 2 ขวด');
+        expect(qtyInWords(acid, -0.25)).toBe('ติดลบ 250 ก.');
     });
     it('writes a difference with its sign', () => {
         expect(diffInWords(gin, -1.2, ml700)).toBe('-1 ขวด 140 มล.');

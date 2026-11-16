@@ -221,6 +221,8 @@ export const openLeftText = (frac, capacity = null) => (capacity
  */
 export const qtyInWords = (item, qty, capacity = null) => {
     const unit = displayUnit(item?.unit || item?.pack_unit);
+    // A balance below zero (sold more than was received) is said as it is, never shown as 0
+    if (Number(qty) < -0.00005) return `ติดลบ ${qtyInWords(item, -Number(qty), capacity)}`;
     const n = Math.max(0, Number(qty) || 0);
     if (!countsWholeUnits(item)) {
         const packed = ['g', 'ml'].includes(String(item?.usage_unit || '').toLowerCase())

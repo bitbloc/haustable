@@ -129,14 +129,17 @@ BEGIN
     END IF;
 
     UPDATE public.recipe_ingredients
-    SET ingredient_id = p_keep, quantity = ROUND((quantity * v_use)::numeric, 4)
+    SET ingredient_id = p_keep,
+        quantity = ROUND((quantity * v_use)::numeric, 4),
+        -- a recipe row names the unit its amount is in; it follows the kept item's recipe unit
+        unit = CASE WHEN v_ku = v_gu THEN unit ELSE v_keep.usage_unit END
     WHERE ingredient_id = p_remove;
     GET DIAGNOSTICS v_recipes = ROW_COUNT;
 
     UPDATE public.option_choice_ingredients
     SET stock_item_id = p_keep,
         quantity = ROUND((quantity * v_use)::numeric, 4),
-        unit = CASE WHEN v_same THEN unit ELSE v_keep.usage_unit END
+        unit = CASE WHEN v_ku = v_gu THEN unit ELSE v_keep.usage_unit END
     WHERE stock_item_id = p_remove;
     GET DIAGNOSTICS v_options = ROW_COUNT;
 
