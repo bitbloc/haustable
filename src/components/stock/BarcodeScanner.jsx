@@ -330,10 +330,17 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
         
         return () => {
              stopOCR();
-             if (scannerRef.current && scannerRef.current.isScanning) {
-                 scannerRef.current.stop().catch(console.error);
-             }
-             if (scannerRef.current) scannerRef.current.clear();
+             // clear() throws while the camera is still running or paused, and stop() only
+             // finishes later: clear after it has stopped, never beside it. A throw here went
+             // to the error screen right after every successful scan.
+             const scanner = scannerRef.current;
+             scannerRef.current = null;
+             if (!scanner) return;
+             const clear = () => { try { scanner.clear(); } catch (e) { console.warn('Scanner clear skipped', e); } };
+             let running = false;
+             try { const st = scanner.getState(); running = st === 2 || st === 3; } catch { /* not started */ }
+             if (running) scanner.stop().then(clear, clear);
+             else clear();
         };
     }, []);
 
