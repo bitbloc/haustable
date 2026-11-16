@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     stockHealth, findDuplicateNames, unitSetupWarnings, readMergeResult,
     isPackagingByWeight, hasBrokenFactor, isOneUnitOneGram, unitsNeverSet,
+    sameUnitSetup, suggestMergeRatio, parseRatio, mergedQuantity,
 } from '../stockHealth';
 
 const it_ = (over) => ({ id: over.name, unit: over.pack_unit, cost_price: 10, conversion_factor: 1, ...over });
@@ -94,5 +95,37 @@ describe('readMergeResult', () => {
         expect(readMergeResult({ data: { success: false, code: 'UNITS_DIFFER' }, error: null }).message).toContain('หน่วย');
         expect(readMergeResult({ data: null, error: { code: 'PGRST202', message: 'x' } }).code).toBe('NOT_INSTALLED');
         expect(readMergeResult({ data: { success: false, code: 'NEW' }, error: null }).code).toBe('UNKNOWN');
+    });
+});
+
+describe('merging items set up in different units', () => {
+    // Pairs from the shop's duplicate list (2026-11-16)
+    const riceKg = it_({ name: 'ข้าวคั่ว', id: 'a', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 1.4 });
+    const riceBag = it_({ name: 'ข้าวคั่ว', id: 'b', pack_unit: 'bag', usage_unit: 'g', conversion_factor: 500, current_quantity: 3 });
+    const sauceBottle = it_({ name: 'ซอสฝาเขียว', id: 'c', pack_unit: 'bottle', usage_unit: 'unit', conversion_factor: 1, current_quantity: 0 });
+    const sauceKg = it_({ name: 'ซอสฝาเขียว/แกลอน', id: 'd', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 0.85 });
+    const chilliBag = it_({ name: 'ซอสพริกโรซ่า/ถุง', id: 'e', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 1, current_quantity: 1.5 });
+    const chilliKg = it_({ name: 'ซอสพริกโรซ่า/ซอง', id: 'f', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 1 });
+
+    it('works the converter out when both are used by weight', () => {
+        expect(sameUnitSetup(riceKg, riceBag)).toBe(false);
+        expect(suggestMergeRatio(riceKg, riceBag)).toBe(0.5);
+        expect(suggestMergeRatio(riceBag, riceKg)).toBe(2);
+        expect(suggestMergeRatio(riceKg, { ...riceKg, id: 'z' })).toBe(1);
+    });
+    it('leaves it to a person for pieces against grams and for set-ups that cannot be true', () => {
+        expect(suggestMergeRatio(sauceKg, sauceBottle)).toBeNull();
+        expect(suggestMergeRatio(chilliKg, chilliBag)).toBeNull();
+    });
+    it('adds the removed balance in the kept unit', () => {
+        expect(mergedQuantity(riceKg, [riceBag], { b: 0.5 })).toBe(2.9);
+        expect(mergedQuantity(riceBag, [riceKg], { a: 2 })).toBe(5.8);
+        expect(mergedQuantity(riceKg, [{ ...riceKg, id: 'z', current_quantity: 2 }], {})).toBe(3.4);
+    });
+    it('reads a typed converter', () => {
+        expect(parseRatio('0,5')).toBe(0.5);
+        expect(parseRatio('')).toBeNull();
+        expect(parseRatio('0')).toBeNull();
+        expect(parseRatio('abc')).toBeNull();
     });
 });

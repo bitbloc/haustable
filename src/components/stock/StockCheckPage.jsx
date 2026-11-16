@@ -4,13 +4,21 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import StockItemForm from './StockItemForm';
-import { stockHealth, readMergeResult, unitLine } from '../../utils/stockHealth';
-import { displayUnit } from '../../utils/stockCount';
+import { stockHealth, readMergeResult, unitLine, sameUnitSetup, suggestMergeRatio, parseRatio, mergedQuantity } from '../../utils/stockHealth';
+import { displayUnit, qtyInWords } from '../../utils/stockCount';
+import { fullUnitCapacity } from '../../utils/recipeGraph';
 import '../../StockPage.css';
 
 const SHOWN = 8;
 const baht = (n) => `฿${Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
-const qtyText = (item) => `${Number(item.current_quantity || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${displayUnit(item.unit || item.pack_unit)}`;
+const qtyText = (item) => qtyInWords(item, item.current_quantity, fullUnitCapacity(item));
+const unitOf = (item) => displayUnit(item.unit || item.pack_unit || 'unit');
+// One ratio per item that will be removed, prefilled when the set-up already says it
+const ratiosFor = (group, keepId) => {
+    const keep = group.find(i => i.id === keepId);
+    return Object.fromEntries(group.filter(i => i.id !== keepId && !sameUnitSetup(keep, i))
+        .map(i => [i.id, String(suggestMergeRatio(keep, i) ?? '')]));
+};
 
 /**
  * Where stock items are set up wrongly: what bends menu cost first, then what makes counts
@@ -26,7 +34,7 @@ export default function StockCheckPage() {
     const [failed, setFailed] = useState(false);
     const [expanded, setExpanded] = useState(() => new Set());
     const [editing, setEditing] = useState(null);
-    const [merge, setMerge] = useState(null); // { group, keepId, saving, problem }
+    const [merge, setMerge] = useState(null); // { group, keepId, ratios, saving, problem }
 
     const load = useCallback(async () => {
         try {
@@ -66,10 +74,12 @@ export default function StockCheckPage() {
     const runMerge = async () => {
         if (!merge || merge.saving) return;
         setMerge(m => ({ ...m, saving: true, problem: null }));
+        const keep = merge.group.find(i => i.id === merge.keepId);
         const others = merge.group.filter(i => i.id !== merge.keepId);
         for (const other of others) {
+            const ratio = sameUnitSetup(keep, other) ? null : parseRatio(merge.ratios[other.id]);
             const result = readMergeResult(await supabase
-                .rpc('merge_stock_items', { p_keep: merge.keepId, p_remove: other.id })
+                .rpc('merge_stock_items', { p_keep: merge.keepId, p_remove: other.id, p_ratio: ratio })
                 .then(res => res, err => ({ data: null, error: err })));
             if (!result.ok) {
                 setMerge(m => (m ? { ...m, saving: false, problem: result.message } : m));
@@ -77,11 +87,15 @@ export default function StockCheckPage() {
                 return;
             }
         }
-        const kept = merge.group.find(i => i.id === merge.keepId);
-        toast.success(`รวมเป็น "${kept?.name}" แล้ว`);
+        toast.success(`รวมเป็น "${keep?.name}" แล้ว`);
         setMerge(null);
         load();
     };
+
+    const mergeKeep = merge ? merge.group.find(i => i.id === merge.keepId) : null;
+    const mergeOthers = merge ? merge.group.filter(i => i.id !== merge.keepId) : [];
+    const mergeNeeds = mergeOthers.filter(o => !sameUnitSetup(mergeKeep, o));
+    const mergeReady = mergeNeeds.every(o => parseRatio(merge.ratios[o.id]) !== null);
 
     return (
         <div className="stock-page">
@@ -155,11 +169,10 @@ export default function StockCheckPage() {
                             <h2 id="sk-duplicates">ชื่อที่น่าจะเป็นของเดียวกัน</h2>
                             <span className="sk-count">{health.duplicates.length}</span>
                         </div>
-                        <p className="sk-why">ของเดียวกันที่แยกเป็นสองรายการ ทำให้ยอดคงเหลือและสูตรกระจาย รวมได้เมื่อสองรายการตั้งหน่วยเหมือนกัน ถ้าเป็นคนละของ ไม่ต้องทำอะไร</p>
+                        <p className="sk-why">ของเดียวกันที่แยกเป็นสองรายการ ทำให้ยอดคงเหลือและสูตรกระจาย กด "รวม" เพื่อเลือกรายการที่จะเก็บ ถ้าสองรายการตั้งหน่วยต่างกัน จะถามตัวแปลงก่อนรวม ถ้าเป็นคนละของ ไม่ต้องทำอะไร</p>
                         <ul className="sk-rows">
                             {health.duplicates.map(group => {
-                                const sameUnits = group.every(i => unitLine(i) === unitLine(group[0])
-                                    && String(i.unit || i.pack_unit || '').toLowerCase() === String(group[0].unit || group[0].pack_unit || '').toLowerCase());
+                                const sameUnits = group.every(i => sameUnitSetup(i, group[0]));
                                 return (
                                     <li key={group.map(i => i.id).join('-')} className="sk-dup">
                                         <span className="sk-row__main">
@@ -172,10 +185,10 @@ export default function StockCheckPage() {
                                                     </span>
                                                 </button>
                                             ))}
-                                            {!sameUnits && <span className="sk-dup__note">หน่วยไม่ตรงกัน แตะรายการเพื่อแก้หน่วยให้ตรงก่อน จึงจะรวมได้</span>}
+                                            {!sameUnits && <span className="sk-dup__note">หน่วยไม่ตรงกัน ตอนรวมจะถามว่าหนึ่งหน่วยของรายการที่ลบเท่ากับเท่าไรของรายการที่เก็บ</span>}
                                         </span>
-                                        <button type="button" className="sp-btn sp-btn--outline" disabled={!sameUnits}
-                                            onClick={() => setMerge({ group, keepId: group[0].id, saving: false, problem: null })}>
+                                        <button type="button" className="sp-btn sp-btn--outline"
+                                            onClick={() => setMerge({ group, keepId: group[0].id, ratios: ratiosFor(group, group[0].id), saving: false, problem: null })}>
                                             รวม
                                         </button>
                                     </li>
@@ -207,19 +220,38 @@ export default function StockCheckPage() {
                             <legend>เก็บรายการไหนไว้</legend>
                             {merge.group.map(item => (
                                 <label key={item.id} className={`sk-choice ${merge.keepId === item.id ? 'is-on' : ''}`}>
-                                    <input type="radio" name="sk-keep" checked={merge.keepId === item.id} onChange={() => setMerge(m => ({ ...m, keepId: item.id, problem: null }))} />
+                                    <input type="radio" name="sk-keep" checked={merge.keepId === item.id} onChange={() => setMerge(m => ({ ...m, keepId: item.id, ratios: ratiosFor(m.group, item.id), problem: null }))} />
                                     <span className="sk-row__main">
                                         <span className="sk-row__name">{item.name}</span>
-                                        <span className="sk-row__sub">คงเหลือ {qtyText(item)} · ราคา {baht(item.cost_price)}{recipeCounts[item.id] > 0 ? ` · ใช้ใน ${recipeCounts[item.id]} สูตร` : ''}</span>
+                                        <span className="sk-row__sub">คงเหลือ {qtyText(item)} · {unitLine(item)} · ราคา {baht(item.cost_price)}{recipeCounts[item.id] > 0 ? ` · ใช้ใน ${recipeCounts[item.id]} สูตร` : ''}</span>
                                     </span>
                                 </label>
                             ))}
                         </fieldset>
+                        {mergeNeeds.map(other => (
+                            <label key={other.id} className="sk-ratio">
+                                <span className="sk-ratio__q">1 {unitOf(other)} ของ “{other.name}” เท่ากับกี่{unitOf(mergeKeep)}</span>
+                                <span className="sk-ratio__row">
+                                    <input type="text" inputMode="decimal" autoComplete="off" value={merge.ratios[other.id] ?? ''}
+                                        aria-invalid={parseRatio(merge.ratios[other.id]) === null}
+                                        onChange={e => setMerge(m => ({ ...m, ratios: { ...m.ratios, [other.id]: e.target.value }, problem: null }))} />
+                                    <span>{unitOf(mergeKeep)}</span>
+                                </span>
+                                <span className="sk-row__sub">
+                                    {suggestMergeRatio(mergeKeep, other) !== null
+                                        ? `คิดจากที่ตั้งไว้: ${unitLine(other)} และ ${unitLine(mergeKeep)} แก้ได้ถ้าไม่ตรงของจริง`
+                                        : 'หน่วยของสองรายการเทียบกันเองไม่ได้ ดูจากของจริงแล้วใส่ตัวเลข'}
+                                </span>
+                            </label>
+                        ))}
+                        <p className="sk-total">
+                            ยอดหลังรวม <strong>{mergeReady ? qtyInWords(mergeKeep, mergedQuantity(mergeKeep, mergeOthers, Object.fromEntries(Object.entries(merge.ratios).map(([id, v]) => [id, parseRatio(v) ?? 0]))), fullUnitCapacity(mergeKeep)) : 'ใส่ตัวแปลงก่อน'}</strong>
+                        </p>
                         <p className="sk-why">
-                            รายการที่ไม่ได้เลือกจะถูกลบ ยอดคงเหลือจะถูกบวกเข้ารายการที่เก็บไว้ สูตร ประวัติ การนับ และบาร์โค้ดของมันจะย้ายมาด้วย ย้อนกลับไม่ได้
+                            รายการที่ไม่ได้เลือกจะถูกลบ ยอดคงเหลือ ประวัติ การนับ และบาร์โค้ดของมันจะถูกแปลงเป็นหน่วยของรายการที่เก็บไว้ สูตรที่ใช้มันจะย้ายมาด้วย ย้อนกลับไม่ได้
                         </p>
                         {merge.problem && <p className="sk-notice" role="alert">{merge.problem}</p>}
-                        <button type="button" className="sk-primary" disabled={merge.saving} onClick={runMerge}>
+                        <button type="button" className="sk-primary" disabled={merge.saving || !mergeReady} onClick={runMerge}>
                             {merge.saving ? 'กำลังรวม' : 'รวมรายการ'}
                         </button>
                     </div>

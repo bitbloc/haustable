@@ -141,12 +141,50 @@ const MERGE_MESSAGES = {
     NOT_ALLOWED: 'เฉพาะเจ้าของ แอดมิน หรือผู้จัดการ ที่รวมรายการได้',
     NOT_FOUND: 'ไม่พบรายการ อาจถูกลบหรือรวมไปแล้ว',
     SAME_ITEM: 'เลือกรายการเดียวกัน',
-    UNITS_DIFFER: 'สองรายการนี้ตั้งหน่วยไม่เหมือนกัน ให้แก้หน่วยให้ตรงกันก่อน แล้วค่อยรวม',
+    UNITS_DIFFER: 'สองรายการนี้ตั้งหน่วยไม่เหมือนกัน ใส่ว่าหนึ่งหน่วยของรายการที่จะลบเท่ากับเท่าไรของรายการที่เก็บ',
+    RECIPE_UNITS: 'รายการที่จะลบมีสูตรของตัวเองและตั้งหน่วยต่างกัน ให้เลือกเก็บรายการนั้นไว้แทน',
     BOTH_HAVE_RECIPES: 'ทั้งสองรายการมีสูตรของตัวเอง ให้ลบสูตรของรายการที่จะเลิกใช้ก่อน',
     OPTION_CONFLICT: 'ตัวเลือกเมนูบางตัวผูกกับทั้งสองรายการ ให้แก้ที่ตัวเลือกนั้นก่อน',
     NOT_INSTALLED: 'ระบบรวมรายการยังไม่ได้เปิดใช้ในฐานข้อมูล',
     UNKNOWN: 'รวมไม่สำเร็จ ข้อมูลยังเหมือนเดิม',
 };
+
+const stockUnitOf = (item) => lower(item?.unit || item?.pack_unit);
+
+/** Same counting unit, recipe unit and converter: the two can be added as they are. */
+export const sameUnitSetup = (a, b) => stockUnitOf(a) === stockUnitOf(b)
+    && lower(a?.usage_unit) === lower(b?.usage_unit)
+    && factorOf(a) === factorOf(b);
+
+const BASE = { g: ['mass', 1], kg: ['mass', 1000], ml: ['volume', 1], l: ['volume', 1000] };
+
+/**
+ * How many of the kept item's counting units one counting unit of the removed item is, when the
+ * set-up says so: both are used by weight (or both by volume) and neither converter is one of the
+ * impossible ones. "1 ถุง = 500 กรัม" into "1 กิโลกรัม = 1,000 กรัม" -> 0.5.
+ * Returns null when a person has to say (pieces against grams, or a set-up that cannot be true).
+ */
+export function suggestMergeRatio(keep, remove) {
+    if (sameUnitSetup(keep, remove)) return 1;
+    const k = BASE[lower(keep?.usage_unit)];
+    const g = BASE[lower(remove?.usage_unit)];
+    if (!k || !g || k[0] !== g[0]) return null;
+    if ([keep, remove].some(i => hasBrokenFactor(i) || isOneUnitOneGram(i))) return null;
+    const ratio = (factorOf(remove) * g[1]) / (factorOf(keep) * k[1]);
+    return Number.isFinite(ratio) && ratio > 0 ? Math.round(ratio * 10000) / 10000 : null;
+}
+
+/** Ratio typed by a person -> number, or null when empty or not above zero. */
+export const parseRatio = (raw) => {
+    const n = Number(String(raw ?? '').trim().replace(',', '.'));
+    return String(raw ?? '').trim() !== '' && Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/** The kept item's balance after the merge, in its own counting unit. */
+export const mergedQuantity = (keep, others = [], ratios = {}) => Math.round(others.reduce(
+    (sum, o) => sum + (Number(o.current_quantity) || 0) * (sameUnitSetup(keep, o) ? 1 : (Number(ratios[o.id]) || 0)),
+    Number(keep?.current_quantity) || 0
+) * 10000) / 10000;
 
 /** Normalise a merge_stock_items answer into { ok, code, message, data }. */
 export function readMergeResult({ data, error }) {

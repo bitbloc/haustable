@@ -513,6 +513,14 @@
 .sk-choice { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; border: 1px solid var(--sp-control); border-radius: var(--sp-r-control); cursor: pointer; }
 .sk-choice.is-on { border-color: var(--sp-ink); background: var(--sp-paper); }
 .sk-choice input { width: 18px; height: 18px; accent-color: var(--sp-ink); flex: none; }
+.sk-ratio { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--sp-control); border-radius: var(--sp-r-control); min-width: 0; }
+.sk-ratio__q { font-size: 14px; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.sk-ratio__row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.sk-ratio__row input { width: 112px; height: 44px; padding: 0 12px; border: 1px solid var(--sp-control); border-radius: var(--sp-r-control); background: var(--sp-card); color: var(--sp-ink); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.sk-ratio__row input:focus { outline: 0; border-color: var(--sp-ink); }
+.sk-ratio__row input[aria-invalid="true"] { border-color: var(--sp-accent-ink); }
+.sk-total { font-size: 14px; line-height: 1.6; }
+.sk-total strong { font-weight: 700; }
 .sk-primary { min-height: 44px; border: 1px solid var(--sp-ink); border-radius: var(--sp-r-control); background: var(--sp-ink); color: var(--sp-on-ink); font-size: 16px; font-weight: 600; }
 .sk-primary:disabled { opacity: 0.6; cursor: default; }
 @media (min-width: 640px) {
