@@ -41,6 +41,32 @@ describe('refundBookingLoyaltyIfNeeded', () => {
         expect(writes.some(w => w.table === 'bookings')).toBe(false)
     })
 
+    it('lets the database do the refund when refund_booking_loyalty is installed', async () => {
+        const { client, writes } = fakeSupabase({ profile })
+        const calls = []
+        client.rpc = async (name, args) => { calls.push({ name, args }); return { data: true, error: null } }
+        expect(await refundBookingLoyaltyIfNeeded(booking, client)).toBe(true)
+        expect(calls).toEqual([{ name: 'refund_booking_loyalty', args: { p_booking_id: 'b1' } }])
+        expect(writes).toHaveLength(0)
+    })
+
+    it('reports no refund, and writes nothing, when the database declines it', async () => {
+        const { client, writes } = fakeSupabase({ profile })
+        client.rpc = async () => ({ data: false, error: null })
+        expect(await refundBookingLoyaltyIfNeeded(booking, client)).toBe(false)
+        client.rpc = async () => ({ data: null, error: { code: '42501', message: 'denied' } })
+        expect(await refundBookingLoyaltyIfNeeded(booking, client)).toBe(false)
+        expect(writes).toHaveLength(0)
+    })
+
+    it('falls back to the direct writes when the function is not installed yet', async () => {
+        const { client, writes } = fakeSupabase({ profile })
+        client.rpc = async () => ({ data: null, error: { code: 'PGRST202', message: 'not found' } })
+        expect(await refundBookingLoyaltyIfNeeded(booking, client)).toBe(true)
+        expect(writes[0].table).toBe('profiles')
+        expect(writes[1].values.staff_remark).toContain('[LOYALTY_REFUNDED]')
+    })
+
     it('skips bookings already refunded', async () => {
         const { client, writes } = fakeSupabase({ profile })
         expect(await refundBookingLoyaltyIfNeeded({ ...booking, staff_remark: '[LOYALTY_REFUNDED]' }, client)).toBe(false)

@@ -233,6 +233,24 @@ export async function refundBookingLoyaltyIfNeeded(booking, supabaseClient) {
 
     if (xhausRedeemed <= 0 && !isFreeDrinkUsed) return false;
 
+    // Preferred path: the database does the refund and the tag in one step (refund_booking_loyalty).
+    // It works from the PIN-only POS, which is not allowed to write profiles directly.
+    // Only when that function is not installed do we fall back to the direct writes below.
+    if (typeof supabaseClient.rpc === 'function' && booking.id) {
+        try {
+            const { data: refunded, error: rpcErr } = await supabaseClient.rpc('refund_booking_loyalty', { p_booking_id: booking.id });
+            if (!rpcErr) return refunded === true;
+            const isMissingFunction = rpcErr.code === 'PGRST202' || rpcErr.code === '42883';
+            if (!isMissingFunction) {
+                console.warn('[refundBookingLoyaltyIfNeeded] Refund not applied:', rpcErr.message);
+                return false;
+            }
+        } catch (err) {
+            console.warn('[refundBookingLoyaltyIfNeeded] Failed to refund loyalty:', err);
+            return false;
+        }
+    }
+
     try {
         const { data: prof } = await supabaseClient
             .from('profiles')
