@@ -563,7 +563,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     {/* Costing Tab */}
                     {activeTab === 'costing' && (
                         <>
-                            {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && (
+                            {/* A bottle used by the millilitre needs its size. Once the converter says it, there is nothing to warn about. */}
+                            {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && !(Number(formData.conversion_factor) > 1) && (
                                 <div className="border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] px-3 py-2.5">
                                     <p className={`text-sm ${ink} leading-relaxed`}>
                                         หน่วยซื้อ ({unitLabel(formData.pack_unit)}) กับหน่วยใช้ ({unitLabel(formData.usage_unit)}) เป็นคนละประเภท ใส่ตัวแปลงหน่วยตามของจริง เช่น 1 ขวด = 750 มล.
