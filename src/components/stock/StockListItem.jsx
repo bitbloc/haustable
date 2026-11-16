@@ -1,10 +1,11 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · quiet row, accent only on what needs a look */
 import React from 'react';
 import { stockStatus, stockQtyParts, STOCK_STATUS_LABEL } from '../../utils/stockUtils';
+import OpenPackMeter from './OpenPackMeter';
 
 export default function StockListItem({ item, onClick, onRecipe, searchActive = false, categories = [] }) {
     const status = stockStatus(item);
-    const { main, unit, open } = stockQtyParts(item);
+    const { main, unit, open, openPercent, total } = stockQtyParts(item);
     const categoryLabel = searchActive ? categories?.find(c => c.id === item.category)?.label : '';
 
     return (
@@ -30,12 +31,12 @@ export default function StockListItem({ item, onClick, onRecipe, searchActive = 
                             สูตร
                         </button>
                     )}
-                    {open && <span>{open}</span>}
+                    {open && <span className="sc-open sc-open--inline"><OpenPackMeter percent={openPercent} /><span className="sc-open__text">{open}</span></span>}
                 </div>
             </div>
 
             <div className="sli-right">
-                <span className="sli-qty"><span className="sli-qty__val">{main}</span> {unit}</span>
+                <span className="sli-qty"><span className="sli-qty__val">{main}</span> {unit}{total && <span className="sc-qty__total"> · {total}</span>}</span>
                 {status !== 'ok' && <span className={`sc-status sc-status--${status}`}>{STOCK_STATUS_LABEL[status]}</span>}
             </div>
         </div>

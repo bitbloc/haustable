@@ -1,10 +1,11 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · quiet card, accent only on what needs a look */
 import React from 'react';
 import { stockStatus, stockQtyParts, STOCK_STATUS_LABEL } from '../../utils/stockUtils';
+import OpenPackMeter from './OpenPackMeter';
 
 export default function StockCard({ item, onClick, onRecipe, searchActive = false, categories = [] }) {
     const status = stockStatus(item);
-    const { main, unit, open } = stockQtyParts(item);
+    const { main, unit, open, openPercent, total } = stockQtyParts(item);
     const categoryLabel = searchActive ? categories?.find(c => c.id === item.category)?.label : '';
     const par = Number(item.par_level) || 0;
 
@@ -42,8 +43,11 @@ export default function StockCard({ item, onClick, onRecipe, searchActive = fals
             <div className="sc-qty">
                 <span className="sc-qty__val">{main}</span>
                 <span className="sc-qty__unit">{unit}</span>
+                {total && <span className="sc-qty__total">· {total}</span>}
             </div>
-            <p className="sc-qty__open">{open || ' '}</p>
+            <p className="sc-open">
+                {open ? <><OpenPackMeter percent={openPercent} /><span className="sc-open__text">{open}</span></> : ' '}
+            </p>
 
             {par > 0 && (
                 <div className="sc-par-bar" aria-hidden="true">

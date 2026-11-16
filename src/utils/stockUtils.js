@@ -1,4 +1,5 @@
 import { displayUnit } from './stockCount';
+import { getUnitType } from './unitUtils';
 
 /**
  * Formats stock quantity into a structured object for display.
@@ -101,13 +102,30 @@ export const stockStatus = (item = {}) => {
 export const STOCK_STATUS_LABEL = Object.freeze({ out: 'หมด', low: 'เหลือน้อย', reorder: 'ควรสั่ง', ok: '' });
 
 /** "2 ขวด" and, when one is open, what is left in it ("เปิดแล้ว 300 ml" / "เปิดแล้ว 40%"). */
+// Units that hold many of something; the piece total is shown only for these
+const CONTAINER_UNITS = ['pack', 'box', 'crate', 'carton', 'bag', 'can', 'bottle', 'แพ็ค', 'แพค', 'กล่อง', 'ลัง', 'ถุง', 'ห่อ', 'กระป๋อง', 'ขวด', 'โหล'];
+
 export function stockQtyParts(item) {
     const unit = displayUnit(item.unit || item.pack_unit);
     const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
         item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor
     );
+    // The big number is what is on the shelf, the opened pack included: "0" with an open bottle read as out.
+    // The line under it says one of them is open and how much is left in it.
     const open = hasOpen
-        ? `เปิดแล้ว ${remainderUsage !== null ? `${remainderUsage.toLocaleString('th-TH')} ${displayUnit(item.usage_unit)}` : `${percent}%`}`
+        ? `เปิดอยู่ 1 · เหลือ ${remainderUsage !== null ? `${remainderUsage.toLocaleString('th-TH')} ${displayUnit(item.usage_unit)}` : `${percent}%`}`
         : null;
-    return { main: fullUnits.toLocaleString('th-TH'), unit, open };
+    const onShelf = hasOpen ? fullUnits + 1 : fullUnits;
+    // Packs of countable things (bags, cups, straws): how many pieces that is, so a glance answers "how many are left"
+    const factor = Number(item.conversion_factor) || 1;
+    // Only for real containers (แพ็ค, กล่อง, ลัง, ถุง…): a pack set up in kilograms, or "1 ชิ้น = 1,000 ขวด",
+    // is a unit set-up mistake and would print a nonsense total.
+    const isContainer = (u) => CONTAINER_UNITS.includes(String(u || '').trim().toLowerCase());
+    const countedInPieces = factor > 1
+        && (getUnitType(item.usage_unit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(item.usage_unit))
+        && (isContainer(item.pack_unit) || isContainer(item.unit))
+        && !isContainer(item.usage_unit);
+    const pieces = countedInPieces ? Math.round((Number(item.current_quantity) || 0) * factor) : 0;
+    const total = pieces > 0 ? `${pieces.toLocaleString('th-TH')} ${displayUnit(item.usage_unit)}` : null;
+    return { main: onShelf.toLocaleString('th-TH'), unit, open, openPercent: hasOpen ? percent : 0, total };
 }
