@@ -1729,16 +1729,22 @@ export default function CustomerOrderLanding() {
         return () => window.removeEventListener('resize', updateChipScroll);
     }, [updateChipScroll, visibleCategories.length, loading]);
 
-    // One-time nudge after load so customers see the row moves sideways (skipped for reduced motion)
+    // One-time nudge after load so customers see the row moves sideways (skipped for reduced motion).
+    // It waits for any dialog to close: played behind the guest-count dialog it was a blurred twitch, and the hint was lost.
+    const dialogOpen = showPaxModal || showMemberModal || showStaffActivationModal;
     useEffect(() => {
         const row = chipRowRef.current;
-        if (loading || chipNudgedRef.current || !row || row.scrollWidth <= row.clientWidth) return;
+        if (loading || dialogOpen || chipNudgedRef.current || !row || row.scrollWidth <= row.clientWidth) return;
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-        chipNudgedRef.current = true;
-        const toTimer = setTimeout(() => row.scrollTo({ left: 56, behavior: 'smooth' }), 700);
-        const backTimer = setTimeout(() => row.scrollTo({ left: 0, behavior: 'smooth' }), 1300);
-        return () => { clearTimeout(toTimer); clearTimeout(backTimer); };
-    }, [loading, visibleCategories.length]);
+        // Marked as done only once it starts, so a dialog that opens during the wait postpones it instead of cancelling it for good.
+        // The way back is not cancellable: a started nudge always returns the row to the start.
+        const toTimer = setTimeout(() => {
+            chipNudgedRef.current = true;
+            row.scrollTo({ left: 56, behavior: 'smooth' });
+            setTimeout(() => { if (row.isConnected) row.scrollTo({ left: 0, behavior: 'smooth' }); }, 600);
+        }, 700);
+        return () => clearTimeout(toTimer);
+    }, [loading, dialogOpen, visibleCategories.length]);
 
     // ── Category jump + scroll-spy ──
     // The sticky search/chip bar sits under the sticky header; sections land just below its stuck bottom edge.
