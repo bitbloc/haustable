@@ -213,3 +213,57 @@ export function readAdjustResult({ data, error }) {
     const code = ADJUST_MESSAGES[data?.code] ? data.code : 'UNKNOWN'
     return { ok: false, code, message: ADJUST_MESSAGES[code], data: data || null }
 }
+
+/**
+ * One row per table for the staff floor list: its live bill (if any), what is left to pay,
+ * whether the guests called, and a reservation arriving within the hour.
+ * Order: tables that called first, then tables with a bill, then free ones; by name inside each group.
+ */
+export function summariseTables(tables, bookings, now = new Date()) {
+    const byTable = new Map()
+    ;(bookings || []).forEach(b => {
+        if (b?.table_id == null) return
+        const key = String(b.table_id)
+        if (!byTable.has(key)) byTable.set(key, [])
+        byTable.get(key).push(b)
+    })
+
+    const rows = (tables || []).map(table => {
+        const mine = byTable.get(String(table.id)) || []
+        const bill = pickOpenBill(mine, now)
+        const remark = bill?.staff_remark || ''
+        const blocked = bill ? ['Internal Block', 'Maintenance Block'].includes(bill.customer_note) : false
+        const items = bill?.order_items || []
+        const arriving = bill ? null : mine
+            .filter(b => ['pending', 'confirmed'].includes(b.status) && b.booking_time)
+            .map(b => new Date(b.booking_time))
+            .filter(t => t - now > 0 && t - now <= 60 * 60000)
+            .sort((a, b) => a - b)[0] || null
+        const started = bill ? new Date(bill.booking_time || bill.created_at || now) : null
+
+        return {
+            id: table.id,
+            name: table.table_name,
+            capacity: table.capacity,
+            state: blocked ? 'blocked' : (bill ? 'open' : 'free'),
+            billId: bill?.id || null,
+            itemCount: items.reduce((sum, i) => sum + Number(i.quantity || 0), 0),
+            due: bill && !blocked ? billBalance(bill).remainingBalance : 0,
+            minutes: started ? Math.max(0, Math.floor((now - started) / 60000)) : 0,
+            callStaff: remark.includes('[CALL_STAFF]'),
+            callBill: remark.includes('[CALL_BILL]'),
+            arriving,
+        }
+    })
+
+    const rank = (r) => (r.callStaff || r.callBill ? 0 : (r.state === 'open' ? 1 : (r.state === 'free' ? 2 : 3)))
+    return rows.sort((a, b) => rank(a) - rank(b)
+        || String(a.name).localeCompare(String(b.name), 'th', { numeric: true }))
+}
+
+/** "48 นาที" or "1 ชม. 5 นาที" */
+export function formatDwell(minutes) {
+    const m = Math.max(0, Math.floor(Number(minutes) || 0))
+    if (m < 60) return `${m} นาที`
+    return m % 60 === 0 ? `${Math.floor(m / 60)} ชม.` : `${Math.floor(m / 60)} ชม. ${m % 60} นาที`
+}

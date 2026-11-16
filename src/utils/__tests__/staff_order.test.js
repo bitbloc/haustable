@@ -21,6 +21,8 @@ import {
     normalizePromptPayId,
     formatPromptPayId,
     readAdjustResult,
+    summariseTables,
+    formatDwell,
 } from '../staffOrder'
 import { buildRemovalSlipBooking } from '../staffRemovalSlips'
 
@@ -235,5 +237,47 @@ describe('payment QR', () => {
         expect(normalizePromptPayId(null)).toBeNull()
         expect(normalizePromptPayId('12345')).toBeNull()
         expect(formatPromptPayId('0985284217')).toBe('098-528-4217')
+    })
+})
+
+describe('staff floor list', () => {
+    const tables = [
+        { id: 1, table_name: 'H1', capacity: 6 },
+        { id: 2, table_name: 'H2', capacity: 2 },
+        { id: 10, table_name: 'H10', capacity: 4 },
+        { id: 3, table_name: 'O1', capacity: 2 },
+    ]
+    const bookings = [
+        { id: 'a', table_id: 2, status: 'seated', booking_type: 'walk_in', booking_time: hoursAgo(1.5), discount_amount: 0,
+          staff_remark: '', order_items: [{ price_at_time: 100, quantity: 2 }, { price_at_time: 65, quantity: 1 }] },
+        { id: 'b', table_id: 10, status: 'seated', booking_type: 'walk_in', booking_time: hoursAgo(0.5),
+          staff_remark: '[QR] guest [CALL_BILL]', order_items: [{ price_at_time: 199, quantity: 1 }] },
+        { id: 'c', table_id: 3, status: 'confirmed', booking_type: 'dine_in', booking_time: hoursAgo(-0.5), order_items: [] },
+        { id: 'd', table_id: 1, status: 'completed', booking_type: 'walk_in', booking_time: hoursAgo(3), order_items: [] },
+    ]
+    const rows = summariseTables(tables, bookings, NOW)
+
+    it('puts a table that called first, then open bills, then free tables', () => {
+        expect(rows.map(r => r.name)).toEqual(['H10', 'H2', 'H1', 'O1'])
+    })
+    it('reports each open bill: items, what is left to pay, time seated', () => {
+        const h2 = rows.find(r => r.name === 'H2')
+        expect(h2).toMatchObject({ state: 'open', billId: 'a', itemCount: 3, due: 265, minutes: 90, callStaff: false, callBill: false })
+        expect(rows.find(r => r.name === 'H10').callBill).toBe(true)
+    })
+    it('keeps a closed bill free and shows a reservation arriving within the hour', () => {
+        expect(rows.find(r => r.name === 'H1')).toMatchObject({ state: 'free', billId: null, due: 0 })
+        const o1 = rows.find(r => r.name === 'O1')
+        expect(o1.state).toBe('free')
+        expect(o1.arriving).toBeInstanceOf(Date)
+    })
+    it('never prices a maintenance block', () => {
+        const blocked = summariseTables([tables[0]], [{ id: 'x', table_id: 1, status: 'seated', booking_type: 'walk_in', booking_time: hoursAgo(1), customer_note: 'Maintenance Block', total_amount: 0, order_items: [] }], NOW)[0]
+        expect(blocked).toMatchObject({ state: 'blocked', due: 0 })
+    })
+    it('formats time seated', () => {
+        expect(formatDwell(48)).toBe('48 นาที')
+        expect(formatDwell(65)).toBe('1 ชม. 5 นาที')
+        expect(formatDwell(120)).toBe('2 ชม.')
     })
 })
