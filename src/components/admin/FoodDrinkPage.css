@@ -1,0 +1,42 @@
+/* Food & Drink: the three parts (เมนู / เบส / วิธีทำ) as one small segmented control, so it reads as a
+ * switch inside the page and not as a second row of page tabs under "Menu Catalog · Categories · …".
+ * The chosen part is charcoal, matching the chosen category chip below it. */
+.fd-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid oklch(85% 0.012 28);
+  border-radius: 6px;
+  background: oklch(99% 0.004 28);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fd-switch::-webkit-scrollbar { display: none; }
+.fd-switch__opt {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: oklch(42% 0.010 28);
+  font-size: 13px;
+  line-height: 28px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fd-switch__opt:hover { background: oklch(94% 0.010 28); color: oklch(18% 0.012 28); }
+.fd-switch__opt[aria-pressed="true"] { background: oklch(18% 0.012 28); color: oklch(97% 0.008 28); font-weight: 500; }
+.fd-switch__opt:focus-visible { outline: 2px solid oklch(60% 0.15 28); outline-offset: 1px; }
+.fd-hint { font-size: 12px; line-height: 1.6; color: oklch(42% 0.010 28); }
+
+@media (max-width: 639px) {
+  .fd-switch__opt { height: 36px; line-height: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-switch__opt { transition: none; }
+}

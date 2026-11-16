@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom';
 import MenuCostPage from './MenuCostPage';
 import RecipeLabPage from './RecipeLabPage';
 import SOPEditorPage from './SOPEditorPage';
-import { AdminFilterChips, AdminTabPanel } from './AdminKit';
+import { AdminTabPanel } from './AdminKit';
+import './FoodDrinkPage.css';
 
 const VIEWS = [
     { id: 'menus', label: 'เมนู', hint: 'สูตรของแต่ละจานและแก้ว ใช้คิดต้นทุน GP และตัดสต๊อก' },
@@ -27,16 +28,16 @@ export default function FoodDrinkPage({ initialView = 'menus' }) {
 
     return (
         <div className="font-sans text-[oklch(18%_0.012_28)] space-y-4">
-            {/* One switch for the three parts of a recipe, with what the current part is for */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <AdminFilterChips
-                    label="ส่วนของ Food & Drink"
-                    layoutId="food-drink-view"
-                    options={VIEWS.map(v => ({ key: v.id, label: v.label }))}
-                    value={view}
-                    onChange={setView}
-                />
-                <p className="text-[13px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">{current?.hint}</p>
+            {/* One small switch for the three parts of a recipe, with what the current part is for under it */}
+            <div className="flex flex-col gap-1">
+                <div className="fd-switch" role="group" aria-label="ส่วนของ Food & Drink">
+                    {VIEWS.map(v => (
+                        <button key={v.id} type="button" className="fd-switch__opt" aria-pressed={view === v.id} onClick={() => setView(v.id)}>
+                            {v.label}
+                        </button>
+                    ))}
+                </div>
+                <p className="fd-hint min-w-0">{current?.hint}</p>
             </div>
 
             <AdminTabPanel id={view}>

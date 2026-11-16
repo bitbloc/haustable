@@ -1,0 +1,32 @@
+/* Menu & Lab › Food & Drink › เมนู: category groups.
+ * Owner's request (2026-11-16): categories should stand out. Lime was too loud; the owner chose black and
+ * the page's cream instead. Each category opens with an ink band (the same ink as the "+ สร้างสูตร" button)
+ * with cream text and a cream count chip. The chosen chip in the category strip is the same ink.
+ */
+:root {
+  --mc-charcoal: oklch(18% 0.012 28);
+  --mc-on-charcoal: oklch(97% 0.008 28);
+  --mc-on-charcoal-2: oklch(80% 0.010 28);
+}
+
+.mc-band { background: var(--mc-charcoal); color: var(--mc-on-charcoal); }
+.mc-band:hover { background: var(--mc-charcoal); }
+.mc-band__row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.mc-band__name { font-size: 14px; line-height: 1.6; font-weight: 600; overflow-wrap: anywhere; }
+.mc-band__count {
+  flex: none;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--mc-on-charcoal);
+  color: var(--mc-charcoal);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mc-band__note { font-size: 12px; line-height: 1.6; color: var(--mc-on-charcoal-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Cards: the band is a heading over the group, with the group's gap above it */
+.mc-band--card { margin: 0; padding: 8px 12px; border-radius: 4px; font-weight: 400; }
+section + section > .mc-band--card { margin-top: 12px; }

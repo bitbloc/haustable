@@ -8,6 +8,7 @@ import RecipeReadinessPanel from './RecipeReadinessPanel';
 import RecipeUnitCheckPanel from './RecipeUnitCheckPanel';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
+import './MenuCostPage.css';
 
 export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }) {
     const navigate = useNavigate();
@@ -263,6 +264,21 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
 
         return list;
     }, [menuItems, searchTerm, selectedCategory, filterMode, sortConfig]);
+
+    // Sorted by category (the default): one charcoal band per category, so each group reads as a block.
+    // Sorted by anything else the categories are mixed, so each row keeps its own category tag instead.
+    const groupedByCategory = sortConfig.key === 'category';
+    const categoryGroups = useMemo(() => {
+        if (!groupedByCategory) return [{ key: 'all', name: null, items: processedItems }];
+        const groups = [];
+        processedItems.forEach(item => {
+            const name = (item.category || '').trim() || 'ไม่ระบุหมวด';
+            const last = groups[groups.length - 1];
+            if (last && last.name === name) last.items.push(item);
+            else groups.push({ key: name, name, items: [item] });
+        });
+        return groups;
+    }, [processedItems, groupedByCategory]);
 
     // Digital Export: UTF-8 CSV with BOM for Windows Excel Thai compatibility
     const handleExportCSV = () => {
@@ -621,9 +637,9 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             <span className="text-[oklch(55%_0.010_28)] shrink-0 mr-1 text-xs">หมวดหมู่:</span>
                             <button
                                 onClick={() => setSelectedCategory('ALL')}
-                                className={`px-2 py-0.5 shrink-0 border rounded-xs transition-colors ${
+                                className={`px-2.5 py-1 shrink-0 border rounded-xs transition-colors ${
                                     selectedCategory === 'ALL'
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] font-bold'
+                                        ? 'bg-[var(--mc-charcoal)] text-[var(--mc-on-charcoal)] border-[var(--mc-charcoal)] font-bold'
                                         : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                                 }`}
                             >
@@ -633,9 +649,9 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                 <button
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
-                                    className={`px-2 py-0.5 shrink-0 border rounded-xs transition-colors ${
+                                    className={`px-2.5 py-1 shrink-0 border rounded-xs transition-colors ${
                                         selectedCategory === cat
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] font-bold'
+                                            ? 'bg-[var(--mc-charcoal)] text-[var(--mc-on-charcoal)] border-[var(--mc-charcoal)] font-bold'
                                             : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                                 }`}
                                 >
@@ -738,7 +754,22 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[oklch(88%_0.012_28)] tabular-nums text-[13px]">
-                                        {processedItems.map(item => (
+                                        {categoryGroups.map(group => (
+                                            <React.Fragment key={group.key}>
+                                            {group.name && (
+                                                <tr className="mc-band">
+                                                    <th colSpan={6} scope="rowgroup" className="px-3 py-2 text-left font-normal">
+                                                        <span className="mc-band__row">
+                                                            <span className="mc-band__name">{group.name}</span>
+                                                            <span className="mc-band__count">{group.items.length} เมนู</span>
+                                                            {group.items.some(i => !i.hasRecipe) && (
+                                                                <span className="mc-band__note">รอผูกสูตร {group.items.filter(i => !i.hasRecipe).length}</span>
+                                                            )}
+                                                        </span>
+                                                    </th>
+                                                </tr>
+                                            )}
+                                            {group.items.map(item => (
                                             <tr
                                                 key={item.id}
                                                 className="hover:bg-[oklch(95%_0.010_28)] transition-colors"
@@ -763,9 +794,11 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                                 {item.name}
                                                             </div>
                                                             <div className="flex items-center gap-2 mt-0.5 text-xs text-[oklch(55%_0.010_28)]">
-                                                                <span className="px-1.5 py-0.2 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
-                                                                    {item.category || 'ไม่ระบุหมวด'}
-                                                                </span>
+                                                                {!groupedByCategory && (
+                                                                    <span className="px-1.5 py-0.2 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
+                                                                        {item.category || 'ไม่ระบุหมวด'}
+                                                                    </span>
+                                                                )}
                                                                 {item.hasRecipe && (
                                                                     <span className="text-xs text-[oklch(55%_0.010_28)]">
                                                                         {item.ingredientCount} วัตถุดิบ
@@ -856,6 +889,8 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                     </div>
                                                 </td>
                                             </tr>
+                                            ))}
+                                            </React.Fragment>
                                         ))}
                                     </tbody>
                                 </table>
@@ -865,7 +900,20 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                         {/* Mobile Compact Financial Cards */}
                         {(viewLayout === 'cards' || viewLayout === 'auto') && (
                             <div className={`${viewLayout === 'auto' ? 'block lg:hidden' : 'block'} space-y-3`}>
-                            {processedItems.map(item => (
+                            {categoryGroups.map(group => (
+                                <section key={group.key} className="space-y-3" aria-label={group.name || undefined}>
+                                {group.name && (
+                                    <h3 className="mc-band mc-band--card">
+                                        <span className="mc-band__row">
+                                            <span className="mc-band__name">{group.name}</span>
+                                            <span className="mc-band__count">{group.items.length} เมนู</span>
+                                            {group.items.some(i => !i.hasRecipe) && (
+                                                <span className="mc-band__note">รอผูกสูตร {group.items.filter(i => !i.hasRecipe).length}</span>
+                                            )}
+                                        </span>
+                                    </h3>
+                                )}
+                                {group.items.map(item => (
                                 <div
                                     key={item.id}
                                     className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-3.5 space-y-3"
@@ -888,9 +936,11 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                 <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
                                                     {item.name}
                                                 </div>
-                                                <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
-                                                    {item.category || 'ไม่ระบุหมวด'}
-                                                </div>
+                                                {!groupedByCategory && (
+                                                    <div className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
+                                                        {item.category || 'ไม่ระบุหมวด'}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -953,6 +1003,8 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                         </button>
                                     )}
                                 </div>
+                                ))}
+                                </section>
                             ))}
                             </div>
                         )}
