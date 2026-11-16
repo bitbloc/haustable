@@ -73,7 +73,8 @@ function getBroadcastChannel(forceRecreate = false) {
             'table_moved',
             'bills_merged',
             'online_order_status_updated',
-            'customer_arrived'
+            'customer_arrived',
+            'staff_item_changed'
         ];
         explicitEvents.forEach(evt => {
             channelInstance.on('broadcast', { event: evt }, ({ payload }) => {

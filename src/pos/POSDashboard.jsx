@@ -36,6 +36,7 @@ import {
 } from '../utils/staffAuthHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
+import { printStaffRemovalSlips } from '../utils/staffRemovalSlips';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip, prewarmPrintOptionMap } from '../utils/printerHelper';
 import { filterLocallyUnprinted, addLocallyPrintedIds, carryOverLocallyPrinted, pruneLocalPrintTracker, isDbPrinted, claimItemsForPrint, markItemsPrinted, releasePrintClaim } from '../utils/printClaim';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
@@ -1140,6 +1141,18 @@ export default function POSDashboard() {
         }
     };
 
+    // Cancel / reduce slips for items a waiter removed on the staff phone remote (claimed in the database, so one terminal prints each)
+    const runStaffRemovalSlips = useCallback(async () => {
+        if (IS_POS_READONLY_PREVIEW) return;
+        const { printed, failed } = await printStaffRemovalSlips(autoPrintQROrder);
+        printed.forEach(row => {
+            toast.success(`${row.removed_by || 'พนักงาน'} ${Number(row.quantity_after) === 0 ? 'ยกเลิก' : 'ลดจำนวน'} "${row.item_name || 'รายการ'}" (-${Number(row.quantity_removed)}) ${row.table_name ? `โต๊ะ ${row.table_name} ` : ''}จากมือถือ · พิมพ์ใบแจ้งแล้ว`, { duration: 8000 });
+        });
+        if (failed.length > 0) {
+            toast.error(`พิมพ์ใบยกเลิกจากมือถือไม่สำเร็จ ${failed.length} รายการ ระบบจะลองใหม่อัตโนมัติ`, { duration: 8000 });
+        }
+    }, []);
+
     const scheduleAutoPrint = useCallback((bookingId, tableNameHint = 'TABLE', delay = 500) => {
         if (!bookingId || !isValidUuid(bookingId)) return;
         const existingHint = autoPrintTableNamesRef.current.get(bookingId);
@@ -1549,7 +1562,8 @@ export default function POSDashboard() {
                 await Promise.allSettled([
                     checkPendingOrders(true),
                     checkUnprintedQrOrders(),
-                    checkStaffAndBillCalls()
+                    checkStaffAndBillCalls(),
+                    runStaffRemovalSlips()
                 ]);
             } catch (e) {
                 console.warn('[Safety Heartbeat] Execution error:', e);
@@ -1815,6 +1829,14 @@ export default function POSDashboard() {
         loadTablesMap();
 
         const handleIncomingBroadcast = async ({ event, payload }) => {
+            // A waiter lowered or removed an item from their phone: print the cancel / reduce slip here
+            if (event === 'staff_item_changed') {
+                runStaffRemovalSlips();
+                if (payload?.booking_id && activeBookingRef.current?.id === payload.booking_id) {
+                    refreshActiveBookingItems(payload.booking_id);
+                }
+                return;
+            }
             if (event === 'qr_order_created') {
                 console.log('⚡ [Realtime POS] Instant broadcast qr_order_created received:', payload);
                 const bId = payload?.booking_id;
@@ -2497,10 +2519,12 @@ export default function POSDashboard() {
                                     const tId = bData.table_id;
                                     const resolvedShortId = getShortBookingId(bData);
 
-                                    const itemBadge = isItemPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : (isOnlineTableRes ? 'ONLINE BOOKING · จองโต๊ะล่วงหน้า' : 'QR ORDER · ออเดอร์เข้าใหม่');
-                                    const itemTitle = isItemPickup 
-                                        ? `ออเดอร์รับกลับ #${resolvedShortId} มีรายการสั่งอาหารเข้ามา` 
-                                        : (isOnlineTableRes ? `จองโต๊ะ ${tName || ''} มีรายการสั่งอาหารล่วงหน้า` : `โต๊ะ ${tName || 'หน้าร้าน'} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`);
+                                    // Sent by a waiter from the staff phone remote (submit_staff_order records who)
+                                    const staffOrderedBy = (!isItemPickup && !isOnlineTableRes) ? (payload.new?.ordered_by_name || null) : null;
+                                    const itemBadge = isItemPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : (isOnlineTableRes ? 'ONLINE BOOKING · จองโต๊ะล่วงหน้า' : (staffOrderedBy ? 'STAFF ORDER · พนักงานสั่งจากมือถือ' : 'QR ORDER · ออเดอร์เข้าใหม่'));
+                                    const itemTitle = isItemPickup
+                                        ? `ออเดอร์รับกลับ #${resolvedShortId} มีรายการสั่งอาหารเข้ามา`
+                                        : (isOnlineTableRes ? `จองโต๊ะ ${tName || ''} มีรายการสั่งอาหารล่วงหน้า` : (staffOrderedBy ? `โต๊ะ ${tName || 'หน้าร้าน'} · ${staffOrderedBy} สั่งจากมือถือ` : `โต๊ะ ${tName || 'หน้าร้าน'} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`));
 
                                     toast.custom((t) => renderPosToast(t, {
                                         badge: itemBadge,
@@ -2517,7 +2541,7 @@ export default function POSDashboard() {
                                             }
                                         }
                                     }), { id: qrItemAlertKey, duration: 10000 });
-                                    pushNotifHistory('ORDER', isItemPickup ? 'Online Pickup' : (isOnlineTableRes ? 'Online Booking' : 'QR Order'), itemTitle, tId);
+                                    pushNotifHistory('ORDER', isItemPickup ? 'Online Pickup' : (isOnlineTableRes ? 'Online Booking' : (staffOrderedBy ? 'Staff Order' : 'QR Order')), itemTitle, tId);
                                 }
 
                                 const isUnverifiedGps = bData.status === 'pending' && remarkLower.includes('gps_unverified');

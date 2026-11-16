@@ -214,3 +214,72 @@
   .sr-figure:first-child { border-top: 0; }
   .sr-figure.is-lead .sr-figure__n { font-size: 20px; }
 }
+
+/* ── Bill lines are buttons: tap one to lower its quantity or remove it ── */
+.sr-line--tap { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+.sd-rows > li:first-child > .sr-line--tap { border-top: 0; }
+.sr-line--tap:hover .sr-line__name { text-decoration: underline; text-decoration-color: var(--sd-control); text-underline-offset: 4px; }
+
+/* ── Bottom sheet (edit a line, payment QR): the one thing that floats ── */
+.sr-sheet { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+.sr-sheet__veil { position: absolute; inset: 0; border: 0; background: oklch(24% 0.006 125 / 0.45); cursor: default; }
+.sr-sheet__body {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--sd-border);
+  border-bottom: 0;
+  border-radius: var(--sd-r-card) var(--sd-r-card) 0 0;
+  background: var(--sd-card);
+}
+.sr-sheet__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sd-gap); }
+.sr-sheet__head h2 { font-size: 16px; line-height: 1.6; font-weight: 600; overflow-wrap: anywhere; }
+.sr-sheet__head p { font-size: 12px; color: var(--sd-ink-3); }
+.sr-sheet__head .sd-quiet { flex: none; margin-right: -8px; }
+
+.sr-field { display: flex; align-items: center; justify-content: space-between; gap: var(--sd-gap); }
+.sr-field--stack { flex-direction: column; align-items: stretch; gap: 4px; }
+.sr-field__label { font-size: 14px; font-weight: 500; color: var(--sd-ink); padding: 0; }
+.sr-field input[type="text"] {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--sd-control);
+  border-radius: var(--sd-r-control);
+  background: var(--sd-card);
+  color: var(--sd-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.sr-field input[type="text"]::placeholder { color: var(--sd-ink-3); }
+.sr-stepper button:disabled { color: var(--sd-control); cursor: default; background: transparent; }
+
+.sr-choices { display: grid; gap: 8px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.sr-choices legend { margin-bottom: 4px; }
+.sr-choice { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; border: 1px solid var(--sd-control); border-radius: var(--sd-r-control); cursor: pointer; }
+.sr-choice.is-on { border-color: var(--sd-ink); background: var(--sd-paper); }
+.sr-choice input { width: 18px; height: 18px; accent-color: var(--sd-ink); flex: none; }
+.sr-choice__main { display: flex; flex-direction: column; font-size: 14px; font-weight: 500; }
+.sr-choice__hint { font-size: 12px; font-weight: 400; color: var(--sd-ink-3); }
+
+.sr-qr { display: grid; justify-items: center; gap: 4px; padding: 8px 0; }
+.sr-qr__code { padding: 12px; border: 1px solid var(--sd-border); border-radius: var(--sd-r-card); background: #ffffff; line-height: 0; }
+.sr-qr__amount { margin-top: 8px; font-size: 24px; line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.sr-qr__payee { font-size: 14px; color: var(--sd-ink-2); font-variant-numeric: tabular-nums; }
+
+@media (min-width: 640px) {
+  .sr-sheet { align-items: center; }
+  .sr-sheet__body { border-bottom: 1px solid var(--sd-border); border-radius: var(--sd-r-card); }
+}
+
+/* Wide: two dock buttons share the 760px bill column (2 × 374 + 12) */
+@media (min-width: 900px) {
+  .sr-dock__row.sr-main--bill > .sr-btn { max-width: 374px; }
+  .sr-dock__row.sr-main--bill > .sr-btn:only-child { max-width: 760px; }
+}

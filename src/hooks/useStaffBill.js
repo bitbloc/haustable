@@ -42,7 +42,11 @@ export function useStaffBill(tableId) {
                 setError('TABLE_NOT_FOUND')
                 return
             }
-            const open = pickOpenBill(billsRes.data)
+            let open = pickOpenBill(billsRes.data)
+            // Dev server only: a sample bill for checking the screens when no table is open. Stripped from builds.
+            if (import.meta.env.DEV && !open && new URLSearchParams(window.location.search).get('fixture') === '1') {
+                open = (await import('../staff/__fixtures__/sampleBill.js')).sampleBill()
+            }
             if (open) {
                 open.order_items = [...(open.order_items || [])].sort(
                     (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)

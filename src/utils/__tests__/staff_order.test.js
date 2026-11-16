@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+vi.mock('../../lib/supabaseClient', () => ({ supabase: { rpc: vi.fn() } }))
 import {
     BAR_CATEGORY_IDS,
     resolveDestination,
@@ -14,7 +16,13 @@ import {
     isPrintOverdue,
     readSubmitResult,
     formatBaht,
+    isSentToKitchen,
+    billBalance,
+    normalizePromptPayId,
+    formatPromptPayId,
+    readAdjustResult,
 } from '../staffOrder'
+import { buildRemovalSlipBooking } from '../staffRemovalSlips'
 
 const NOW = new Date('2026-11-16T20:00:00+07:00')
 const hoursAgo = (h) => new Date(NOW.getTime() - h * 3600 * 1000).toISOString()
@@ -160,5 +168,72 @@ describe('formatBaht', () => {
     it('groups thousands', () => {
         expect(formatBaht(1250)).toBe('฿1,250')
         expect(formatBaht(null)).toBe('฿0')
+    })
+})
+
+describe('editing a bill line', () => {
+    it('treats a printed or claimed item as sent, a fresh one as not', () => {
+        expect(isSentToKitchen({ kitchen_printed_at: hoursAgo(1) })).toBe(true)
+        expect(isSentToKitchen({ kitchen_printed_at: null, kitchen_print_claimed_at: hoursAgo(0.01) })).toBe(true)
+        expect(isSentToKitchen({ kitchen_printed_at: null, kitchen_print_claimed_at: null })).toBe(false)
+    })
+    it('explains each refusal of staff_adjust_order_item', () => {
+        expect(readAdjustResult({ data: { success: true, needs_slip: true }, error: null })).toMatchObject({ ok: true })
+        expect(readAdjustResult({ data: { success: false, code: 'REASON_REQUIRED' }, error: null }).message).toContain('เหตุผล')
+        expect(readAdjustResult({ data: { success: false, code: 'BILL_CLOSED' }, error: null }).code).toBe('BILL_CLOSED')
+        expect(readAdjustResult({ data: null, error: { code: 'PGRST202', message: 'x' } }).code).toBe('NOT_INSTALLED')
+        expect(readAdjustResult({ data: { success: false, code: 'NEW' }, error: null }).code).toBe('UNKNOWN')
+    })
+})
+
+describe('cancel slip for a phone removal', () => {
+    const row = {
+        id: 7, booking_id: 'b1', menu_item_id: 12, item_name: 'ผัดกะเพราหมูกรอบ', quantity_removed: 1, quantity_after: 0,
+        unit_price: 139, selected_options: [{ name: 'เผ็ดน้อย' }], reason: 'made_wasted', removed_by: 'มายด์',
+        note: 'ลูกค้าเปลี่ยนใจ', table_name: 'H9', destination: 'kitchen', removed_at: '2026-11-16T12:00:00Z',
+    }
+    it('tags a full removal as cancelled and says who, why and from where', () => {
+        const slip = buildRemovalSlipBooking(row)
+        const item = slip.order_items[0]
+        expect(slip.tables_layout.table_name).toBe('H9')
+        expect(item.name).toBe('[ยกเลิกรายการ] ผัดกะเพราหมูกรอบ')
+        expect(item.quantity).toBe(1)
+        expect(item.destination).toBe('kitchen')
+        expect(item.item_note).toContain('ยกเลิกรายการทั้งหมด (-1 ชิ้น)')
+        expect(item.item_note).toContain('ทำแล้ว ต้องทิ้ง')
+        expect(item.item_note).toContain('โดย มายด์ (มือถือ)')
+        expect(item.name).not.toContain('*')
+    })
+    it('tags a partial removal as a reduction and routes drinks to the bar', () => {
+        const item = buildRemovalSlipBooking({ ...row, quantity_removed: 2, quantity_after: 1, destination: 'bar' }).order_items[0]
+        expect(item.name).toBe('[ลดจำนวน] ผัดกะเพราหมูกรอบ')
+        expect(item.item_note).toContain('ลดจำนวน -2 ชิ้น (คงเหลือ 1 ชิ้น)')
+        expect(item.category_name).toBe('เครื่องดื่ม')
+    })
+})
+
+describe('payment QR', () => {
+    it('charges what the POS would: items less saved discount, deposit and split rounds, no VAT', () => {
+        const bill = {
+            discount_amount: 50,
+            deposit_amount: 100,
+            staff_remark: '[SPLIT_ROUNDS: [{"round":1,"amount":200,"method":"qr"}]]',
+            order_items: [{ price_at_time: 139, quantity: 2 }, { price_at_time: 372, quantity: 1 }],
+        }
+        const balance = billBalance(bill)
+        expect(balance.subtotal).toBe(650)
+        expect(balance.tax).toBe(0)
+        expect(balance.fullOrderTotal).toBe(600)
+        expect(balance.alreadyPaid).toBe(300)
+        expect(balance.remainingBalance).toBe(300)
+    })
+    it('accepts only real PromptPay ids and never falls back to a default number', () => {
+        expect(normalizePromptPayId('098-528-4217')).toBe('0985284217')
+        expect(normalizePromptPayId('66985284217')).toBe('0985284217')
+        expect(normalizePromptPayId('0105560000000')).toBe('0105560000000')
+        expect(normalizePromptPayId('')).toBeNull()
+        expect(normalizePromptPayId(null)).toBeNull()
+        expect(normalizePromptPayId('12345')).toBeNull()
+        expect(formatPromptPayId('0985284217')).toBe('098-528-4217')
     })
 })

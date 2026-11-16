@@ -2,6 +2,8 @@
 // The phone only adds order_items to a table's open bill through the submit_staff_order RPC;
 // closing the bill, payment and receipts stay on the POS terminal.
 
+import { calculateSplitBalance } from './splitPaymentHelper'
+
 // Same list the POS and the customer QR page use to route drinks to the bar printer.
 export const BAR_CATEGORY_IDS = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667',
@@ -157,4 +159,57 @@ export function readSubmitResult({ data, error }) {
 
 export function formatBaht(amount) {
     return `฿${Number(amount || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`
+}
+
+/** The kitchen or bar already has (or is getting) a slip for this item: removing it needs a reason and a cancel slip. */
+export function isSentToKitchen(item) {
+    return Boolean(item?.kitchen_printed_at || item?.kitchen_print_claimed_at)
+}
+
+/**
+ * What is left to pay, by the POS's own arithmetic (items, saved discounts, deposit, split rounds already paid).
+ * Never adds VAT. A discount the cashier typed at the POS but has not saved is not known here.
+ */
+export function billBalance(bill) {
+    return calculateSplitBalance(bill, bill?.order_items || [], false)
+}
+
+/** PromptPay id as digits (phone 10, tax or national id 13, e-wallet 15), or null. No fallback number: a wrong payee is worse than no QR. */
+export function normalizePromptPayId(raw) {
+    let clean = String(raw ?? '').replace(/[^0-9]/g, '')
+    if (clean.startsWith('66') && clean.length === 11) clean = '0' + clean.slice(2)
+    return [10, 13, 15].includes(clean.length) ? clean : null
+}
+
+export function formatPromptPayId(id) {
+    const clean = String(id ?? '').replace(/\D/g, '')
+    if (clean.length === 10) return `${clean.slice(0, 3)}-${clean.slice(3, 6)}-${clean.slice(6)}`
+    if (clean.length === 13) return `${clean.slice(0, 1)}-${clean.slice(1, 5)}-${clean.slice(5, 10)}-${clean.slice(10, 12)}-${clean.slice(12)}`
+    return clean
+}
+
+const ADJUST_MESSAGES = {
+    NOT_SIGNED_IN: 'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่',
+    NOT_STAFF: 'บัญชีนี้ไม่มีสิทธิ์แก้รายการในบิล',
+    ITEM_GONE: 'รายการนี้ถูกลบไปแล้ว',
+    BILL_CLOSED: 'บิลนี้ถูกปิดไปแล้ว แก้ไม่ได้',
+    NOTHING_TO_REMOVE: 'จำนวนใหม่ต้องน้อยกว่าเดิม ถ้าจะเพิ่มให้กดสั่งเพิ่ม',
+    REASON_REQUIRED: 'รายการนี้ส่งเข้าครัวแล้ว กรุณาเลือกเหตุผล',
+    NOT_INSTALLED: 'ระบบแก้รายการจากมือถือยังไม่ได้เปิดใช้ในฐานข้อมูล',
+    OFFLINE: 'แก้ไม่ได้ เพราะไม่มีสัญญาณอินเทอร์เน็ต',
+    UNKNOWN: 'แก้ไม่สำเร็จ บิลยังเหมือนเดิม ลองอีกครั้ง',
+}
+
+/** Normalise a staff_adjust_order_item answer into { ok, code, message, data }. */
+export function readAdjustResult({ data, error }) {
+    if (error) {
+        const text = `${error.code || ''} ${error.message || ''}`
+        let code = 'UNKNOWN'
+        if (error.code === 'PGRST202' || /could not find the function/i.test(text)) code = 'NOT_INSTALLED'
+        else if (/failed to fetch|network|load failed/i.test(text)) code = 'OFFLINE'
+        return { ok: false, code, message: ADJUST_MESSAGES[code], data: null }
+    }
+    if (data?.success) return { ok: true, code: 'OK', message: '', data }
+    const code = ADJUST_MESSAGES[data?.code] ? data.code : 'UNKNOWN'
+    return { ok: false, code, message: ADJUST_MESSAGES[code], data: data || null }
 }
