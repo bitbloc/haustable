@@ -352,7 +352,15 @@ export default function StockCountPage() {
         const fresh = code && gateRef.current.accept(normalizeBarcode(code) || code);
         if (!fresh || unknownRef.current) return; // waiting for the person to link the last code
         const hit = resolveScan(barcodeIndex, code, new Set(itemsById.keys()));
-        if (hit.itemId) {
+        if (hit.itemId && hit.isLabel) {
+            // A shop label is one per shelf, not one per piece: scanning it picks the item, and
+            // the amount is typed or stepped beside the camera. Adding 1 per scan of a shelf
+            // label is how counts came out wrong.
+            const item = itemsById.get(hit.itemId);
+            setLastScanned(hit.itemId);
+            setScanStatus(`${item?.name || 'รายการ'}: ใส่จำนวนที่นับได้ด้านล่าง`);
+            scanFeedback(true);
+        } else if (hit.itemId) {
             countScan(hit.itemId, hit.perScan);
         } else {
             scanFeedback(false);
@@ -672,7 +680,7 @@ export default function StockCountPage() {
                         <AnimatePresence initial={false}>
                             {scanning && (
                                 <motion.div key="scan" {...fade} className={`border-b ${ui.RULE}`}>
-                                    <ScanStrip onCode={handleScan} onClose={() => setScanning(false)} status={scanStatus} />
+                                    <ScanStrip onCode={handleScan} onClose={() => setScanning(false)} status={scanStatus || 'ป้าย QR ของร้าน = เลือกรายการ แล้วใส่จำนวน · บาร์โค้ดสินค้า = นับเพิ่มทีละชิ้น'} />
                                     {lastScanned && itemsById.get(lastScanned) && (() => {
                                         const it = itemsById.get(lastScanned);
                                         const raw = counts[it.id] ?? '';
@@ -680,7 +688,7 @@ export default function StockCountPage() {
                                             <div className={`grid grid-cols-[1fr_auto] gap-3 items-center px-3 py-2.5 ${ui.PAPER2}`}>
                                                 <AnimatePresence mode="wait" initial={false}>
                                                     <motion.div key={it.id} {...fade} className="min-w-0">
-                                                        <span className={`text-[12px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด</span>
+                                                        <span className={`text-[12px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด · ใส่ยอดทั้งหมดที่นับได้</span>
                                                         <span className="font-semibold text-base leading-6 break-words">{it.name}</span>
                                                         <span className={`text-[12px] leading-5 ${ui.NEUTRAL} block`}>นับเป็น{displayUnit(it.unit)}</span>
                                                         {Number(openLeft[it.id]) > 0 && (

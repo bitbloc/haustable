@@ -89,26 +89,25 @@ export const createScanGate = (quietMs = 1200, now = () => Date.now()) => {
 };
 
 /**
- * Of the codes a frame holds, the one being aimed at: its centre inside `region` and nearest
- * the centre of the region. null when none is inside. One code per frame, so an item with two
- * codes on it is one scan. codes: [{ rawValue, boundingBox: { x, y, width, height } }];
- * a code without a box (some readers give none) counts as centred.
+ * What the aim box holds in one frame: { value, ambiguous }.
+ * A code counts only when it lies wholly inside the box. Two different codes inside it is
+ * ambiguous: nothing is read, so labels on neighbouring shelves are never counted for each
+ * other. The same code seen twice (a label and its reflection) is still one code.
+ * codes: [{ rawValue, boundingBox: { x, y, width, height } }]; a code without a box (some
+ * readers give none) counts as inside.
  */
-export const pickAimedCode = (codes = [], region) => {
-    const cx = region.x + region.width / 2;
-    const cy = region.y + region.height / 2;
-    let best = null;
-    let bestDist = Infinity;
-    for (const code of codes) {
+export const readAimBox = (codes = [], region) => {
+    const inside = new Set();
+    for (const code of codes || []) {
         if (!code?.rawValue) continue;
         const box = code.boundingBox;
-        const x = box ? box.x + box.width / 2 : cx;
-        const y = box ? box.y + box.height / 2 : cy;
-        if (x < region.x || x > region.x + region.width || y < region.y || y > region.y + region.height) continue;
-        const dist = (x - cx) ** 2 + (y - cy) ** 2;
-        if (dist < bestDist) { best = code; bestDist = dist; }
+        if (box && (box.x < region.x || box.y < region.y
+            || box.x + box.width > region.x + region.width
+            || box.y + box.height > region.y + region.height)) continue;
+        inside.add(code.rawValue);
     }
-    return best;
+    if (inside.size === 1) return { value: [...inside][0], ambiguous: false };
+    return { value: null, ambiguous: inside.size > 1 };
 };
 
 /** New count text after a scan: adds perScan to what is typed (empty or invalid counts as 0). */

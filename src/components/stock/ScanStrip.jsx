@@ -2,11 +2,12 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { getCodeDetector } from '../../utils/codeDetector';
-import { pickAimedCode } from '../../utils/stockBarcode';
+import { readAimBox } from '../../utils/stockBarcode';
 
-// The aim box, as a share of the camera picture. Only a code inside it is read, and the corner
-// marks drawn over the picture show the same box.
-const AIM = { x: 0.12, y: 0.14, width: 0.76, height: 0.72 };
+// The aim box, as a share of the camera picture. Only a code wholly inside it is read, and the
+// corner marks drawn over the picture show the same box. Smaller than the picture so a shelf
+// label beside the one aimed at stays out of it.
+const AIM = { x: 0.2, y: 0.12, width: 0.6, height: 0.76 };
 
 // Only what shop stock carries: retail barcodes (EAN / UPC), CODE 128 on cases, and our
 // own QR labels. Every extra format is one more decoder tried on every frame, which is
@@ -45,7 +46,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
     const videoRef = useRef(null);
     const [state, setState] = useState('starting'); // starting | running | error
     const [engine, setEngine] = useState(null); // 'native' | 'wasm' | 'lib'
-    const [aimed, setAimed] = useState(false); // a code is inside the aim box right now
+    const [aimed, setAimed] = useState('none'); // 'none' | 'one' | 'many' codes inside the aim box
     const [error, setError] = useState('');
     const [attempt, setAttempt] = useState(0);
 
@@ -58,7 +59,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
         let frameHandle = null;
         setState('starting');
         setError('');
-        setAimed(false);
+        setAimed('none');
 
         const stopStream = () => {
             const video = videoRef.current;
@@ -106,13 +107,13 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     if (canvas.height !== box.height) canvas.height = box.height;
                     ctx.drawImage(video, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
                     const codes = await detector.detect(ctx.getImageData(0, 0, box.width, box.height));
-                    return pickAimedCode(codes, { x: 0, y: 0, width: box.width, height: box.height });
+                    return readAimBox(codes, { x: 0, y: 0, width: box.width, height: box.height });
                 };
             } else {
-                read = async () => pickAimedCode(await detector.detect(video), aimBox());
+                read = async () => readAimBox(await detector.detect(video), aimBox());
             }
 
-            let wasAimed = false;
+            let wasAimed = 'none';
             let busy = false;
             const schedule = () => {
                 if (cancelled) return;
@@ -127,10 +128,11 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     try {
                         // One code per frame: the one aimed at. An item with a shop label and a printed
                         // barcode side by side is one scan, not two.
-                        const code = await read();
+                        const seen = await read();
                         if (cancelled) return;
-                        if (!!code !== wasAimed) { wasAimed = !!code; setAimed(wasAimed); }
-                        if (code) onCodeRef.current?.(code.rawValue);
+                        const now = seen?.value ? 'one' : seen?.ambiguous ? 'many' : 'none';
+                        if (now !== wasAimed) { wasAimed = now; setAimed(now); }
+                        if (seen?.value) onCodeRef.current?.(seen.value);
                     } catch { /* a frame that could not be read: the next one will be */ }
                     busy = false;
                 }
@@ -222,8 +224,13 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     <div aria-hidden="true" className="pointer-events-none absolute"
                         style={{ left: `${AIM.x * 100}%`, top: `${AIM.y * 100}%`, width: `${AIM.width * 100}%`, height: `${AIM.height * 100}%` }}>
                         {['top-0 left-0 border-t-[3px] border-l-[3px]', 'top-0 right-0 border-t-[3px] border-r-[3px]', 'bottom-0 left-0 border-b-[3px] border-l-[3px]', 'bottom-0 right-0 border-b-[3px] border-r-[3px]'].map(corner => (
-                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed ? 'border-[oklch(93%_0.22_118)]' : 'border-[oklch(97%_0.008_28)]'}`} />
+                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed === 'one' ? 'border-[oklch(93%_0.22_118)]' : 'border-[oklch(97%_0.008_28)]'}`} />
                         ))}
+                        {aimed === 'many' && (
+                            <span className="absolute inset-x-0 top-2 mx-auto w-max max-w-[90%] rounded px-2 py-1 bg-[oklch(18%_0.012_28)] text-[13px] leading-5 text-[oklch(97%_0.008_28)] text-center">
+                                เห็นหลายโค้ด เล็งให้เหลือโค้ดเดียว
+                            </span>
+                        )}
                     </div>
                 )}
                 {state !== 'running' && (
@@ -242,7 +249,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
             </div>
             <div className="grid grid-cols-[1fr_auto] items-center divide-x divide-[oklch(42%_0.010_28)] border-t border-[oklch(42%_0.010_28)]">
                 <p className="px-3 py-2 font-sans text-[13px] leading-5 text-[oklch(94%_0.010_28)] min-w-0 break-words" aria-live="polite">
-                    {status || 'เล็งโค้ดให้อยู่ในกรอบ ทีละชิ้น สแกน 1 ครั้ง = นับเพิ่ม 1'}
+                    {status || 'เล็งโค้ดให้อยู่ในกรอบทีละโค้ด'}
                 </p>
                 <button type="button" onClick={onClose}
                     className="px-4 py-2 font-sans font-bold text-[13px] text-[oklch(97%_0.008_28)] hover:bg-[oklch(25%_0.012_28)] cursor-pointer">

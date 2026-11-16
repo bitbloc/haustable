@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-    normalizeBarcode, parseShopLabel, shopLabelFor, buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, pickAimedCode
+    normalizeBarcode, parseShopLabel, shopLabelFor, buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, readAimBox
 } from '../stockBarcode';
 
 const ID = '2c2c49d6-8765-464f-94d4-4cdf924006f2';
@@ -74,21 +74,26 @@ describe('createScanGate', () => {
     });
 });
 
-describe('pickAimedCode', () => {
+describe('readAimBox', () => {
     const region = { x: 100, y: 100, width: 400, height: 200 };
-    const at = (rawValue, x, y) => ({ rawValue, boundingBox: { x: x - 10, y: y - 10, width: 20, height: 20 } });
+    const at = (rawValue, x, y, size = 20) => ({ rawValue, boundingBox: { x: x - size / 2, y: y - size / 2, width: size, height: size } });
 
-    it('takes the code nearest the middle of the aim box', () => {
-        expect(pickAimedCode([at('edge', 120, 120), at('middle', 310, 190)], region).rawValue).toBe('middle');
+    it('reads the one code wholly inside the box', () => {
+        expect(readAimBox([at('A', 300, 200), at('outside', 50, 50)], region)).toEqual({ value: 'A', ambiguous: false });
     });
 
-    it('ignores codes outside the aim box', () => {
-        expect(pickAimedCode([at('outside', 50, 50), at('below', 300, 400)], region)).toBeNull();
-        expect(pickAimedCode([], region)).toBeNull();
+    it('does not guess between two different codes: neighbouring labels are never counted for each other', () => {
+        expect(readAimBox([at('A', 200, 200), at('B', 400, 200)], region)).toEqual({ value: null, ambiguous: true });
+        expect(readAimBox([at('A', 200, 200), at('A', 210, 205)], region)).toEqual({ value: 'A', ambiguous: false });
     });
 
-    it('treats a code with no box as centred', () => {
-        expect(pickAimedCode([{ rawValue: 'x' }], region).rawValue).toBe('x');
+    it('ignores a code cut by the edge of the box', () => {
+        expect(readAimBox([at('edge', 105, 200, 40)], region)).toEqual({ value: null, ambiguous: false });
+        expect(readAimBox([], region)).toEqual({ value: null, ambiguous: false });
+    });
+
+    it('treats a code with no box as inside', () => {
+        expect(readAimBox([{ rawValue: 'x' }], region).value).toBe('x');
     });
 });
 
