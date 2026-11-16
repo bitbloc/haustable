@@ -4,7 +4,7 @@
  * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { 
@@ -13,7 +13,7 @@ import {
     Clock, Crown, UserCheck, Phone, Gamepad2, UserPlus, Music, 
     ChevronRight, ChevronLeft, Sparkles, RefreshCw, Layers, Star
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
@@ -24,6 +24,39 @@ import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 import { detectDeviceLanguage } from '../utils/languageHelper';
 import { useTableStrings, translateTable, TABLE_LANGUAGES } from './customerOrderStrings';
+import './customerOrderMotion.css';
+
+// Number pop-in (transitions.dev 02): only the digits that changed swap; the leading ones both numbers share stay still.
+// The group is keyed by value, so a new value remounts it and the animation replays without a manual reflow.
+const PopNumber = ({ value }) => {
+    const str = String(value);
+    const state = useRef({ cur: str, old: null });
+    if (state.current.cur !== str) state.current = { cur: str, old: state.current.cur };
+    const old = state.current.old;
+
+    if (old === null) return <span className="t-digit-group">{str}</span>;
+
+    let same = 0;
+    while (same < old.length && same < str.length && old[same] === str[same]) same++;
+
+    return (
+        <span key={str} className="t-digit-group is-animating">
+            {[...str].map((ch, i) => {
+                if (i < same || !/\d/.test(ch)) {
+                    return <span key={i} className="t-digit" data-same="">{ch}</span>;
+                }
+                const fromEnd = str.length - 1 - i;
+                const oldCh = old[old.length - (str.length - i)];
+                return (
+                    <span key={i} className="t-digit-slot" data-stagger={fromEnd === 1 ? '1' : fromEnd === 0 ? '2' : undefined}>
+                        {oldCh && /\d/.test(oldCh) && <span className="t-digit-old" aria-hidden="true">{oldCh}</span>}
+                        <span className="t-digit">{ch}</span>
+                    </span>
+                );
+            })}
+        </span>
+    );
+};
 
 // Haversine Distance Formula
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -157,6 +190,87 @@ function isBookingActiveAndFresh(booking) {
     return true;
 }
 
+// One timing set for the page, from the transitions.dev scale: sheets use the panel values, centred dialogs the modal values.
+// Opening is slower than closing on purpose; the ease is front-loaded so most of the travel happens in the first third.
+const MOTION_EASE = [0.22, 1, 0.36, 1];
+const SHEET_OPEN = { duration: 0.4, ease: MOTION_EASE };
+const SHEET_CLOSE = { duration: 0.35, ease: MOTION_EASE };
+const MODAL_OPEN = { duration: 0.25, ease: MOTION_EASE };
+const MODAL_CLOSE = { duration: 0.15, ease: MOTION_EASE };
+
+// Tabs sliding (transitions.dev 16): one fill slides between options instead of each option repainting.
+// The fill takes its box from whichever child carries data-pill-active="true". First placement, resizes and
+// font loads are written without a transition so it never animates in from the corner; no active child hides it.
+const useSlidingPill = (containerRef, pillRef, mounted, deps) => {
+    const placed = useRef(false);
+    const move = useCallback((animate) => {
+        const container = containerRef.current;
+        const pill = pillRef.current;
+        if (!container || !pill) return;
+        const target = container.querySelector('[data-pill-active="true"]');
+        if (!target) {
+            pill.style.opacity = '0';
+            placed.current = false;
+            return;
+        }
+        const write = () => {
+            pill.style.transform = `translateX(${target.offsetLeft}px)`;
+            pill.style.width = `${target.offsetWidth}px`;
+            pill.style.top = `${target.offsetTop}px`;
+            pill.style.height = `${target.offsetHeight}px`;
+            pill.style.opacity = '1';
+        };
+        if (animate && placed.current) {
+            write();
+        } else {
+            const prev = pill.style.transition;
+            pill.style.transition = 'none';
+            write();
+            void pill.offsetWidth;
+            pill.style.transition = prev;
+        }
+        placed.current = true;
+    }, [containerRef, pillRef]);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useLayoutEffect(() => { move(true); }, deps);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return undefined;
+        let alive = true;
+        document.fonts?.ready?.then(() => { if (alive) move(false); });
+        if (typeof ResizeObserver === 'undefined') return () => { alive = false; };
+        const observer = new ResizeObserver(() => move(false));
+        observer.observe(container);
+        return () => { alive = false; observer.disconnect(); };
+        // Only when the row mounts: a new observer reports at once, and that snap would cut a slide short
+    }, [mounted, containerRef, move]);
+};
+
+// Centred dialog shell (transitions.dev 06): scales up from 0.96 on open, a quicker scale-down on close
+const CenterModal = ({ open, dim = 'bg-black/50', children }) => (
+    <AnimatePresence>
+        {open && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: MODAL_OPEN }}
+                exit={{ opacity: 0, transition: MODAL_CLOSE }}
+                className={`fixed inset-0 ${dim} backdrop-blur-xs z-50 flex items-center justify-center p-4`}
+            >
+                <motion.div
+                    initial={{ scale: 0.96 }}
+                    animate={{ scale: 1, transition: MODAL_OPEN }}
+                    exit={{ scale: 0.96, transition: MODAL_CLOSE }}
+                    className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]"
+                >
+                    {children}
+                </motion.div>
+            </motion.div>
+        )}
+    </AnimatePresence>
+);
+
 export default function CustomerOrderLanding() {
     const { tableId } = useParams();
     const { lang, setLanguage, hasChosenLanguage, loc } = useTableStrings();
@@ -173,8 +287,10 @@ export default function CustomerOrderLanding() {
     const navigate = useNavigate();
 
     // UI States
+    const reduceMotion = useReducedMotion();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [orderSent, setOrderSent] = useState(null); // success message shown in the cart sheet before leaving for the status page
     const submittingRef = useRef(false);
     const [search, setSearch] = useState('');
     const [activeSection, setActiveSection] = useState(null);
@@ -1276,8 +1392,8 @@ export default function CustomerOrderLanding() {
             }
             return [...prev, configuredItem];
         });
+        // No toast: the row count, the cart row and its total answer the tap, and a toast covered the table header
         setSelectedItem(null);
-        toast.success(tt('toastAddedToCart', { name: configuredItem.name }));
     };
 
     const handleUpdateQty = (index, delta) => {
@@ -1538,7 +1654,14 @@ export default function CustomerOrderLanding() {
                 console.warn('[Checkout] Broadcast delivery non-fatal warning:', broadcastErr);
             }
 
-            toast.success(isGeofenceVerified ? tt('toastOrderSentKitchen') : tt('toastOrderSentPos'));
+            // Confirm inside the cart sheet, then leave. A toast here was lost at once: the page navigates away and its Toaster unmounts.
+            const sentMessage = isGeofenceVerified ? tt('toastOrderSentKitchen') : tt('toastOrderSentPos');
+            if (cartOpen) {
+                setOrderSent(sentMessage);
+                await new Promise((resolve) => setTimeout(resolve, reduceMotion ? 700 : 1300));
+            } else {
+                toast.success(sentMessage);
+            }
             setCart([]);
             setCartOpen(false);
             setTableRemarkInput('');
@@ -1561,11 +1684,28 @@ export default function CustomerOrderLanding() {
         }
     };
 
+    // Removing the last item closes the sheet instead of leaving an empty cart with a send button
+    useEffect(() => {
+        if (cartOpen && cart.length === 0 && !orderSent) setCartOpen(false);
+    }, [cart.length, cartOpen, orderSent]);
+
     const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0);
 
+    // "View cart · 3 items" split around the count so only the number animates; wording stays in the string tables
+    const cartLabelParts = (() => {
+        const label = tt('viewCart', { n: cartCount });
+        const at = label.indexOf(String(cartCount));
+        return at < 0
+            ? { before: label, after: '', hasNumber: false }
+            : { before: label.slice(0, at), after: label.slice(at + String(cartCount).length), hasNumber: true };
+    })();
+
     // Category chip row: track overflow so the edge arrows only show when there is more to scroll
     const chipRowRef = useRef(null);
+    const chipPillRef = useRef(null);
+    const langRowRef = useRef(null);
+    const langPillRef = useRef(null);
     const [chipScroll, setChipScroll] = useState({ left: false, right: false });
     const chipNudgedRef = useRef(false);
 
@@ -1701,17 +1841,48 @@ export default function CustomerOrderLanding() {
         }
     }, [activeSection]);
 
+    // Chip and language fills slide to the active option (hooks: must stay above the early returns; the chip faces are transparent; the pill is the fill)
+    const activeChipKey = isSearching ? null : activeSection;
+    useSlidingPill(chipRowRef, chipPillRef, !loading, [loading, activeChipKey, lang, groupedItems.length, recommendedRail.length]);
+    useSlidingPill(langRowRef, langPillRef, !loading, [loading, lang]);
+
     if (loading) {
         const isNumeric = /^\d+$/.test((tableId || '').trim());
         const cachedName = localStorage.getItem('active_customer_table_name');
         const displayLoadingName = table?.table_name || (!isNumeric ? tableId : (cachedName && localStorage.getItem('active_customer_table_id') === tableId ? cachedName : null));
 
         return (
-            <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)]">
-                <div className="w-10 h-10 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">
-                    {displayLoadingName ? tt('connectingTable', { table: displayLoadingName }) : tt('connectingTableGeneric')}
-                </p>
+            // Skeleton in the shape of the page that follows (header, search, chips, menu rows), so the menu
+            // resolves in place instead of replacing a spinner. Loading here takes seconds, so the pulse loops.
+            <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col font-[var(--font-body)]" aria-busy="true">
+                <header className="border-b border-[var(--color-rule)]">
+                    <div className="max-w-2xl mx-auto px-4 py-2.5">
+                        <span className="block text-[11px] font-bold tracking-wide text-[var(--color-neutral)] leading-tight">IN THE HAUS</span>
+                        <p role="status" className="text-sm font-bold text-[var(--color-ink)] leading-relaxed">
+                            {displayLoadingName ? tt('connectingTable', { table: displayLoadingName }) : tt('connectingTableGeneric')}
+                        </p>
+                    </div>
+                </header>
+                <div className="order-skel max-w-2xl mx-auto w-full p-3" aria-hidden="true">
+                    <div className="h-10 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)]" />
+                    <div className="mt-2.5 flex gap-1.5">
+                        <span className="h-8 w-28 rounded-sm bg-[var(--color-paper-2)]" />
+                        <span className="h-8 w-32 rounded-sm bg-[var(--color-paper-2)]" />
+                        <span className="h-8 w-24 rounded-sm bg-[var(--color-paper-2)]" />
+                    </div>
+                    <div className="mt-6 h-5 w-36 rounded-sm bg-[var(--color-paper-2)]" />
+                    {[0, 1, 2, 3, 4, 5].map(i => (
+                        <div key={i} className="py-3 flex items-start gap-3 border-b border-[var(--color-rule)]">
+                            <span className="w-16 h-16 shrink-0 rounded-sm bg-[var(--color-paper-2)]" />
+                            <span className="flex-1 space-y-2 pt-1">
+                                <span className="block h-4 w-2/5 rounded-sm bg-[var(--color-paper-2)]" />
+                                <span className="block h-3 w-4/5 rounded-sm bg-[var(--color-paper-2)]" />
+                                <span className="block h-4 w-12 rounded-sm bg-[var(--color-paper-2)]" />
+                            </span>
+                            <span className="self-center w-8 h-8 shrink-0 rounded-sm bg-[var(--color-paper-2)]" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
@@ -1785,11 +1956,14 @@ export default function CustomerOrderLanding() {
                             </div>
                         )}
 
-                        {inCartCount > 0 && (
-                            <div className="absolute top-1.5 right-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] font-mono font-black w-6 h-6 rounded-full flex items-center justify-center">
-                                {inCartCount}
-                            </div>
-                        )}
+                        {/* Always mounted so the count can fade in and out */}
+                        <div className="absolute top-1.5 right-1.5">
+                            <span className="t-icon-swap" data-state={inCartCount > 0 ? 'b' : 'a'} aria-hidden={inCartCount > 0 ? undefined : true}>
+                                <span className="t-icon bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] font-mono font-black w-6 h-6 rounded-full flex items-center justify-center" data-icon="b">
+                                    {inCartCount > 0 ? inCartCount : ''}
+                                </span>
+                            </span>
+                        </div>
                     </div>
 
                     {/* Item Title & Desc: 2 lines each. Line-height 1.5+ keeps stacked Thai marks of the clamped (hidden) line from showing */}
@@ -1874,15 +2048,15 @@ export default function CustomerOrderLanding() {
                 </div>
 
                 <div className="self-center shrink-0">
-                    {inCartCount > 0 ? (
-                        <span className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-bold text-xs flex items-center justify-center">
-                            {inCartCount}
-                        </span>
-                    ) : (
-                        <span className="w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
+                    {/* Icon swap: both faces stay mounted in one cell; + cross-fades into the count */}
+                    <span className="t-icon-swap" data-state={inCartCount > 0 ? 'b' : 'a'}>
+                        <span className="t-icon w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center" data-icon="a" aria-hidden={inCartCount > 0 ? true : undefined}>
                             <Plus size={14} />
                         </span>
-                    )}
+                        <span className="t-icon w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-bold text-xs flex items-center justify-center" data-icon="b" aria-hidden={inCartCount > 0 ? undefined : true}>
+                            {inCartCount > 0 ? inCartCount : ''}
+                        </span>
+                    </span>
                 </div>
             </motion.button>
         );
@@ -1892,15 +2066,21 @@ export default function CustomerOrderLanding() {
         const active = activeSection === key && !isSearching;
         if (accent) {
             return active
-                ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-paper)]'
-                : 'bg-[var(--color-paper)] border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]';
+                ? 'border-[var(--color-accent)] text-[var(--color-paper)]'
+                : 'border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]';
         }
         return active
-            ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]'
-            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]';
+            ? 'border-[var(--color-ink)] text-[var(--color-paper)]'
+            : 'border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]';
     };
 
+    const tableStatusKey = (gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)))
+        ? (activeBooking ? 'open' : 'ready')
+        : (gpsChecking ? 'locating' : 'waiting');
+
     return (
+        // reducedMotion="user": with the OS setting on, sheets and dialogs fade only; no slide or scale
+        <MotionConfig reducedMotion="user">
         <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-36 select-none">
             {/* Top Header: brand, table, party size and session status in one row */}
             <header className="sticky top-0 bg-[var(--color-paper)] border-b border-[var(--color-rule)] z-40">
@@ -1924,6 +2104,16 @@ export default function CustomerOrderLanding() {
                                 </button>
                             </div>
                         </div>
+                        {/* Text states swap (transitions.dev 04): the old status leaves upward, the new one rises in, 150ms each */}
+                        <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                            key={tableStatusKey}
+                            initial={{ opacity: 0, y: 4, filter: 'blur(2px)' }}
+                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                            exit={{ opacity: 0, y: -4, filter: 'blur(2px)' }}
+                            transition={{ duration: 0.15, ease: 'easeInOut' }}
+                            className="shrink-0"
+                        >
                         {gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) ? (
                             <div className="flex items-center gap-1 text-[var(--color-accent-2)] text-xs font-semibold whitespace-nowrap">
                                 <ShieldCheck size={14} />
@@ -1945,6 +2135,8 @@ export default function CustomerOrderLanding() {
                                 <span>{tt('statusWaitingStaff')}</span>
                             </button>
                         )}
+                        </motion.div>
+                        </AnimatePresence>
                     </div>
 
                     <div className="flex items-center">
@@ -1962,7 +2154,7 @@ export default function CustomerOrderLanding() {
 
             {/* Language cells: a row of their own under the header (it scrolls away with the page),
                 so four languages never squeeze the table name on a narrow phone */}
-            <div className="max-w-2xl mx-auto w-full grid grid-cols-4 divide-x divide-[var(--color-rule)] border-b border-[var(--color-rule)]" role="group" aria-label={tt('languageSwitch')}>
+            <div ref={langRowRef} className="relative max-w-2xl mx-auto w-full grid grid-cols-4 divide-x divide-[var(--color-rule)] border-b border-[var(--color-rule)]" role="group" aria-label={tt('languageSwitch')}>
                 {TABLE_LANGUAGES.map(option => (
                     <button
                         key={option.code}
@@ -1970,15 +2162,18 @@ export default function CustomerOrderLanding() {
                         lang={option.code}
                         onClick={() => setLanguage(option.code)}
                         aria-pressed={lang === option.code}
-                        className={`min-h-[36px] py-1.5 text-xs font-bold leading-normal transition-colors cursor-pointer ${
+                        data-pill-active={lang === option.code ? 'true' : undefined}
+                        className={`relative z-[1] min-h-[36px] py-1.5 text-xs font-bold leading-normal transition-colors cursor-pointer ${
                             lang === option.code
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                ? 'text-[var(--color-paper)]'
                                 : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                         }`}
                     >
                         {option.label}
                     </button>
                 ))}
+                {/* Last child, so divide-x puts no rule on the first cell; its own divide border is switched off inline */}
+                <span ref={langPillRef} aria-hidden="true" className="order-pill bg-[var(--color-ink)]" style={{ borderWidth: 0 }} />
             </div>
 
             {/* GPS Unverified Notice */}
@@ -2090,6 +2285,11 @@ export default function CustomerOrderLanding() {
                         onScroll={updateChipScroll}
                         className="relative flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     >
+                        <span
+                            ref={chipPillRef}
+                            aria-hidden="true"
+                            className={`order-pill rounded-sm ${activeChipKey === 'recommended' ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-ink)]'}`}
+                        />
                         {/* Chips jump to their section; the active one follows the scroll position */}
                         {recommendedRail.length > 0 && (
                             <button
@@ -2097,7 +2297,8 @@ export default function CustomerOrderLanding() {
                                 data-cat="recommended"
                                 onClick={() => handleChipTap('recommended')}
                                 aria-current={activeSection === 'recommended' && !isSearching ? 'true' : undefined}
-                                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass('recommended', true)}`}
+                                data-pill-active={activeChipKey === 'recommended' ? 'true' : undefined}
+                                className={`relative z-[1] px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass('recommended', true)}`}
                             >
                                 {tt('chipRecommended', { n: recommendedRail.length })}
                             </button>
@@ -2110,7 +2311,8 @@ export default function CustomerOrderLanding() {
                                 data-cat={group.key}
                                 onClick={() => handleChipTap(group.key)}
                                 aria-current={activeSection === group.key && !isSearching ? 'true' : undefined}
-                                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass(group.key)}`}
+                                data-pill-active={activeChipKey === group.key ? 'true' : undefined}
+                                className={`relative z-[1] px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass(group.key)}`}
                             >
                                 {group.cat ? loc(group.cat) : group.title} ({group.items.length})
                             </button>
@@ -2124,7 +2326,7 @@ export default function CustomerOrderLanding() {
                         <button
                             type="button"
                             onClick={() => scrollChips(-1)}
-                            className="absolute left-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-r border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
+                            className="absolute z-[2] left-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-r border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
                             aria-label={tt('chipsPrev')}
                         >
                             <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronLeft size={16} /></span>
@@ -2134,7 +2336,7 @@ export default function CustomerOrderLanding() {
                         <button
                             type="button"
                             onClick={() => scrollChips(1)}
-                            className="absolute right-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
+                            className="absolute z-[2] right-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
                             aria-label={tt('chipsNext')}
                         >
                             <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronRight size={16} /></span>
@@ -2144,7 +2346,7 @@ export default function CustomerOrderLanding() {
                 </div>
 
                 {/* Menu Grid Listing */}
-                <main className="flex-1 p-3">
+                <main className="order-reveal flex-1 p-3">
                     {isSearching ? (
                         <section>
                             <h3 className="text-base font-bold text-[var(--color-ink)] leading-normal">
@@ -2235,25 +2437,40 @@ export default function CustomerOrderLanding() {
                         onConfirm={handleConfirmOptions} 
                         labels={optionLabels}
                         localize={loc}
+                        sheetMotion={{ open: SHEET_OPEN, close: SHEET_CLOSE }}
                     />
                 )}
             </AnimatePresence>
 
             {/* Bottom Actions: staff + ordered items; cart row only when the cart has items */}
             <div translate="no" className="fixed bottom-0 left-0 right-0 p-3 bg-[var(--color-paper)] border-t border-[var(--color-rule)] z-40 safe-area-bottom">
-                <div className="max-w-2xl mx-auto flex flex-col gap-2">
-                    {cart.length > 0 && (
-                        <button
-                            onClick={() => setCartOpen(true)}
-                            className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm text-sm font-bold flex items-center justify-between gap-3 active:scale-98 transition-transform cursor-pointer"
-                        >
-                            <span className="flex items-center gap-2">
-                                <ShoppingBag size={16} />
-                                <span>{tt('viewCart', { n: cartCount })}</span>
-                            </span>
-                            <span className="font-mono">฿{cartSubtotal.toLocaleString()}</span>
-                        </button>
-                    )}
+                <div className="max-w-2xl mx-auto flex flex-col">
+                    {/* Cart row grows in instead of popping: the wrapper tweens its height (resize timing), the 8px gap rides inside it.
+                        It is also the live region that replaces the old "added to cart" toast. */}
+                    <AnimatePresence initial={false}>
+                        {cart.length > 0 && (
+                            <motion.div
+                                key="cart-row"
+                                initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                                transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                className="overflow-hidden"
+                                aria-live="polite"
+                            >
+                                <button
+                                    onClick={() => setCartOpen(true)}
+                                    className="w-full mb-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm text-sm font-bold flex items-center justify-between gap-3 active:scale-98 transition-transform cursor-pointer"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <ShoppingBag size={16} />
+                                        <span>{cartLabelParts.before}{cartLabelParts.hasNumber && <PopNumber value={cartCount} />}{cartLabelParts.after}</span>
+                                    </span>
+                                    <span className="font-mono">฿<PopNumber value={cartSubtotal.toLocaleString()} /></span>
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <div className="flex gap-2 w-full">
                         <button
@@ -2303,12 +2520,33 @@ export default function CustomerOrderLanding() {
 
                         <motion.div 
                             initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                            animate={{ y: 0, transition: SHEET_OPEN }}
+                            exit={{ y: '100%', transition: SHEET_CLOSE }}
                             translate="no"
                             className="bg-[var(--color-paper)] w-full max-w-lg rounded-t-sm border-t border-[var(--color-rule)] p-4 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] text-[var(--color-ink)] font-[var(--font-body)]"
                         >
+                            {orderSent ? (
+                                // Success check (transitions.dev 10): the one moment on this page that is an event
+                                <div role="status" className="min-h-[240px] flex flex-col items-center justify-center gap-4 text-center px-4">
+                                    <span className="w-14 h-14 border border-[var(--color-rule)] rounded-sm flex items-center justify-center text-[var(--color-accent-2)]">
+                                        <span className="t-success-check" data-state="in" aria-hidden="true">
+                                            <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
+                                                <path d="M14 25l7 7 13-15" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </span>
+                                    </span>
+                                    {/* A trailing "(…)" in the message becomes its own quieter line, so Thai never wraps mid-phrase around the bracket */}
+                                    {(() => {
+                                        const m = orderSent.match(/^(.*?)\s*[(（](.+)[)）]\s*$/);
+                                        return (
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-bold leading-relaxed text-[var(--color-ink)] [text-wrap:balance]">{m ? m[1] : orderSent}</p>
+                                                {m && <p className="text-xs leading-relaxed text-[var(--color-neutral)] [text-wrap:balance]">{m[2]}</p>}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            ) : (<>
                             {/* Drawer Header */}
                             <div className="flex justify-between items-center pb-3 border-b border-[var(--color-rule)] shrink-0">
                                 <div>
@@ -2328,9 +2566,17 @@ export default function CustomerOrderLanding() {
                             </div>
 
                             {/* Cart Items List */}
-                            <div className="flex-1 overflow-y-auto space-y-2.5 my-3 pr-1 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto mt-3 mb-0.5 pr-1 custom-scrollbar">
+                                {/* A removed line folds shut (resize timing) so the lines below slide up instead of jumping.
+                                    Keyed by item + options: the same pair is always merged into one line when added. */}
+                                <AnimatePresence initial={false}>
                                 {cart.map((item, index) => (
-                                    <div key={index} className="bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-rule)] flex items-start gap-3">
+                                    <motion.div
+                                        key={`${item.id}:${JSON.stringify(item.selectedOptions ?? null)}`}
+                                        exit={{ height: 0, opacity: 0, transition: { duration: 0.3, ease: MOTION_EASE } }}
+                                        className="overflow-hidden"
+                                    >
+                                    <div className="mb-2.5 bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-rule)] flex items-start gap-3">
                                         <div className="flex-1 min-w-0">
                                             <h5 className="font-bold text-xs truncate text-[var(--color-ink)]">{loc(menuItems.find(m => m.id === item.id) || item)}</h5>
                                             {item.optionsSummary && item.optionsSummary.length > 0 && (
@@ -2341,7 +2587,7 @@ export default function CustomerOrderLanding() {
                                                 </div>
                                             )}
                                             <p className="text-[var(--color-ink)] font-mono font-bold text-xs mt-1.5">
-                                                ฿{(item.totalPricePerUnit * item.qty).toLocaleString()}
+                                                ฿<PopNumber value={(item.totalPricePerUnit * item.qty).toLocaleString()} />
                                             </p>
                                         </div>
 
@@ -2352,7 +2598,7 @@ export default function CustomerOrderLanding() {
                                             >
                                                 <Minus size={10} />
                                             </button>
-                                            <span className="w-5 text-center font-mono font-bold text-xs text-[var(--color-ink)]">{item.qty}</span>
+                                            <span className="w-5 flex justify-center font-mono font-bold text-xs text-[var(--color-ink)]"><PopNumber value={item.qty} /></span>
                                             <button 
                                                 onClick={() => handleUpdateQty(index, 1)}
                                                 className="w-6 h-6 rounded-sm flex items-center justify-center hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] cursor-pointer"
@@ -2361,7 +2607,9 @@ export default function CustomerOrderLanding() {
                                             </button>
                                         </div>
                                     </div>
+                                    </motion.div>
                                 ))}
+                                </AnimatePresence>
                             </div>
 
                             {/* Kitchen Remark Input */}
@@ -2382,7 +2630,7 @@ export default function CustomerOrderLanding() {
                             <div className="border-t border-[var(--color-rule)] pt-3 mt-3 space-y-2.5 shrink-0">
                                 <div className="flex justify-between items-baseline">
                                     <span className="text-[var(--color-neutral)] text-[10px] uppercase font-mono font-bold tracking-wider">{tt('subtotal')}</span>
-                                    <span className="text-lg font-black text-[var(--color-ink)] font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
+                                    <span className="text-lg font-black text-[var(--color-ink)] font-mono">฿<PopNumber value={cartSubtotal.toLocaleString()} />.-</span>
                                 </div>
 
                                 <button 
@@ -2403,6 +2651,7 @@ export default function CustomerOrderLanding() {
                                     )}
                                 </button>
                             </div>
+                            </>)}
                         </motion.div>
                     </div>
                 )}
@@ -2431,9 +2680,8 @@ export default function CustomerOrderLanding() {
 
                             <motion.div 
                                 initial={{ y: '100%' }}
-                                animate={{ y: 0 }}
-                                exit={{ y: '100%' }}
-                                transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                                animate={{ y: 0, transition: SHEET_OPEN }}
+                                exit={{ y: '100%', transition: SHEET_CLOSE }}
                                 translate="no"
                             className="bg-[var(--color-paper)] w-full max-w-lg rounded-t-sm border-t border-[var(--color-rule)] p-4 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] text-[var(--color-ink)] font-[var(--font-body)]"
                             >
@@ -2567,9 +2815,7 @@ export default function CustomerOrderLanding() {
             </AnimatePresence>
 
             {/* Guest Count Modal (Dieter Rams Stepper) */}
-            {showPaxModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)] animate-in fade-in zoom-in-95 duration-150">
+            <CenterModal open={showPaxModal}>
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between">
                             <div>
                                 <h3 className="font-bold text-sm">{tt('paxTitle')}</h3>
@@ -2644,14 +2890,10 @@ export default function CustomerOrderLanding() {
                                 <span>{tt('paxConfirm')}</span>
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+            </CenterModal>
 
             {/* Member Identification Modal */}
-            {showMemberModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]">
+            <CenterModal open={showMemberModal}>
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
                             <div className="flex items-center gap-2">
                                 <h3 className="font-bold text-sm">{tt('memberModalTitle')}</h3>
@@ -2734,14 +2976,10 @@ export default function CustomerOrderLanding() {
                                 </form>
                             )}
                         </div>
-                    </div>
-                </div>
-            )}
+            </CenterModal>
 
             {/* Staff Table Activation Modal (Dieter Rams + Thai Modern OKLCH) */}
-            {showStaffActivationModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]">
+            <CenterModal open={showStaffActivationModal} dim="bg-black/60">
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
                             <div className="flex items-center gap-2">
                                 <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
@@ -2827,9 +3065,8 @@ export default function CustomerOrderLanding() {
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-            )}
+            </CenterModal>
         </div>
+        </MotionConfig>
     );
 }

@@ -23,7 +23,8 @@ const fill = (template, vars) => template.replace(/\{(\w+)\}/g, (match, name) =>
 
 const showSource = (row, field) => row?.[field]
 
-export default function OptionSelectionModal({ item, onClose, onConfirm, labels, localize = showSource }) {
+// sheetMotion ({ open, close }) lets a page bring its own sheet timing; without it the POS-fast default stays
+export default function OptionSelectionModal({ item, onClose, onConfirm, labels, localize = showSource, sheetMotion }) {
     const L = labels ? { ...DEFAULT_LABELS, ...labels } : DEFAULT_LABELS
     // Mono uppercase suits the English POS labels; translated (Thai) labels read better in the text face
     const labelFace = labels ? '' : 'font-mono uppercase'
@@ -201,7 +202,9 @@ export default function OptionSelectionModal({ item, onClose, onConfirm, labels,
 
             {/* Modal Card - Dieter Rams tabular layout */}
             <motion.div
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                initial={{ y: '100%' }}
+                animate={{ y: 0, transition: sheetMotion?.open }}
+                exit={{ y: '100%', transition: sheetMotion?.close }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                 className="w-full max-w-md bg-[var(--color-paper)] border-t sm:border border-[var(--color-rule)] sm:rounded-sm z-10 pointer-events-auto flex flex-col max-h-[90vh] shadow-xl will-change-transform"
             >
