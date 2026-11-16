@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-    shopDayOf, addDays, defaultCountKind, displayUnit, parseCount, buildCountLines,
+    shopDayOf, addDays, defaultCountKind, displayUnit, parseCount, buildCountLines, stepCount,
+    countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft,
     isAbnormal, summarizeReconciliation, sortReconciliation, carryOverClosing, thresholdsFromSettings
 } from '../stockCount';
 
@@ -113,5 +114,66 @@ describe('thresholdsFromSettings', () => {
         const row = { closing_qty: 9, variance: -1, expected_close: 10, variance_value: -80, unit_cost: 80 };
         expect(isAbnormal(row)).toBe(false);
         expect(isAbnormal(row, { percent: 5, baht: 50 })).toBe(true);
+    });
+});
+
+describe('stepCount (plus / minus on the count sheet)', () => {
+    it('moves a typed count by one and keeps the decimals of an open bottle', () => {
+        expect(stepCount('7', 1)).toBe('8');
+        expect(stepCount('7', -1)).toBe('6');
+        expect(stepCount('1,2', 1)).toBe('2.2');
+        expect(stepCount('0.45', 1)).toBe('1.45');
+    });
+    it('starts an empty field from the amount in the system, or from zero when it is hidden', () => {
+        expect(stepCount('', -1, 7)).toBe('6');
+        expect(stepCount(undefined, 1, 7)).toBe('8');
+        expect(stepCount('', 1)).toBe('1');
+        expect(stepCount('', 1, -3)).toBe('1');
+        expect(stepCount('abc', 1, 2)).toBe('3');
+    });
+    it('never goes below zero', () => {
+        expect(stepCount('0.45', -1)).toBe('0');
+        expect(stepCount('', -1)).toBe('0');
+        expect(stepCount('', -1, 0.5)).toBe('0');
+    });
+});
+
+describe('amounts in words, no decimals', () => {
+    const gin = { unit: 'bottle', pack_unit: 'bottle', usage_unit: 'ml', conversion_factor: 700 };
+    const ml700 = { amount: 700, unit: 'ml' };
+    const lager = { unit: 'unit', pack_unit: 'unit', usage_unit: 'unit', conversion_factor: 1 };
+    const acid = { unit: 'kg', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000 };
+
+    it('splits bottles into full ones and the opened one', () => {
+        expect(splitQty(2.2)).toEqual({ whole: 2, frac: 0.2 });
+        expect(splitQty(7)).toEqual({ whole: 7, frac: 0 });
+        expect(splitQty(0.99999)).toEqual({ whole: 1, frac: 0 });
+        expect(splitQty(-3)).toEqual({ whole: 0, frac: 0 });
+        expect(countsWholeUnits(gin)).toBe(true);
+        expect(countsWholeUnits(acid)).toBe(false);
+    });
+    it('says what is left in the opened one by pack size, or as a percentage', () => {
+        expect(openLeftText(0.2, ml700)).toBe('140 มล.');
+        expect(openLeftText(0.45)).toBe('45%');
+    });
+    it('writes the amount the way it is counted on the shelf', () => {
+        expect(qtyInWords(gin, 0.45, ml700)).toBe('เปิดอยู่ 1 เหลือ 315 มล.');
+        expect(qtyInWords(gin, 1.2, ml700)).toBe('1 ขวด + เปิดอยู่ 1 เหลือ 140 มล.');
+        expect(qtyInWords(gin, 3, ml700)).toBe('3 ขวด');
+        expect(qtyInWords(lager, 7)).toBe('7 หน่วย/ชิ้น');
+        expect(qtyInWords(lager, 0.5)).toBe('เปิดอยู่ 1 เหลือ 50%');
+        expect(qtyInWords(acid, 1.7)).toBe('1 กก. 700 ก.');
+        expect(qtyInWords(acid, 0)).toBe('0 กิโลกรัม');
+    });
+    it('writes a difference with its sign', () => {
+        expect(diffInWords(gin, -1.2, ml700)).toBe('-1 ขวด 140 มล.');
+        expect(diffInWords(gin, 2, ml700)).toBe('+2 ขวด');
+        expect(diffInWords(gin, 0, ml700)).toBe('ตรง');
+        expect(diffInWords(acid, -0.25)).toBe('-250 ก.');
+    });
+    it('adds the opened one to the full ones only when saving', () => {
+        expect(mergeOpenLeft({ a: '2', b: '', c: 'x', d: '5' }, { a: 0.2, b: 0.5, c: 0.3 }))
+            .toEqual({ a: '2.2', b: '0.5', c: 'x', d: '5' });
+        expect(buildCountLines(mergeOpenLeft({}, { b: 0.5 }))).toEqual([{ stock_item_id: 'b', counted_qty: 0.5 }]);
     });
 });

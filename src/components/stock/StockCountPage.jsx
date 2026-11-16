@@ -6,7 +6,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { logStaffActivity } from '../../utils/auditLogger';
 import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import {
-    COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines, addDays, carryOverClosing
+    COUNT_KINDS, defaultCountKind, shopDayOf, displayUnit, parseCount, buildCountLines, addDays, carryOverClosing, stepCount,
+    countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft
 } from '../../utils/stockCount';
 import { buildBarcodeIndex, resolveScan, createScanGate, addScanToCount, normalizeBarcode } from '../../utils/stockBarcode';
 import ScanStrip from './ScanStrip';
@@ -17,28 +18,42 @@ import { linkBarcodeToItem } from '../../utils/stockBarcodeLink';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import * as ui from './stockUi';
 
-const DRAFT_KEY = (kind, day) => `stock_count_draft_v1:${day}:${kind}`;
+const DRAFT_KEY = (day) => `stock_count_draft_v2:${day}`;
+// Drafts from when the screen had three rounds; picked up once so nothing typed is lost.
+const OLD_DRAFT_KEYS = (day) => ['opening', 'spot', 'closing'].map(k => `stock_count_draft_v1:${day}:${k}`);
 
-const readDraft = (kind, day) => {
+const readDraft = (day) => {
     try {
-        const raw = localStorage.getItem(DRAFT_KEY(kind, day));
-        return raw ? JSON.parse(raw) : {};
+        const raw = localStorage.getItem(DRAFT_KEY(day));
+        if (raw) return JSON.parse(raw);
+        return OLD_DRAFT_KEYS(day).reduce((all, key) => ({ ...all, ...JSON.parse(localStorage.getItem(key) || '{}') }), {});
     } catch {
         return {};
     }
 };
 
-const writeDraft = (kind, day, counts) => {
+const OPEN_KEY = (day) => `${DRAFT_KEY(day)}:open`;
+const readOpenDraft = (day) => {
+    try { return JSON.parse(localStorage.getItem(OPEN_KEY(day)) || '{}'); } catch { return {}; }
+};
+const writeOpenDraft = (day, openLeft) => {
     try {
+        if (Object.keys(openLeft).length) localStorage.setItem(OPEN_KEY(day), JSON.stringify(openLeft));
+        else localStorage.removeItem(OPEN_KEY(day));
+    } catch { /* storage unavailable */ }
+};
+
+const writeDraft = (day, counts) => {
+    try {
+        OLD_DRAFT_KEYS(day).forEach(key => localStorage.removeItem(key));
         if (Object.values(counts).some(v => String(v ?? '').trim() !== '')) {
-            localStorage.setItem(DRAFT_KEY(kind, day), JSON.stringify(counts));
+            localStorage.setItem(DRAFT_KEY(day), JSON.stringify(counts));
         } else {
-            localStorage.removeItem(DRAFT_KEY(kind, day));
+            localStorage.removeItem(DRAFT_KEY(day));
         }
     } catch { /* storage unavailable: counting still works */ }
 };
 
-const fmt = (n) => Number(Number(n || 0).toFixed(3)).toLocaleString('th-TH', { maximumFractionDigits: 3 });
 
 const loadItems = async () => {
     // select('*') so the screen works before and after newer columns (track_mode) exist
@@ -81,6 +96,7 @@ const capacityOf = fullUnitCapacity;
 
 // Count fields: 16px so phones do not zoom on focus; border colour is added per state.
 const numInput = `h-11 px-2 rounded-md border ${ui.PAPER} ${ui.INK} text-base font-semibold tabular-nums text-right outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`;
+const stepBtn = `w-11 h-11 shrink-0 rounded-md border ${ui.RULE} ${ui.PAPER} text-xl leading-none ${ui.INK} flex items-center justify-center select-none touch-manipulation transition-[background-color,border-color,transform] hover:bg-[oklch(94%_0.010_28)] hover:border-[oklch(42%_0.010_28)] active:scale-95 cursor-pointer`;
 const smallPrimary = 'h-9 px-3 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-[oklch(25%_0.012_28)] cursor-pointer';
 
 /** Full units + what is left in the open one -> one decimal count. */
@@ -121,11 +137,11 @@ function OpenUnitHelper({ item, onApply, onClose }) {
             )}
             <div className="flex items-center justify-between gap-3">
                 <span className={`text-[14px] leading-5 ${ui.MUTED}`}>
-                    รวม <span className={`font-semibold tabular-nums ${ui.INK}`}>{fmt(total)}</span> {unit}
+                    รวม <span className={`font-semibold ${ui.INK}`}>{qtyInWords(item, total, cap)}</span>
                 </span>
                 <div className="flex gap-2">
                     <button type="button" onClick={onClose} className={ui.ghostBtn}>ยกเลิก</button>
-                    <button type="button" onClick={() => onApply(String(total))} className={smallPrimary}>ใช้ค่านี้</button>
+                    <button type="button" onClick={() => onApply({ full: fullN, frac: Number(fraction.toFixed(4)), total })} className={smallPrimary}>ใช้ค่านี้</button>
                 </div>
             </div>
         </div>
@@ -139,14 +155,19 @@ export default function StockCountPage() {
         ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
         : { initial: { opacity: 0, y: -6 }, animate: { opacity: 1, y: 0, transition: { duration: 0.18, ease: ui.EASE } }, exit: { opacity: 0, transition: { duration: 0.1 } } };
     const shopDay = useMemo(() => shopDayOf(new Date()), []);
-    const [kind, setKind] = useState(() => defaultCountKind(new Date()));
+    // One way to count. The round (opening / mid-day / closing) is worked out from the clock and
+    // filed with the count, so the reports that read the day's first and last count keep working.
+    const [kind] = useState(() => defaultCountKind(new Date()));
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [scope, setScope] = useState('daily'); // 'daily' | 'all' | 'suggested'
     const [spotData, setSpotData] = useState(null); // { ranked, lastCounted } for mid-day suggestions
     const [search, setSearch] = useState('');
-    const [counts, setCounts] = useState(() => readDraft(defaultCountKind(new Date()), shopDayOf(new Date())));
-    const [showSystem, setShowSystem] = useState(() => !COUNT_KINDS[defaultCountKind(new Date())].blindByDefault);
+    const [counts, setCounts] = useState(() => readDraft(shopDayOf(new Date())));
+    const [showSystem, setShowSystem] = useState(true);
+    // The opened unit of an item, as a fraction of a full one. Kept beside the field, which holds
+    // the unopened units, so nobody reads or types "2.2 bottles".
+    const [openLeft, setOpenLeft] = useState(() => readOpenDraft(shopDayOf(new Date())));
     const [saving, setSaving] = useState(false);
     const [result, setResult] = useState(null);
     const [user, setUser] = useState(null);
@@ -227,10 +248,19 @@ export default function StockCountPage() {
 
     const applyLastClosing = () => {
         if (!lastClosing) return;
-        const { counts: next, filled } = carryOverClosing(lastClosing.lines, new Set(items.map(i => i.id)), counts);
+        const { counts: carried, filled } = carryOverClosing(lastClosing.lines, new Set(items.map(i => i.id)), counts);
+        const next = { ...carried };
+        const opened = { ...openLeft };
+        for (const item of items) {
+            if (carried[item.id] === counts[item.id] || !countsWholeUnits(item)) continue;
+            const { whole, frac } = splitQty(parseCount(carried[item.id]));
+            next[item.id] = String(whole);
+            if (frac > 0) opened[item.id] = frac;
+        }
         setCounts(next);
+        setOpenLeft(opened);
         if (filled && scope === 'daily' && lastClosing.lines.some(l => itemsById.get(l.stock_item_id)?.track_mode !== 'daily')) setScope('all');
-        toast.success(filled ? `ใส่ยอดปิดเมื่อวาน ${filled} รายการ แก้เฉพาะตัวที่ไม่ตรงแล้วบันทึก` : 'ทุกรายการกรอกไว้แล้ว');
+        toast.success(filled ? `ใส่ยอดเมื่อคืน ${filled} รายการ แก้เฉพาะตัวที่ไม่ตรงแล้วบันทึก` : 'ทุกรายการกรอกไว้แล้ว');
     };
 
     const barcodeIndex = useMemo(() => buildBarcodeIndex(items, extraBarcodes), [items, extraBarcodes]);
@@ -282,16 +312,27 @@ export default function StockCountPage() {
         countScan(item.id, perScan);
     };
 
-    useEffect(() => { writeDraft(kind, shopDay, counts); }, [kind, shopDay, counts]);
+    useEffect(() => { writeDraft(shopDay, counts); }, [shopDay, counts]);
+    useEffect(() => { writeOpenDraft(shopDay, openLeft); }, [shopDay, openLeft]);
 
-    const changeKind = (next) => {
-        if (next === kind) return;
-        writeDraft(kind, shopDay, counts);
-        setKind(next);
-        setCounts(readDraft(next, shopDay));
-        setShowSystem(!COUNT_KINDS[next].blindByDefault);
-        setResult(null);
+    // Plus / minus: a field left empty starts from the amount in the system when it is on show.
+    // For bottles and packs the field takes the full ones and the opened one is carried beside it.
+    const step = (item, delta) => {
+        const blank = String(counts[item.id] ?? '').trim() === '';
+        const system = showSystem ? Math.max(0, Number(item.current_quantity) || 0) : 0;
+        if (blank && countsWholeUnits(item)) {
+            const { whole, frac } = splitQty(system);
+            setCounts(prev => ({ ...prev, [item.id]: stepCount('', delta, whole) }));
+            if (frac > 0 && openLeft[item.id] === undefined) setOpenLeft(prev => ({ ...prev, [item.id]: frac }));
+            return;
+        }
+        setCounts(prev => ({ ...prev, [item.id]: stepCount(prev[item.id], delta, system) }));
     };
+    const clearOpen = (id) => setOpenLeft(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+    });
 
     const dailyCount = items.filter(i => i.track_mode === 'daily').length;
     const visible = useMemo(() => {
@@ -301,7 +342,7 @@ export default function StockCountPage() {
             .filter(i => !q || i.name.toLowerCase().includes(q));
     }, [items, scope, search, suggestedIds]);
 
-    const lines = buildCountLines(counts);
+    const lines = buildCountLines(mergeOpenLeft(counts, openLeft));
     const filled = lines.length;
     const invalidCount = Object.values(counts).filter(v => String(v ?? '').trim() !== '' && parseCount(v) === null).length;
 
@@ -322,8 +363,9 @@ export default function StockCountPage() {
         setSaving(true);
         try {
             const performedBy = user?.user_metadata?.full_name || user?.email || 'Staff';
+            const round = defaultCountKind(new Date()); // the screen may have been open for hours
             const { data, error } = await supabase.rpc('submit_stock_count', {
-                p_kind: kind,
+                p_kind: round,
                 p_lines: lines,
                 p_performed_by: performedBy,
                 p_note: null,
@@ -335,13 +377,14 @@ export default function StockCountPage() {
             logStaffActivity('stock', 'stock_count_session', {
                 staffName: performedBy,
                 amount: data?.line_count || filled,
-                reason: `${COUNT_KINDS[kind].label}: นับ ${data?.line_count || filled} รายการ ผลต่าง ฿${Number(data?.value_diff || 0).toFixed(2)}`,
-                metadata: { module: 'stock', session_id: data?.session_id, kind, shop_day: shopDay, value_diff: data?.value_diff }
+                reason: `${COUNT_KINDS[round].label}: นับ ${data?.line_count || filled} รายการ ผลต่าง ฿${Number(data?.value_diff || 0).toFixed(2)}`,
+                metadata: { module: 'stock', session_id: data?.session_id, kind: round, shop_day: shopDay, value_diff: data?.value_diff }
             });
 
             setResult(data);
             setCounts({});
-            writeDraft(kind, shopDay, {});
+            setOpenLeft({});
+            writeDraft(shopDay, {});
             const fresh = await loadItems().catch(() => null);
             if (fresh) setItems(fresh);
             toast.success(`บันทึกการนับ ${data?.line_count || filled} รายการแล้ว`);
@@ -357,7 +400,6 @@ export default function StockCountPage() {
     };
 
     const pillTransition = reduceMotion ? { duration: 0 } : { duration: 0.22, ease: ui.EASE };
-    const kindEntries = Object.entries(COUNT_KINDS);
 
     return (
         <div className={`min-h-screen bg-[oklch(97%_0.008_28)] ${ui.INK} font-sans pb-28`}>
@@ -374,21 +416,6 @@ export default function StockCountPage() {
                         </p>
                     </div>
                 </div>
-                <div className={`max-w-3xl mx-auto border-x border-t ${ui.RULE} px-3 py-2`}>
-                    <div className={`relative grid p-1 rounded-md ${ui.PAPER2}`} style={{ gridTemplateColumns: `repeat(${kindEntries.length}, minmax(0, 1fr))` }}
-                        role="tablist" aria-label="รอบนับ">
-                        {kindEntries.map(([key, k]) => (
-                            <button key={key} type="button" role="tab" aria-selected={kind === key} onClick={() => changeKind(key)}
-                                className={`relative h-9 rounded text-sm transition-colors cursor-pointer ${kind === key ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}>
-                                {kind === key && (
-                                    <motion.span layoutId="count-kind-pill" transition={pillTransition}
-                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]`} />
-                                )}
-                                <span className="relative">{k.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
             </header>
 
             <main className={`max-w-3xl mx-auto border-x ${ui.RULE} ${ui.PAPER} min-h-[60vh]`}>
@@ -397,7 +424,7 @@ export default function StockCountPage() {
                     <motion.section key="result" {...fade} className="p-4 space-y-4" aria-labelledby="count-result">
                         <div>
                             <h2 id="count-result" className="font-semibold text-base leading-7">
-                                บันทึก{COUNT_KINDS[result.kind]?.label || ''}แล้ว {result.line_count} รายการ
+                                บันทึกการนับแล้ว {result.line_count} รายการ
                             </h2>
                             <p className={`text-[14px] leading-6 ${ui.MUTED}`}>
                                 ผลต่างจากยอดในระบบรวม{' '}
@@ -407,22 +434,26 @@ export default function StockCountPage() {
                             </p>
                         </div>
                         <ol className={`rounded-md border ${ui.RULE} divide-y divide-[oklch(90%_0.008_28)] overflow-hidden`}>
-                            {(result.lines || []).map((l, i) => (
+                            {(result.lines || []).map((l, i) => {
+                                const it = itemsById.get(l.stock_item_id) || { unit: l.unit };
+                                const cap = capacityOf(it);
+                                return (
                                 <motion.li key={l.stock_item_id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2.5"
                                     initial={reduceMotion ? false : { opacity: 0, y: 4 }}
                                     animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: ui.EASE, delay: Math.min(i, 12) * 0.02 } }}>
                                     <span className="font-semibold text-[14px] leading-6 min-w-0 break-words">{l.name}</span>
                                     <span className={`text-[14px] leading-6 tabular-nums text-right ${Number(l.diff) < 0 ? ui.ACCENT : ui.MUTED}`}>
-                                        {Number(l.diff) > 0 ? '+' : ''}{fmt(l.diff)} {displayUnit(l.unit)}
+                                        {diffInWords(it, l.diff, cap)}
                                     </span>
                                     <span className={`text-[12px] leading-5 ${ui.NEUTRAL}`}>
-                                        ระบบ <span className="tabular-nums">{fmt(l.system_qty)}</span> → นับได้ <span className="tabular-nums">{fmt(l.counted_qty)}</span>
+                                        ระบบ {qtyInWords(it, l.system_qty, cap)} → นับได้ {qtyInWords(it, l.counted_qty, cap)}
                                     </span>
                                     <span className={`text-[12px] leading-5 tabular-nums text-right ${ui.NEUTRAL}`}>
                                         ฿{Number(l.value_diff || 0).toFixed(2)}
                                     </span>
                                 </motion.li>
-                            ))}
+                                );
+                            })}
                         </ol>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setResult(null)}
@@ -484,9 +515,9 @@ export default function StockCountPage() {
                                 </button>
                             </div>
                             <AnimatePresence initial={false}>
-                                {kind === 'closing' && !showSystem && (
+                                {!showSystem && (
                                     <motion.p key="blind" {...fade} className={`text-[12px] leading-5 ${ui.MUTED}`}>
-                                        นับปิดร้านแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
+                                        นับแบบไม่เห็นยอดในระบบ นับตามของจริง แล้วระบบจะแสดงผลต่างหลังบันทึก
                                     </motion.p>
                                 )}
                                 {kind === 'spot' && spotSuggestions.length > 0 && (
@@ -514,12 +545,12 @@ export default function StockCountPage() {
                                 {kind === 'opening' && lastClosing && (
                                     <motion.div key="carry" {...fade} className={`grid grid-cols-[1fr_auto] gap-3 items-center rounded-md border ${ui.RULE} ${ui.PAPER} px-3 py-2.5`}>
                                         <p className={`text-[12px] leading-5 ${ui.MUTED} min-w-0`}>
-                                            เมื่อวานนับปิดร้าน <span className={`font-semibold tabular-nums ${ui.INK}`}>{new Set(lastClosing.lines.map(l => l.stock_item_id)).size}</span> รายการ
+                                            เมื่อคืนนับไว้ <span className={`font-semibold tabular-nums ${ui.INK}`}>{new Set(lastClosing.lines.map(l => l.stock_item_id)).size}</span> รายการ
                                             {' '}({lastClosing.sessions.map(x => `${new Date(x.created_at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} ${x.performed_by || ''}`.trim()).join(', ')})
-                                            <span className="block">ถ้าไม่มีอะไรเปลี่ยนตอนปิด ใช้ยอดนั้นเป็นยอดเปิด แล้วแก้เฉพาะที่ไม่ตรง</span>
+                                            <span className="block">ถ้าของไม่ได้เปลี่ยนตั้งแต่ปิดร้าน ใส่ยอดนั้นให้ทุกช่อง แล้วแก้เฉพาะที่ไม่ตรง</span>
                                         </p>
                                         <button type="button" onClick={applyLastClosing} className={smallPrimary}>
-                                            ใส่ยอดปิดเมื่อวาน
+                                            ใส่ยอดเมื่อคืน
                                         </button>
                                     </motion.div>
                                 )}
@@ -539,16 +570,15 @@ export default function StockCountPage() {
                                                     <motion.div key={it.id} {...fade} className="min-w-0">
                                                         <span className={`text-[12px] leading-4 ${ui.NEUTRAL} block`}>สแกนล่าสุด</span>
                                                         <span className="font-semibold text-base leading-6 break-words">{it.name}</span>
+                                                        <span className={`text-[12px] leading-5 ${ui.NEUTRAL} block`}>นับเป็น{displayUnit(it.unit)}</span>
                                                     </motion.div>
                                                 </AnimatePresence>
                                                 <div className="flex items-center gap-2">
-                                                    <button type="button" aria-label={`ลด ${it.name} 1`}
-                                                        onClick={() => setCounts(prev => ({ ...prev, [it.id]: String(Math.max(0, (parseCount(prev[it.id]) ?? 0) - 1)) }))}
-                                                        className={`w-11 h-11 shrink-0 rounded-md border ${ui.RULE} ${ui.PAPER} text-xl ${ui.INK} flex items-center justify-center transition-[background-color,transform] hover:bg-[oklch(94%_0.010_28)] active:scale-95 cursor-pointer`}>−</button>
+                                                    <button type="button" aria-label={`ลด ${it.name} 1`} onClick={() => step(it, -1)} className={stepBtn}>−</button>
                                                     <input type="text" inputMode="decimal" value={raw} aria-label={`จำนวน ${it.name}`}
                                                         onChange={e => setCounts(prev => ({ ...prev, [it.id]: e.target.value }))}
-                                                        className={`w-20 ${numInput} ${ui.RULE}`} />
-                                                    <span className={`w-12 text-[12px] leading-5 ${ui.MUTED} break-words`}>{displayUnit(it.unit)}</span>
+                                                        className={`w-16 ${numInput} ${ui.RULE}`} />
+                                                    <button type="button" aria-label={`เพิ่ม ${it.name} 1`} onClick={() => step(it, 1)} className={stepBtn}>+</button>
                                                 </div>
                                             </div>
                                         );
@@ -570,8 +600,11 @@ export default function StockCountPage() {
                                 className="divide-y divide-[oklch(90%_0.008_28)]">
                                 {visible.map(item => {
                                     const raw = counts[item.id] ?? '';
-                                    const entered = String(raw).trim() !== '';
-                                    const invalid = entered && parseCount(raw) === null;
+                                    const cap = capacityOf(item);
+                                    const opened = Number(openLeft[item.id]) > 0 ? Number(openLeft[item.id]) : 0;
+                                    const typed = String(raw).trim() !== '';
+                                    const invalid = typed && parseCount(raw) === null;
+                                    const entered = typed || opened > 0;
                                     return (
                                         <li key={item.id} className={`px-3 py-3 transition-colors ${entered && !invalid ? 'bg-[oklch(97.5%_0.006_28)]' : ''}`}>
                                             <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center">
@@ -580,7 +613,11 @@ export default function StockCountPage() {
                                                         {item.name}
                                                     </label>
                                                     <div className={`flex flex-wrap gap-x-3 text-[12px] leading-5 ${ui.NEUTRAL}`}>
-                                                        {showSystem && <span>ในระบบ <span className="tabular-nums">{fmt(item.current_quantity)}</span></span>}
+                                                        <span>
+                                                            {showSystem
+                                                                ? <>ในระบบ <span className="tabular-nums">{qtyInWords(item, item.current_quantity, cap)}</span></>
+                                                                : <>นับเป็น{displayUnit(item.unit)}</>}
+                                                        </span>
                                                         <button type="button" onClick={() => setHelperFor(helperFor === item.id ? null : item.id)}
                                                             aria-expanded={helperFor === item.id}
                                                             className={`font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer ${helperFor === item.id ? ui.INK : ''}`}>
@@ -593,8 +630,18 @@ export default function StockCountPage() {
                                                             </button>
                                                         )}
                                                     </div>
+                                                    {opened > 0 && (
+                                                        <div className={`flex flex-wrap gap-x-3 text-[14px] leading-6 ${ui.INK}`}>
+                                                            <span className="font-semibold">+ เปิดอยู่ 1 เหลือ <span className="tabular-nums">{openLeftText(opened, cap)}</span></span>
+                                                            <button type="button" onClick={() => clearOpen(item.id)}
+                                                                className={`text-[12px] font-medium underline underline-offset-2 decoration-[oklch(85%_0.012_28)] ${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)] hover:decoration-current transition-colors cursor-pointer`}>
+                                                                ไม่มีของเปิด
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                                    <button type="button" aria-label={`ลด ${item.name} 1`} onClick={() => step(item, -1)} className={stepBtn}>−</button>
                                                     <input
                                                         id={`count-${item.id}`}
                                                         type="text"
@@ -603,11 +650,11 @@ export default function StockCountPage() {
                                                         value={raw}
                                                         onChange={e => setCounts(prev => ({ ...prev, [item.id]: e.target.value }))}
                                                         aria-invalid={invalid}
-                                                        className={`w-24 ${numInput} ${invalid
+                                                        className={`w-16 sm:w-20 ${numInput} ${invalid
                                                             ? 'border-[oklch(52%_0.16_28)]'
                                                             : entered ? 'border-[oklch(42%_0.010_28)]' : ui.RULE}`}
                                                     />
-                                                    <span className={`w-14 text-[12px] leading-5 ${ui.MUTED} break-words`}>{displayUnit(item.unit)}</span>
+                                                    <button type="button" aria-label={`เพิ่ม ${item.name} 1`} onClick={() => step(item, 1)} className={stepBtn}>+</button>
                                                 </div>
                                             </div>
                                             <AnimatePresence initial={false}>
@@ -621,8 +668,14 @@ export default function StockCountPage() {
                                                             <OpenUnitHelper
                                                                 item={item}
                                                                 onClose={() => setHelperFor(null)}
-                                                                onApply={(value) => {
-                                                                    setCounts(prev => ({ ...prev, [item.id]: value }));
+                                                                onApply={({ full, frac, total }) => {
+                                                                    if (countsWholeUnits(item)) {
+                                                                        setCounts(prev => ({ ...prev, [item.id]: String(full) }));
+                                                                        if (frac > 0) setOpenLeft(prev => ({ ...prev, [item.id]: frac }));
+                                                                        else clearOpen(item.id);
+                                                                    } else {
+                                                                        setCounts(prev => ({ ...prev, [item.id]: String(total) }));
+                                                                    }
                                                                     setHelperFor(null);
                                                                 }}
                                                             />
@@ -675,7 +728,7 @@ export default function StockCountPage() {
                                 disabled={!filled || invalidCount > 0 || saving}
                                 className="h-12 px-6 shrink-0 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-base font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                             >
-                                {saving ? 'กำลังบันทึก...' : `บันทึก${COUNT_KINDS[kind].label}`}
+                                {saving ? 'กำลังบันทึก...' : 'บันทึกการนับ'}
                             </button>
                         </div>
                     </motion.footer>

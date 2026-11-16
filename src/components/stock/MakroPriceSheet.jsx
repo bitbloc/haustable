@@ -43,6 +43,9 @@ export default function MakroPriceSheet({ initialTerm = '', onPick, onClose }) {
     }, [onClose]);
 
     const makroLink = `https://www.makro.pro/c/search?q=${encodeURIComponent(term.trim())}`;
+    // Lotus's has no search data on its public page (results load from its app API), so it is a link out,
+    // not a second list: staff compare there and type the price in.
+    const lotusLink = `https://www.lotuss.com/th/search/${encodeURIComponent(term.trim())}`;
 
     return createPortal(
         <div className="fixed inset-0 z-[80] bg-[oklch(18%_0.012_28/0.45)] flex justify-end" onClick={onClose}>
@@ -118,6 +121,14 @@ export default function MakroPriceSheet({ initialTerm = '', onPick, onClose }) {
                         </ul>
                     )}
                 </div>
+
+                {term.trim() && (
+                    <footer className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[14px] leading-6">
+                        <span className="text-[oklch(42%_0.010_28)]">เทียบราคา “{term.trim()}” ที่</span>
+                        <a href={lotusLink} target="_blank" rel="noopener noreferrer" className="font-bold underline underline-offset-4">Lotus's</a>
+                        <a href={makroLink} target="_blank" rel="noopener noreferrer" className="font-bold underline underline-offset-4">makro.pro</a>
+                    </footer>
+                )}
             </div>
         </div>,
         document.body

@@ -803,7 +803,7 @@ export default function StockPage() {
                 <div className="sp-cta-grid">
                     <button type="button" onClick={() => navigate('/staff/stock/count')} className="sp-cta sp-cta--ink">
                         <span className="sp-cta__label">นับสต๊อก</span>
-                        <span className="sp-cta__hint">เปิด · ระหว่างวัน · ปิด</span>
+                        <span className="sp-cta__hint">กรอก หรือกด + −</span>
                     </button>
                     <button type="button" onClick={() => navigate('/staff/stock/receive')} className="sp-cta">
                         <span className="sp-cta__label">รับของ</span>

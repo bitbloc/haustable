@@ -3,7 +3,7 @@
  * Shared rules for stock counts and the daily reconciliation report.
  * Shop day runs 05:00 to 05:00 Asia/Bangkok (same as SQL stock_shop_day).
  */
-import { THAI_UNITS } from './unitUtils';
+import { THAI_UNITS, getUnitType } from './unitUtils';
 
 export const SHOP_DAY_CUTOFF_HOUR = 5;
 export const SHOP_TIMEZONE = 'Asia/Bangkok';
@@ -37,7 +37,11 @@ export const shopDayOf = (date = new Date()) => {
 
 export const addDays = shiftYmd;
 
-/** Sensible count type for the time of day: morning = opening, late = closing. */
+/**
+ * Count type for the time of day: morning = opening, late = closing. The count screen has one
+ * mode only; this label is filed with each count so the daily report, the Telegram closing
+ * summary and the POS close-shift reminder keep finding the day's first and last count.
+ */
 export const defaultCountKind = (date = new Date()) => {
     const { hour } = shopClock(date);
     if (hour >= SHOP_DAY_CUTOFF_HOUR && hour < 15) return 'opening';
@@ -57,6 +61,17 @@ export const parseCount = (raw) => {
     if (text === '') return null;
     const n = Number(text);
     return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
+/**
+ * One tap on plus or minus. An empty (or unreadable) field starts from `base`: the amount the
+ * system holds when the counter can see it, otherwise zero. Never goes below zero.
+ */
+export const stepCount = (raw, delta, base = 0) => {
+    const current = parseCount(raw);
+    const start = current ?? Math.max(0, Number(base) || 0);
+    const next = Math.max(0, start + (Number(delta) || 0));
+    return String(Math.round(next * 10000) / 10000);
 };
 
 /** Lines to send: only items with a valid count, one per item. */
@@ -176,3 +191,76 @@ export function formatPackQty(qty, { factor, packUnit, usageUnit } = {}) {
     if (rest > 0) parts.push(`${Number(rest.toFixed(2)).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${shortUnit(usageUnit)}`.trim());
     return sign + parts.join(' ');
 }
+
+/* ── Counting without decimals ──────────────────────────────────────────────────────────────
+ * Staff count "2 full bottles and one open with about 140 ml left", never "2.2". The count sheet
+ * keeps the unopened units in the field and the opened one as a fraction beside it; the two are
+ * added only when the count is saved. Things weighed or poured loose (kg, litres) stay one amount.
+ */
+const round4 = (n) => Math.round(n * 10000) / 10000;
+
+/** True for bottles, packs, pieces: counted whole, with at most one opened. */
+export const countsWholeUnits = (item) => !['mass', 'volume'].includes(getUnitType(item?.unit || item?.pack_unit));
+
+/** 2.2 -> { whole: 2, frac: 0.2 }. Negative or unreadable amounts count as nothing. */
+export const splitQty = (qty) => {
+    const n = Math.max(0, Number(qty) || 0);
+    const whole = Math.floor(n + 1e-9);
+    const frac = round4(n - whole);
+    return frac >= 0.9999 ? { whole: whole + 1, frac: 0 } : { whole, frac: Math.max(0, frac) };
+};
+
+/** What is left in the opened unit: "140 มล." when the pack size is known, else "20%". */
+export const openLeftText = (frac, capacity = null) => (capacity
+    ? `${Math.round(frac * capacity.amount).toLocaleString('th-TH')} ${shortUnit(capacity.unit)}`
+    : `${Math.round(frac * 100)}%`);
+
+/**
+ * An amount in words: "2 ขวด + เปิดอยู่ 1 เหลือ 140 มล.", "7 ขวด", "1 กก. 700 ก.".
+ * capacity: fullUnitCapacity(item) or null.
+ */
+export const qtyInWords = (item, qty, capacity = null) => {
+    const unit = displayUnit(item?.unit || item?.pack_unit);
+    const n = Math.max(0, Number(qty) || 0);
+    if (!countsWholeUnits(item)) {
+        const packed = ['g', 'ml'].includes(String(item?.usage_unit || '').toLowerCase())
+            ? formatPackQty(n, { factor: item?.conversion_factor, packUnit: item?.unit || item?.pack_unit, usageUnit: item?.usage_unit })
+            : null;
+        return packed && packed !== '0' ? packed : `${round4(n).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${unit}`.trim();
+    }
+    const { whole, frac } = splitQty(n);
+    if (!frac) return `${whole.toLocaleString('th-TH')} ${unit}`.trim();
+    const open = `เปิดอยู่ 1 เหลือ ${openLeftText(frac, capacity)}`;
+    return whole > 0 ? `${whole.toLocaleString('th-TH')} ${unit} + ${open}` : open;
+};
+
+/** A difference in words with its sign: "-1 ขวด 140 มล.", "+2 แพ็ค", "ตรง". */
+export const diffInWords = (item, diff, capacity = null) => {
+    const n = Number(diff) || 0;
+    if (Math.abs(n) < 0.00005) return 'ตรง';
+    const sign = n < 0 ? '-' : '+';
+    if (!countsWholeUnits(item)) return sign + qtyInWords(item, Math.abs(n), capacity);
+    const unit = displayUnit(item?.unit || item?.pack_unit);
+    const { whole, frac } = splitQty(Math.abs(n));
+    const parts = [];
+    if (whole > 0) parts.push(`${whole.toLocaleString('th-TH')} ${unit}`.trim());
+    if (frac > 0) parts.push(openLeftText(frac, capacity));
+    return sign + parts.join(' ');
+};
+
+/**
+ * Field values + opened fractions -> the counts to save. An item with only an opened unit counts
+ * as zero full ones. A field that cannot be read is passed through so it is still flagged.
+ */
+export const mergeOpenLeft = (counts = {}, openLeft = {}) => {
+    const out = { ...counts };
+    for (const [id, f] of Object.entries(openLeft)) {
+        const frac = Number(f);
+        if (!(frac > 0)) continue;
+        const blank = String(counts[id] ?? '').trim() === '';
+        const n = blank ? 0 : parseCount(counts[id]);
+        if (n === null) continue;
+        out[id] = String(round4(n + frac));
+    }
+    return out;
+};
