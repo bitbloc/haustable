@@ -7,7 +7,7 @@
  * customer saw "staff called". These rows are the backup the heartbeat reads.
  *
  * Every function is best-effort: if the table does not exist yet (migration
- * 20261116090000_table_staff_calls.sql not applied) the POS simply keeps the old behaviour.
+ * 20261116235500_table_staff_calls.sql not applied) the POS simply keeps the old behaviour.
  */
 import { supabase } from '../lib/supabaseClient';
 
