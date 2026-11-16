@@ -276,9 +276,12 @@
 @keyframes sp-fade { from { opacity: 0.35; } to { opacity: 1; } }
 
 .sp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-gap); }
+/* Columns are chosen so a card stays 165-190px wide at every width (the phone's two columns are 165px):
+   375: 2 x 165.5 + 12 = 343 · 768: 4 x 175 + 3 x 12 = 736 · 1024: 5 x 185.6 + 4 x 12 = 976 · 1440: 6 x 182 + 5 x 12 = 1152 */
 @media (min-width: 560px) { .sp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 900px) { .sp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-@media (min-width: 1200px) { .sp-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 720px) { .sp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .sp-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .sp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 
 /* ── Status mark: one per card or row ── */
 .sc-status {
@@ -303,7 +306,8 @@
 .sc-card {
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--sp-border);
   border-radius: var(--sp-r-card);
   background: var(--sp-card);
@@ -339,7 +343,7 @@
   align-self: center;
   width: 64px;
   height: 64px;
-  margin: 8px 0 12px;
+  margin: 4px 0 8px;
   border-radius: var(--sp-r-control);
   background: var(--sp-paper-2);
   display: flex;
@@ -362,7 +366,8 @@
   padding-bottom: 1px;
 }
 
-.sc-qty { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 6px; margin-top: 8px; min-width: 0; }
+/* One axis per card: picture, name, figures and the opened-pack line all sit on the centre line */
+.sc-qty { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 0 6px; margin-top: 8px; min-width: 0; }
 /* Pieces in the packs on the shelf ("· 143 ชิ้น"), for things bought in packs and used one by one */
 .sc-qty__total { font-size: 14px; font-weight: 500; color: var(--sp-ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sc-qty__val { font-size: 24px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
@@ -370,14 +375,36 @@
 .sc-qty__open { font-size: 12px; color: var(--sp-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-card--out .sc-qty__val, .sc-card--low .sc-qty__val { color: var(--sp-accent); }
 
-/* Opened pack: four quarter cells, then what is left in words. Ink, so it reads before the par line below. */
-.sc-open { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; min-height: 19px; margin: 2px 0 0; min-width: 0; }
+/* Opened pack: one tube that drains, then what is left in words. Ink, so it reads before the par line below. */
+/* Tabular card (owner's sketch, 2026-11-16): a head, then two cells split by a rule
+   (on the shelf | the amount inside), then a foot for the opened pack. Rules run edge to edge. */
+/* Head: the picture is the whole top cell (16:10), chips on its corners on an opaque ground; the name has its own cell */
+.sc-media { position: relative; aspect-ratio: 16 / 10; background: var(--sp-paper-2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.sc-media .sc-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sc-media .sc-top { position: absolute; inset: 8px 8px auto 8px; height: 24px; }
+.sc-media .sc-chip { background: var(--sp-card); border-color: var(--sp-border); color: var(--sp-ink-2); }
+.sc-media .sc-status { height: 24px; padding: 0 8px; border-radius: var(--sp-r-chip); background: var(--sp-card); }
+.sc-media .sc-status--out { background: var(--sp-accent-pale); }
+.sc-name { flex: 1; padding: 8px 12px 6px; border-top: 1px solid var(--sp-rule); }
+.sc-cells { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-top: 1px solid var(--sp-rule); }
+.sc-cell { display: flex; flex-direction: column; justify-content: center; min-width: 0; min-height: 52px; padding: 4px 12px; }
+.sc-cell + .sc-cell { border-left: 1px solid var(--sp-rule); }
+.sc-cell__n { font-size: 20px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-cell + .sc-cell .sc-cell__n { font-size: 16px; line-height: 1.75; color: var(--sp-ink-2); }
+.sc-cell__unit { font-size: 12px; line-height: 1.6; color: var(--sp-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-cell__none { font-size: 16px; color: var(--sp-control); }
+.sc-foot { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 28px; padding: 4px 12px 8px; border-top: 1px solid var(--sp-rule); }
+.sc-foot .sc-open__meter { width: 100%; }
+.sc-foot .sc-open__text { overflow-wrap: anywhere; }
+
+.sc-open { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; margin: 2px 0 0; min-width: 0; }
 /* On the card the opened-pack line sits centred under the figures (owner, 2026-11-16) */
-.sc-card .sc-open { justify-content: center; text-align: center; }
+/* Card: what is open in words, then one full-width tube under it */
+.sc-card .sc-open { flex-direction: column-reverse; flex-wrap: nowrap; align-items: stretch; gap: 4px; text-align: center; }
+.sc-card .sc-open__meter { width: 100%; }
 .sc-open--inline { display: inline-flex; margin: 0; min-height: 0; }
-.sc-open__meter { display: grid; grid-template-columns: repeat(4, 10px); gap: 2px; flex: none; }
-.sc-open__cell { position: relative; height: 10px; border-radius: 2px; background: var(--sp-paper-2); box-shadow: inset 0 0 0 1px var(--sp-control); overflow: hidden; }
-.sc-open__fill { position: absolute; inset: 0 auto 0 0; background: var(--sp-ink-2); }
+.sc-open__meter { position: relative; flex: none; width: 56px; height: 6px; border-radius: 999px; background: var(--sp-paper-2); box-shadow: inset 0 0 0 1px var(--sp-control); overflow: hidden; }
+.sc-open__fill { position: absolute; inset: 0 auto 0 0; min-width: 3px; border-radius: inherit; background: var(--sp-ink-2); }
 .sc-open__text { font-size: 12px; line-height: 1.6; font-weight: 500; color: var(--sp-ink-2); font-variant-numeric: tabular-nums; min-width: 0; }
 
 .sc-par-bar { height: 4px; margin-top: 8px; border-radius: 999px; background: var(--sp-paper-2); overflow: hidden; }

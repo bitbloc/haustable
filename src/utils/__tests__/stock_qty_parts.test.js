@@ -5,8 +5,8 @@ const item = (over) => ({ unit: 'bottle', pack_unit: 'bottle', usage_unit: 'ml',
 
 describe('What a stock card shows', () => {
     it('counts the opened bottle in the big figure and says what is left in it', () => {
-        expect(stockQtyParts(item({ current_quantity: 0.5 }))).toMatchObject({ main: '1', open: 'เปิดอยู่ 1 · เหลือ 350 มิลลิลิตร', openPercent: 50 });
-        expect(stockQtyParts(item({ current_quantity: 2.25 }))).toMatchObject({ main: '3', openPercent: 25 });
+        expect(stockQtyParts(item({ current_quantity: 0.5 }))).toMatchObject({ main: '1', open: 'เปิดอยู่ 1 เหลือ 350 มิลลิลิตร', openPercent: 50 });
+        expect(stockQtyParts(item({ current_quantity: 2.25 }))).toMatchObject({ main: '3', open: 'เต็ม 2 · เปิดอยู่ 1 เหลือ 175 มิลลิลิตร', openPercent: 25 });
     });
     it('shows whole bottles as they are, with no open line', () => {
         expect(stockQtyParts(item({ current_quantity: 3 }))).toMatchObject({ main: '3', open: null, openPercent: 0 });
@@ -15,7 +15,8 @@ describe('What a stock card shows', () => {
     it('falls back to a percentage when the pack size is unknown', () => {
         const r = stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'unit', conversion_factor: 1, current_quantity: 0.95 }));
         expect(r.main).toBe('1');
-        expect(r.open).toBe('เปิดอยู่ 1 · เหลือ 95%');
+        expect(r.open).toBe('เปิดอยู่ 1 เหลือ 95%');
+        expect(r.unit).toBe('ชิ้น');
     });
     it('never rounds a weight or a volume up to a whole pack', () => {
         const soy = stockQtyParts(item({ unit: 'kg', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 0.35 }));
@@ -28,9 +29,14 @@ describe('What a stock card shows', () => {
         expect(stockQtyParts(item({ unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 24, current_quantity: 2 })).total).toBe('48 ขวด');
         expect(stockQtyParts(item({ unit: 'แพ็ค', pack_unit: 'แพ็ค', usage_unit: 'glass', conversion_factor: 50, current_quantity: 15 })).total).toBe('750 แก้ว');
     });
-    it('prints no piece total for liquids, for 1:1 items or for broken unit set-ups', () => {
-        expect(stockQtyParts(item({ current_quantity: 2 })).total).toBeNull();
+    it('adds the amount inside for packs and bottles of things measured by weight or volume', () => {
+        expect(stockQtyParts(item({ current_quantity: 2 })).total).toBe('1,400 มิลลิลิตร');
+        expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 1000, current_quantity: 5 })).total).toBe('5,000 กรัม');
+        expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 440, current_quantity: 1.3 })).total).toBe('572 กรัม');
+    });
+    it('prints no total for 1:1 items or for broken unit set-ups', () => {
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'unit', conversion_factor: 1, current_quantity: 6 })).total).toBeNull();
+        expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 1, current_quantity: 6 })).total).toBeNull();
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'bottle', conversion_factor: 1000, current_quantity: 1 })).total).toBeNull();
         expect(stockQtyParts(item({ unit: 'kg', pack_unit: 'kg', usage_unit: 'unit', conversion_factor: 1000, current_quantity: 2 })).total).toBeNull();
     });
