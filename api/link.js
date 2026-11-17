@@ -657,7 +657,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     <meta name="description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · มีที่จอดรถสะดวก">
     <link rel="canonical" href="https://haustable.vercel.app/link">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-    <link rel="apple-touch-icon" href="/pwa-icon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon-inbaan.png">
     <meta name="theme-color" content="#41032A">
 
     <!-- Open Graph / Facebook -->
@@ -831,7 +831,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         /* Masthead: brand cell | live status cell */
         .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
         .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
-        .logo-box { width: 48px; height: 48px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
+        .logo-box { width: 48px; height: 48px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: contain; background: var(--brand-plum); }
         .shop-name { display: flex; flex-direction: column; min-width: 0; }
         .shop-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; white-space: nowrap; }
         .shop-sub { font-size: var(--text-sm); font-weight: 400; line-height: 1.5; color: var(--color-muted); }

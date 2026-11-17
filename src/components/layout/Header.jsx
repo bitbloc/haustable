@@ -29,9 +29,12 @@ export default function Header({ session }) {
             <nav className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-100 sticky top-0 z-40 flex justify-between items-center transition-all bg-[#FFFFFFCC]">
                 <div>
                     <Link to="/" className="flex items-center gap-2 group">
+                        {/* ในบ้าน logo, whole square shown (object-contain, no rounding or crop) */}
                         <img 
-                            src="/logo.png" 
-                            alt="Haus Table" 
+                            src="/logo-inbaan-96.png" 
+                            alt="ในบ้าน In the haus" 
+                            width="40"
+                            height="40"
                             className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
                         />
                     </Link>
