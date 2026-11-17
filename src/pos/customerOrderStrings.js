@@ -51,6 +51,7 @@ const STRINGS = {
         // Menu browsing
         searchPlaceholder: 'ค้นหาเมนูอาหารและเครื่องดื่ม...',
         clearSearch: 'ล้างคำค้นหา',
+        close: 'ปิด',
         chipAll: 'ทั้งหมด ({n})',
         chipRecommended: 'เมนูแนะนำ ({n})',
         chipsPrev: 'เลื่อนดูหมวดก่อนหน้า',
@@ -302,6 +303,7 @@ const STRINGS = {
 
         searchPlaceholder: 'Search food and drinks...',
         clearSearch: 'Clear search',
+        close: 'Close',
         chipAll: 'All ({n})',
         chipRecommended: 'Recommended ({n})',
         chipsPrev: 'Previous categories',

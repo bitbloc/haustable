@@ -190,12 +190,12 @@ function isBookingActiveAndFresh(booking) {
     return true;
 }
 
-// One timing set for the page, from the transitions.dev scale: sheets use the panel values, centred dialogs the modal values.
-// Opening is slower than closing on purpose; the ease is front-loaded so most of the travel happens in the first third.
+// One timing set for the page, inside the brand range (.agents/AGENTS.md 5: 120-180ms, transform and opacity only).
+// Opening is a little slower than closing; the ease is front-loaded and never overshoots.
 const MOTION_EASE = [0.22, 1, 0.36, 1];
-const SHEET_OPEN = { duration: 0.4, ease: MOTION_EASE };
-const SHEET_CLOSE = { duration: 0.35, ease: MOTION_EASE };
-const MODAL_OPEN = { duration: 0.25, ease: MOTION_EASE };
+const SHEET_OPEN = { duration: 0.18, ease: MOTION_EASE };
+const SHEET_CLOSE = { duration: 0.15, ease: MOTION_EASE };
+const MODAL_OPEN = { duration: 0.18, ease: MOTION_EASE };
 const MODAL_CLOSE = { duration: 0.15, ease: MOTION_EASE };
 
 // Tabs sliding (transitions.dev 16): one fill slides between options instead of each option repainting.
@@ -214,8 +214,8 @@ const useSlidingPill = (containerRef, pillRef, mounted, deps) => {
             return;
         }
         const write = () => {
-            pill.style.transform = `translateX(${target.offsetLeft}px)`;
-            pill.style.width = `${target.offsetWidth}px`;
+            // Width rides on scaleX of a 100px fill so the slide animates transform only
+            pill.style.transform = `translateX(${target.offsetLeft}px) scaleX(${target.offsetWidth / 100})`;
             pill.style.top = `${target.offsetTop}px`;
             pill.style.height = `${target.offsetHeight}px`;
             pill.style.opacity = '1';
@@ -249,7 +249,7 @@ const useSlidingPill = (containerRef, pillRef, mounted, deps) => {
 };
 
 // Centred dialog shell (transitions.dev 06): scales up from 0.96 on open, a quicker scale-down on close
-const CenterModal = ({ open, dim = 'bg-black/50', children }) => (
+const CenterModal = ({ open, dim = 'bg-charcoal/50', children }) => (
     <AnimatePresence>
         {open && (
             <motion.div
@@ -1838,7 +1838,7 @@ export default function CustomerOrderLanding() {
         const row = chipRowRef.current;
         const chip = activeSection ? row?.querySelector(`[data-cat="${activeSection}"]`) : null;
         if (!row || !chip) return;
-        const edge = 40; // width of the arrow cells
+        const edge = 48; // width of the arrow cells
         const chipLeft = chip.offsetLeft;
         const chipRight = chipLeft + chip.offsetWidth;
         if (chipLeft < row.scrollLeft + edge || chipRight > row.scrollLeft + row.clientWidth - edge) {
@@ -1862,9 +1862,11 @@ export default function CustomerOrderLanding() {
             // resolves in place instead of replacing a spinner. Loading here takes seconds, so the pulse loops.
             <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col font-[var(--font-body)]" aria-busy="true">
                 <header className="border-b border-[var(--color-rule)]">
-                    <div className="max-w-2xl mx-auto px-4 py-2.5">
-                        <span className="block text-[11px] font-bold tracking-wide text-[var(--color-neutral)] leading-tight">IN THE HAUS</span>
-                        <p role="status" className="text-sm font-bold text-[var(--color-ink)] leading-relaxed">
+                    <div className="max-w-2xl mx-auto flex items-stretch divide-x divide-[var(--color-rule)]">
+                        <div className="shrink-0 px-3 py-1.5 flex items-center">
+                            <img src="/logo-inbaan-wordmark-plum-96.png" alt="ในบ้าน In the haus" width="175" height="96" className="h-10 w-auto" decoding="async" />
+                        </div>
+                        <p role="status" className="flex-1 min-w-0 px-3 flex items-center text-base font-semibold text-[var(--color-ink)] leading-normal">
                             {displayLoadingName ? tt('connectingTable', { table: displayLoadingName }) : tt('connectingTableGeneric')}
                         </p>
                     </div>
@@ -1900,13 +1902,13 @@ export default function CustomerOrderLanding() {
                 <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 rounded-full flex items-center justify-center text-[var(--color-accent)] mb-4">
                     <AlertTriangle size={30} />
                 </div>
-                <h3 className="font-bold text-base mb-2 text-[var(--color-accent)]">{tt('orderingClosedTitle')}</h3>
-                <p className="text-[var(--color-neutral)] text-xs max-w-sm leading-relaxed mb-6">
+                <h3 className="font-display text-2xl leading-normal mb-2 text-[var(--color-accent)]">{tt('orderingClosedTitle')}</h3>
+                <p className="text-[var(--color-muted)] text-base max-w-sm leading-relaxed mb-6">
                     {tt('orderingClosedBody')}
                 </p>
                 <button 
                     onClick={() => window.location.reload()} 
-                    className="bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] px-6 py-2.5 rounded-sm text-xs font-mono font-bold uppercase tracking-wider active:scale-95 transition-all text-[var(--color-ink)] flex items-center gap-2 cursor-pointer shadow-sm"
+                    className="min-h-12 bg-[var(--color-paper)] border border-[var(--color-ink)] hover:bg-[var(--color-paper-2)] px-6 rounded-sm text-base font-semibold active:scale-95 transition-transform text-[var(--color-ink)] flex items-center gap-2 cursor-pointer"
                 >
                     <RefreshCw size={12} />
                     <span>{tt('reloadPage')}</span>
@@ -1957,7 +1959,7 @@ export default function CustomerOrderLanding() {
 
                         {/* Badges */}
                         {item.is_recommended && (
-                            <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                            <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-xs font-mono font-medium leading-normal px-1.5 rounded-sm uppercase tracking-wider">
                                 {tt('signatureBadge')}
                             </div>
                         )}
@@ -1965,7 +1967,7 @@ export default function CustomerOrderLanding() {
                         {/* Always mounted so the count can fade in and out */}
                         <div className="absolute top-1.5 right-1.5">
                             <span className="t-icon-swap" data-state={inCartCount > 0 ? 'b' : 'a'} aria-hidden={inCartCount > 0 ? undefined : true}>
-                                <span className="t-icon bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] font-mono font-black w-6 h-6 rounded-full flex items-center justify-center" data-icon="b">
+                                <span className="t-icon bg-[var(--color-ink)] text-[var(--color-paper)] text-sm font-mono font-medium w-7 h-7 rounded-full flex items-center justify-center" data-icon="b">
                                     {inCartCount > 0 ? inCartCount : ''}
                                 </span>
                             </span>
@@ -1973,15 +1975,15 @@ export default function CustomerOrderLanding() {
                     </div>
 
                     {/* Item Title & Desc: 2 lines each. Line-height 1.5+ keeps stacked Thai marks of the clamped (hidden) line from showing */}
-                    <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-normal">
+                    <h4 className="font-semibold text-base text-[var(--color-ink)] line-clamp-2 leading-normal">
                         {loc(item)}
                     </h4>
                     {/* Translated view keeps the Thai name so guests can point it out to staff */}
                     {lang !== 'th' && loc(item) !== item.name && (
-                        <p className="text-xs text-[var(--color-neutral)] truncate leading-normal mt-0.5">{item.name}</p>
+                        <p className="text-sm text-[var(--color-neutral)] truncate leading-normal mt-0.5">{item.name}</p>
                     )}
                     {cardDescription(item) && (
-                        <p className="text-xs text-[var(--color-neutral)] line-clamp-2 mt-1.5 leading-relaxed">
+                        <p className="text-base text-[var(--color-muted)] line-clamp-2 mt-1 leading-relaxed">
                             {cardDescription(item)}
                         </p>
                     )}
@@ -1989,17 +1991,17 @@ export default function CustomerOrderLanding() {
 
                 {/* Bottom Price & Action */}
                 <div className="pt-2 mt-2 border-t border-[var(--color-rule)]/60 flex items-center justify-between gap-1">
-                    <span className="text-[var(--color-ink)] font-mono font-bold text-sm">
+                    <span className="text-[var(--color-ink)] font-mono font-medium text-base">
                         ฿{Number(item.price).toLocaleString()}
                     </span>
                     <div className="flex items-center gap-1.5">
                         {hasOptions && (
-                            <span className="text-[11px] text-[var(--color-neutral)] whitespace-nowrap">
+                            <span className="text-sm leading-normal text-[var(--color-neutral)] whitespace-nowrap">
                                 {tt('hasOptions')}
                             </span>
                         )}
-                        <div className="w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
-                            <Plus size={14} />
+                        <div className="w-9 h-9 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
+                            <Plus size={16} />
                         </div>
                     </div>
                 </div>
@@ -2020,7 +2022,7 @@ export default function CustomerOrderLanding() {
                 onClick={() => handleAddToCart(item)}
                 className="w-full py-3 flex items-start gap-3 text-left border-b border-[var(--color-rule)] cursor-pointer group"
             >
-                <div className="w-16 h-16 shrink-0 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] overflow-hidden relative">
+                <div className="w-20 h-20 shrink-0 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] overflow-hidden relative">
                     {item.image_url ? (
                         <img src={item.image_url} alt={loc(item)} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
@@ -2032,23 +2034,23 @@ export default function CustomerOrderLanding() {
 
                 {/* Line-height 1.5+ keeps stacked Thai marks of clamped lines from clipping or bleeding */}
                 <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-normal">
+                    <h4 className="font-semibold text-base text-[var(--color-ink)] line-clamp-2 leading-normal">
                         {loc(item)}
                     </h4>
                     {lang !== 'th' && loc(item) !== item.name && (
-                        <p className="text-xs text-[var(--color-neutral)] truncate leading-normal">{item.name}</p>
+                        <p className="text-sm text-[var(--color-neutral)] truncate leading-normal">{item.name}</p>
                     )}
                     {cardDescription(item) && (
-                        <p className="text-xs text-[var(--color-neutral)] line-clamp-1 leading-relaxed mt-0.5">
+                        <p className="text-base text-[var(--color-muted)] line-clamp-1 leading-relaxed mt-0.5">
                             {cardDescription(item)}
                         </p>
                     )}
                     <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-[var(--color-ink)] font-mono font-bold text-sm">
+                        <span className="text-[var(--color-ink)] font-mono font-medium text-base">
                             ฿{Number(item.price).toLocaleString()}
                         </span>
                         {hasOptions && (
-                            <span className="text-[11px] text-[var(--color-neutral)] whitespace-nowrap">{tt('hasOptions')}</span>
+                            <span className="text-sm leading-normal text-[var(--color-neutral)] whitespace-nowrap">{tt('hasOptions')}</span>
                         )}
                     </div>
                 </div>
@@ -2056,10 +2058,10 @@ export default function CustomerOrderLanding() {
                 <div className="self-center shrink-0">
                     {/* Icon swap: both faces stay mounted in one cell; + cross-fades into the count */}
                     <span className="t-icon-swap" data-state={inCartCount > 0 ? 'b' : 'a'}>
-                        <span className="t-icon w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center" data-icon="a" aria-hidden={inCartCount > 0 ? true : undefined}>
-                            <Plus size={14} />
+                        <span className="t-icon w-9 h-9 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center" data-icon="a" aria-hidden={inCartCount > 0 ? true : undefined}>
+                            <Plus size={16} />
                         </span>
-                        <span className="t-icon w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-bold text-xs flex items-center justify-center" data-icon="b" aria-hidden={inCartCount > 0 ? undefined : true}>
+                        <span className="t-icon w-9 h-9 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-medium text-base flex items-center justify-center" data-icon="b" aria-hidden={inCartCount > 0 ? undefined : true}>
                             {inCartCount > 0 ? inCartCount : ''}
                         </span>
                     </span>
@@ -2077,7 +2079,7 @@ export default function CustomerOrderLanding() {
         }
         return active
             ? 'border-[var(--color-ink)] text-[var(--color-paper)]'
-            : 'border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]';
+            : 'border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)]';
     };
 
     const tableStatusKey = (gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)))
@@ -2087,46 +2089,52 @@ export default function CustomerOrderLanding() {
     return (
         // reducedMotion="user": with the OS setting on, sheets and dialogs fade only; no slide or scale
         <MotionConfig reducedMotion="user">
-        <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-36 select-none">
-            {/* Top Header: brand, table, party size and session status in one row */}
+        <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-44 select-none">
+            {/* Top Header cells: logo | table + party size (one tap target) and session status | member card */}
             <header className="sticky top-0 bg-[var(--color-paper)] border-b border-[var(--color-rule)] z-40">
-                <div className="max-w-2xl mx-auto flex items-stretch divide-x divide-[var(--color-rule)]">
-                    <div className="flex-1 min-w-0 px-4 py-2.5 flex items-center justify-between gap-3">
-                        <div className="min-w-0 overflow-hidden">
-                            <span className="block text-[11px] font-bold tracking-wide text-[var(--color-neutral)] leading-tight">
-                                IN THE HAUS
+                <div className="max-w-2xl mx-auto h-16 flex items-stretch divide-x divide-[var(--color-rule)]">
+                    {/* ในบ้าน wordmark only (no tagline at this size); plum on cream, full mark, never cropped */}
+                    <div className="shrink-0 px-3 flex items-center">
+                        <img
+                            src="/logo-inbaan-wordmark-plum-96.png"
+                            alt="ในบ้าน In the haus"
+                            width="175"
+                            height="96"
+                            className="h-10 w-auto"
+                            decoding="async"
+                        />
+                    </div>
+                    <div className="flex-1 min-w-0 pl-3 pr-2 py-1.5 flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowPaxModal(true)}
+                            className="min-w-0 min-h-12 text-left flex flex-col justify-center cursor-pointer group"
+                            aria-label={tt('paxEditLabel', { n: paxCount })}
+                        >
+                            <h1 className="font-display text-xl text-[var(--color-ink)] leading-normal whitespace-nowrap">
+                                {tt('tableName', { table: table?.table_name })}
+                            </h1>
+                            <span className="text-sm leading-normal text-[var(--color-muted)] group-hover:text-[var(--color-ink)] underline underline-offset-2 whitespace-nowrap">
+                                {tt('paxCount', { n: paxCount })}
                             </span>
-                            <div className="flex items-baseline gap-2">
-                                <h1 className="text-lg font-bold text-[var(--color-ink)] leading-snug whitespace-nowrap">
-                                    {tt('tableName', { table: table?.table_name })}
-                                </h1>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPaxModal(true)}
-                                    className="text-xs text-[var(--color-neutral)] hover:text-[var(--color-ink)] underline underline-offset-2 whitespace-nowrap cursor-pointer"
-                                    aria-label={tt('paxEditLabel', { n: paxCount })}
-                                >
-                                    {tt('paxCount', { n: paxCount })}
-                                </button>
-                            </div>
-                        </div>
-                        {/* Text states swap (transitions.dev 04): the old status leaves upward, the new one rises in, 150ms each */}
+                        </button>
+                        {/* Text states swap: the old status leaves upward, the new one rises in, 150ms each, opacity and transform only */}
                         <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={tableStatusKey}
-                            initial={{ opacity: 0, y: 4, filter: 'blur(2px)' }}
-                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                            exit={{ opacity: 0, y: -4, filter: 'blur(2px)' }}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
                             transition={{ duration: 0.15, ease: 'easeInOut' }}
                             className="shrink-0"
                         >
                         {gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) ? (
-                            <div className="flex items-center gap-1 text-[var(--color-accent-2)] text-xs font-semibold whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-[var(--color-accent)] text-sm leading-normal font-semibold whitespace-nowrap">
                                 <ShieldCheck size={14} />
                                 <span>{activeBooking ? tt('statusTableOpen') : tt('statusReady')}</span>
                             </div>
                         ) : gpsChecking ? (
-                            <div className="flex items-center gap-1 text-[var(--color-neutral)] text-xs font-semibold whitespace-nowrap animate-pulse">
+                            <div className="flex items-center gap-1 text-[var(--color-neutral)] text-sm leading-normal font-semibold whitespace-nowrap">
                                 <MapPin size={14} />
                                 <span>{tt('statusLocating')}</span>
                             </div>
@@ -2134,7 +2142,7 @@ export default function CustomerOrderLanding() {
                             <button
                                 type="button"
                                 onClick={() => setShowStaffActivationModal(true)}
-                                className="flex items-center gap-1 text-[var(--color-accent)] text-xs font-semibold whitespace-nowrap border border-[var(--color-accent)]/40 px-2 py-1 rounded-sm bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 cursor-pointer"
+                                className="relative flex items-center gap-1 text-[var(--color-paper)] text-sm leading-normal font-semibold whitespace-nowrap px-2.5 py-1.5 rounded-sm bg-[var(--color-accent)] hover:bg-[var(--color-plum-2)] cursor-pointer before:absolute before:-inset-y-2 before:inset-x-0 before:content-['']"
                                 title={tt('statusWaitingStaffHint')}
                             >
                                 <AlertTriangle size={13} />
@@ -2148,7 +2156,7 @@ export default function CustomerOrderLanding() {
                     <div className="flex items-center">
                         <Link
                             to="/member-card"
-                            className="px-3.5 self-stretch text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
+                            className="w-12 self-stretch text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
                             title={tt('memberCard')}
                             aria-label={tt('memberCard')}
                         >
@@ -2169,7 +2177,7 @@ export default function CustomerOrderLanding() {
                         onClick={() => setLanguage(option.code)}
                         aria-pressed={lang === option.code}
                         data-pill-active={lang === option.code ? 'true' : undefined}
-                        className={`relative z-[1] min-h-[36px] py-1.5 text-xs font-bold leading-normal transition-colors cursor-pointer ${
+                        className={`relative z-[1] min-h-12 text-base font-semibold leading-normal transition-colors cursor-pointer ${
                             lang === option.code
                                 ? 'text-[var(--color-paper)]'
                                 : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
@@ -2184,14 +2192,14 @@ export default function CustomerOrderLanding() {
 
             {/* GPS Unverified Notice */}
             {settings.qr_gps_enabled === 'true' && gpsStatus === 'failed' && !(activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) && (
-                <div className="max-w-2xl mx-auto w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 py-2 flex items-center justify-between gap-3">
-                    <span className="text-xs leading-normal text-[var(--color-muted)]">
+                <div className="max-w-2xl mx-auto w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] pl-4 pr-3 flex items-center justify-between gap-3">
+                    <span className="text-base leading-normal text-[var(--color-muted)]">
                         {tt('gpsNotice')}
                     </span>
                     <button
                         type="button"
                         onClick={() => setShowStaffActivationModal(true)}
-                        className="text-xs font-semibold text-[var(--color-accent)] underline underline-offset-2 cursor-pointer shrink-0"
+                        className="min-h-12 px-1 text-base font-semibold text-[var(--color-accent)] underline underline-offset-2 cursor-pointer shrink-0"
                     >
                         {tt('viewStatus')}
                     </button>
@@ -2202,7 +2210,7 @@ export default function CustomerOrderLanding() {
                 {/* Member Strip: one line, sign-in action on the right */}
                 <div className="px-4 py-2 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between gap-3">
                     {memberProfile ? (
-                        <div className="min-w-0 text-xs leading-normal">
+                        <div className="min-w-0 text-base leading-normal">
                             <div className="font-bold text-[var(--color-ink)] truncate">
                                 {tt('memberGreeting', { name: memberProfile.display_name || memberProfile.nickname || tt('memberFallbackName') })}
                                 <span className="ml-1.5 font-normal text-[var(--color-neutral)]">
@@ -2212,12 +2220,12 @@ export default function CustomerOrderLanding() {
                             <div className="text-[var(--color-muted)] truncate">
                                 <span className="font-mono">{parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span> xhaus · {tt('memberStamps')} <span className="font-mono">{memberProfile.drink_stamp_count || 0}/10</span>
                                 {(memberProfile.free_drink_quota || 0) > 0 && (
-                                    <span className="ml-1.5 font-semibold text-[var(--color-accent-2)]">{tt('memberFreeDrinks', { n: memberProfile.free_drink_quota })}</span>
+                                    <span className="ml-1.5 font-semibold text-[var(--color-accent)]">{tt('memberFreeDrinks', { n: memberProfile.free_drink_quota })}</span>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        <p className="min-w-0 text-xs leading-normal text-[var(--color-muted)]">
+                        <p className="min-w-0 text-base leading-normal text-[var(--color-muted)]">
                             <span className="font-bold text-[var(--color-ink)]">{tt('memberPitchLabel')}</span> {tt('memberPitch')}
                         </p>
                     )}
@@ -2226,7 +2234,7 @@ export default function CustomerOrderLanding() {
                         {memberProfile && (
                             <Link
                                 to="/member-card"
-                                className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2.5 py-1.5 rounded-sm text-xs font-semibold cursor-pointer active:scale-95"
+                                className="min-h-12 inline-flex items-center bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-ink)] text-[var(--color-ink)] px-3 rounded-sm text-base font-semibold cursor-pointer active:scale-95"
                                 title={tt('memberCardOpen')}
                             >
                                 {tt('memberCardShort')}
@@ -2234,7 +2242,7 @@ export default function CustomerOrderLanding() {
                         )}
                         <button
                             onClick={() => setShowMemberModal(true)}
-                            className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-semibold cursor-pointer active:scale-95 whitespace-nowrap"
+                            className="min-h-12 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-ink)] text-[var(--color-ink)] px-3 rounded-sm text-base font-semibold cursor-pointer active:scale-95 whitespace-nowrap"
                         >
                             {memberProfile ? tt('memberSwitch') : tt('memberSignIn')}
                         </button>
@@ -2244,21 +2252,21 @@ export default function CustomerOrderLanding() {
                 {/* Kitchen Cutoff High-Contrast Rams Notice Banner */}
                 {isKitchenClosed && (
                     <div className="p-3 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
-                        <div className="p-3 bg-[var(--color-ink)] text-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] flex items-center justify-between gap-3 shadow-sm">
+                        <div className="p-3 bg-[var(--color-plum)] text-[var(--color-cream)] rounded-sm flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)] text-[var(--color-paper)] flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                                <div className="w-10 h-10 rounded-sm bg-[var(--color-plum-2)] text-[var(--color-cream)] flex items-center justify-center font-mono font-medium text-sm shrink-0">
                                     OFF
                                 </div>
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-accent)]">
+                                        <span className="font-semibold text-base leading-normal text-[var(--color-cream)]">
                                             {tt('kitchenClosedTitle', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' })}
                                         </span>
-                                        <span className="bg-[var(--color-paper)]/15 text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
+                                        <span className="bg-[var(--color-plum-2)] text-[var(--color-cream)] text-sm leading-normal font-semibold px-1.5 rounded-sm">
                                             {tt('kitchenClosedTag')}
                                         </span>
                                     </div>
-                                    <span className="text-[10px] text-[var(--color-paper)]/80 mt-0.5 block truncate">
+                                    <span className="text-sm leading-normal text-[oklch(79.98%_0.0348_349.28)] mt-0.5 block">
                                         {tt('kitchenClosedBody')}
                                     </span>
                                 </div>
@@ -2268,19 +2276,19 @@ export default function CustomerOrderLanding() {
                 )}
 
                 {/* Menu Search & Category Navigation */}
-                <div ref={menuNavRef} className="px-3 pt-3 pb-2.5 sticky top-[59px] bg-[var(--color-paper)] z-30 space-y-2.5 border-b border-[var(--color-rule)]">
+                <div ref={menuNavRef} className="px-3 pt-3 pb-2.5 sticky top-16 bg-[var(--color-paper)] z-30 space-y-2.5 border-b border-[var(--color-rule)]">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={15} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={16} />
                         <input 
                             type="search" 
                             placeholder={tt('searchPlaceholder')} 
-                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 pl-9 pr-9 text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] text-base transition-colors"
+                            className="w-full min-h-12 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm pl-9 pr-12 text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] text-base transition-colors"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                         {search && (
-                            <button onClick={() => setSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] p-2" aria-label={tt('clearSearch')}>
-                                <X size={13} />
+                            <button onClick={() => setSearch('')} className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-[var(--color-neutral)]" aria-label={tt('clearSearch')}>
+                                <X size={16} />
                             </button>
                         )}
                     </div>
@@ -2304,7 +2312,7 @@ export default function CustomerOrderLanding() {
                                 onClick={() => handleChipTap('recommended')}
                                 aria-current={activeSection === 'recommended' && !isSearching ? 'true' : undefined}
                                 data-pill-active={activeChipKey === 'recommended' ? 'true' : undefined}
-                                className={`relative z-[1] px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass('recommended', true)}`}
+                                className={`relative z-[1] min-h-12 px-3.5 rounded-sm text-base leading-normal font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass('recommended', true)}`}
                             >
                                 {tt('chipRecommended', { n: recommendedRail.length })}
                             </button>
@@ -2318,13 +2326,13 @@ export default function CustomerOrderLanding() {
                                 onClick={() => handleChipTap(group.key)}
                                 aria-current={activeSection === group.key && !isSearching ? 'true' : undefined}
                                 data-pill-active={activeChipKey === group.key ? 'true' : undefined}
-                                className={`relative z-[1] px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass(group.key)}`}
+                                className={`relative z-[1] min-h-12 px-3.5 rounded-sm text-base leading-normal font-semibold transition-colors border whitespace-nowrap shrink-0 cursor-pointer ${chipClass(group.key)}`}
                             >
                                 {group.cat ? loc(group.cat) : group.title} ({group.items.length})
                             </button>
                         ))}
                         {/* End spacer so the last chip clears the arrow cell */}
-                        <span className="shrink-0 w-9" aria-hidden="true" />
+                        <span className="shrink-0 w-11" aria-hidden="true" />
                     </div>
 
                     {/* Scroll cues: solid edge cells, shown only when more chips sit that way */}
@@ -2332,20 +2340,20 @@ export default function CustomerOrderLanding() {
                         <button
                             type="button"
                             onClick={() => scrollChips(-1)}
-                            className="absolute z-[2] left-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-r border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
+                            className="absolute z-[2] left-0 inset-y-0 w-12 flex items-center justify-center bg-[var(--color-paper)] border-r border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
                             aria-label={tt('chipsPrev')}
                         >
-                            <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronLeft size={16} /></span>
+                            <span className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronLeft size={16} /></span>
                         </button>
                     )}
                     {chipScroll.right && (
                         <button
                             type="button"
                             onClick={() => scrollChips(1)}
-                            className="absolute z-[2] right-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
+                            className="absolute z-[2] right-0 inset-y-0 w-12 flex items-center justify-center bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
                             aria-label={tt('chipsNext')}
                         >
-                            <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronRight size={16} /></span>
+                            <span className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronRight size={16} /></span>
                         </button>
                     )}
                     </div>
@@ -2355,9 +2363,9 @@ export default function CustomerOrderLanding() {
                 <main className="order-reveal flex-1 p-3">
                     {isSearching ? (
                         <section>
-                            <h3 className="text-base font-bold text-[var(--color-ink)] leading-normal">
+                            <h3 className="font-display text-xl text-[var(--color-ink)] leading-normal">
                                 {tt('searchResults', { q: search.trim() })}
-                                <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{filteredItems.length}</span>
+                                <span className="ml-1.5 font-mono text-sm text-[var(--color-neutral)]">{filteredItems.length}</span>
                             </h3>
                             <div>{filteredItems.map(item => renderMenuRow(item))}</div>
                         </section>
@@ -2366,15 +2374,15 @@ export default function CustomerOrderLanding() {
                             {/* Recommended rail: the only place with large photo cards; scrolls sideways to keep it one row tall */}
                             {recommendedRail.length > 0 && (
                                 <section id="menu-sec-recommended" aria-labelledby="cat-recommended">
-                                    <h3 id="cat-recommended" className="mb-3 text-base font-bold text-[var(--color-ink)] leading-normal">
+                                    <h3 id="cat-recommended" className="mb-3 font-display text-xl text-[var(--color-ink)] leading-normal">
                                         {tt('recommendedTitle')}
-                                        <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{recommendedRail.length}</span>
+                                        <span className="ml-1.5 font-mono text-sm text-[var(--color-neutral)]">{recommendedRail.length}</span>
                                     </h3>
                                     <div className="-mx-3 px-3 flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                         {recommendedRail.map(item => (
                                             // grid-cols-1 = minmax(0,1fr): the card cannot grow past the slot when a
                                             // nowrap/truncated line (the Thai subtitle in EN view) is longer than the card
-                                            <div key={`rec-${item.id}`} className="w-40 sm:w-48 shrink-0 snap-start grid grid-cols-1">
+                                            <div key={`rec-${item.id}`} className="w-44 sm:w-52 shrink-0 snap-start grid grid-cols-1">
                                                 {renderMenuCard(item, 'rec-')}
                                             </div>
                                         ))}
@@ -2392,9 +2400,9 @@ export default function CustomerOrderLanding() {
                                         ? { minHeight: `calc(100dvh - ${stuckNavBottom + 160}px)` }
                                         : undefined}
                                 >
-                                    <h3 id={`cat-${group.key}`} className="text-base font-bold text-[var(--color-ink)] leading-normal">
+                                    <h3 id={`cat-${group.key}`} className="font-display text-xl text-[var(--color-ink)] leading-normal">
                                         {group.cat ? loc(group.cat) : group.title}
-                                        <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{group.items.length}</span>
+                                        <span className="ml-1.5 font-mono text-sm text-[var(--color-neutral)]">{group.items.length}</span>
                                     </h3>
                                     <div>{group.items.map(item => renderMenuRow(item))}</div>
                                 </section>
@@ -2404,17 +2412,17 @@ export default function CustomerOrderLanding() {
 
                     {filteredItems.length === 0 && isSearching && (
                         <div className="py-12 text-center space-y-2">
-                            <p className="text-sm font-bold text-[var(--color-ink)] leading-normal">{tt('searchEmpty', { q: search.trim() })}</p>
-                            <p className="text-xs text-[var(--color-neutral)] leading-relaxed">{tt('searchEmptyHint')}</p>
+                            <p className="text-base font-bold text-[var(--color-ink)] leading-normal">{tt('searchEmpty', { q: search.trim() })}</p>
+                            <p className="text-base text-[var(--color-muted)] leading-relaxed">{tt('searchEmptyHint')}</p>
                             {isKitchenClosed && (
-                                <p className="text-xs text-[var(--color-accent)] leading-relaxed">
+                                <p className="text-base text-[var(--color-accent)] leading-relaxed">
                                     {tt('kitchenClosedEmpty', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' })}
                                 </p>
                             )}
                             <button
                                 type="button"
                                 onClick={() => setSearch('')}
-                                className="mt-2 px-4 py-2 rounded-sm border border-[var(--color-rule)] text-xs font-semibold text-[var(--color-ink)] hover:border-[var(--color-ink)] cursor-pointer"
+                                className="mt-2 min-h-12 px-4 rounded-sm border border-[var(--color-ink)] text-base font-semibold text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] cursor-pointer"
                             >
                                 {tt('clearSearch')}
                             </button>
@@ -2422,10 +2430,10 @@ export default function CustomerOrderLanding() {
                     )}
 
                     {filteredItems.length === 0 && !isSearching && (
-                        <div className="py-16 text-center text-[var(--color-neutral)] font-mono text-xs uppercase tracking-wider space-y-2">
+                        <div className="py-16 text-center text-[var(--color-muted)] text-base leading-relaxed space-y-2">
                             <p>{tt('emptyCategory')}</p>
                             {isKitchenClosed && (
-                                <p className="text-[10px] text-[var(--color-accent)]">
+                                <p className="text-base text-[var(--color-accent)]">
                                     {tt('kitchenClosedEmpty', { open: settings.qr_kitchen_open_time || '11:00', close: settings.qr_kitchen_close_time || '20:45' })}
                                 </p>
                             )}
@@ -2451,28 +2459,27 @@ export default function CustomerOrderLanding() {
             {/* Bottom Actions: staff + ordered items; cart row only when the cart has items */}
             <div translate="no" className="fixed bottom-0 left-0 right-0 p-3 bg-[var(--color-paper)] border-t border-[var(--color-rule)] z-40 safe-area-bottom">
                 <div className="max-w-2xl mx-auto flex flex-col">
-                    {/* Cart row grows in instead of popping: the wrapper tweens its height (resize timing), the 8px gap rides inside it.
+                    {/* Cart row fades and rises in (opacity and transform only; no height tween, AGENTS 5).
                         It is also the live region that replaces the old "added to cart" toast. */}
                     <AnimatePresence initial={false}>
                         {cart.length > 0 && (
                             <motion.div
                                 key="cart-row"
-                                initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                                transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
-                                className="overflow-hidden"
+                                initial={reduceMotion ? false : { y: 8, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: reduceMotion ? 0 : 0.15, ease: MOTION_EASE }}
                                 aria-live="polite"
                             >
                                 <button
                                     onClick={() => setCartOpen(true)}
-                                    className="w-full mb-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm text-sm font-bold flex items-center justify-between gap-3 active:scale-98 transition-transform cursor-pointer"
+                                    className="w-full min-h-14 mb-2 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)] px-4 rounded-sm text-base font-semibold flex items-center justify-between gap-3 active:scale-98 transition-transform cursor-pointer"
                                 >
                                     <span className="flex items-center gap-2">
                                         <ShoppingBag size={16} />
                                         <span>{cartLabelParts.before}{cartLabelParts.hasNumber && <PopNumber value={cartCount} />}{cartLabelParts.after}</span>
                                     </span>
-                                    <span className="font-mono">฿<PopNumber value={cartSubtotal.toLocaleString()} /></span>
+                                    <span className="font-mono font-medium text-lg">฿<PopNumber value={cartSubtotal.toLocaleString()} /></span>
                                 </button>
                             </motion.div>
                         )}
@@ -2482,9 +2489,9 @@ export default function CustomerOrderLanding() {
                         <button
                             onClick={handleCallStaff}
                             disabled={callingStaff}
-                            className="flex-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2.5 px-3 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                            className="flex-1 min-h-12 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-ink)] text-[var(--color-ink)] px-3 rounded-sm font-semibold text-base flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
                         >
-                            <Bell size={15} className="text-[var(--color-accent)]" />
+                            <Bell size={16} className="text-[var(--color-accent)]" />
                             <span>{callingStaff ? tt('callingStaff') : tt('callStaff')}</span>
                         </button>
 
@@ -2496,16 +2503,16 @@ export default function CustomerOrderLanding() {
                                     toast.info(tt('orderFirstHint'));
                                 }
                             }}
-                            className={`flex-1 py-2.5 px-3 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap ${
+                            className={`flex-1 min-h-12 px-3 rounded-sm font-semibold text-base flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer whitespace-nowrap ${
                                 activeBooking
-                                    ? 'bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]'
+                                    ? 'bg-[var(--color-paper)] border border-[var(--color-ink)] text-[var(--color-ink)]'
                                     : 'bg-[var(--color-paper-2)] border border-[var(--color-rule)]/60 text-[var(--color-muted)] cursor-not-allowed'
                             }`}
                         >
-                            <Receipt size={15} className={activeBooking ? "text-[var(--color-accent-2)]" : "text-[var(--color-muted)]"} />
+                            <Receipt size={16} className={activeBooking ? "text-[var(--color-accent)]" : "text-[var(--color-muted)]"} />
                             <span>{tt('orderedSoFar')}</span>
                             {activeBooking && (
-                                <span className="font-mono">฿{Number(activeBooking.total_amount || 0).toLocaleString()}</span>
+                                <span className="font-mono font-medium">฿{Number(activeBooking.total_amount || 0).toLocaleString()}</span>
                             )}
                         </button>
                     </div>
@@ -2520,7 +2527,7 @@ export default function CustomerOrderLanding() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/50 pointer-events-auto"
+                            className="absolute inset-0 bg-charcoal/50 pointer-events-auto"
                             onClick={() => setCartOpen(false)}
                         />
 
@@ -2534,7 +2541,7 @@ export default function CustomerOrderLanding() {
                             {orderSent ? (
                                 // Success check (transitions.dev 10): the one moment on this page that is an event
                                 <div role="status" className="min-h-[240px] flex flex-col items-center justify-center gap-4 text-center px-4">
-                                    <span className="w-14 h-14 border border-[var(--color-rule)] rounded-sm flex items-center justify-center text-[var(--color-accent-2)]">
+                                    <span className="w-14 h-14 border border-[var(--color-rule)] rounded-sm flex items-center justify-center text-[var(--color-accent)]">
                                         <span className="t-success-check" data-state="in" aria-hidden="true">
                                             <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
                                                 <path d="M14 25l7 7 13-15" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -2546,8 +2553,8 @@ export default function CustomerOrderLanding() {
                                         const m = orderSent.match(/^(.*?)\s*[(（](.+)[)）]\s*$/);
                                         return (
                                             <div className="space-y-1">
-                                                <p className="text-sm font-bold leading-relaxed text-[var(--color-ink)] [text-wrap:balance]">{m ? m[1] : orderSent}</p>
-                                                {m && <p className="text-xs leading-relaxed text-[var(--color-neutral)] [text-wrap:balance]">{m[2]}</p>}
+                                                <p className="text-lg font-semibold leading-relaxed text-[var(--color-ink)] [text-wrap:balance]">{m ? m[1] : orderSent}</p>
+                                                {m && <p className="text-base leading-relaxed text-[var(--color-muted)] [text-wrap:balance]">{m[2]}</p>}
                                             </div>
                                         );
                                     })()}
@@ -2556,60 +2563,62 @@ export default function CustomerOrderLanding() {
                             {/* Drawer Header */}
                             <div className="flex justify-between items-center pb-3 border-b border-[var(--color-rule)] shrink-0">
                                 <div>
-                                    <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                    <h3 className="font-display text-2xl leading-normal text-[var(--color-ink)]">
                                         {tt('cartTitle')}
                                     </h3>
-                                    <p className="text-[10px] text-[var(--color-neutral)] font-mono uppercase mt-0.5">
+                                    <p className="text-sm leading-normal text-[var(--color-neutral)]">
                                         {tt('cartSubtitle', { table: table?.table_name, n: cartCount })}
                                     </p>
                                 </div>
                                 <button 
                                     onClick={() => setCartOpen(false)}
-                                    className="p-1.5 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
+                                    className="w-12 h-12 shrink-0 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] hover:text-[var(--color-ink)] flex items-center justify-center transition-colors cursor-pointer"
+                                    aria-label={tt('close')}
                                 >
-                                    <X size={14} />
+                                    <X size={18} />
                                 </button>
                             </div>
 
                             {/* Cart Items List */}
                             <div className="flex-1 overflow-y-auto mt-3 mb-0.5 pr-1 custom-scrollbar">
-                                {/* A removed line folds shut (resize timing) so the lines below slide up instead of jumping.
+                                {/* A removed line fades out (opacity only, AGENTS 5); the lines below then close the gap.
                                     Keyed by item + options: the same pair is always merged into one line when added. */}
                                 <AnimatePresence initial={false}>
                                 {cart.map((item, index) => (
                                     <motion.div
                                         key={`${item.id}:${JSON.stringify(item.selectedOptions ?? null)}`}
-                                        exit={{ height: 0, opacity: 0, transition: { duration: 0.3, ease: MOTION_EASE } }}
-                                        className="overflow-hidden"
+                                        exit={{ opacity: 0, transition: { duration: 0.12, ease: MOTION_EASE } }}
                                     >
                                     <div className="mb-2.5 bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-rule)] flex items-start gap-3">
                                         <div className="flex-1 min-w-0">
-                                            <h5 className="font-bold text-xs truncate text-[var(--color-ink)]">{loc(menuItems.find(m => m.id === item.id) || item)}</h5>
+                                            <h5 className="font-semibold text-base leading-normal line-clamp-2 text-[var(--color-ink)]">{loc(menuItems.find(m => m.id === item.id) || item)}</h5>
                                             {item.optionsSummary && item.optionsSummary.length > 0 && (
-                                                <div className="text-[9px] text-[var(--color-neutral)] mt-1 space-y-0.5 font-mono">
+                                                <div className="text-sm leading-normal text-[var(--color-muted)] mt-0.5">
                                                     {item.optionsSummary.map((opt, i) => (
                                                         <div key={i}>+ {opt.name} {opt.price > 0 && `(+฿${opt.price})`}</div>
                                                     ))}
                                                 </div>
                                             )}
-                                            <p className="text-[var(--color-ink)] font-mono font-bold text-xs mt-1.5">
+                                            <p className="text-[var(--color-ink)] font-mono font-medium text-base mt-1">
                                                 ฿<PopNumber value={(item.totalPricePerUnit * item.qty).toLocaleString()} />
                                             </p>
                                         </div>
 
-                                        <div className="flex items-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-0.5 gap-1 shrink-0">
+                                        <div className="flex items-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm shrink-0">
                                             <button 
                                                 onClick={() => handleUpdateQty(index, -1)}
-                                                className="w-6 h-6 rounded-sm flex items-center justify-center hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] cursor-pointer"
+                                                className="w-12 h-12 rounded-sm flex items-center justify-center hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] cursor-pointer"
+                                                aria-label="-1"
                                             >
-                                                <Minus size={10} />
+                                                <Minus size={16} />
                                             </button>
-                                            <span className="w-5 flex justify-center font-mono font-bold text-xs text-[var(--color-ink)]"><PopNumber value={item.qty} /></span>
+                                            <span className="w-7 flex justify-center font-mono font-medium text-base text-[var(--color-ink)]"><PopNumber value={item.qty} /></span>
                                             <button 
                                                 onClick={() => handleUpdateQty(index, 1)}
-                                                className="w-6 h-6 rounded-sm flex items-center justify-center hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] cursor-pointer"
+                                                className="w-12 h-12 rounded-sm flex items-center justify-center hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] cursor-pointer"
+                                                aria-label="+1"
                                             >
-                                                <Plus size={10} />
+                                                <Plus size={16} />
                                             </button>
                                         </div>
                                     </div>
@@ -2620,7 +2629,7 @@ export default function CustomerOrderLanding() {
 
                             {/* Kitchen Remark Input */}
                             <div className="pt-2 border-t border-[var(--color-rule)] shrink-0">
-                                <label className="block text-[9px] font-mono font-bold text-[var(--color-neutral)] uppercase tracking-wider mb-1">
+                                <label className="block text-sm leading-normal font-semibold text-[var(--color-muted)] mb-1">
                                     {tt('kitchenNote')}
                                 </label>
                                 <input
@@ -2628,30 +2637,27 @@ export default function CustomerOrderLanding() {
                                     placeholder={tt('kitchenNotePlaceholder')}
                                     value={tableRemarkInput}
                                     onChange={(e) => setTableRemarkInput(e.target.value)}
-                                    className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 px-2.5 text-xs text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] transition-colors"
+                                    className="w-full min-h-12 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm px-3 text-base text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] transition-colors"
                                 />
                             </div>
 
                             {/* Drawer Footer */}
                             <div className="border-t border-[var(--color-rule)] pt-3 mt-3 space-y-2.5 shrink-0">
                                 <div className="flex justify-between items-baseline">
-                                    <span className="text-[var(--color-neutral)] text-[10px] uppercase font-mono font-bold tracking-wider">{tt('subtotal')}</span>
-                                    <span className="text-lg font-black text-[var(--color-ink)] font-mono">฿<PopNumber value={cartSubtotal.toLocaleString()} />.-</span>
+                                    <span className="text-[var(--color-muted)] text-base font-semibold">{tt('subtotal')}</span>
+                                    <span className="text-2xl font-medium text-[var(--color-ink)] font-mono">฿<PopNumber value={cartSubtotal.toLocaleString()} />.-</span>
                                 </div>
 
                                 <button 
                                     onClick={handleCheckout}
                                     disabled={submitting}
-                                    className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 disabled:opacity-50 text-[var(--color-paper)] py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-98"
+                                    className="w-full min-h-14 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] disabled:opacity-50 text-[var(--color-cream)] rounded-sm font-semibold text-base transition-transform flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                                 >
                                     {submitting ? (
-                                        <>
-                                            <div className="w-3.5 h-3.5 border-2 border-[var(--color-paper)] border-t-transparent rounded-full animate-spin" />
-                                            <span>{tt('sendingOrder')}</span>
-                                        </>
+                                        <span>{tt('sendingOrder')}</span>
                                     ) : (
                                         <>
-                                            <Check size={14} />
+                                            <Check size={18} />
                                             <span>{tt('placeOrder')}</span>
                                         </>
                                     )}
@@ -2680,7 +2686,7 @@ export default function CustomerOrderLanding() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 bg-black/50 pointer-events-auto"
+                                className="absolute inset-0 bg-charcoal/50 pointer-events-auto"
                                 onClick={() => setTrackingOpen(false)}
                             />
 
@@ -2694,18 +2700,19 @@ export default function CustomerOrderLanding() {
                                 {/* Header */}
                                 <div className="flex justify-between items-center pb-3 border-b border-[var(--color-rule)] shrink-0">
                                     <div>
-                                        <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                        <h3 className="font-display text-2xl leading-normal text-[var(--color-ink)]">
                                             {tt('trackingTitle')}
                                         </h3>
-                                        <p className="text-[10px] text-[var(--color-neutral)] font-mono uppercase mt-0.5">
+                                        <p className="text-sm leading-normal text-[var(--color-neutral)]">
                                             {tt('trackingSubtitle', { table: table?.table_name, queue: getShortBookingId(activeBooking) })}
                                         </p>
                                     </div>
                                     <button 
                                         onClick={() => setTrackingOpen(false)}
-                                        className="p-1.5 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
+                                        className="w-12 h-12 shrink-0 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] hover:text-[var(--color-ink)] flex items-center justify-center transition-colors cursor-pointer"
+                                        aria-label={tt('close')}
                                     >
-                                        <X size={14} />
+                                        <X size={18} />
                                     </button>
                                 </div>
 
@@ -2713,7 +2720,7 @@ export default function CustomerOrderLanding() {
                                 <div className="flex-1 overflow-y-auto space-y-4 my-3 pr-1 custom-scrollbar">
                                     {/* Progress Steps */}
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4">
-                                        <h4 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-3">
+                                        <h4 className="text-sm leading-normal font-semibold text-[var(--color-muted)] mb-3">
                                             {tt('progress')}
                                         </h4>
                                         <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[var(--color-rule)]">
@@ -2724,25 +2731,25 @@ export default function CustomerOrderLanding() {
                                                     <div key={step.key} className="relative">
                                                         <div className="absolute -left-6 top-0.5 w-4 h-4 rounded-full bg-[var(--color-paper)] border border-[var(--color-rule)] flex items-center justify-center">
                                                             {isCurrent ? (
-                                                                <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                                                                <span className="w-2 h-2 rounded-full bg-[var(--color-accent)]" />
                                                             ) : isDone ? (
-                                                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                <span className="w-2 h-2 rounded-full bg-[var(--color-ink)]" />
                                                             ) : (
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-rule)]" />
                                                             )}
                                                         </div>
                                                         <div className="pl-1">
                                                             <div className="flex items-center gap-2">
-                                                                <span className={`text-xs font-bold ${isDone ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
+                                                                <span className={`text-base leading-normal font-semibold ${isDone ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
                                                                     {step.label}
                                                                 </span>
                                                                 {isCurrent && (
-                                                                    <span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[8px] font-mono font-bold uppercase px-1.5 py-0.2 rounded-sm">
+                                                                    <span className="bg-[var(--color-accent)] text-[var(--color-cream)] text-sm leading-normal font-semibold px-1.5 rounded-sm">
                                                                         {tt('cookingNow')}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <p className="text-[10px] text-[var(--color-neutral)] mt-0.5">{step.desc}</p>
+                                                            <p className="text-sm leading-normal text-[var(--color-muted)]">{step.desc}</p>
                                                         </div>
                                                     </div>
                                                 );
@@ -2752,18 +2759,18 @@ export default function CustomerOrderLanding() {
 
                                     {/* Order Items Ledger */}
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4">
-                                        <h4 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-3">
+                                        <h4 className="text-sm leading-normal font-semibold text-[var(--color-muted)] mb-3">
                                             {tt('orderItems')}
                                         </h4>
                                         <div className="space-y-2.5">
                                             {orderItems.map((item, idx) => (
-                                                <div key={idx} className="flex justify-between items-start text-xs pb-2 border-b border-[var(--color-rule)] last:border-b-0 last:pb-0">
+                                                <div key={idx} className="flex justify-between items-start gap-3 text-base leading-normal pb-2 border-b border-[var(--color-rule)] last:border-b-0 last:pb-0">
                                                     <div className="flex gap-2">
-                                                        <span className="font-bold font-mono text-[var(--color-accent)]">{item.quantity}x</span>
+                                                        <span className="font-medium font-mono text-[var(--color-accent)]">{item.quantity}x</span>
                                                         <div>
-                                                            <span className="font-bold text-[var(--color-ink)] block leading-tight">{loc(item.menu_items)}</span>
+                                                            <span className="font-semibold text-[var(--color-ink)] block leading-normal">{loc(item.menu_items)}</span>
                                                             {item.selected_options && (
-                                                                <div className="text-[9px] text-[var(--color-neutral)] mt-0.5 font-mono">
+                                                                <div className="text-sm leading-normal text-[var(--color-muted)]">
                                                                     {Array.isArray(item.selected_options) ? (
                                                                         item.selected_options.map((opt, i) => (
                                                                             <div key={i}>- {typeof opt === 'object' ? opt.name : opt}</div>
@@ -2773,14 +2780,14 @@ export default function CustomerOrderLanding() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <span className="font-mono font-bold text-[var(--color-ink)]">
+                                                    <span className="font-mono font-medium text-[var(--color-ink)] whitespace-nowrap">
                                                         ฿{(item.price_at_time * item.quantity).toLocaleString()}
                                                     </span>
                                                 </div>
                                             ))}
                                             <div className="border-t border-[var(--color-rule)] pt-2.5 mt-2 flex justify-between items-baseline">
-                                                <span className="text-[10px] text-[var(--color-neutral)] font-mono font-bold uppercase">{tt('orderTotal')}</span>
-                                                <span className="text-base font-black text-[var(--color-ink)] font-mono">฿{Number(activeBooking.total_amount || 0).toLocaleString()}.-</span>
+                                                <span className="text-base font-semibold text-[var(--color-muted)]">{tt('orderTotal')}</span>
+                                                <span className="text-2xl font-medium text-[var(--color-ink)] font-mono">฿{Number(activeBooking.total_amount || 0).toLocaleString()}.-</span>
                                             </div>
                                         </div>
                                     </div>
@@ -2795,20 +2802,20 @@ export default function CustomerOrderLanding() {
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4 text-center">
                                         {!activeBooking.staff_remark?.includes('[CALL_BILL]') ? (
                                             <div className="space-y-2.5">
-                                                <h5 className="font-bold text-xs text-[var(--color-ink)]">{tt('billQuestion')}</h5>
-                                                <p className="text-[10px] text-[var(--color-neutral)]">{tt('billHint')}</p>
+                                                <h5 className="font-semibold text-base leading-normal text-[var(--color-ink)]">{tt('billQuestion')}</h5>
+                                                <p className="text-sm leading-normal text-[var(--color-muted)]">{tt('billHint')}</p>
                                                 <button
                                                     onClick={handleRequestBill}
                                                     disabled={requestingBill}
-                                                    className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                    className="w-full min-h-14 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)] rounded-sm font-semibold text-base transition-transform active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
                                                 >
-                                                    <Receipt size={13} />
+                                                    <Receipt size={18} />
                                                     <span>{requestingBill ? tt('processing') : tt('requestBill')}</span>
                                                 </button>
                                             </div>
                                         ) : (
-                                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-sm text-xs font-mono font-bold flex items-center justify-center gap-2">
-                                                <CheckCircle size={14} className="text-emerald-600" />
+                                            <div className="bg-[var(--color-paper)] border border-[var(--color-accent)] text-[var(--color-accent)] p-3 rounded-sm text-base leading-normal font-semibold flex items-center justify-center gap-2">
+                                                <CheckCircle size={18} />
                                                 <span>{tt('billRequested')}</span>
                                             </div>
                                         )}
@@ -2822,38 +2829,38 @@ export default function CustomerOrderLanding() {
 
             {/* Guest Count Modal (Dieter Rams Stepper) */}
             <CenterModal open={showPaxModal}>
-                        <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between">
+                        <div className="pl-4 pr-2 py-2 border-b border-[var(--color-rule)] flex items-center justify-between min-h-16">
                             <div>
-                                <h3 className="font-bold text-sm">{tt('paxTitle')}</h3>
-                                <p className="text-xs text-[var(--color-neutral)] mt-0.5">{tt('tableName', { table: table?.table_name })}</p>
+                                <h3 className="font-display text-xl leading-normal">{tt('paxTitle')}</h3>
+                                <p className="text-sm leading-normal text-[var(--color-neutral)]">{tt('tableName', { table: table?.table_name })}</p>
                             </div>
                             {activeBooking && (
-                                <button onClick={() => setShowPaxModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
-                                    <X size={16} />
+                                <button onClick={() => setShowPaxModal(false)} className="w-12 h-12 flex items-center justify-center hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-muted)]" aria-label={tt('close')}>
+                                    <X size={18} />
                                 </button>
                             )}
                         </div>
                         
                         <div className="p-5 flex flex-col items-center gap-3 text-center">
-                            <div className="text-xs font-bold text-[var(--color-ink)]">
+                            <div className="text-base leading-normal font-semibold text-[var(--color-ink)]">
                                 {tt('paxQuestion')}
                             </div>
-                            <p className="text-xs text-[var(--color-neutral)]">{tt('paxReason')}</p>
+                            <p className="text-sm leading-normal text-[var(--color-muted)]">{tt('paxReason')}</p>
 
                             {/* Stepper */}
                             <div className="flex items-center gap-3 my-2">
                                 <button 
                                     onClick={() => setPaxCount(prev => Math.max(1, prev - 1))}
-                                    className="w-10 h-10 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-xl font-bold flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                                    className="w-14 h-14 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-2xl font-mono flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                                 >
                                     -
                                 </button>
-                                <div className="w-16 h-10 bg-[var(--color-paper)] border-2 border-[var(--color-ink)] rounded-sm flex items-center justify-center text-xl font-mono font-black text-[var(--color-ink)]">
+                                <div className="w-20 h-14 bg-[var(--color-paper)] border-2 border-[var(--color-ink)] rounded-sm flex items-center justify-center text-2xl font-mono font-medium text-[var(--color-ink)]">
                                     {paxCount}
                                 </div>
                                 <button 
                                     onClick={() => setPaxCount(prev => prev + 1)}
-                                    className="w-10 h-10 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-xl font-bold flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                                    className="w-14 h-14 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-2xl font-mono flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
                                 >
                                     +
                                 </button>
@@ -2865,7 +2872,7 @@ export default function CustomerOrderLanding() {
                                     <button
                                         key={num}
                                         onClick={() => setPaxCount(num)}
-                                        className={`py-1.5 rounded-sm font-mono font-bold text-xs transition-all cursor-pointer ${
+                                        className={`min-h-12 rounded-sm font-mono font-medium text-base transition-colors cursor-pointer ${
                                             paxCount === num 
                                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border border-[var(--color-ink)]' 
                                                 : 'bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-ink)]'
@@ -2890,9 +2897,9 @@ export default function CustomerOrderLanding() {
                                     }
                                     setShowPaxModal(false);
                                 }}
-                                className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                className="w-full min-h-14 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)] rounded-sm text-base font-semibold transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
                             >
-                                <Check size={14} />
+                                <Check size={18} />
                                 <span>{tt('paxConfirm')}</span>
                             </button>
                         </div>
@@ -2900,25 +2907,25 @@ export default function CustomerOrderLanding() {
 
             {/* Member Identification Modal */}
             <CenterModal open={showMemberModal}>
-                        <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
+                        <div className="pl-4 pr-2 py-2 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)] min-h-16">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-sm">{tt('memberModalTitle')}</h3>
+                                <h3 className="font-display text-xl leading-normal">{tt('memberModalTitle')}</h3>
                             </div>
-                            <button onClick={() => setShowMemberModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
-                                <X size={15} />
+                            <button onClick={() => setShowMemberModal(false)} className="w-12 h-12 flex items-center justify-center hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-muted)]" aria-label={tt('close')}>
+                                <X size={18} />
                             </button>
                         </div>
 
                         <div className="p-4 space-y-3.5">
                             {memberProfile && (
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-sm p-3 flex items-center justify-between text-xs">
-                                    <div>
-                                        <span className="text-[9px] text-emerald-700 font-mono font-bold uppercase block">{tt('memberLinked')}</span>
-                                        <span className="font-bold text-emerald-900">{memberProfile.display_name} ({memberProfile.phone_number || 'Member'})</span>
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm pl-3 py-2 flex items-center justify-between gap-2 text-base leading-normal">
+                                    <div className="min-w-0">
+                                        <span className="text-sm text-[var(--color-muted)] block">{tt('memberLinked')}</span>
+                                        <span className="font-semibold text-[var(--color-ink)]">{memberProfile.display_name} ({memberProfile.phone_number || 'Member'})</span>
                                     </div>
                                     <button
                                         onClick={handleUnlinkMember}
-                                        className="text-[10px] text-red-600 font-mono font-bold underline cursor-pointer"
+                                        className="min-h-12 px-3 shrink-0 text-base text-[var(--color-error)] font-semibold underline underline-offset-2 cursor-pointer"
                                     >
                                         {tt('memberUnlink')}
                                     </button>
@@ -2927,7 +2934,7 @@ export default function CustomerOrderLanding() {
 
                             {!isNewMemberForm ? (
                                 <form onSubmit={handleMemberPhoneLookup} className="space-y-3">
-                                    <label className="block text-xs font-bold text-[var(--color-ink)]">
+                                    <label className="block text-base leading-normal font-semibold text-[var(--color-ink)]">
                                         {tt('memberPhonePrompt')}
                                     </label>
                                     <div className="relative">
@@ -2936,24 +2943,24 @@ export default function CustomerOrderLanding() {
                                             placeholder="08X-XXX-XXXX"
                                             value={memberPhoneInput}
                                             onChange={(e) => setMemberPhoneInput(e.target.value)}
-                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 px-3 text-sm font-mono font-bold text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
+                                            className="w-full min-h-12 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm px-3 text-lg font-mono text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={memberLookupLoading}
-                                        className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                                        className="w-full min-h-14 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)] rounded-sm font-semibold text-base transition-transform active:scale-98 cursor-pointer"
                                     >
                                         {memberLookupLoading ? tt('memberSearching') : tt('memberSearch')}
                                     </button>
                                 </form>
                             ) : (
                                 <form onSubmit={handleRegisterMember} className="space-y-3">
-                                    <div className="bg-amber-50 border border-amber-200 rounded-sm p-2.5 text-xs text-amber-800 leading-relaxed">
+                                    <div className="bg-[var(--color-paper-2)] border-l-2 border-[var(--color-accent)] rounded-sm p-3 text-base text-[var(--color-ink)] leading-relaxed">
                                         {tt('memberNotFoundPrefix')} <strong>{newMemberForm.phone_number}</strong> {tt('memberNotFoundSuffix')}
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">
+                                        <label className="block text-base leading-normal font-semibold text-[var(--color-ink)] mb-1">
                                             {tt('memberNameLabel')}
                                         </label>
                                         <input
@@ -2961,21 +2968,21 @@ export default function CustomerOrderLanding() {
                                             placeholder={tt('memberNamePlaceholder')}
                                             value={newMemberForm.display_name}
                                             onChange={(e) => setNewMemberForm(prev => ({ ...prev, display_name: e.target.value }))}
-                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 px-2.5 text-sm font-bold text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
+                                            className="w-full min-h-12 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm px-3 text-base text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={memberLookupLoading}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                        className="w-full min-h-14 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)] rounded-sm font-semibold text-base transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
                                     >
-                                        <Check size={14} />
+                                        <Check size={18} />
                                         <span>{memberLookupLoading ? tt('memberSaving') : tt('memberRegister')}</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setIsNewMemberForm(false)}
-                                        className="w-full text-center text-xs text-[var(--color-neutral)] underline font-mono cursor-pointer"
+                                        className="w-full min-h-12 text-center text-base text-[var(--color-muted)] underline underline-offset-2 cursor-pointer"
                                     >
                                         {tt('memberBackToSearch')}
                                     </button>
@@ -2985,18 +2992,19 @@ export default function CustomerOrderLanding() {
             </CenterModal>
 
             {/* Staff Table Activation Modal (Dieter Rams + Thai Modern OKLCH) */}
-            <CenterModal open={showStaffActivationModal} dim="bg-black/60">
-                        <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
+            <CenterModal open={showStaffActivationModal} dim="bg-charcoal/60">
+                        <div className="pl-4 pr-2 py-2 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)] min-h-16">
                             <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
+                                <span className="text-base leading-normal font-semibold text-[var(--color-ink)]">
                                     {tt('verifyTitle', { table: table?.table_name })}
                                 </span>
                             </div>
                             <button 
                                 onClick={() => setShowStaffActivationModal(false)} 
-                                className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)] cursor-pointer"
+                                className="w-12 h-12 flex items-center justify-center hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-muted)] cursor-pointer"
+                                aria-label={tt('close')}
                             >
-                                <X size={15} />
+                                <X size={18} />
                             </button>
                         </div>
 
@@ -3004,19 +3012,19 @@ export default function CustomerOrderLanding() {
                             <div className="flex flex-col items-center text-center space-y-2">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${
                                     isCallingStaffOpen
-                                        ? 'bg-[var(--color-accent-2)]/10 border-[var(--color-accent-2)]/30 text-[var(--color-accent-2)]'
-                                        : 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)]'
+                                        ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-cream)]'
+                                        : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-accent)]'
                                 }`}>
                                     {isCallingStaffOpen ? (
-                                        <Bell size={22} className="animate-pulse" />
+                                        <Bell size={22} />
                                     ) : (
                                         <MapPin size={22} />
                                     )}
                                 </div>
-                                <h4 className="font-mono font-bold text-sm tracking-wider uppercase text-[var(--color-ink)]">
+                                <h4 className="font-display text-2xl leading-normal text-[var(--color-ink)]">
                                     {isCallingStaffOpen ? tt('verifyStaffNotified') : tt('verifySeat')}
                                 </h4>
-                                <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
+                                <p className="text-base text-[var(--color-muted)] leading-relaxed">
                                     {isCallingStaffOpen
                                         ? tt('verifyStaffNotifiedBody')
                                         : gpsError 
@@ -3034,7 +3042,7 @@ export default function CustomerOrderLanding() {
                                             setShowStaffActivationModal(false);
                                             handleCheckout({ isAutoSubmit: true });
                                         }}
-                                        className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border border-[var(--color-ink)] shadow-sm active:scale-98"
+                                        className="w-full min-h-14 px-3 bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)] rounded-sm font-semibold text-base leading-normal transition-transform cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                                     >
                                         <span>{submitting ? tt('sendingOrderShort') : tt('sendToPos')}</span>
                                     </button>
@@ -3044,13 +3052,13 @@ export default function CustomerOrderLanding() {
                                     type="button"
                                     onClick={handleCallStaffToOpenTable}
                                     disabled={callingStaff}
-                                    className={`w-full py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border ${
-                                        isCallingStaffOpen
-                                            ? 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
-                                            : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
+                                    className={`w-full min-h-12 px-3 rounded-sm font-semibold text-base leading-normal transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                                        cart.length > 0
+                                            ? 'bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-ink)] text-[var(--color-ink)]'
+                                            : 'bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-[var(--color-cream)]'
                                     }`}
                                 >
-                                    <Bell size={14} className={callingStaff ? 'animate-spin' : ''} />
+                                    <Bell size={18} />
                                     <span>
                                         {callingStaff 
                                             ? tt('signalSending') 
@@ -3064,9 +3072,9 @@ export default function CustomerOrderLanding() {
                                     type="button"
                                     onClick={() => performGeofenceCheck(settings, true)}
                                     disabled={gpsChecking}
-                                    className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-2 rounded-sm font-mono text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                    className="w-full min-h-12 px-3 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)] rounded-sm text-base leading-normal font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                                 >
-                                    <RefreshCw size={12} className={gpsChecking ? 'animate-spin' : ''} />
+                                    <RefreshCw size={16} />
                                     <span>{gpsChecking ? tt('gpsChecking') : tt('gpsRetry')}</span>
                                 </button>
                             </div>
