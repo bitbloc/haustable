@@ -5,6 +5,8 @@ import { supabase } from './lib/supabaseClient'
 import { BookingProvider } from './context/BookingContext'
 import { Toaster } from 'sonner'
 import ErrorBoundary from './components/staff/ErrorBoundary'
+import PosDeviceGate from './components/pos/PosDeviceGate'
+import { isAllowedPosDevice } from './utils/posDevice'
 
 // Lazy load layouts to prevent admin framer-motion from leaking into entry bundle
 const PublicLayout = lazy(() => import('./components/layout/PublicLayout'))
@@ -16,7 +18,8 @@ const StaffAuthLayout = lazy(() => import('./components/layout/StaffAuthLayout')
 
 // Immediate conditional prefetch for staff POS terminal to maintain 0ms startup without bloat on customer pages
 if (typeof window !== 'undefined') {
-  const isStaffOrPOS = window.location.pathname.startsWith('/pos') || window.location.pathname.startsWith('/staff') || Capacitor.isNativePlatform();
+  // /pos only for the POS app or a registered browser (see PosDeviceGate); never warm it for a stranger
+  const isStaffOrPOS = (window.location.pathname.startsWith('/pos') && isAllowedPosDevice()) || window.location.pathname.startsWith('/staff') || Capacitor.isNativePlatform();
   if (isStaffOrPOS) {
     import('./pos/POSDashboard');
     import('./LoginPage');
@@ -70,6 +73,7 @@ const HausmadeShopPage = lazy(() => import('./pages/HausmadeShopPage'))
 const HausmadeAdminPage = lazy(() => import('./pages/admin/HausmadeAdminPage'))
 const HausmadeKeychainPage = lazy(() => import('./pages/HausmadeKeychainPage'))
 const AdminStaffLogsPage = lazy(() => import('./pages/admin/AdminStaffLogsPage'))
+const AdminPosDevicePage = lazy(() => import('./pages/admin/AdminPosDevicePage'))
 
 const FallbackLoader = () => (
   <div className="min-h-screen bg-canvas flex items-center justify-center text-[var(--color-muted)] text-base select-none" aria-busy="true">
@@ -190,8 +194,8 @@ function App() {
               <Route path="/link" element={<AdsLandingPage />} />
               <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
               <Route path="/qa" element={<QnAPage />} />
-              <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
-              <Route path="/pos" element={<POSDashboard />} />
+              <Route path="/pos/cfd" element={<PosDeviceGate><POSCustomerDisplay /></PosDeviceGate>} />
+              <Route path="/pos" element={<PosDeviceGate><POSDashboard /></PosDeviceGate>} />
               <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
               <Route path="/arcade" element={<ArcadeLobby />} />
@@ -258,6 +262,7 @@ function App() {
                   <Route path="songs" element={<AdminMarketingPage defaultTab="songs" />} />
                   <Route path="hausmade" element={<HausmadeAdminPage />} />
                   <Route path="logs" element={<AdminStaffLogsPage />} />
+                  <Route path="pos-device" element={<AdminPosDevicePage />} />
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
 

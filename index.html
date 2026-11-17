@@ -84,7 +84,10 @@
       // never sent to GA4 / Google Ads again (also when it later opens public pages).
       // Opening any page with ?internal=off clears the mark on that device.
       (function() {
-        const STAFF_RE = /^\/(admin|staff|pos)(\/|$)/;
+        // /pos counts as staff only on a registered POS browser: a customer who types /pos is sent
+        // home by the app and must not be dropped from analytics (see src/utils/posDevice.js).
+        const isPosDevice = function() { try { return !!localStorage.getItem('haus_pos_device'); } catch (e) { return false; } };
+        const STAFF_RE = { test: function(p) { return /^\/(admin|staff)(\/|$)/.test(p) || (/^\/pos(\/|$)/.test(p) && isPosDevice()); } };
         const disableTags = function() {
           window['ga-disable-G-D1M18Z54LM'] = true;
           window['ga-disable-AW-11227095880'] = true;
