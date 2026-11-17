@@ -75,8 +75,9 @@ const DEFAULT_SETTINGS = {
     link_location_text_en: "On Sunthorn Wichit Road, 2 minutes from Phaya Si Satta Nakharat (Naga) Square, by the Mekong, Nakhon Phanom",
     link_location_short: "ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ",
     link_directions_sub: "ห่าง 2 นาที จากลานพญานาค",
-    // "First time here?" chooser lists every available item in these categories (name contains)
-    link_set_category: "Set :",
+    // "First time here?" chooser lists every available item in these categories: comma list matched
+    // against the category's Thai or English name, case-insensitive (see isSetCategory)
+    link_set_category: "เซ็ต, Set",
     // The set listed first (tagged "เริ่มที่ชุดนี้") in each group: menu item id or part of its name
     link_starter_solo_item: "115",
     link_starter_item: "141",
@@ -89,6 +90,10 @@ const DEFAULT_SETTINGS = {
     // Categories left out of SPECIALTIES (non-food); is_hausmade items are always left out
     link_hide_categories: "Hausmade."
 }
+
+// Share card (LINE / Facebook / X): a real 1200x630 file. public/og-link.jpg is a stand-in cropped from the
+// hero photo until the designed artwork replaces it (same path, so no code change is needed).
+const OG_IMAGE_URL = 'https://haustable.vercel.app/og-link.jpg'
 
 const HEAT_LABELS = ['ไม่เผ็ด', 'เผ็ดน้อย', 'เผ็ดกลาง', 'เผ็ดมาก']
 
@@ -414,8 +419,32 @@ function buildSetRow(item, spiceMap) {
         heat: heatHtml(spiceRange(name, spiceMap, item.id)),
         thumb: item.image_url ? optImg(item.image_url, 160, 70) : '',
         feature: item.image_url ? optImg(item.image_url, 720, 70) : '',
+        featureSm: item.image_url ? optImg(item.image_url, 480, 70) : '',
         bigImg: item.image_url ? optImg(item.image_url, 800) : ''
     }
+}
+
+// link_set_category → normalized keys. "Set :" (the old default) becomes "set"; the defaults are always
+// accepted too, so a stale stored value can't hide the chooser again.
+function setCategoryKeyList(setting) {
+    const norm = s => String(s || '').trim().toLowerCase().replace(/\s*[:：]\s*$/, '')
+    const keys = String(setting || '').split(',').concat(DEFAULT_SETTINGS.link_set_category.split(','))
+    return [...new Set(keys.map(norm).filter(Boolean))]
+}
+// A category is a set category when its Thai or English name equals a key or starts with it
+// ("Set Menus", "เซ็ต (2-4 คน)"). A Latin key must end on a word edge, so "set" never matches "Settings".
+function isSetCategory(category, keys) {
+    const names = [category.name, category.name_en].map(n => String(n || '').trim().toLowerCase()).filter(Boolean)
+    return names.some(n => keys.some(k => n === k || (n.startsWith(k) && !/[a-z0-9]/.test(n.charAt(k.length)))))
+}
+
+// "11:30-15:00" → is the current Asia/Bangkok time inside it?
+function inTimeWindow(range, date = new Date()) {
+    const w = String(range || '').match(/(\d{1,2})[:.](\d{2})\s*-\s*(\d{1,2})[:.](\d{2})/)
+    if (!w) return false
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date)
+    const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value)
+    return now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])
 }
 
 // Resolve a "menu item id or part of its name" setting to an item id
@@ -426,6 +455,21 @@ function resolveItemId(menuItems, ref) {
         ? menuItems.find(i => String(i.id) === key)
         : menuItems.find(i => (i.name || '').toLowerCase().includes(key.toLowerCase()))
     return item ? item.id : null
+}
+
+// Full menu for the client-rendered "ดูเมนูทั้งหมด" list: only the fields that list reads, with spice levels.
+// Served from /link?part=menu so the first HTML stays small.
+function fullMenuPayload(data) {
+    const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
+    const spiceMap = parseSpiceMap(settings.link_spice_map || DEFAULT_SETTINGS.link_spice_map)
+    const pick = (o, keys) => keys.reduce((acc, k) => { if (o[k] !== null && o[k] !== undefined && o[k] !== '') acc[k] = o[k]; return acc }, {})
+    return {
+        categories: (data.categories || []).map(c => pick(c, ['id', 'name', 'name_en', 'name_zh', 'name_lo'])),
+        menuItems: (data.menuItems || []).map(i => ({
+            ...pick(i, ['id', 'name', 'name_en', 'name_zh', 'name_lo', 'price', 'description', 'description_en', 'description_zh', 'description_lo', 'image_url', 'category_id']),
+            spice: spiceRange(i.name, spiceMap, i.id)
+        }))
+    }
 }
 
 function generateStandaloneLandingHtml(data) {
@@ -528,11 +572,8 @@ function generateStandaloneLandingHtml(data) {
     menuItems.forEach(item => { item.spice = spiceRange(item.name, spiceMap, item.id) })
 
     // "First time here?" chooser: every set, grouped by party size, configured starters first
-    const setCategoryKeys = String(settings.link_set_category || DEFAULT_SETTINGS.link_set_category)
-        .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-    const setCategoryIds = new Set(categories
-        .filter(c => setCategoryKeys.some(k => String(c.name || '').toLowerCase().includes(k)))
-        .map(c => c.id))
+    const setCategoryKeys = setCategoryKeyList(settings.link_set_category)
+    const setCategoryIds = new Set(categories.filter(c => isSetCategory(c, setCategoryKeys)).map(c => c.id))
     const starterIds = [settings.link_starter_solo_item, settings.link_starter_item, settings.link_starter_xl_item]
         .map(ref => resolveItemId(menuItems, ref))
         .filter(id => id !== null)
@@ -551,6 +592,19 @@ function generateStandaloneLandingHtml(data) {
     const defaultGroup = (setGroups.find(g => g.rows.some(r => r.starter && r.groupMin > 1))
         || setGroups.find(g => g.min > 1) || setGroups[0] || {}).key
     const lunchWindow = escapeHtml(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)
+    // Group shown on first paint: the solo sets during the lunch window (Asia/Bangkok), else the default.
+    // Chosen here rather than in the browser so the visible feature photo is the one preloaded as LCP.
+    const initialGroup = (setGroups.some(g => g.key === '1') && inTimeWindow(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)) ? '1' : defaultGroup
+    const initialSet = (setGroups.find(g => g.key === initialGroup) || { rows: [] }).rows[0]
+    // Largest image in the first mobile screen: the visible set photo, else the first signature dish.
+    // The preload carries the same srcset/sizes as the <img> so the browser fetches the file it will show.
+    const SET_FEATURE_SIZES = '(max-width: 560px) calc(100vw - 32px), 528px'
+    const SIG_SIZES = '(max-width: 480px) 33vw, 160px'
+    const lcpImage = initialSet && initialSet.feature
+        ? { href: initialSet.feature, srcset: `${initialSet.featureSm} 480w, ${initialSet.feature} 720w`, sizes: SET_FEATURE_SIZES }
+        : { href: sig1Img, srcset: `${sig1Img} 240w, ${sig1Img2x} 320w`, sizes: SIG_SIZES }
+    // With the set chooser on top, the signature photos sit below the first screen and must not compete with it
+    const sigLoading = initialSet ? 'loading="lazy"' : 'fetchpriority="high" loading="eager"'
 
     // Recommended Specialties: food only (merch stays in the full menu) and no sets (they live in the chooser)
     const hiddenCategoryNames = String(settings.link_hide_categories || DEFAULT_SETTINGS.link_hide_categories)
@@ -595,7 +649,7 @@ function generateStandaloneLandingHtml(data) {
     <title>${shopName} | อาหารใต้รสชัด ริมโขง นครพนม</title>
     <meta name="description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · มีที่จอดรถสะดวก">
     <link rel="canonical" href="https://haustable.vercel.app/link">
-    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="apple-touch-icon" href="/pwa-icon.png">
     <meta name="theme-color" content="#181815">
 
@@ -604,20 +658,20 @@ function generateStandaloneLandingHtml(data) {
     <meta property="og:url" content="https://haustable.vercel.app/link">
     <meta property="og:title" content="${shopName} | อาหารใต้รสชัด ริมโขง">
     <meta property="og:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม จองโต๊ะ & สอบถาม : 098-528-4217">
-    <meta property="og:image" content="${sig1Img}">
+    <meta property="og:image" content="${OG_IMAGE_URL}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="อาหารใต้ของร้านในบ้าน นครพนม">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${shopName} | อาหารใต้รสชัด ริมโขง">
     <meta name="twitter:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม">
-    <meta name="twitter:image" content="${sig1Img}">
+    <meta name="twitter:image" content="${OG_IMAGE_URL}">
 
-    <!-- High Performance Preconnect & LCP Image Preload (Zero Render-Blocking Overhead) -->
+    <!-- Preconnect + LCP image preload (same srcset/sizes as the visible <img>, so it is never fetched twice) -->
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
-    <link rel="preload" as="image" href="${sig1Img}" fetchpriority="high">
-    <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
+    <link rel="preload" as="image" href="${lcpImage.href}" imagesrcset="${lcpImage.srcset}" imagesizes="${lcpImage.sizes}" fetchpriority="high">
     <meta name="rendered-at" content="${Date.now()}">
 
     <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
@@ -666,6 +720,8 @@ function generateStandaloneLandingHtml(data) {
             --color-paper-3: oklch(91% 0.012 28);
             --color-rule: oklch(85% 0.012 28);
             --color-neutral: oklch(55% 0.010 28);
+            /* Small labels on paper / paper-2: neutral darkened just enough for 4.5:1 (55% measures ~4.1 on paper-2) */
+            --color-label: oklch(51% 0.010 28);
             --color-muted: oklch(42% 0.010 28);
             --color-ink: oklch(18% 0.012 28);
             --color-ink-2: oklch(28% 0.012 28);
@@ -683,8 +739,9 @@ function generateStandaloneLandingHtml(data) {
             --color-focus: oklch(60% 0.15 28);
             --color-signal: oklch(93% 0.19 113);
             --color-signal-2: oklch(88% 0.19 113);
-            --color-line: oklch(53% 0.14 152);
-            --color-line-2: oklch(47% 0.13 152);
+            /* LINE green, darkened from 53% so paper text clears 4.5:1 (was 4.49); hover stays one step darker */
+            --color-line: oklch(50% 0.14 152);
+            --color-line-2: oklch(45% 0.13 152);
             --color-scrim: oklch(14% 0.010 28 / 0.9);
             --color-scrim-soft: oklch(14% 0.010 28 / 0);
 
@@ -744,7 +801,7 @@ function generateStandaloneLandingHtml(data) {
         .marquee-text { flex: 1; min-width: 0; text-align: center; text-wrap: balance; }
         /* Language cells: each language named in its own script, so a visitor who can't read Thai still finds theirs */
         .lang-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--color-ink); background: var(--color-paper); }
-        .lang-cell { min-height: 36px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .lang-cell { min-height: 48px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
         .lang-cell + .lang-cell { border-left: 1px solid var(--color-rule); }
         .lang-cell:hover { color: var(--color-ink); }
         html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--color-ink); color: var(--color-paper); }
@@ -764,13 +821,13 @@ function generateStandaloneLandingHtml(data) {
         .fact + .fact { border-left: 1px solid var(--color-rule); }
         .fact.full { grid-column: span 2; border-left: none; border-top: 1px solid var(--color-rule); }
         .fact.wide { grid-column: span 2; }
-        .fact-label { font-size: var(--text-xs); color: var(--color-neutral); }
+        .fact-label { font-size: var(--text-xs); color: var(--color-label); }
         .fact-val { font-size: var(--text-md); font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: var(--space-2); }
         .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--color-accent-2); }
         .dot.closed { background: var(--color-neutral); }
         .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
         .loc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-        .loc-map-btn { flex-shrink: 0; min-height: 40px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .loc-map-btn { flex-shrink: 0; min-height: 48px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .loc-map-btn:hover { background: var(--color-ink-2); }
         .loc-more summary { font-size: var(--text-xs); color: var(--color-muted); cursor: pointer; margin-top: var(--space-1); width: fit-content; }
         .loc-more p { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); line-height: 1.6; }
@@ -829,7 +886,8 @@ function generateStandaloneLandingHtml(data) {
         .set-more a:hover { text-decoration-color: var(--color-paper); }
         @media (min-width: 480px) { .sets-title { font-size: 36px; } }
         @media (prefers-reduced-motion: no-preference) {
-            .set-panel:not([hidden]) { animation: set-in 240ms var(--ease-out); }
+            /* Only when the guest switches tabs: the first paint (and the LCP photo inside it) is never faded in */
+            .set-panel.entering:not([hidden]) { animation: set-in 240ms var(--ease-out); }
             @keyframes set-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         }
 
@@ -886,7 +944,7 @@ function generateStandaloneLandingHtml(data) {
         .cat-chip:active { transform: scale(0.96); }
         #full-menu-content .section-header.sub { scroll-margin-top: 104px; }
         .section-header.sub .section-title { font-size: var(--text-xl); }
-        .section-meta { font-size: var(--text-xs); color: var(--color-neutral); white-space: nowrap; }
+        .section-meta { font-size: var(--text-xs); color: var(--color-label); white-space: nowrap; }
 
         /* Signature dishes */
         .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
@@ -921,6 +979,8 @@ function generateStandaloneLandingHtml(data) {
         .full-menu-btn.open { background: var(--color-paper-2); color: var(--color-ink); border-bottom: 1px solid var(--color-rule); }
         .full-menu-btn.open .arrow { color: var(--color-ink); }
         .full-menu-btn.open .full-menu-sub { display: none; }
+        .full-menu-status { padding: var(--space-4); font-size: var(--text-sm); color: var(--color-muted); }
+        .full-menu-retry { min-height: 44px; margin-left: var(--space-2); padding: 0 var(--space-3); font-weight: 600; color: var(--color-ink); border: 1px solid var(--color-ink); border-radius: var(--radius); }
 
         /* Opening hours: large figures + live state, readable at a glance */
         .hours-fact { gap: var(--space-1); padding-top: var(--space-4); padding-bottom: var(--space-4); }
@@ -1068,14 +1128,19 @@ function generateStandaloneLandingHtml(data) {
                 };
                 userEvents.forEach(evt => window.addEventListener(evt, triggerGtm, { passive: true, once: true }));
 
-                // Load GTM as soon as the page has finished loading, so the tags are ready
-                // before an ad visitor taps "นำทาง" / LINE / โทร. Waiting 3.5s for idle lost
-                // conversions on mobile: the tap hands off to the Maps/LINE app before GTM arrives.
-                // Bots are excluded above, so lab CWV scores are unaffected.
+                // Otherwise load GTM in the first idle moment after the page has loaded (at most 1.5s
+                // later), so it never competes with the first view. Kept short on purpose: an earlier
+                // 3.5s idle wait lost conversions on mobile, because a quick tap on "นำทาง" / LINE / โทร
+                // hands off to the Maps/LINE app before GTM arrives. Any touch or scroll loads it at once.
+                // Bots are excluded above, so lab (Lighthouse) scores never include GTM either way.
+                const scheduleGtm = function() {
+                    if ('requestIdleCallback' in window) requestIdleCallback(window.loadGtm, { timeout: 1500 });
+                    else setTimeout(window.loadGtm, 1000);
+                };
                 if (document.readyState === 'complete') {
-                    window.loadGtm();
+                    scheduleGtm();
                 } else {
-                    window.addEventListener('load', window.loadGtm, { once: true });
+                    window.addEventListener('load', scheduleGtm, { once: true });
                 }
             }
         })();
@@ -1113,7 +1178,7 @@ function generateStandaloneLandingHtml(data) {
 
         ${setGroups.length > 0 ? `
         <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
-        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" aria-labelledby="sets-title">
+        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" data-default="${escapeHtml(defaultGroup)}" aria-labelledby="sets-title">
             <div class="sets-head">
                 <h2 class="sets-title" id="sets-title">${tt('<span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span>', '<span class="nb">First time here?</span> <span class="nb">Pick a set for your group</span>')}</h2>
                 <p class="sets-walkin">${tt('ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ', 'No booking needed · walk in anytime · parking')}</p>
@@ -1121,13 +1186,13 @@ function generateStandaloneLandingHtml(data) {
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
-                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span></button>`).join('')}
+                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === initialGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span></button>`).join('')}
             </div>` : ''}
             ${setGroups.map(g => `
-            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
+            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === initialGroup ? '' : ' hidden'}>
                 ${g.rows.map((r, i) => i === 0 ? `
                 <article class="set-feature">
-                    ${r.feature ? `<img class="set-feature-img" src="${r.feature}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === defaultGroup ? 'eager' : 'lazy'}"${g.key === defaultGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
+                    ${r.feature ? `<img class="set-feature-img" src="${r.feature}" srcset="${r.featureSm} 480w, ${r.feature} 720w" sizes="${SET_FEATURE_SIZES}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === initialGroup ? 'eager' : 'lazy'}"${g.key === initialGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
                     <div class="set-feature-body">
                         <div class="set-feature-top">
                             <h3 class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</h3>
@@ -1141,7 +1206,7 @@ function generateStandaloneLandingHtml(data) {
                     </div>
                 </article>` : `
                 <div class="set-row">
-                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
+                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="${g.key === initialGroup ? 'eager' : 'lazy'}" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
                     <div class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</div>
                     <div class="set-price">
                         <span class="num">฿${r.price}</span>
@@ -1202,16 +1267,16 @@ function generateStandaloneLandingHtml(data) {
             </div>
         </div>
 
-        <a href="/link/hauscheckin" class="row-link slip">
+        <a href="/link/hauscheckin" class="row-link slip" onclick="trackClick('click_checkin_board', '/link/hauscheckin')">
             <span class="row-main"><span class="dot"></span><span>${tt('รูปจากลูกค้าจริง', 'Real guest photos')}<span class="row-sub">${tt('บอร์ดเช็กอินของลูกค้าที่มาร้าน', 'Check-in wall from our guests')}</span></span></span>
             <span class="arrow">→</span>
         </a>
 
         <!-- Tab strip -->
         <div class="tab-bar" role="tablist">
-            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')">${tt('เมนู', 'Menu')}</button>
-            <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">${tt('บรรยากาศ', 'Atmosphere')}</button>
-            <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">${tt('ติดต่อ', 'Contact')}</button>
+            <button type="button" class="tab-btn active" id="tab-btn-menu" role="tab" aria-selected="true" aria-controls="sec-menu" onclick="switchSection('menu')">${tt('เมนู', 'Menu')}</button>
+            <button type="button" class="tab-btn" id="tab-btn-vibe" role="tab" aria-selected="false" aria-controls="sec-vibe" onclick="switchSection('vibe')">${tt('บรรยากาศ', 'Atmosphere')}</button>
+            <button type="button" class="tab-btn" id="tab-btn-connect" role="tab" aria-selected="false" aria-controls="sec-connect" onclick="switchSection('connect')">${tt('ติดต่อ', 'Contact')}</button>
         </div>
 
         <!-- ─── SECTION 1: MENU ─── -->
@@ -1223,7 +1288,7 @@ function generateStandaloneLandingHtml(data) {
             <div class="sig-grid">
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="${SIG_SIZES}" alt="${sig1Name}" ${sigLoading} decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${tt(sig1Name, sig1NameEn, sigNames[0].zh, sigNames[0].lo)}</div>
@@ -1233,7 +1298,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="${SIG_SIZES}" alt="${sig2Name}" ${sigLoading} decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${tt(sig2Name, sig2NameEn, sigNames[1].zh, sigNames[1].lo)}</div>
@@ -1243,7 +1308,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="${SIG_SIZES}" alt="${sig3Name}" ${sigLoading} decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${tt(sig3Name, sig3NameEn, sigNames[2].zh, sigNames[2].lo)}</div>
@@ -1282,7 +1347,6 @@ function generateStandaloneLandingHtml(data) {
 
             <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu(true)"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`, `查看完整菜单 · ${menuItems.length} 项`, `ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
-            <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
 
         <!-- ─── SECTION 2: ATMOSPHERE ─── -->
@@ -1344,7 +1408,7 @@ function generateStandaloneLandingHtml(data) {
                 <span>${tt('สั่งรับหน้าร้าน', 'Order for pickup')}<span class="row-sub">${tt('สั่งออนไลน์ แล้วแวะรับ', 'Order online, pick up at the shop')}</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="row-link" onclick="logAdEvent('click_lineman')">
+            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="row-link" onclick="trackClick('click_lineman', 'LINE MAN'); logAdEvent('click_lineman')">
                 <span>${tt('เดลิเวอรีผ่าน LINE MAN', 'Delivery via LINE MAN')}<span class="row-sub">${tt('สั่งผ่านแอป LINE MAN', 'Order in the LINE MAN app')}</span></span>
                 <span class="arrow">→</span>
             </a>
@@ -1352,19 +1416,19 @@ function generateStandaloneLandingHtml(data) {
             <div class="section-header">
                 <h2 class="section-title">${tt('ติดตามและข้อมูลร้าน', 'Follow &amp; info')}</h2>
             </div>
-            <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
+            <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="row-link" onclick="trackClick('click_instagram', 'Instagram')">
                 <span>Instagram<span class="row-sub">@inthehausth</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
+            <a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="row-link" onclick="trackClick('click_facebook', 'Facebook')">
                 <span>Facebook<span class="row-sub">In the haus</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="/qa" class="row-link">
+            <a href="/qa" class="row-link" onclick="trackClick('click_faq', '/qa')">
                 <span>${tt('คำถามที่พบบ่อย', 'FAQ')}<span class="row-sub">${tt('รวมคำถามที่ลูกค้าถามบ่อย', 'Questions guests often ask')}</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="/link/hauscheckin" class="row-link">
+            <a href="/link/hauscheckin" class="row-link" onclick="trackClick('click_checkin_board', '/link/hauscheckin')">
                 <span>${tt('บอร์ดเช็กอินลูกค้า', 'Guest check-in wall')}<span class="row-sub">${tt('รูปจากลูกค้าที่มาร้าน', 'Photos from our guests')}</span></span>
                 <span class="arrow">→</span>
             </a>
@@ -1407,7 +1471,7 @@ function generateStandaloneLandingHtml(data) {
     <div id="booklet-modal" class="modal" onclick="closeBooklet(event)">
         <button class="modal-close" onclick="closeBooklet()">${tt('ปิด', 'Close')}</button>
         <div class="modal-stack" onclick="event.stopPropagation()">
-            <img id="booklet-img" class="modal-content" src="${bookletImages[0] ? optImg(bookletImages[0], 900) : ''}" alt="หน้าเมนูแบบเล่ม">
+            <img id="booklet-img" class="modal-content" alt="หน้าเมนูแบบเล่ม" decoding="async">
             <div class="booklet-nav">
                 <button onclick="prevBookletPage()">← ${tt('ก่อนหน้า', 'Prev')}</button>
                 <span id="booklet-counter" class="num">1 / ${bookletImages.length}</span>
@@ -1429,7 +1493,10 @@ function generateStandaloneLandingHtml(data) {
             let found = false;
             starterCard.querySelectorAll('.set-panel').forEach(function(p) {
                 const on = p.dataset.group === key;
+                const wasHidden = p.hidden;
                 p.hidden = !on;
+                p.classList.remove('entering');
+                if (on && wasHidden && !silent) { void p.offsetWidth; p.classList.add('entering'); }
                 if (on) found = true;
             });
             if (!found) return;
@@ -1454,7 +1521,11 @@ function generateStandaloneLandingHtml(data) {
             try {
                 const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
                 const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value);
-                if (now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])) selectSetGroup('1', true);
+                // The server already picked the group; this only corrects a page served from the CDN cache across the window edge
+                const inLunch = now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4]);
+                const shown = (starterCard.querySelector('.set-panel:not([hidden])') || {}).dataset;
+                const target = inLunch ? '1' : starterCard.dataset.default;
+                if (target && shown && shown.group !== target) selectSetGroup(target, true);
             } catch(e) {}
         })();
 
@@ -1465,7 +1536,9 @@ function generateStandaloneLandingHtml(data) {
         function markSection(name) {
             SECTIONS.forEach(function(s) {
                 const b = document.getElementById('tab-btn-' + s);
-                if (b) b.className = 'tab-btn' + (s === name ? ' active' : '');
+                if (!b) return;
+                b.className = 'tab-btn' + (s === name ? ' active' : '');
+                b.setAttribute('aria-selected', String(s === name));
             });
             const bar = document.querySelector('.tab-bar');
             if (bar && SECTIONS.indexOf(name) !== -1) bar.style.setProperty('--tab-i', SECTIONS.indexOf(name));
@@ -1866,6 +1939,71 @@ function generateStandaloneLandingHtml(data) {
             window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - offset + 1, behavior: 'smooth' });
         }
 
+        // ─── FULL MENU (fetched on demand from /link?part=menu, not inlined in the page) ───
+        let fullMenuData = null;
+        let fullMenuReq = null;
+        function loadFullMenuData(fresh) {
+            if (fullMenuData && !fresh) return Promise.resolve(fullMenuData);
+            if (fullMenuReq && !fresh) return fullMenuReq;
+            fullMenuReq = fetch('/link?part=menu' + (fresh ? '&purge=1&t=' + Date.now() : ''), { cache: fresh ? 'no-store' : 'default' })
+                .then(function(r) { if (!r.ok) throw new Error('menu ' + r.status); return r.json(); })
+                .then(function(d) { fullMenuData = d; return d; })
+                .catch(function(err) { fullMenuReq = null; throw err; });
+            return fullMenuReq;
+        }
+        // Start the download once the reader scrolls near the button, so the tap itself feels instant
+        (function() {
+            const btn = document.getElementById('btn-full-menu');
+            if (!btn || !('IntersectionObserver' in window)) return;
+            const io = new IntersectionObserver(function(entries) {
+                if (!entries.some(function(en) { return en.isIntersecting; })) return;
+                io.disconnect();
+                loadFullMenuData().catch(function() {});
+            }, { rootMargin: '600px 0px' });
+            io.observe(btn);
+        })();
+        function retryFullMenu() {
+            const content = document.getElementById('full-menu-content');
+            content.innerHTML = '';
+            content.style.display = 'none';
+            toggleFullMenu();
+        }
+        function renderFullMenu(content, raw) {
+            let html = '';
+            let index = '';
+            raw.categories.forEach((cat, ci) => {
+                const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
+                if (cItems.length === 0) return;
+                const shortTh = String(cat.name || '').replace(/\s*\(.*\)\s*/, '').trim() || cat.name;
+                index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</button>';
+                html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items', cItems.length + ' 项', cItems.length + ' ລາຍການ') + '</span></div><div>';
+                cItems.forEach(item => {
+                    const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
+                    const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
+                    const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)"' : '';
+                    const descHtml = clientItemDesc(item);
+                    html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + clientItemName(item) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
+                });
+                html += '</div>';
+            });
+            content.innerHTML = (index ? '<nav class="cat-index" aria-label="หมวดเมนู">' + index + '</nav>' : '') + html;
+            // Highlight the category being read and keep its chip in view
+            if ('IntersectionObserver' in window) {
+                const nav = content.querySelector('.cat-index');
+                const catIo = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(en) {
+                        if (!en.isIntersecting || !nav) return;
+                        nav.querySelectorAll('.cat-chip').forEach(function(c) {
+                            const on = c.dataset.cat === en.target.id;
+                            c.setAttribute('aria-current', on ? 'true' : 'false');
+                            if (on) nav.scrollTo({ left: c.offsetLeft - 16, behavior: 'smooth' });
+                        });
+                    });
+                }, { rootMargin: '-110px 0px -70% 0px' });
+                content.querySelectorAll('.section-header.sub[id]').forEach(function(h) { catIo.observe(h); });
+            }
+        }
+
         function finishFullMenuClose(content) {
             clearTimeout(content._closeTimer);
             content._closing = false;
@@ -1880,42 +2018,16 @@ function generateStandaloneLandingHtml(data) {
             if (content._closing) finishFullMenuClose(content);
             if (content.style.display === 'none') {
                 if (!content.hasChildNodes()) {
-                    try {
-                        const raw = JSON.parse(document.getElementById('full-menu-data').textContent);
-                        let html = '';
-                        let index = '';
-                        raw.categories.forEach((cat, ci) => {
-                            const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
-                            if (cItems.length === 0) return;
-                            const shortTh = String(cat.name || '').replace(/\s*\(.*\)\s*/, '').trim() || cat.name;
-                            index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</button>';
-                            html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items', cItems.length + ' 项', cItems.length + ' ລາຍການ') + '</span></div><div>';
-                            cItems.forEach(item => {
-                                const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
-                                const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
-                                const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)"' : '';
-                                const descHtml = clientItemDesc(item);
-                                html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + clientItemName(item) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
-                            });
-                            html += '</div>';
+                    if (fullMenuData) {
+                        renderFullMenu(content, fullMenuData);
+                    } else {
+                        content.innerHTML = '<p class="full-menu-status" role="status">' + TT('กำลังโหลดเมนู…', 'Loading the menu…', '正在加载菜单…', 'ກຳລັງໂຫຼດເມນູ…') + '</p>';
+                        loadFullMenuData().then(function(d) {
+                            renderFullMenu(content, d);
+                        }).catch(function() {
+                            content.innerHTML = '<p class="full-menu-status" role="status">' + TT('โหลดเมนูไม่สำเร็จ', 'Could not load the menu', '菜单加载失败', 'ໂຫຼດເມນູບໍ່ສຳເລັດ') + ' <button type="button" class="full-menu-retry" onclick="retryFullMenu()">' + TT('ลองอีกครั้ง', 'Try again', '重试', 'ລອງໃໝ່') + '</button></p>';
                         });
-                        content.innerHTML = (index ? '<nav class="cat-index" aria-label="หมวดเมนู">' + index + '</nav>' : '') + html;
-                        // Highlight the category being read and keep its chip in view
-                        if ('IntersectionObserver' in window) {
-                            const nav = content.querySelector('.cat-index');
-                            const catIo = new IntersectionObserver(function(entries) {
-                                entries.forEach(function(en) {
-                                    if (!en.isIntersecting || !nav) return;
-                                    nav.querySelectorAll('.cat-chip').forEach(function(c) {
-                                        const on = c.dataset.cat === en.target.id;
-                                        c.setAttribute('aria-current', on ? 'true' : 'false');
-                                        if (on) nav.scrollTo({ left: c.offsetLeft - 16, behavior: 'smooth' });
-                                    });
-                                });
-                            }, { rootMargin: '-110px 0px -70% 0px' });
-                            content.querySelectorAll('.section-header.sub[id]').forEach(function(h) { catIo.observe(h); });
-                        }
-                    } catch(e) {}
+                    }
                 }
                 content.style.display = 'block';
                 content.classList.remove('opening'); void content.offsetWidth; content.classList.add('opening');
@@ -1962,6 +2074,8 @@ function generateStandaloneLandingHtml(data) {
         // ─── BOOKLET MODAL ───
         function openBooklet() {
             if (bookletPages.length === 0) return;
+            // Pages are fetched only from here: the hidden modal has no src on first load
+            updateBooklet();
             showModal(document.getElementById('booklet-modal'));
             pushModalState();
             if (window.gtag) gtag('event', 'click_booklet', { event_category: 'engagement', page_path: '/link' });
@@ -1975,8 +2089,11 @@ function generateStandaloneLandingHtml(data) {
             popModalState();
         }
         function updateBooklet() {
-            document.getElementById('booklet-img').src = bookletPages[currentBookletIdx];
+            const img = document.getElementById('booklet-img');
+            if (img.getAttribute('src') !== bookletPages[currentBookletIdx]) img.src = bookletPages[currentBookletIdx];
             document.getElementById('booklet-counter').innerText = (currentBookletIdx + 1) + ' / ' + bookletPages.length;
+            // Warm the next page so "next" turns instantly
+            if (bookletPages[currentBookletIdx + 1]) (new Image()).src = bookletPages[currentBookletIdx + 1];
         }
         function prevBookletPage() {
             if (currentBookletIdx > 0) { currentBookletIdx--; updateBooklet(); }
@@ -2070,6 +2187,18 @@ function generateStandaloneLandingHtml(data) {
             } else {
                 setTimeout(fn, 0);
             }
+        }
+
+        // Outbound links without an ad conversion of their own (Instagram, Facebook, FAQ, check-in board,
+        // LINE MAN): same dataLayer shape as click_line / click_call, so GTM can pick them up by event name
+        function trackClick(eventName, destination) {
+            if (isDebounced(eventName)) return;
+            if (window.loadGtm) window.loadGtm();
+            window.dataLayer.push({
+                event: eventName,
+                target_destination: destination,
+                page_path: '/link'
+            });
         }
 
         function handleCallClick(e) {
@@ -2170,30 +2299,14 @@ function generateStandaloneLandingHtml(data) {
                 const renderedMeta = document.querySelector('meta[name="rendered-at"]');
                 const renderedAt = renderedMeta ? parseInt(renderedMeta.getAttribute('content') || '0', 10) : 0;
                 if (lastMod && renderedAt && lastMod > renderedAt) {
-                    fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' })
-                        .then(r => r.text())
-                        .then(newHtml => {
-                            const startTag = '<script id="full-menu-data" type="application/json">';
-                            const endTag = '</' + 'script>';
-                            const sIdx = newHtml.indexOf(startTag);
-                            if (sIdx !== -1) {
-                                const eIdx = newHtml.indexOf(endTag, sIdx);
-                                if (eIdx !== -1) {
-                                    const jsonText = newHtml.substring(sIdx + startTag.length, eIdx);
-                                    const script = document.getElementById('full-menu-data');
-                                    if (script) {
-                                        script.textContent = jsonText;
-                                        const content = document.getElementById('full-menu-content');
-                                        if (content && content.style.display !== 'none') {
-                                            content.innerHTML = '';
-                                            toggleFullMenu();
-                                            toggleFullMenu();
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        .catch(() => {});
+                    loadFullMenuData(true).then(function() {
+                        const content = document.getElementById('full-menu-content');
+                        if (content && content.style.display !== 'none') {
+                            content.innerHTML = '';
+                            toggleFullMenu();
+                            toggleFullMenu();
+                        }
+                    }).catch(function() {});
                 }
             } catch(e) {}
         })();
@@ -2272,7 +2385,14 @@ export default async function handler(req, res) {
             }
         }
 
-        // 4. Generate Autonomous High-Performance Standalone HTML
+        // 4a. Full menu JSON, fetched by the page when the guest opens "ดูเมนูทั้งหมด"
+        if (parsedUrl.searchParams.get('part') === 'menu') {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8')
+            res.setHeader('Cache-Control', isPurgeRequest ? 'no-cache, no-store, must-revalidate' : 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400')
+            return res.status(200).send(JSON.stringify(fullMenuPayload(data)))
+        }
+
+        // 4b. Generate Autonomous High-Performance Standalone HTML
         const html = generateStandaloneLandingHtml(data)
 
         // 5. Edge CDN Caching Strategy:
