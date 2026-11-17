@@ -1227,7 +1227,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         <button
                             type="button"
                             onClick={onOpenMenu}
-                            className="text-[10px] font-bold bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-2xs font-mono uppercase"
+                            className="text-[10px] font-bold bg-plum hover:bg-plum-2 text-cream border border-plum px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-2xs font-mono uppercase"
                             title="เปิดเมนูเพื่อคีย์และสั่งอาหารเข้าโต๊ะนี้"
                         >
                             <Plus size={12} />
@@ -1539,10 +1539,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <button
                                 type="button"
                                 onClick={onOpenMenu}
-                                className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                                className="bg-lime hover:bg-lime-press text-charcoal px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
                             >
                                 <Plus size={14} />
-                                <span>+ สั่งอาหาร / คีย์รายการ</span>
+                                <span>สั่งอาหาร / คีย์รายการ</span>
                             </button>
                         )}
                     </div>
@@ -1701,7 +1701,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     </span>
                                 </div>
                             ) : (
-                                <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">
+                                <span className="text-2xl font-black text-charcoal tracking-tight">
                                     ฿{remainingDue.toLocaleString()}
                                 </span>
                             )}
