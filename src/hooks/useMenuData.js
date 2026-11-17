@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchAndSortMenu, invalidateMenuCache } from '../utils/menuHelper'
 import { supabase } from '../lib/supabaseClient'
 
-export function useMenuData() {
+// live: keep a realtime channel on the menu tables (only while the menu is on screen).
+// The fetch itself is shared with BookingContext through menuHelper's cache / in-flight promise.
+export function useMenuData({ live = true } = {}) {
     const [menuItems, setMenuItems] = useState([])
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
@@ -10,6 +12,7 @@ export function useMenuData() {
     const isMountedRef = useRef(true)
 
     const loadMenu = useCallback(async (force = false) => {
+        if (isMountedRef.current) setError(null)
         try {
             if (force) invalidateMenuCache()
             const { menuItems: sorted, categories: cats } = await fetchAndSortMenu(force)
@@ -28,7 +31,11 @@ export function useMenuData() {
     useEffect(() => {
         isMountedRef.current = true
         loadMenu(false)
+        return () => { isMountedRef.current = false }
+    }, [loadMenu])
 
+    useEffect(() => {
+        if (!live) return
         let debounceTimer = null
         const handleRealtimeChange = () => {
             if (debounceTimer) clearTimeout(debounceTimer)
@@ -63,14 +70,13 @@ export function useMenuData() {
         document.addEventListener('visibilitychange', handleVisibilityOrFocus)
 
         return () => {
-            isMountedRef.current = false
             if (debounceTimer) clearTimeout(debounceTimer)
             if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
             supabase.removeChannel(channel)
             window.removeEventListener('focus', handleVisibilityOrFocus)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
         }
-    }, [loadMenu])
+    }, [loadMenu, live])
 
-    return { menuItems, categories, loading, error, refreshMenu: () => loadMenu(true) }
+    return { menuItems, categories, loading, error, refreshMenu: () => { setLoading(true); return loadMenu(true) } }
 }

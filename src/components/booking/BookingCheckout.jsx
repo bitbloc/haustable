@@ -6,12 +6,11 @@ import { usePromotion } from '../../hooks/usePromotion' // NEW
 import ImageModal from '../shared/ImageModal'
 import { supabase } from '../../lib/supabaseClient'
 import { verifyPaymentSlip } from '../../utils/slipVerificationHelper'
-import { normalizePromptPayId } from '../../utils/printerHelper'
-import generatePayload from 'promptpay-qr'
-import { QRCodeSVG } from 'qrcode.react'
+import LazyPromptPayQR from '../shared/LazyPromptPayQR'
 import CRMCheckoutPrivileges from '../shared/CRMCheckoutPrivileges'
 import { DEFAULT_CRM_SETTINGS } from '../../utils/crmHelper'
 import { trackBookingComplete } from '../../utils/analyticsHelper'
+import { toast } from 'sonner'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -26,6 +25,7 @@ export default function BookingCheckout() {
     const [localPhone, setLocalPhone] = useState(contactPhone || '')
 
     const [submitting, setSubmitting] = useState(false)
+    const [formError, setFormError] = useState('') // shown above the submit button
     const [isSlipModalOpen, setIsSlipModalOpen] = useState(false)
 
     // Payment & Auto-Verification State
@@ -199,19 +199,8 @@ export default function BookingCheckout() {
 
     const [selectedModalImage, setSelectedModalImage] = useState(null)
 
-    const cleanPromptPayId = useMemo(() => {
-        return normalizePromptPayId(settings.promptpayId || '0985284217')
-    }, [settings.promptpayId])
-
-    const promptPayPayload = useMemo(() => {
-        if (!cleanPromptPayId) return null
-        try {
-            return generatePayload(cleanPromptPayId, { amount: depositAmount > 0 ? depositAmount : undefined })
-        } catch (e) {
-            console.warn('Failed to generate dynamic PromptPay QR payload for booking:', e)
-            return null
-        }
-    }, [cleanPromptPayId, depositAmount])
+    // QR libraries load only here, on the prepaid payment step (LazyPromptPayQR)
+    const promptpayIdForQr = settings.promptpayId || '0985284217'
 
     // Estimated points earned
     const estimatedPointsEarned = Math.floor((finalTotal / (parseFloat(crmSettings.crm_base_spend_amount) || 100)) * (tierDetails.multiplier || 1.0))
@@ -297,17 +286,19 @@ export default function BookingCheckout() {
         const cleanPhone = trimmedPhone.replace(/\D/g, '')
 
         if (!trimmedName) {
-            return alert(t('fillContact') || 'กรุณากรอกชื่อผู้จองโต๊ะ (Customer Name is required)')
+            return setFormError('กรุณากรอกชื่อผู้จองโต๊ะ')
         }
         if (!trimmedPhone || cleanPhone.length < 9) {
-            return alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Phone Number is required)')
+            return setFormError('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง อย่างน้อย 9-10 หลัก')
         }
 
         if (!isFreeBooking && settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback) {
-            return alert('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
+            return setFormError('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
         }
 
+        setFormError('')
         setSubmitting(true)
+        let redirecting = false
         
         try {
             // Sync final values before submit
@@ -345,20 +336,26 @@ export default function BookingCheckout() {
                     pax
                 })
 
-                alert(t('confirmBooking') + ' Success!' + (slipVerifyResult?.verified ? ' (สลิปมัดจำผ่านการตรวจอัตโนมัติ ✓)' : ''))
+                toast.success('จองโต๊ะสำเร็จ' + (isFreeBooking ? ' ร้านจะโทรยืนยันการจอง' : slipVerifyResult?.verified ? ' สลิปมัดจำผ่านการตรวจอัตโนมัติ' : ''))
 
+                // The conversion must reach GTM before the page unloads
                 await trackingDone
                 
+                redirecting = true
                 if (token) {
                     window.location.replace(`/tracking/${token}`)
                 } else {
                     window.location.replace('/')
                 }
             } else {
-                alert('Error: ' + result.error)
+                setFormError(result.error || 'ส่งการจองไม่สำเร็จ กรุณาลองใหม่')
+                toast.error('ส่งการจองไม่สำเร็จ')
             }
+        } catch (err) {
+            setFormError('ส่งการจองไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')
+            console.error('Booking submit failed', err)
         } finally {
-            setSubmitting(false)
+            if (!redirecting) setSubmitting(false)
         }
     }
 
@@ -708,28 +705,16 @@ export default function BookingCheckout() {
                             <div>
                                 <div className="flex flex-col items-center gap-2 mb-3">
                                     <div className="bg-white p-3.5 rounded-rams border border-[var(--color-rule)] shadow-2xs">
-                                        {promptPayPayload ? (
-                                            <QRCodeSVG
-                                                value={promptPayPayload}
-                                                size={176}
-                                                level="M"
-                                                className="cursor-zoom-in"
-                                                onClick={() => setSelectedModalImage({ type: 'vector', payload: promptPayPayload, title: 'PromptPay QR (ยอดมัดจำ 50%)' })}
-                                            />
-                                        ) : settings.qrCodeUrl ? (
-                                            <img
-                                                src={settings.qrCodeUrl}
-                                                className="max-w-[176px] max-h-[176px] w-auto h-auto object-contain cursor-zoom-in"
-                                                alt="Payment QR"
-                                                onClick={() => setSelectedModalImage({ type: 'image', url: settings.qrCodeUrl, title: 'PromptPay QR (ยอดมัดจำ 50%)' })}
-                                            />
-                                        ) : (
-                                            <div className="w-44 h-44 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">{t('noQrCode')}</div>
-                                        )}
+                                        <LazyPromptPayQR
+                                            promptpayId={promptpayIdForQr}
+                                            amount={depositAmount}
+                                            size={176}
+                                            fallbackUrl={settings.qrCodeUrl}
+                                            className="cursor-zoom-in"
+                                            onClick={() => setSelectedModalImage({ type: 'vector', promptpayId: promptpayIdForQr, amount: depositAmount, title: 'PromptPay QR (ยอดมัดจำ 50%)' })}
+                                        />
                                     </div>
-                                    {(promptPayPayload || settings.qrCodeUrl) && (
-                                        <p className="text-[10px] text-subInk font-mono">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
-                                    )}
+                                    <p className="text-sm text-subInk">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
                                 </div>
 
                                 <div className="space-y-1.5 font-mono text-xs pt-2">
@@ -895,16 +880,22 @@ export default function BookingCheckout() {
             </div>
             )}
 
-            <label className="flex items-start gap-3 p-2 cursor-pointer">
-                <input type="checkbox" checked={isAgreed} onChange={e => updateForm('isAgreed', e.target.checked)} className="mt-1 w-4 h-4 accent-ink" />
-                <span className="text-xs font-mono text-subInk leading-relaxed">
+            {/* Whole row is the hit area (min 48px) */}
+            <label className="flex items-start gap-3 py-3 px-2 min-h-12 cursor-pointer">
+                <input type="checkbox" checked={isAgreed} onChange={e => updateForm('isAgreed', e.target.checked)} className="mt-1 w-5 h-5 shrink-0 accent-ink" />
+                <span className="text-base text-ink leading-relaxed">
                     {isFreeBooking
                         ? `ฉันรับทราบว่าพนักงานจะโทรยืนยันการจอง และร้านเก็บโต๊ะไว้ให้ ${settings.bookingHoldMinutes || 30} นาทีหลังเวลานัดหมาย`
                         : t('agreeTerms')}
                 </span>
             </label>
 
+            {formError && (
+                <p role="alert" className="text-base font-bold text-error leading-relaxed border border-error/40 bg-paper p-3">{formError}</p>
+            )}
+
             <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={submitting || !isContactValid || !isAgreed || (!isFreeBooking && (!slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)))}
                 className="w-full bg-brand text-cream border border-ink py-4 rounded-none font-mono font-bold text-lg uppercase tracking-widest mt-4 hover:bg-paper hover:text-ink disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
@@ -941,7 +932,7 @@ export default function BookingCheckout() {
                         </div>
                         <div className="p-3 bg-white border border-[var(--color-rule)] rounded-xl my-2 flex justify-center items-center shadow-inner">
                             {selectedModalImage.type === 'vector' ? (
-                                <QRCodeSVG value={selectedModalImage.payload} size={240} level="M" />
+                                <LazyPromptPayQR promptpayId={selectedModalImage.promptpayId} amount={selectedModalImage.amount} size={240} />
                             ) : (
                                 <img src={selectedModalImage.url} alt="QR Zoom" className="max-w-[240px] max-h-[300px] w-auto h-auto object-contain" />
                             )}

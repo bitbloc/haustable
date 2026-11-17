@@ -46,12 +46,22 @@ export const initialState = {
         policyNote: '',
         soundAlertUrl: null
     },
-    isLoading: true
+    isLoading: true,
+    loadError: null, // Thai message when the first load failed; BookingSteps shows a retry
+    menuStatus: 'idle' // 'idle' | 'loading' | 'ready' | 'error' (menu is loaded only for the prepaid path)
 }
 
 export function bookingReducer(state, action) {
     switch (action.type) {
         // --- Data Loading ---
+        case 'LOAD_INITIAL_START':
+            return { ...state, isLoading: true, loadError: null }
+        case 'LOAD_INITIAL_ERROR':
+            return { ...state, isLoading: false, loadError: action.payload || 'โหลดข้อมูลไม่สำเร็จ' }
+        case 'LOAD_MENU_START':
+            return { ...state, menuStatus: 'loading' }
+        case 'LOAD_MENU_ERROR':
+            return { ...state, menuStatus: 'error' }
         case 'LOAD_INITIAL_SUCCESS':
             return {
                 ...state,
@@ -60,14 +70,16 @@ export function bookingReducer(state, action) {
                 settings: { ...state.settings, ...action.payload.settings },
                 contactName: action.payload.user?.name || state.contactName,
                 contactPhone: action.payload.user?.phone || state.contactPhone,
-                isLoading: false // FAST LOAD DONE
+                isLoading: false, // FAST LOAD DONE
+                loadError: null
             }
 
         case 'LOAD_MENU_SUCCESS':
             return {
                 ...state,
                 menuItems: action.payload.menuItems || [],
-                categories: action.payload.categories || []
+                categories: action.payload.categories || [],
+                menuStatus: 'ready'
             }
 
         case 'SET_BOOKED_TABLES':
@@ -174,7 +186,7 @@ export function bookingReducer(state, action) {
             }
 
         case 'RESET_BOOKING':
-            return { ...initialState, isLoading: false, settings: state.settings, tables: state.tables, menuItems: state.menuItems, categories: state.categories } // Keep loaded data
+            return { ...initialState, isLoading: false, settings: state.settings, tables: state.tables, blockedDates: state.blockedDates, menuItems: state.menuItems, categories: state.categories, menuStatus: state.menuStatus } // Keep loaded data
 
         default:
             return state

@@ -4,9 +4,11 @@ import { supabase } from '../lib/supabaseClient'
 import { toThaiISO } from '../utils/timeUtils'
 import { isBookingOverlap } from '../utils/availabilityUtils'
 import { useOrderSubmission } from './useOrderSubmission'
+import { getLiffIdToken } from '../utils/liffLoader'
+import { isTableTooSmall } from '../utils/tableCapacity'
 
 export function useBooking() {
-    const { state, dispatch } = useBookingContext()
+    const { state, dispatch, requestBookingData, retryBookingData, requestMenu, setLiveScope } = useBookingContext()
     const { submitOrder } = useOrderSubmission()
 
     // --- Actions ---
@@ -66,14 +68,17 @@ export function useBooking() {
             const requestedEnd = new Date(requestedStart.getTime() + (2 * 60 * 60 * 1000))
 
             // Fetch ALL active bookings for this date (Simple optimized fetch)
-            // We fetch the whole day to ensure we catch any overlapping "Long" bookings or "Multi-slot" bookings
+            // We fetch the whole day to ensure we catch any overlapping "Long" bookings or "Multi-slot" bookings.
+            // staff_remark is internal staff text and is not read on the public page; without it a free
+            // booking's [HOLD:n] release is not applied here, so a no-show table stays shut for its 2 h
+            // window (stricter, never a double booking).
             const dateStr = state.date // YYYY-MM-DD
             const dayStart = `${dateStr}T00:00:00+07:00`
             const dayEnd = `${dateStr}T23:59:59+07:00`
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, end_time, booking_type, status, staff_remark')
+                .select('table_id, booking_time, end_time, booking_type, status')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
@@ -110,9 +115,12 @@ export function useBooking() {
 
             if (!finalContactName) throw new Error('กรุณาระบุชื่อผู้จองโต๊ะ (Customer Name is required)')
             if (!finalContactPhone || cleanPhone.length < 9) throw new Error('กรุณาระบุเบอร์โทรศัพท์ติดต่อที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
-            if (!state.isAgreed) throw new Error('Please agree to terms')
-            if (!isFreeBooking && !finalSlipFile) throw new Error('Please upload payment slip')
+            if (!state.isAgreed) throw new Error('กรุณากดยอมรับเงื่อนไขการจองก่อน')
+            if (!isFreeBooking && !finalSlipFile) throw new Error('กรุณาแนบสลิปการโอน')
             if (!state.selectedTable?.id) throw new Error('กรุณาเลือกโต๊ะที่ต้องการจอง')
+            if (isTableTooSmall(state.selectedTable, state.pax)) {
+                throw new Error(`โต๊ะนี้นั่งได้ ${state.selectedTable.capacity} ท่าน น้อยกว่าจำนวนลูกค้า ${state.pax} ท่าน กรุณาเลือกโต๊ะใหม่`)
+            }
 
             // Security Check: Blocked Date
             const { count: blockedCount } = await supabase
@@ -140,7 +148,7 @@ export function useBooking() {
 
             const { data: conflictBookings } = await supabase
                 .from('bookings')
-                .select('id, booking_time, end_time, status, booking_type, staff_remark')
+                .select('id, booking_time, end_time, status, booking_type')
                 .eq('table_id', state.selectedTable.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', `${state.date}T00:00:00+07:00`)
@@ -233,7 +241,7 @@ export function useBooking() {
 
             // Resolve Line Token
             const { data: { user } } = await supabase.auth.getUser()
-            const lineIdToken = !user && (state.lineIdToken || (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null))
+            const lineIdToken = !user && (state.lineIdToken || getLiffIdToken())
 
             const result = await submitOrder({
                 bookingPayload,
@@ -263,6 +271,9 @@ export function useBooking() {
         addToCart, removeFromCart, openOptionModal, closeOptionModal, confirmOptionSelection,
         setCheckoutMode, updateForm, // Added updateForm to return
         setBookingMode, isFreeBooking,
+
+        // Data loading (booking data is fetched only when a booking page asks)
+        requestBookingData, retryBookingData, requestMenu, setLiveScope,
 
         // Async
         refreshAvailability,

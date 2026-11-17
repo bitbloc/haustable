@@ -51,6 +51,14 @@ const translations = {
         timeSlot: 'เวลารับบริการ',
         guests: 'จำนวนลูกค้า',
         selectTable: 'เลือกโต๊ะนี้',
+        nextChooseTable: 'ถัดไป เลือกโต๊ะ',
+        paxUnit: 'ท่าน',
+        time: 'เวลา',
+        confirmThisTable: 'ยืนยันโต๊ะนี้',
+        unavailable: 'ไม่ว่าง',
+        tableTooSmall: 'โต๊ะนี้นั่งได้ {cap} ท่าน น้อยกว่าจำนวนลูกค้า {pax} ท่าน',
+        allCategories: 'ทั้งหมด',
+        recommendedShort: 'แนะนำ',
         orderFood: 'สั่งอาหาร',
         searchMenu: 'ค้นหาเมนู...',
         next: 'ถัดไป',
@@ -234,6 +242,14 @@ const translations = {
         timeSlot: 'Time Slot',
         guests: 'Guests',
         selectTable: 'Select Table',
+        nextChooseTable: 'Next: choose a table',
+        paxUnit: 'guests',
+        time: 'Time',
+        confirmThisTable: 'Confirm this table',
+        unavailable: 'Unavailable',
+        tableTooSmall: 'This table seats {cap}, fewer than your {pax} guests',
+        allCategories: 'All',
+        recommendedShort: 'Rec.',
         orderFood: 'Order Food',
         searchMenu: 'Search menu...',
         next: 'Next',
@@ -408,7 +424,7 @@ export const LanguageProvider = ({ children }) => {
     };
 
     // Shared dictionary covers th/en; anything else reads the English entry
-    const t = (key) => (translations[lang] || translations.en)[key] || key;
+    const t = (key) => translations[lang]?.[key] || translations.en[key] || key;
 
     return (
         <LanguageContext.Provider value={{ lang, setLanguage, toggleLanguage, hasChosenLanguage, t }}>

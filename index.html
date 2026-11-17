@@ -153,15 +153,7 @@
             }
           }
 
-          // LIFF SDK: Load only when needed (skip on /link or /pos unless inside LINE app)
-          const isLinkOrPos = window.location.pathname.startsWith('/link') || window.location.pathname.startsWith('/pos');
-          const isLineBrowser = /Line/i.test(navigator.userAgent);
-          if (!isLinkOrPos || isLineBrowser) {
-            const liffScript = document.createElement('script');
-            liffScript.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
-            liffScript.async = true;
-            document.head.appendChild(liffScript);
-          }
+          // LINE LIFF SDK is loaded by the app only where LINE login is used (src/utils/liffLoader.js)
         }
       })();
     </script>
@@ -224,16 +216,8 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
     <div id="root">
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #ECECE9; font-family: system-ui, -apple-system, sans-serif; color: #181815; user-select: none; -webkit-user-select: none;">
-        <div style="font-size: 14px; font-weight: bold; font-family: monospace; letter-spacing: 0.15em; text-transform: uppercase;">ONHAUS SYSTEM</div>
-        <div style="margin-top: 16px; font-size: 10px; font-family: monospace; color: #555552; letter-spacing: 0.1em; text-transform: uppercase; animation: pulse 1.5s ease-in-out infinite;">Loading...</div>
-        <style>
-          @keyframes pulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
-          }
-        </style>
-      </div>
+      <!-- Pre-JS placeholder: brand cream, Thai text, no looping animation -->
+      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #ECE4E7; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #524A4E; font-size: 16px; line-height: 1.6;">กำลังโหลด...</div>
     </div>
     <!-- Dedicated Print Portal Root to eliminate all background document trees from browser print dialogs -->
     <div id="print-portal-root"></div>
