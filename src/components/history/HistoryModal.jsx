@@ -6,7 +6,7 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { getShortBookingId } from '../../utils/printerHelper'
+import { getShortBookingId } from '../../utils/bookingShortId'
 
 export default function HistoryModal({ isOpen, onClose, history }) {
     const { activeOrders = [], pastOrders = [], loading } = history || {}
