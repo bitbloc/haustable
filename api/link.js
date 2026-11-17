@@ -1127,14 +1127,19 @@ function generateStandaloneLandingHtml(data) {
                 };
                 userEvents.forEach(evt => window.addEventListener(evt, triggerGtm, { passive: true, once: true }));
 
-                // Load GTM as soon as the page has finished loading, so the tags are ready
-                // before an ad visitor taps "นำทาง" / LINE / โทร. Waiting 3.5s for idle lost
-                // conversions on mobile: the tap hands off to the Maps/LINE app before GTM arrives.
-                // Bots are excluded above, so lab CWV scores are unaffected.
+                // Otherwise load GTM in the first idle moment after the page has loaded (at most 1.5s
+                // later), so it never competes with the first view. Kept short on purpose: an earlier
+                // 3.5s idle wait lost conversions on mobile, because a quick tap on "นำทาง" / LINE / โทร
+                // hands off to the Maps/LINE app before GTM arrives. Any touch or scroll loads it at once.
+                // Bots are excluded above, so lab (Lighthouse) scores never include GTM either way.
+                const scheduleGtm = function() {
+                    if ('requestIdleCallback' in window) requestIdleCallback(window.loadGtm, { timeout: 1500 });
+                    else setTimeout(window.loadGtm, 1000);
+                };
                 if (document.readyState === 'complete') {
-                    window.loadGtm();
+                    scheduleGtm();
                 } else {
-                    window.addEventListener('load', window.loadGtm, { once: true });
+                    window.addEventListener('load', scheduleGtm, { once: true });
                 }
             }
         })();
@@ -1261,7 +1266,7 @@ function generateStandaloneLandingHtml(data) {
             </div>
         </div>
 
-        <a href="/link/hauscheckin" class="row-link slip">
+        <a href="/link/hauscheckin" class="row-link slip" onclick="trackClick('click_checkin_board', '/link/hauscheckin')">
             <span class="row-main"><span class="dot"></span><span>${tt('รูปจากลูกค้าจริง', 'Real guest photos')}<span class="row-sub">${tt('บอร์ดเช็กอินของลูกค้าที่มาร้าน', 'Check-in wall from our guests')}</span></span></span>
             <span class="arrow">→</span>
         </a>
@@ -1402,7 +1407,7 @@ function generateStandaloneLandingHtml(data) {
                 <span>${tt('สั่งรับหน้าร้าน', 'Order for pickup')}<span class="row-sub">${tt('สั่งออนไลน์ แล้วแวะรับ', 'Order online, pick up at the shop')}</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="row-link" onclick="logAdEvent('click_lineman')">
+            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="row-link" onclick="trackClick('click_lineman', 'LINE MAN'); logAdEvent('click_lineman')">
                 <span>${tt('เดลิเวอรีผ่าน LINE MAN', 'Delivery via LINE MAN')}<span class="row-sub">${tt('สั่งผ่านแอป LINE MAN', 'Order in the LINE MAN app')}</span></span>
                 <span class="arrow">→</span>
             </a>
@@ -1410,19 +1415,19 @@ function generateStandaloneLandingHtml(data) {
             <div class="section-header">
                 <h2 class="section-title">${tt('ติดตามและข้อมูลร้าน', 'Follow &amp; info')}</h2>
             </div>
-            <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
+            <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="row-link" onclick="trackClick('click_instagram', 'Instagram')">
                 <span>Instagram<span class="row-sub">@inthehausth</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
+            <a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="row-link" onclick="trackClick('click_facebook', 'Facebook')">
                 <span>Facebook<span class="row-sub">In the haus</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="/qa" class="row-link">
+            <a href="/qa" class="row-link" onclick="trackClick('click_faq', '/qa')">
                 <span>${tt('คำถามที่พบบ่อย', 'FAQ')}<span class="row-sub">${tt('รวมคำถามที่ลูกค้าถามบ่อย', 'Questions guests often ask')}</span></span>
                 <span class="arrow">→</span>
             </a>
-            <a href="/link/hauscheckin" class="row-link">
+            <a href="/link/hauscheckin" class="row-link" onclick="trackClick('click_checkin_board', '/link/hauscheckin')">
                 <span>${tt('บอร์ดเช็กอินลูกค้า', 'Guest check-in wall')}<span class="row-sub">${tt('รูปจากลูกค้าที่มาร้าน', 'Photos from our guests')}</span></span>
                 <span class="arrow">→</span>
             </a>
@@ -2178,6 +2183,18 @@ function generateStandaloneLandingHtml(data) {
             } else {
                 setTimeout(fn, 0);
             }
+        }
+
+        // Outbound links without an ad conversion of their own (Instagram, Facebook, FAQ, check-in board,
+        // LINE MAN): same dataLayer shape as click_line / click_call, so GTM can pick them up by event name
+        function trackClick(eventName, destination) {
+            if (isDebounced(eventName)) return;
+            if (window.loadGtm) window.loadGtm();
+            window.dataLayer.push({
+                event: eventName,
+                target_destination: destination,
+                page_path: '/link'
+            });
         }
 
         function handleCallClick(e) {
