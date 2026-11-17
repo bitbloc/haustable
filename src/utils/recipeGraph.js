@@ -55,23 +55,45 @@ export const usagePerPortion = (item) => {
 export const hasPortionYield = (item) =>
     getItemType(item) !== ITEM_TYPES.PREP || num(item?.portion_yield_qty) > 0;
 
-const MEASURE_UNITS = new Set(['ml', 'l', 'g', 'kg', 'mg', 'oz', 'oz_fl', 'lb', 'gallon', 'ขีด', 'cup', 'tbsp', 'tsp', 'shot']);
+// One code per unit name, Thai or English (same list as SQL stock_unit_code)
+const UNIT_CODES = {
+    g: 'g', 'กรัม': 'g', 'ก.': 'g', kg: 'kg', 'กก.': 'kg', 'กก': 'kg', 'กิโลกรัม': 'kg', mg: 'mg', 'ขีด': 'ขีด',
+    ml: 'ml', 'มล.': 'ml', 'มล': 'ml', 'มิลลิลิตร': 'ml', l: 'l', 'ลิตร': 'l', 'ล.': 'l',
+    gallon: 'gallon', 'แกลลอน': 'gallon', 'แกลอน': 'gallon',
+    bottle: 'bottle', 'ขวด': 'bottle', can: 'can', 'กระป๋อง': 'can', pcs: 'pcs', piece: 'pcs', 'ชิ้น': 'pcs',
+    pack: 'pack', 'แพ็ค': 'pack', 'แพค': 'pack', crate: 'crate', 'ลัง': 'crate', box: 'box', 'กล่อง': 'box',
+    bag: 'bag', 'ถุง': 'bag', glass: 'glass', 'แก้ว': 'glass'
+};
+export const unitCode = (u) => { const k = String(u || '').trim().toLowerCase(); return UNIT_CODES[k] || k; };
+// Weights and volumes in their base unit (g or ml). A "gallon" is a jug of any size in a Thai
+// shop (Aro: 6 l), so it is never converted by a fixed ratio.
+const MEASURE_BASE = {
+    g: ['mass', 1], kg: ['mass', 1000], mg: ['mass', 0.001], 'ขีด': ['mass', 100], lb: ['mass', 453.592], oz: ['mass', 28.3495],
+    ml: ['volume', 1], l: ['volume', 1000], oz_fl: ['volume', 29.5735], cup: ['volume', 240], tbsp: ['volume', 15], tsp: ['volume', 5]
+};
+const MEASURE_UNITS = new Set([...Object.keys(MEASURE_BASE), 'gallon', 'shot']);
 
 /**
  * usage_unit in one counted unit of stock (same rule as SQL stock_usage_per_count_unit).
- * Pack is a weight/volume and the item is counted in something else (bottle, gallon)
- *   -> one counted unit is the whole pack: soda bottle = 325 ml.
- * Otherwise (pack is a count of pieces, or counted in the pack unit)
- *   -> conversion_factor: coke case of 12 counted per bottle = 1; pork in kg = 1000 g.
+ *   counted and bought in weights or volumes of one kind -> unit ratio x factor (counted in g, bought in kg: 1)
+ *   counted in the pack unit itself                       -> conversion_factor (pork in kg = 1000 g)
+ *   bought by weight/volume, counted in a container       -> pack_size x factor (soda bottle = 325 ml)
+ *   a pack of pieces counted per pack under another name  -> pack_size x factor (crate of 12 bottles)
+ *   otherwise                                             -> conversion_factor (coke counted per bottle = 1)
  */
 export const usagePerStockUnit = (item) => {
     const factor = num(item?.conversion_factor, 1) || 1;
-    const packUnit = String(item?.pack_unit || '').toLowerCase();
-    const unit = String(item?.unit || '').toLowerCase();
+    if (getItemType(item) !== ITEM_TYPES.RAW) return factor;
+    const pk = unitCode(item?.pack_unit);
+    const cu = unitCode(item?.unit || item?.pack_unit);
+    const uu = unitCode(item?.usage_unit);
     const packSize = num(item?.pack_size, 0);
-    if (getItemType(item) === ITEM_TYPES.RAW && MEASURE_UNITS.has(packUnit) && unit !== packUnit && packSize > 0) {
-        return packSize * factor;
-    }
+    const pm = MEASURE_BASE[pk];
+    const cm = MEASURE_BASE[cu];
+    if (pm && cm && pm[0] === cm[0]) return cm[1] / pm[1] * factor;
+    if (cu === pk) return factor;
+    if (MEASURE_UNITS.has(pk) && packSize > 0) return packSize * factor;
+    if (packSize > 0 && cu !== uu) return packSize * factor;
     return factor;
 };
 

@@ -56,6 +56,18 @@ describe('item type helpers', () => {
         expect(usagePerStockUnit(jasmineBase)).toBe(920);
     });
 
+    it('second pass: units of one kind convert, crates hold the pack, Thai names match codes', () => {
+        // counted in g, bought in kg: a gram is a gram, not the whole kilo
+        expect(usagePerStockUnit({ item_type: 'raw', unit: 'g', pack_unit: 'kg', pack_size: 5.9, usage_unit: 'g', conversion_factor: 1000 })).toBe(1);
+        expect(usagePerStockUnit({ item_type: 'raw', unit: 'กก.', pack_unit: 'kg', pack_size: 1, usage_unit: 'g', conversion_factor: 1000 })).toBe(1000);
+        // a pack of 12 bottles counted per crate is the whole pack
+        expect(usagePerStockUnit({ item_type: 'raw', unit: 'ลัง', pack_unit: 'bottle', pack_size: 12, usage_unit: 'bottle', conversion_factor: 1 })).toBe(12);
+        // the crate set-up in use today
+        expect(usagePerStockUnit({ item_type: 'raw', unit: 'crate', pack_unit: 'crate', pack_size: 1, usage_unit: 'bottle', conversion_factor: 12 })).toBe(12);
+        // a gallon jug is not 3,785 ml
+        expect(usagePerStockUnit({ item_type: 'raw', unit: 'gallon', pack_unit: 'l', pack_size: 6, usage_unit: 'ml', conversion_factor: 1000 })).toBe(6000);
+    });
+
     it('converts recipe quantities to counted stock', () => {
         expect(usageToStockQty(tea, 100)).toBeCloseTo(0.2);          // 100 g of a 500 g bag
         expect(usageToStockQty(jasmineBase, 230)).toBeCloseTo(0.25); // quarter of a portion
