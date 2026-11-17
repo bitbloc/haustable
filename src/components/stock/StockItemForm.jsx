@@ -156,7 +156,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                          itemId: item.id,
                          mode: 'set',
                          quantity: rescale.quantity,
-                         reason: STOCK_REASONS.ADJUST,
+                         reason: STOCK_REASONS.OPENING, // a restatement, not a movement: Stock Recon moves the day's opening
                          performedBy: 'System (unit change)',
                          note: rescale.note
                      });

@@ -1,6 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Ledger report · theme: Thai Modern OKLCH */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { getUnitType } from '../../utils/unitUtils';
 import { supabase } from '../../lib/supabaseClient';
 import {
     shopDayOf, addDays, displayUnit, formatPackQty, isAbnormal, summarizeReconciliation, sortReconciliation, COUNT_KINDS,
@@ -57,6 +58,11 @@ export default function StockReconciliationPage() {
     }, []);
     const qty = (v, r, digits) => {
         const u = itemUnits[r.stock_item_id];
+        // Used one by one (bottles of a crate, cups of a pack): said in pieces, "17 ขวด", like the stock card
+        const pieces = u && u.factor > 1 && v !== null && v !== undefined && Number.isFinite(Number(v))
+            && (getUnitType(u.usageUnit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(u.usageUnit))
+            && String(u.usageUnit || '').toLowerCase() !== String(r.unit || '').toLowerCase();
+        if (pieces) return `${Math.round(Number(v) * u.factor).toLocaleString('th-TH')} ${displayUnit(u.usageUnit)}`;
         return (u && formatPackQty(v, { factor: u.factor, packUnit: r.unit, usageUnit: u.usageUnit })) ?? num(v, digits);
     };
     // "Abnormal" = off by more than X% AND more than ฿Y (app_settings, shared with Telegram)
