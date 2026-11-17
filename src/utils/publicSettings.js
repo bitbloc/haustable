@@ -30,7 +30,9 @@ export const BOOKING_SETTING_KEYS = [
     'booking_hold_minutes',
     'booking_time_slots',
     'side_dish_config',
-    'side_dish_enabled'
+    'side_dish_enabled',
+    'closing_time',
+    'qr_kitchen_close_time'
 ]
 
 export const PICKUP_SETTING_KEYS = [

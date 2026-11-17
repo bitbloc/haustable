@@ -43,6 +43,8 @@ const parseSettings = (map) => {
         }
     }
     if (map.side_dish_enabled) settings.sideDishEnabled = map.side_dish_enabled === 'true'
+    if (map.closing_time) settings.closingTime = map.closing_time
+    if (map.qr_kitchen_close_time) settings.kitchenCloseTime = map.qr_kitchen_close_time
     return settings
 }
 

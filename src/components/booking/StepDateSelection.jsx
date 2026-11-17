@@ -5,7 +5,7 @@ import { useBooking } from '../../hooks/useBooking'
 import BookingHeader from './BookingHeader'
 import CustomCalendar from './CustomCalendar'
 import { getBookingSlotsForDate } from '../../utils/storeHours'
-import { bangkokNow, toMinutes } from '../../utils/bangkokTime'
+import { bangkokNow, toMinutes, getLastOrderTime } from '../../utils/bangkokTime'
 
 // Renders before the booking data arrives (defaults from the reducer), so the first paint
 // is the real form, not a loader. "Next" waits for the data.
@@ -33,10 +33,13 @@ export default function StepDateSelection() {
         }
     }, [blockedDates, date, setDate, t])
 
-    // Slot is too soon when it starts before now + minAdvanceHours (Bangkok clock)
+    // Slot is unavailable when it is after last order (any day), or today and sooner than
+    // now + minAdvanceHours (Bangkok clock)
     const now = bangkokNow()
+    const lastOrder = toMinutes(getLastOrderTime({ kitchenCloseTime: settings.kitchenCloseTime, closingTime: settings.closingTime }))
     const isSlotTooSoon = (tm) => {
         if (!date) return false
+        if (toMinutes(tm) > lastOrder) return true
         if (date > now.dateStr) return false
         if (date < now.dateStr) return true
         return toMinutes(tm) < now.minutes + (Number(settings.minAdvanceHours) || 0) * 60

@@ -9,6 +9,8 @@ import { getEntryBackPath } from '../utils/funnelTracking'
  * Is this service open right now (Asia/Bangkok clock, not the phone's)?
  * cutoff: 'closing' -> open until closing_time
  *         'last_order' -> open until the kitchen last order (qr_kitchen_close_time, 20:45)
+ *         'none' -> the clock never closes the page; only manual_close does (booking is for
+ *                   future dates, so a 23:00 visitor can still book tomorrow)
  * Returns { status: 'checking' | 'open' | 'error', retry }. On 'closed' it redirects
  * (to /link when the visit came from the ads page, else /). A failed check is reported
  * as 'error' so the page can offer a retry instead of letting the order through blind.
@@ -34,6 +36,7 @@ export function useServiceStatus(modeKey, { cutoff = 'closing' } = {}) {
                 let isOpen
                 if (mode === 'manual_open') isOpen = true
                 else if (mode === 'manual_close') isOpen = false
+                else if (cutoff === 'none') isOpen = true
                 else {
                     const until = cutoff === 'last_order'
                         ? getLastOrderTime({ kitchenCloseTime: s.qr_kitchen_close_time, closingTime: s.closing_time })

@@ -7,7 +7,8 @@ import { useBooking } from './hooks/useBooking'
 export default function BookingPage() {
     // The open/closed check and the booking data load run side by side; step 1 renders
     // straight away (no full-screen loader to swap out, which is what shifted the layout).
-    const { status, retry } = useServiceStatus('shop_mode_table')
+    // Only a manual close shuts booking; same-day slots past last order are disabled in step 1
+    const { status, retry } = useServiceStatus('shop_mode_table', { cutoff: 'none' })
     const { requestBookingData } = useBooking()
 
     useEffect(() => {

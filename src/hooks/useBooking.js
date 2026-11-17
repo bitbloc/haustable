@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useBookingContext } from '../context/BookingContext'
 import { supabase } from '../lib/supabaseClient'
 import { toThaiISO } from '../utils/timeUtils'
-import { isBookingOverlap } from '../utils/availabilityUtils'
+import { isBookingOverlap, withPublicHoldTag } from '../utils/availabilityUtils'
 import { useOrderSubmission } from './useOrderSubmission'
 import { getLiffIdToken } from '../utils/liffLoader'
 import { isTableTooSmall } from '../utils/tableCapacity'
@@ -69,16 +69,15 @@ export function useBooking() {
 
             // Fetch ALL active bookings for this date (Simple optimized fetch)
             // We fetch the whole day to ensure we catch any overlapping "Long" bookings or "Multi-slot" bookings.
-            // staff_remark is internal staff text and is not read on the public page; without it a free
-            // booking's [HOLD:n] release is not applied here, so a no-show table stays shut for its 2 h
-            // window (stricter, never a double booking).
+            // staff_remark is internal staff text and is not read on the public page; the free-booking
+            // hold ([HOLD:n]) is rebuilt from source / booking_type / deposit_amount instead.
             const dateStr = state.date // YYYY-MM-DD
             const dayStart = `${dateStr}T00:00:00+07:00`
             const dayEnd = `${dateStr}T23:59:59+07:00`
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, end_time, booking_type, status')
+                .select('table_id, booking_time, end_time, booking_type, status, source, deposit_amount')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
@@ -89,7 +88,8 @@ export function useBooking() {
             const statuses = {}
             const now = new Date()
 
-            data.forEach(b => {
+            const holdMinutes = state.settings.bookingHoldMinutes || 30
+            data.map(row => withPublicHoldTag(row, holdMinutes)).forEach(b => {
                 // Smart Dynamic Turn & Live Seated Protection
                 if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30, occupiedBlocksRestOfDay: true })) {
                     bookedIds.push(b.table_id)
@@ -148,7 +148,7 @@ export function useBooking() {
 
             const { data: conflictBookings } = await supabase
                 .from('bookings')
-                .select('id, booking_time, end_time, status, booking_type')
+                .select('id, booking_time, end_time, status, booking_type, source, deposit_amount')
                 .eq('table_id', state.selectedTable.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', `${state.date}T00:00:00+07:00`)
@@ -156,7 +156,7 @@ export function useBooking() {
 
             if (conflictBookings && conflictBookings.length > 0) {
                 const now = new Date()
-                const hasOverlap = conflictBookings.some(b => {
+                const hasOverlap = conflictBookings.map(row => withPublicHoldTag(row, holdMinutes)).some(b => {
                     return isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30, occupiedBlocksRestOfDay: true })
                 })
                 if (hasOverlap) {
