@@ -1812,11 +1812,12 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                     if (changed) updateOpenStatus();
                 }
                 drawLine(s);
-                if (s.left > SHOW_WITHIN) { box.hidden = true; return; }
+                if (s.left > SHOW_WITHIN) { box.hidden = true; return s; }
                 const m = Math.floor(s.left / 60);
                 const sec = s.left % 60;
+                // Whole minutes, floored, so it reads 11 นาที → 10 นาที → 10:00 (at 600s) without a jump
                 const minutesOnly = s.left > SECONDS_WITHIN;
-                const str = minutesOnly ? String(Math.ceil(s.left / 60)) : m + ':' + pad(sec);
+                const str = minutesOnly ? String(m) : m + ':' + pad(sec);
                 if (unitEl) unitEl.hidden = !minutesOnly;
                 if (str.replace(/\\d/g, '0') !== shape) build(str);
                 else {
@@ -1824,8 +1825,9 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                     for (const ch of str) { if (ch !== ':') setDigit(cells[i++], Number(ch)); }
                 }
                 // Screen readers hear the minute, not every second
-                if (sec === 0 || !srEl.textContent) srEl.textContent = spoken(s.left);
+                if (minutesOnly || sec === 0 || !srEl.textContent) srEl.textContent = spoken(s.left);
                 box.hidden = false;
+                return s;
             }
 
             // Timeline on the card's bottom divider
@@ -1849,11 +1851,24 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                 }
                 line.style.setProperty('--p', String(p));
             }
+            // How many second boundaries until the display next needs to change:
+            // - more than 10 minutes left: once a minute, when the floored minute drops (left % 60 + 1),
+            //   also stopping exactly at the 1-hour mark (box appears) and at 600s (switch to 10:00).
+            //   Past the hour the box is hidden and only the timeline moves, once a minute.
+            // - last 10 minutes: every second.
+            function secondsUntilNextChange(left) {
+                if (left <= SECONDS_WITHIN) return 1;
+                let k = (left % 60) + 1;
+                if (left > SHOW_WITHIN) k = Math.min(k, left - SHOW_WITHIN);
+                k = Math.min(k, left - SECONDS_WITHIN);
+                return Math.max(1, k);
+            }
             function schedule() {
                 clearTimeout(timer);
-                if (document.hidden) return;
-                tick();
-                timer = setTimeout(schedule, 1000 - (Date.now() % 1000) + 15);
+                if (document.hidden) return; // visibilitychange re-runs this when the tab is shown again
+                const s = tick();
+                const k = secondsUntilNextChange(s.left);
+                timer = setTimeout(schedule, k * 1000 - (Date.now() % 1000) + 15);
             }
             document.addEventListener('visibilitychange', schedule);
             schedule();
