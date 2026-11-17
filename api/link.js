@@ -472,7 +472,10 @@ function fullMenuPayload(data) {
     }
 }
 
-function generateStandaloneLandingHtml(data) {
+// utm_content that says the ad sold the location ("location", "map", "naga" ...) → location-first banner
+const LOCATION_AD_RE = /loc|map|direct|nav|near|naga|phaya|พญานาค|นำทาง/
+
+function generateStandaloneLandingHtml(data, opts = {}) {
     const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
     const menuItems = data.menuItems || []
     const categories = data.categories || []
@@ -637,6 +640,10 @@ function generateStandaloneLandingHtml(data) {
     const locationTextLo = escapeHtml(settings.link_location_text_lo || DEFAULT_SETTINGS.link_location_text_lo)
     // "11:00 - 21:30 น." → open and close times for the two-column hours grid
     const hoursSplit = hoursMain.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/)
+
+    // Location-first banner is decided here from the ad URL, so it is in the first paint and never pushes the page down.
+    // The CDN caches per full URL, so each utm_content gets its own copy.
+    const locationFirst = LOCATION_AD_RE.test(String(opts.utmContent || '').toLowerCase())
 
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
@@ -1171,12 +1178,12 @@ function generateStandaloneLandingHtml(data) {
 
         <main id="main">
 
-        <!-- Location-first banner: shown when utm_content says the ad sold the location -->
-        <section class="loc-hero" id="loc-hero" hidden>
+        <!-- Location-first banner: rendered only when utm_content says the ad sold the location -->
+        ${locationFirst ? `<section class="loc-hero" id="loc-hero">
             <div class="loc-hero-title">${tt(directionsSub, directionsSubEn, directionsSubZh, directionsSubLo)}</div>
             <div class="loc-hero-sub">${tt('ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ', 'By the Mekong · Walk-ins welcome · Parking')}</div>
             <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">${tt('นำทางมาร้าน', 'Get directions')} <span class="arrow">→</span></a>
-        </section>
+        </section>` : ''}
 
         ${setGroups.length > 0 ? `
         <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
@@ -1840,17 +1847,6 @@ function generateStandaloneLandingHtml(data) {
             schedule();
         })();
 
-        // ─── LOCATION-FIRST MODE: ad sold the location (utm_content like "location", "map", "naga") ───
-        // Deferred: getUtmParams() relies on constants declared further down this script
-        setTimeout(function() {
-            try {
-                const content = (getUtmParams().utm_content || '').toLowerCase();
-                if (/loc|map|direct|nav|near|naga|phaya|พญานาค|นำทาง/.test(content)) {
-                    document.getElementById('loc-hero').hidden = false;
-                }
-            } catch(e) {}
-        }, 0);
-
         // ─── MODAL HISTORY: phone back button / Esc closes the modal instead of leaving the page ───
         function pushModalState() {
             if (!(history.state && history.state.hausModal)) history.pushState({ hausModal: true }, '');
@@ -2409,7 +2405,7 @@ export default async function handler(req, res) {
         }
 
         // 4b. Generate Autonomous High-Performance Standalone HTML
-        const html = generateStandaloneLandingHtml(data)
+        const html = generateStandaloneLandingHtml(data, { utmContent: parsedUrl.searchParams.get('utm_content') || '' })
 
         // 5. Edge CDN Caching Strategy:
         // - Sub-30ms instant TTFB via Vercel Edge Cache with SWR (stale-while-revalidate=86400)
