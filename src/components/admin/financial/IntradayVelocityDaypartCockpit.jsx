@@ -2930,7 +2930,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             {/* Top Items Ordered in this hour */}
                             <div className="pt-2">
                                 <div className="text-xs sm:text-xs font-bold text-[oklch(18%_0.012_28)] mb-2 flex items-center justify-between">
-                                    <span className="truncate">TOP MENU ITEMS IN THIS HOUR // รายการอาหารยอดนิยม</span>
+                                    <span className="truncate">TOP MENU ITEMS IN THIS HOUR · รายการอาหารยอดนิยม</span>
                                     <span className="text-xs text-[oklch(42%_0.010_28)] font-normal shrink-0">
                                         {drillTopItems.length > 0 ? `${drillTopItems.length} รายการหลัก` : ''}
                                     </span>

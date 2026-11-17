@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback, useTransition, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabaseClient'
 
 import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly } from './utils/timeUtils'
@@ -14,6 +14,7 @@ import { motion } from 'framer-motion'
 // Live Now (default landing) stays in the main chunk
 import SimplifiedLiveOverview from './components/admin/overview/SimplifiedLiveOverview'
 import SimplifiedBillsSummaryList from './components/admin/overview/SimplifiedBillsSummaryList'
+import { AdminSkeletonRows } from './components/admin/AdminKit'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from './utils/tableTransferHelper'
 import { computeDailyOverviewMetrics } from './utils/overviewMetricsHelper'
 
@@ -42,6 +43,9 @@ export default function AdminDashboard() {
     const [shifts, setShifts] = useState([]) // Stores shifts for Selected Date / Active shift
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('bills') // bills, shifts, inbox, schedule, floor
+    // Placeholders only before the first answer. After that a reload (date change, refresh) keeps the
+    // rows on screen, dimmed and inert, instead of swapping them for "loading" text and back.
+    const [hasLoaded, setHasLoaded] = useState(false)
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
     const [overviewMode, setOverviewMode] = useState(() => {
         // Always default to 'simplified' (LIVE NOW // โต๊ะสดหน้าร้าน) on initial landing
@@ -61,8 +65,14 @@ export default function AdminDashboard() {
         return 'simplified' // Default: LIVE NOW
     })
 
+    // Mode and tab switches run as transitions: the Pro blocks and each tab body are lazy chunks, and a plain
+    // state change swapped the whole view for a short placeholder while the chunk loaded. The page collapsed
+    // to one screen, the browser clamped the scroll to the top, and the owner had to scroll back down.
+    // In a transition React keeps the current view on screen (dimmed below) until the next one is ready.
+    const [isSwitching, startSwitch] = useTransition()
+
     const handleSetOverviewMode = (mode) => {
-        setOverviewMode(mode)
+        startSwitch(() => setOverviewMode(mode))
         try {
             sessionStorage.setItem('onhaus_admin_overview_mode', mode)
         } catch {
@@ -289,6 +299,7 @@ export default function AdminDashboard() {
             // non-silent requests cleared it, the page stayed on "loading" forever.
             if (requestId === activeRequestIdRef.current) {
                 setLoading(false)
+                setHasLoaded(true)
             }
         }
     }
@@ -565,12 +576,15 @@ export default function AdminDashboard() {
         setSlipData({ booking, type })
     }
 
+    const firstLoad = loading && !hasLoaded
+    const isStale = isSwitching || (loading && hasLoaded)
+
     const getTabContent = () => {
         if (activeTab === 'bills') {
             return (
                 <AllDailyBillsHub
                     bookings={dailyBookings}
-                    loading={loading}
+                    loading={firstLoad}
                     onPrintSlip={handlePrint}
                     onViewSlip={setViewSlipUrl}
                     onOpenTaxInvoice={setTaxInvoiceBooking}
@@ -584,7 +598,7 @@ export default function AdminDashboard() {
             return (
                 <AdminShiftsLedgerTab
                     shifts={shifts}
-                    loading={loading}
+                    loading={firstLoad}
                     selectedDate={selectedDate}
                     onRefreshShifts={() => fetchData(false, selectedDate)}
                 />
@@ -605,7 +619,7 @@ export default function AdminDashboard() {
             return (
                 <ScheduleSection 
                     bookings={scheduleBookings} 
-                    loading={loading} 
+                    loading={firstLoad} 
                     onPrint={handlePrint}
                     onViewSlip={setViewSlipUrl}
                 />
@@ -755,6 +769,11 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
+                <div
+                    className={`transition-opacity duration-150 ${isStale ? 'opacity-60 pointer-events-none' : ''}`}
+                    aria-busy={isStale || undefined}
+                >
+                <Suspense fallback={<AdminSkeletonRows rows={12} className="mb-6" />}>
                 {overviewMode === 'simplified' ? (
                     <div className="space-y-6 mb-6">
                         {/* 1. Simplified Live Floor (Direct Floor Awareness with Zero Graph Clutter) */}
@@ -768,7 +787,7 @@ export default function AdminDashboard() {
                             activeUnpaidCount={activeUnpaidCount}
                             shifts={shifts}
                             selectedDate={selectedDate}
-                            loading={loading}
+                            loading={firstLoad}
                             hideHeroKpis={false}
                             onRefresh={() => fetchData(true, selectedDate)}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
@@ -780,12 +799,11 @@ export default function AdminDashboard() {
                         <SimplifiedBillsSummaryList 
                             bookings={dailyBookings}
                             selectedDate={selectedDate}
-                            loading={loading}
+                            loading={firstLoad}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                         />
                     </div>
                 ) : (
-                    <Suspense fallback={<div className="h-64 rounded-2xl border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)]" aria-busy="true" />}>
                     <div className="space-y-6 mb-6">
                         {/* 0. Modern Bento Executive Data Visualization Dashboard */}
                         <AdminExecutiveDataVizDashboard
@@ -804,7 +822,7 @@ export default function AdminDashboard() {
                             adTelemetry={adTelemetry}
                             shifts={shifts}
                             selectedDate={selectedDate}
-                            loading={loading}
+                            loading={firstLoad}
                             onOpenShiftLedger={() => setActiveTab('shifts')}
                             onSwitchToLiveNow={() => handleSetOverviewMode('simplified')}
                             onOpenDailySlip={() => setShowDailySummaryModal(true)}
@@ -817,14 +835,14 @@ export default function AdminDashboard() {
                             onInspectBill={(order) => handlePrint(order, 'bill')}
                             onUpdateStatus={updateStatus}
                             onOpenProMode={() => setActiveTab('inbox')}
-                            loading={loading}
+                            loading={firstLoad}
                         />
 
                         {/* 2. Intraday Velocity & Daypart Chart (Compact Header Mode avoids duplicate KPI clutter) */}
                         <IntradayVelocityDaypartCockpit
                             bookings={dailyBookings}
                             selectedDate={selectedDate}
-                            loading={loading}
+                            loading={firstLoad}
                             totalSeats={derivedFloorOccupancy.totalTables > 0 ? derivedFloorOccupancy.totalTables * 3 : 45}
                             filterMode="day"
                             compactMode={true}
@@ -847,7 +865,7 @@ export default function AdminDashboard() {
                                     <button
                                         key={tab.key}
                                         type="button"
-                                        onClick={() => setActiveTab(tab.key)}
+                                        onClick={() => startSwitch(() => setActiveTab(tab.key))}
                                         className={`h-11 -mb-px border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                                             isActive
                                                 ? 'border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium'
@@ -864,12 +882,18 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* 5. Tab Content */}
-                        <div>
-                            {getTabContent()}
+                        {/* Own boundary: a tab body that is still loading holds its place with rows, never the whole Pro view.
+                            The floor of 70vh keeps the tab strip where it is when a short tab (an empty inbox) follows a long one;
+                            without it the page got shorter than the scroll position and the browser pulled the view up. */}
+                        <div className="min-h-[70vh]">
+                            <Suspense fallback={<AdminSkeletonRows rows={8} />}>
+                                {getTabContent()}
+                            </Suspense>
                         </div>
                     </div>
-                    </Suspense>
                 )}
+                </Suspense>
+                </div>
             </div>
 
             {/* Lazy-Loaded Modals Wrapped in Suspense */}

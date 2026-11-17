@@ -511,8 +511,8 @@ export default function DailySummarySlipModal({
                         </span>
                         <h3 className="text-sm md:text-base font-black text-[oklch(18%_0.012_28)] uppercase tracking-tight">
                             {targetShift 
-                                ? `สลิปสรุปปิดกะ // กะที่ ${targetShift.index || targetShift.shift_number || ''} · ${targetShift.staff_name || targetShift.staffName || 'Staff'}` 
-                                : `สลิปสรุปยอดปิดวัน // ${selectedDate}`
+                                ? `สลิปสรุปปิดกะ · กะที่ ${targetShift.index || targetShift.shift_number || ''} · ${targetShift.staff_name || targetShift.staffName || 'Staff'}` 
+                                : `สลิปสรุปยอดปิดวัน · ${selectedDate}`
                             }
                         </h3>
                     </div>

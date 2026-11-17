@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly, getThaiDate, formatThaiDateOnly } from '../../../utils/timeUtils'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking, parseTableTransferInfo } from '../../../utils/tableTransferHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
+import { AdminSkeletonRows } from '../AdminKit'
 
 /**
  * SimplifiedBillsSummaryList
@@ -150,9 +151,7 @@ export default function SimplifiedBillsSummaryList({
 
             {/* Content Area */}
             {loading ? (
-                <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)]">
-                    กำลังโหลดรายการบิล...
-                </div>
+                <AdminSkeletonRows rows={6} />
             ) : filteredBookings.length === 0 ? (
                 <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)] border border-[oklch(88%_0.012_28)] bg-[oklch(95.5%_0.008_28)] rounded-xl">
                     ไม่พบรายการบิลในหมวดหมู่นี้

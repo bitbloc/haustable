@@ -1,5 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
 import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationMinutes, formatThaiDuration, formatThaiRelativeTime } from '../../../utils/timeUtils'
@@ -236,6 +238,38 @@ function OverviewTableCard({
     const hasMoreThan15Items = orderItems.length > 15
     const now = useSharedLiveClock()
 
+    // The order list grows with its content up to the view's cap and is then cut off with a fade.
+    // No scrollbar inside the card: a cut-off card says so in its footer and opens the full bill on tap.
+    const listRef = useRef(null)
+    const [isClipped, setIsClipped] = useState(false)
+    useLayoutEffect(() => {
+        const el = listRef.current
+        const measure = () => {
+            const clipped = Boolean(el) && el.scrollHeight > el.clientHeight + 1
+            setIsClipped(prev => (prev === clipped ? prev : clipped))
+        }
+        measure()
+        if (!el || typeof ResizeObserver === 'undefined') return undefined
+        const observer = new ResizeObserver(measure)
+        observer.observe(el)
+        return () => observer.disconnect()
+    })
+    const listClip = isClipped
+        ? { maskImage: 'linear-gradient(to bottom, black calc(100% - 40px), transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black calc(100% - 40px), transparent)' }
+        : undefined
+
+    // A line that arrives while the card is on screen folds open instead of pushing the list down in one frame.
+    // Lines present when the card first rendered are stamped 0 and never animate.
+    const firstSeen = useRef(null)
+    const isFirstRender = firstSeen.current === null
+    if (isFirstRender) firstSeen.current = new Map()
+    const rowIn = (id) => {
+        if (id == null) return ''
+        if (!firstSeen.current.has(id)) firstSeen.current.set(id, isFirstRender ? 0 : now || Date.now())
+        const seenAt = firstSeen.current.get(id)
+        return seenAt > 0 && (now || Date.now()) - seenAt < 1500 ? 'admin-row-in' : ''
+    }
+
     // Urgency calculation based on elapsed minutes from latest order:
     // <= 10m: Fresh incoming order / new round (Quiet Pulse with animate-rams-breath)
     // 10-15m: Cooling down (Warm muted accent bar, completely still)
@@ -293,9 +327,9 @@ function OverviewTableCard({
 
     return (
         <div
-            onClick={hasMoreThan15Items ? () => onInspect(item) : undefined}
+            onClick={isOccupied ? () => onInspect(item) : undefined}
             className={`${cfg.cardPadding} rounded-xs border transition-colors duration-150 min-w-0 w-full overflow-hidden ${
-                hasMoreThan15Items ? 'cursor-pointer hover:border-[oklch(18%_0.012_28)]' : 'cursor-default'
+                isOccupied ? 'cursor-pointer hover:border-[oklch(18%_0.012_28)]' : 'cursor-default'
             } flex flex-col justify-between ${bgClass} ${borderClass} ${leftAccentClass}`}
         >
             {/* 1. Header (Magazine Editorial Hierarchy) */}
@@ -415,7 +449,7 @@ function OverviewTableCard({
                                 const isSingleRoundFresh = isFreshOrder && (rTimeMs > 0 ? (now - rTimeMs) / 60000 <= 10 : true)
 
                                 return (
-                                    <div className={`${cfg.listMaxHeight} overflow-y-auto ${cfg.itemSpacing} pr-1 overscroll-contain`}>
+                                    <div ref={listRef} style={listClip} className={`${cfg.listMaxHeight} overflow-hidden ${cfg.itemSpacing}`}>
                                         {isSingleRoundFresh && (
                                             <div className="flex items-center justify-between pb-1 mb-1 border-b border-[oklch(88%_0.012_28)] tabular-nums text-xs">
                                                 <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
@@ -438,7 +472,7 @@ function OverviewTableCard({
                                                 const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
 
                                                 return (
-                                                    <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
+                                                    <div key={it.id || idx} className={`${rowIn(it.id)} ${rowIn(it.id)} pt-1.5 first:pt-0 flex items-start justify-between gap-2`}>
                                                         <div className="flex items-start gap-1.5 min-w-0 flex-1">
                                                             <span className={` tabular-nums shrink-0 mt-0.5 ${
                                                                 isSingleRoundFresh 
@@ -474,7 +508,7 @@ function OverviewTableCard({
                             })()
                         ) : (
                             // Multiple rounds: Micro-Timeline with Newest at Top
-                            <div className={`${cfg.listMaxHeight} overflow-y-auto space-y-2.5 pr-1 overscroll-contain`}>
+                            <div ref={listRef} style={listClip} className={`${cfg.listMaxHeight} overflow-hidden space-y-2.5`}>
                                 {reversedRounds.map((round, rIdx) => {
                                     const isNewest = rIdx === 0
 
@@ -512,7 +546,7 @@ function OverviewTableCard({
                                                         const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
 
                                                         return (
-                                                            <div key={it.id || idx} className="pt-1.5 first:pt-1 flex items-start justify-between gap-2">
+                                                            <div key={it.id || idx} className={`${rowIn(it.id)} ${rowIn(it.id)} pt-1.5 first:pt-1 flex items-start justify-between gap-2`}>
                                                                 <div className="flex items-start gap-1.5 min-w-0 flex-1">
                                                                     <span className=" font-black text-[oklch(52%_0.16_28)] tabular-nums shrink-0 text-xs mt-0.5">
                                                                         {it.quantity}×
@@ -563,7 +597,7 @@ function OverviewTableCard({
                                                     const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
 
                                                     return (
-                                                        <div key={it.id || idx} className="pt-1.5 first:pt-0.5 flex items-start justify-between gap-2 text-[oklch(45%_0.010_28)]">
+                                                        <div key={it.id || idx} className={`${rowIn(it.id)} ${rowIn(it.id)} pt-1.5 first:pt-0.5 flex items-start justify-between gap-2 text-[oklch(45%_0.010_28)]`}>
                                                             <div className="flex items-start gap-1.5 min-w-0 flex-1">
                                                                 <span className=" text-[oklch(55%_0.010_28)] font-semibold tabular-nums shrink-0 text-xs mt-0.5">
                                                                     {it.quantity}×
@@ -626,7 +660,7 @@ function OverviewTableCard({
                                 </span>
                             )}
                         </div>
-                        {hasMoreThan15Items && (
+                        {(hasMoreThan15Items || isClipped) && (
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -694,6 +728,7 @@ export default function SimplifiedLiveOverview({
     const [selectedFilter, setSelectedFilter] = useState('occupied')
     const [zoomMode, setZoomMode] = useState('card') // 'card' | 'list'
     const [inspectingTable, setInspectingTable] = useState(null)
+    const reduceMotion = useReducedMotion()
     const [isFullscreen, setIsFullscreen] = useState(false)
     const containerRef = useRef(null)
 
@@ -1216,7 +1251,7 @@ export default function SimplifiedLiveOverview({
     const isDataLoading = loading || loadingInternal
 
     return (
-        <div 
+        <div
             ref={containerRef}
             className={`space-y-4 font-sans select-none transition-all duration-200 ${
                 isFullscreen ? 'fixed inset-0 z-50 bg-[oklch(97%_0.008_28)] p-4 md:p-6 overflow-y-auto' : ''
@@ -1754,14 +1789,23 @@ export default function SimplifiedLiveOverview({
             )}
 
             {/* 4. Complete Food & Drink Order Checklist Modal */}
+            {/* Modal timing (transitions.dev 06): in 250ms from 0.96, out 150ms. admin-scrim opts out of the CSS scrim fade, this owns both. */}
+            <AnimatePresence>
             {inspectingTable && (() => {
                 const inspectingRounds = inspectingTable.orderRoundsInfo || groupOrderItemsIntoRounds(inspectingTable.orderItems, inspectingTable.startTime)
                 return (
-                    <div 
+                    <motion.div
+                        key="inspect-table"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+                        exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } }}
                         onClick={() => setInspectingTable(null)}
-                        className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 z-[60] flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
+                        className="admin-scrim fixed inset-0 bg-[oklch(18%_0.012_28)]/60 z-[60] flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
                     >
-                        <div 
+                        <motion.div
+                            initial={reduceMotion ? false : { scale: 0.96 }}
+                            animate={{ scale: 1, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+                            exit={reduceMotion ? undefined : { scale: 0.96, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } }}
                             onClick={(e) => e.stopPropagation()}
                             className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm max-w-lg w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden font-sans animate-in zoom-in-95 duration-200"
                         >
@@ -2102,10 +2146,11 @@ export default function SimplifiedLiveOverview({
                                 ปิดหน้าต่าง
                             </button>
                         </div>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )
         })()}
+            </AnimatePresence>
         </div>
     )
 }

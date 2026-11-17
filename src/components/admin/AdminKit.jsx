@@ -115,6 +115,25 @@ export function AdminSelect({ value, onChange, options, label, className = '' })
     )
 }
 
+/**
+ * Placeholder rows in the shape of a list (time, name, amount), shown only while a list has
+ * nothing to show yet. It holds the list's height so the page does not collapse and re-grow.
+ */
+export function AdminSkeletonRows({ rows = 6, className = '' }) {
+    return (
+        <div className={`admin-skel border border-[oklch(88%_0.012_28)] rounded-lg divide-y divide-[oklch(90%_0.008_28)] ${className}`} aria-busy="true" aria-label="กำลังโหลด">
+            {Array.from({ length: rows }, (_, i) => (
+                <div key={i} className="h-12 px-4 flex items-center gap-4">
+                    <span className="h-3 w-12 rounded-sm bg-[oklch(92.5%_0.010_28)]" />
+                    <span className="h-3 w-16 rounded-sm bg-[oklch(92.5%_0.010_28)]" />
+                    <span className="h-3 flex-1 max-w-[40%] rounded-sm bg-[oklch(92.5%_0.010_28)]" />
+                    <span className="h-3 w-14 ml-auto rounded-sm bg-[oklch(92.5%_0.010_28)]" />
+                </div>
+            ))}
+        </div>
+    )
+}
+
 /** A hub's filter bar: one bordered panel, rows split by a hairline. */
 export function AdminToolbar({ children, className = 'mb-4' }) {
     return (

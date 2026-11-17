@@ -35,6 +35,7 @@ import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from '../../../utils/tableTransferHelper'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
+import { AdminSkeletonRows } from '../AdminKit'
 
 // Real-time Service Duration Badge Component
 function LiveServiceDurationBadge({ booking }) {
@@ -758,7 +759,7 @@ export default function AllDailyBillsHub({
                         <div className="flex items-center gap-2">
                             <Receipt size={20} className="text-[oklch(52%_0.16_28)]" />
                             <h2 className="tabular-nums text-base md:text-lg font-black text-[oklch(18%_0.012_28)]">
-                                BACKOFFICE ALL-BILLS HUB // {selectedDate}
+                                BACKOFFICE ALL-BILLS HUB · {selectedDate}
                             </h2>
                         </div>
                         <p className="tabular-nums text-[13px] text-[oklch(42%_0.010_28)] mt-0.5">
@@ -931,9 +932,7 @@ export default function AllDailyBillsHub({
 
             {/* Bills Display Area */}
             {loading ? (
-                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-12 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)] rounded-sm">
-                    กำลังโหลดข้อมูลบิลทั้งหมดประจำวัน...
-                </div>
+                <AdminSkeletonRows rows={8} />
             ) : filteredBookings.length === 0 ? (
                 <div className="bg-[oklch(98%_0.006_28)] border-2 border-dashed border-[oklch(85%_0.012_28)] p-12 rounded-sm text-center space-y-2">
                     <AlertCircle size={32} className="mx-auto text-[oklch(52%_0.16_28)] opacity-60" />
@@ -1294,7 +1293,7 @@ export default function AllDailyBillsHub({
                                     <div className="p-4 bg-[oklch(96%_0.008_28)] border-t border-[oklch(85%_0.012_28)] space-y-3 animate-in fade-in duration-200">
                                         <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 tabular-nums text-xs">
                                             <span className="font-black text-[oklch(18%_0.012_28)]  ">
-                                                ORDER ITEMS BREAKDOWN // รายการสินค้าในบิล
+                                                ORDER ITEMS BREAKDOWN · รายการสินค้าในบิล
                                             </span>
                                             <span className="text-[oklch(42%_0.010_28)] font-bold">
                                                 Order ID: {b.id}

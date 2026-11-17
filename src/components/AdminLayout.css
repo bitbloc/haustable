@@ -249,6 +249,24 @@
   from { opacity: 0; transform: translateY(6px); }
 }
 
+/* List placeholder rows breathe while data is on its way (transitions.dev skeleton pulse timing). */
+.admin-skel > * {
+  animation: admin-skel-pulse 1000ms ease-in-out infinite;
+}
+@keyframes admin-skel-pulse {
+  50% { opacity: 0.5; }
+}
+
+/* A new order line folds open in a live table card (resize timing: 300ms, smooth-out). */
+.admin-row-in {
+  overflow: hidden;
+  animation: admin-row-in 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes admin-row-in {
+  from { max-height: 0; opacity: 0; }
+  to   { max-height: 160px; opacity: 1; }
+}
+
 /* Dialog scrims fade in instead of snapping. */
 .admin-system .fixed.inset-0:not(.admin-scrim) {
   animation: admin-fade 140ms ease-out backwards;
@@ -286,6 +304,8 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-page > * > *,
   .admin-system .fixed.inset-0 { animation: none; }
+  .admin-skel > * { animation: none; }
+  .admin-row-in { animation: none; }
   .admin-system button:active { transform: none; }
   .admin-sidebar, .admin-main { transition: none; }
 }
