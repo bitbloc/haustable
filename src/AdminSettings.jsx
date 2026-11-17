@@ -70,7 +70,7 @@ export default function AdminSettings() {
         payment_qr_url: '',
         promptpay_id: '',
         promptpay_name: '',
-        easyslip_api_key: 'e0650eb6-a4c8-4e25-b109-54bf3a10256e',
+        easyslip_api_key: '',
         easyslip_enabled_pickup: 'true',
         easyslip_enabled_booking: 'true',
         truewallet_phone: '',

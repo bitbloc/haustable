@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const LINE_CHANNEL_ACCESS_TOKEN = 'LKoEdJlI0uQUbjxot6TQEhxKGfZNDyPifZAYcuXK4OIxbHF56bqZvCT5NPuUSEsdZY2LOuDkDdMRwf62buy8il5ytzTqFxmjJToe3Hn3KFuAy4Jz2PQ7joM9xABSuyL4vkrU31DllxrMMqBFz1Up3gdB04t89/1O/w1cDnyilFU='
+const LINE_CHANNEL_ACCESS_TOKEN = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN')
 const LINE_GROUP_ID = 'Cc2c65da5408563ef57ae61dee6ce3c1d'
 
 const corsHeaders = {
@@ -13,6 +13,14 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (!LINE_CHANNEL_ACCESS_TOKEN) {
+    console.error('[send-line-notify] LINE_CHANNEL_ACCESS_TOKEN is not configured')
+    return new Response(JSON.stringify({ error: 'LINE_CHANNEL_ACCESS_TOKEN is not configured' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 
   try {

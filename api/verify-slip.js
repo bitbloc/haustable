@@ -1,4 +1,3 @@
-const DEFAULT_EASYSLIP_KEY = 'e0650eb6-a4c8-4e25-b109-54bf3a10256e'
 const EASYSLIP_BASE_URL = 'https://api.easyslip.com/v2'
 
 export default async function handler(req, res) {
@@ -32,7 +31,11 @@ export default async function handler(req, res) {
             remark
         } = body
 
-        const activeApiKey = (customApiKey && customApiKey.trim()) || process.env.EASYSLIP_API_KEY || DEFAULT_EASYSLIP_KEY
+        const activeApiKey = (customApiKey && customApiKey.trim()) || process.env.EASYSLIP_API_KEY
+        if (!activeApiKey) {
+            console.error('[api/verify-slip] EASYSLIP_API_KEY is not configured')
+            return res.status(500).json({ success: false, error: 'EASYSLIP_API_KEY is not configured' })
+        }
 
         // Handle Action: INFO (Get quota & connection status)
         if (action === 'info') {

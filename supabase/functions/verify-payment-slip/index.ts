@@ -5,7 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const DEFAULT_EASYSLIP_KEY = 'e0650eb6-a4c8-4e25-b109-54bf3a10256e'
 const EASYSLIP_BASE_URL = 'https://api.easyslip.com/v2'
 
 interface VerifyRequest {
@@ -32,7 +31,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    let apiKey = customApiKey?.trim() || Deno.env.get('EASYSLIP_API_KEY') || DEFAULT_EASYSLIP_KEY
+    let apiKey = customApiKey?.trim() || Deno.env.get('EASYSLIP_API_KEY') || ''
     try {
       const { data: settingData } = await supabaseAdmin
         .from('app_settings')
@@ -44,6 +43,14 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       console.warn('[verify-payment-slip] Error reading easyslip_api_key setting:', e)
+    }
+
+    if (!apiKey) {
+      console.error('[verify-payment-slip] EASYSLIP_API_KEY is not configured')
+      return new Response(JSON.stringify({ success: false, error: 'EASYSLIP_API_KEY is not configured' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      })
     }
 
     // Handle Action: INFO (Connection & Quota check)
