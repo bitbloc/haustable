@@ -339,6 +339,15 @@ function captionText(text) {
 }
 
 // Join phrases with a separator, each phrase kept on one line (Thai has no spaces to break on)
+// "ห่าง 2 นาที จากลานพญานาค" → two no-wrap phrases split at the last space, so a narrow cell wraps between
+// phrases ("ห่าง 2 นาที" / "จากลานพญานาค") and never inside a Thai word
+function lastPhraseHtml(text) {
+    const t = String(text || '').trim()
+    const i = t.lastIndexOf(' ')
+    if (i < 1) return `<span class="nb">${escapeHtml(t)}</span>`
+    return `<span class="nb">${escapeHtml(t.slice(0, i))}</span> <span class="nb">${escapeHtml(t.slice(i + 1))}</span>`
+}
+
 function phrasesHtml(text, splitter, joiner) {
     return String(text || '').split(splitter).map(t => t.trim()).filter(Boolean)
         .map(t => `<span class="nb">${escapeHtml(t)}</span>`).join(joiner)
@@ -781,7 +790,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
             --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
 
-            --text-xs: 12px; --text-sm: 13px; --text-md: 14px; --text-lg: 16px; --text-xl: 20px; --text-2xl: 24px;
+            /* Type scale (AGENTS.md §4): body (md) is 16px; sm is for secondary lines, xs only for labels */
+            --text-xs: 12px; --text-sm: 14px; --text-md: 16px; --text-lg: 18px; --text-xl: 20px; --text-2xl: 24px;
 
             --radius: 2px;
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -803,6 +813,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
         .arrow { font-family: var(--font-mono); }
         .nb { white-space: nowrap; }
+        @media (max-width: 380px) { :root { --bar-h: 68px; } }
         .fact-val.flow { display: block; }
         .fact-note { font-size: var(--text-xs); color: var(--color-muted); line-height: 1.4; }
 
@@ -1063,7 +1074,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .footer-brand { font-size: var(--text-md); font-weight: 700; }
         .footer-sub { font-size: var(--text-sm); color: var(--color-muted); }
         .footer-seo { font-size: var(--text-xs); line-height: 1.7; color: var(--color-muted); max-width: 46ch; }
-        .footer-copy { font-family: var(--font-mono); font-size: 11px; color: var(--color-label); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
+        .footer-copy { font-family: var(--font-mono); font-size: 12px; color: var(--color-label); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
 
         /* C4 sticky bar: full-width tabular cells */
         .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); background: var(--color-paper); border-top: 1px solid var(--color-ink); padding-bottom: env(safe-area-inset-bottom); }
@@ -1075,7 +1086,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .sticky-btn.map:hover { background: var(--accent-lime-press); }
         .sticky-btn.line { background: var(--color-line); color: var(--color-paper); }
         .sticky-btn.line:hover { background: var(--color-line-2); }
-        .sticky-sub { font-size: 11px; font-weight: 400; color: var(--color-muted); white-space: normal; line-height: 1.3; }
+        .sticky-sub { font-size: 12px; font-weight: 400; color: var(--color-muted); white-space: normal; line-height: 1.3; }
 
         /* Modals */
         .modal { display: none; position: fixed; inset: 0; z-index: var(--z-modal); background: var(--color-scrim); align-items: center; justify-content: center; padding: var(--space-4); }
@@ -1491,7 +1502,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             <div class="sticky-inner">
                 <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
                     <span>${tt('นำทาง', 'Directions')}</span>
-                    <span class="sticky-sub">${tt(directionsSub, directionsSubEn, directionsSubZh, directionsSubLo)}</span>
+                    <span class="sticky-sub">${tt(lastPhraseHtml(settings.link_directions_sub || DEFAULT_SETTINGS.link_directions_sub), lastPhraseHtml(settings.link_directions_sub_en || DEFAULT_SETTINGS.link_directions_sub_en), lastPhraseHtml(settings.link_directions_sub_zh || DEFAULT_SETTINGS.link_directions_sub_zh), lastPhraseHtml(settings.link_directions_sub_lo || DEFAULT_SETTINGS.link_directions_sub_lo))}</span>
                 </a>
                 <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">${tt('แชท LINE', 'LINE chat')}</a>
                 <a href="tel:+66985284217" id="cta-sticky-call" class="sticky-btn" onclick="handleCallClick(event)">${tt('โทร', 'Call')}</a>
