@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import generatePayload from 'promptpay-qr';
 import { getStoreHours } from '../utils/storeHours';
 import { QRCodeSVG } from 'qrcode.react';
+import { CfdIdleMotif, CfdDotsBackdrop } from './CfdMotif';
 import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../utils/printerHelper';
 
 // State changes fade in 180 ms (AGENTS.md §5): opacity only, no scale or slide
@@ -12,15 +13,6 @@ const FADE = { duration: 0.18, ease: [0.2, 0, 0, 1] };
 
 const LINE_LIFF_MEMBER_URL = "https://liff.line.me/2008674756-hTEWodVj";
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-
-const LOCAL_FEATURED_ITEMS = Object.freeze([
-    { url: '/assets/food-beef-rice.webp', name: 'ข้าวหน้าเนื้อโคขุนคั่วพริกเกลือ', price: 185, category: 'CHEF SIGNATURE' },
-    { url: '/assets/food-pouring-curry.webp', name: 'แกงกะหรี่เนื้อตุ๋นสูตรเข้มข้น', price: 220, category: 'SIGNATURE CURRY' },
-    { url: '/assets/food-pork-belly.webp', name: 'หมูกรอบคั่วพริกเกลือโบราณ', price: 165, category: 'HAUS SPECIALTY' },
-    { url: '/assets/food-green-curry.webp', name: 'แกงเขียวหวานเนื้อริบอาย', price: 240, category: 'CHEF RECOMMENDATION' },
-    { url: '/assets/food-tai-pla-curry.webp', name: 'แกงไตปลาปักษ์ใต้รสจัดจ้าน', price: 175, category: 'TRADITIONAL RECIPE' },
-    { url: '/assets/food-fried-garlic-pork.webp', name: 'หมูสามชั้นทอดน้ำปลาหอมกรอบ', price: 155, category: 'APPETIZER' }
-]);
 
 export default function POSCustomerDisplay() {
     // Mode state: 'IDLE' | 'CART' | 'ORDER_CONFIRMED' | 'CHECKOUT' | 'SPLIT_CHECKOUT' | 'SPLIT_SUCCESS' | 'SUCCESS'
@@ -42,9 +34,9 @@ export default function POSCustomerDisplay() {
         bookingId: null
     });
     const [qrPayload, setQrPayload] = useState(null);
-    const [slideshowImages, setSlideshowImages] = useState(LOCAL_FEATURED_ITEMS);
-    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [shopLogoUrl, setShopLogoUrl] = useState(null);
+    // Shop phone shown on the idle screen (settings: receipt_shop_phone, then contact_phone)
+    const [shopPhone, setShopPhone] = useState('098-528-4217');
     const [storePromptpayId, setStorePromptpayId] = useState('0614232455');
     const [storePromptpayName, setStorePromptpayName] = useState('ธัญญธร ศรีวิเศษ');
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
@@ -81,6 +73,12 @@ export default function POSCustomerDisplay() {
                     }
                     const resolvedPpId = getStorePromptpayId(settingsMap, parsedPrinterConfig);
                     setStorePromptpayId(resolvedPpId);
+
+                    const rawPhone = String(settingsMap.receipt_shop_phone || settingsMap.contact_phone || '').trim();
+                    if (rawPhone) {
+                        const digits = rawPhone.replace(/\D/g, '');
+                        setShopPhone(digits.length === 10 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}` : rawPhone);
+                    }
 
                     const nameVal = getStorePromptpayName(settingsMap, parsedPrinterConfig);
                     if (nameVal) {
@@ -134,56 +132,6 @@ export default function POSCustomerDisplay() {
     const VenueLogo = ({ className = "h-9 w-auto object-contain", alt = "ในบ้าน In the haus" }) => (
         <img src="/logo-inbaan-wordmark-plum.png" alt={alt} className={className} width="66" height="36" />
     );
-
-    // Helper to format image URL correctly
-    const getValidImageUrl = (urlStr) => {
-        if (!urlStr || urlStr === 'text_only') return null;
-        if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('data:')) {
-            return urlStr;
-        }
-        const cleanPath = urlStr.startsWith('/') ? urlStr.slice(1) : urlStr;
-        return `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/menu/${cleanPath}`;
-    };
-
-    // Fetch menu showcase images for IDLE mode
-    useEffect(() => {
-        const fetchImages = async () => {
-            try {
-                const { data } = await supabase
-                    .from('menu_items')
-                    .select('image_url, name, price, category_id, menu_categories(name)')
-                    .not('image_url', 'is', null)
-                    .neq('image_url', '')
-                    .limit(20);
-                
-                if (data && data.length > 0) {
-                    const validItems = data
-                        .map(item => ({
-                            url: getValidImageUrl(item.image_url),
-                            name: item.name,
-                            price: item.price,
-                            category: item.menu_categories?.name || 'SIGNATURE'
-                        }))
-                        .filter(item => Boolean(item.url));
-                    if (validItems.length > 0) {
-                        setSlideshowImages([...LOCAL_FEATURED_ITEMS, ...validItems]);
-                    }
-                }
-            } catch (err) {
-                console.error("Error fetching CFD slideshow images:", err);
-            }
-        };
-        fetchImages();
-    }, []);
-
-    // Slideshow transition interval (6.5s per slide)
-    useEffect(() => {
-        if (!slideshowImages || slideshowImages.length === 0) return;
-        const interval = setInterval(() => {
-            setCurrentSlideIndex(prev => (prev + 1) % slideshowImages.length);
-        }, 6500);
-        return () => clearInterval(interval);
-    }, [slideshowImages.length]);
 
     const resetToIdle = () => {
         if (autoResetTimerRef.current) {
@@ -530,11 +478,13 @@ export default function POSCustomerDisplay() {
     const CARD = 'bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-2xl';
 
     // Same top strip on every state: shop mark · what this screen is about · time
-    const CfdTopBar = ({ label }) => (
-        <header className="h-14 shrink-0 flex items-stretch bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
-            <div className="flex items-center px-5 border-r border-[var(--color-rule)]">
-                <VenueLogo className="h-9 w-auto object-contain" />
-            </div>
+    const CfdTopBar = ({ label, showLogo = true }) => (
+        <header className="relative z-10 h-14 shrink-0 flex items-stretch bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
+            {showLogo && (
+                <div className="flex items-center px-5 border-r border-[var(--color-rule)]">
+                    <VenueLogo className="h-9 w-auto object-contain" />
+                </div>
+            )}
             <div className="flex-1 min-w-0 flex items-center px-5">
                 <span className="text-lg font-bold leading-[1.5] text-[var(--color-ink)] truncate">{label}</span>
             </div>
@@ -643,7 +593,7 @@ export default function POSCustomerDisplay() {
     };
 
     // Helpers here are called as plain functions, not <Components/>: a component declared inside this one would
-    // remount on every parent render (the 6.5 s slideshow tick) and restart the countdown bar and the clock.
+    // remount on every parent render (every incoming POS message) and restart the countdown bar and the clock.
 
     // Itemised list used by cart and checkout
     const ItemRows = ({ items, qtyKey = 'quantity', detailed = false }) => (
@@ -677,43 +627,14 @@ export default function POSCustomerDisplay() {
     // IDLE: signature dish photo + member sign-up QR
     // -------------------------------------------------------------
     const renderIdleMode = () => {
-        const activeSlide = slideshowImages[currentSlideIndex];
         const hours = getStoreHours();
         return (
             <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
-                {CfdTopBar({ label: 'ยินดีต้อนรับสู่ ในบ้าน นครพนม' })}
+                {CfdTopBar({ label: 'ยินดีต้อนรับสู่ ในบ้าน นครพนม', showLogo: false })}
                 <div className="flex-1 min-h-0 flex">
-                    <div className="w-[55%] relative overflow-hidden bg-[var(--color-paper-3)] border-r border-[var(--color-rule)]">
-                        <AnimatePresence initial={false}>
-                            {activeSlide && (
-                                <motion.img
-                                    key={currentSlideIndex}
-                                    src={activeSlide.url}
-                                    alt={activeSlide.name}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                                    onError={() => {
-                                        setSlideshowImages(prev => {
-                                            const next = prev.filter((_, idx) => idx !== currentSlideIndex);
-                                            return next.length > 0 ? next : LOCAL_FEATURED_ITEMS;
-                                        });
-                                        setCurrentSlideIndex(0);
-                                    }}
-                                />
-                            )}
-                        </AnimatePresence>
-                        {activeSlide && (
-                            <div className={`absolute left-4 right-4 bottom-4 ${CARD} px-5 py-3 flex items-center justify-between gap-4`}>
-                                <div className="min-w-0">
-                                    <span className={LABEL}>เมนูแนะนำ · {String(currentSlideIndex + 1).padStart(2, '0')}/{String(slideshowImages.length || 1).padStart(2, '0')}</span>
-                                    <span className="block text-xl font-bold leading-[1.5] text-[var(--color-ink)] truncate">{activeSlide.name}</span>
-                                </div>
-                                <span className="shrink-0 font-mono text-2xl font-medium text-[var(--brand-plum)]">{money(activeSlide.price, 0)}</span>
-                            </div>
-                        )}
+                    {/* Brand motif: Southern-Thai words ride the lines around the ในบ้าน wordmark */}
+                    <div className="w-[55%] relative overflow-hidden bg-[var(--color-paper-2)] border-r border-[var(--color-rule)]">
+                        <CfdIdleMotif />
                     </div>
 
                     <div className="w-[45%] flex flex-col gap-4 p-5">
@@ -728,8 +649,8 @@ export default function POSCustomerDisplay() {
                         </div>
                         <div className={`${CARD} grid grid-cols-2 divide-x divide-[var(--color-rule)]`}>
                             <div className="px-4 py-3 min-w-0">
-                                <span className={LABEL}>Wi-Fi</span>
-                                <span className="block text-base font-bold text-[var(--color-ink)] truncate">IN THE HAUS 5G</span>
+                                <span className={LABEL}>ติดต่อร้าน</span>
+                                <span className="block font-mono text-base font-medium text-[var(--color-ink)] truncate">{shopPhone}</span>
                             </div>
                             <div className="px-4 py-3 min-w-0">
                                 <span className={LABEL}>เวลาเปิด</span>
@@ -746,9 +667,9 @@ export default function POSCustomerDisplay() {
     // ORDER CONFIRMED: sent to kitchen / bar (5 s, then back to idle)
     // -------------------------------------------------------------
     const renderOrderConfirmedMode = () => (
-        <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+        <div className="w-full h-full flex flex-col">
             {CfdTopBar({ label: tableLabel })}
-            <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+            <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center p-6">
                 <div className={`${CARD} w-full max-w-[560px] p-8 text-center`}>
                     <span className="font-mono text-sm font-medium uppercase tracking-[0.12em] text-[var(--brand-plum)]">Order received · รับออเดอร์แล้ว</span>
                     <h1 className="mt-2 text-[32px] font-bold leading-[1.5] text-[var(--color-ink)]">ส่งออเดอร์เข้าครัวแล้ว</h1>
@@ -792,9 +713,9 @@ export default function POSCustomerDisplay() {
         const count = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
         const isNamedGuest = orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer);
         return (
-            <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+            <div className="w-full h-full flex flex-col">
                 {CfdTopBar({ label: `${tableLabel} · รายการของคุณ` })}
-                <div className="flex-1 min-h-0 flex gap-4 p-4">
+                <div className="relative z-10 flex-1 min-h-0 flex gap-4 p-4">
                     <div className="w-5/12 flex flex-col gap-4 min-h-0">
                         {orderData.memberProfile ? (
                             MemberCard({})
@@ -858,9 +779,9 @@ export default function POSCustomerDisplay() {
     // CHECKOUT: bill recap + how to pay
     // -------------------------------------------------------------
     const renderCheckoutMode = () => (
-        <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+        <div className="w-full h-full flex flex-col">
             {CfdTopBar({ label: `${tableLabel} · ชำระเงิน` })}
-            <div className="flex-1 min-h-0 flex gap-4 p-4">
+            <div className="relative z-10 flex-1 min-h-0 flex gap-4 p-4">
                 <div className={`${CARD} w-1/2 flex flex-col min-h-0 px-5`}>
                     <div className="py-3 border-b border-[var(--color-rule)]">
                         <span className="text-lg font-bold text-[var(--color-ink)]">สรุปรายการ</span>
@@ -887,9 +808,9 @@ export default function POSCustomerDisplay() {
     const renderSplitCheckoutMode = () => {
         const title = orderData.splitMode === 'ITEMS' ? 'แยกจ่ายตามรายการ' : orderData.splitMode === 'EQUAL' ? 'หารเท่ากัน' : 'แยกจ่ายตามยอด';
         return (
-            <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+            <div className="w-full h-full flex flex-col">
                 {CfdTopBar({ label: `${tableLabel} · ${title}` })}
-                <div className="flex-1 min-h-0 flex gap-4 p-4">
+                <div className="relative z-10 flex-1 min-h-0 flex gap-4 p-4">
                     <div className={`${CARD} w-1/2 flex flex-col min-h-0 px-5`}>
                         <div className="py-3 border-b border-[var(--color-rule)] flex items-baseline justify-between">
                             <span className="text-lg font-bold text-[var(--color-ink)]">{title}</span>
@@ -935,9 +856,9 @@ export default function POSCustomerDisplay() {
 
     // Shared "done" screen for full and split payments
     const DoneScreen = ({ kicker, title, children }) => (
-        <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+        <div className="w-full h-full flex flex-col">
             {CfdTopBar({ label: tableLabel })}
-            <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+            <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center p-6">
                 <div className={`${CARD} w-full max-w-[560px] p-8 text-center`}>
                     <span className="font-mono text-sm font-medium uppercase tracking-[0.12em] text-[var(--color-accent-2)]">{kicker}</span>
                     <h1 className="mt-2 text-[32px] font-bold leading-[1.5] text-[var(--color-ink)]">{title}</h1>
@@ -990,6 +911,11 @@ export default function POSCustomerDisplay() {
 
     return (
         <div className="w-screen h-screen max-h-screen overflow-hidden bg-[var(--color-paper-2)] text-[var(--color-ink)] font-sans relative select-none cfd-container">
+            {mode !== 'IDLE' && (
+                <div className="absolute inset-x-0 top-14 bottom-0">
+                    <CfdDotsBackdrop />
+                </div>
+            )}
             <AnimatePresence mode="wait">
                 {mode === 'IDLE' && (
                     <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
