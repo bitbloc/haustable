@@ -251,14 +251,21 @@ Deno.serve(async (req) => {
     // --- Endpoints for LOW STOCK ---
     if (resource === 'low-stock') {
       if (req.method === 'GET') {
-        // Find items where current_quantity <= reorder_point
+        // Items at or under their reorder point or minimum. PostgREST cannot compare two columns
+        // (the old filter compared against the text 'reorder_point' and always failed), so the
+        // comparison is made here, with the same rule as the app (stockStatus).
         const { data, error } = await supabaseAdmin
           .from('stock_items')
           .select('*')
-          .filter('current_quantity', 'lte', 'reorder_point') // This syntax might vary depending on postgrest version, usually 'lte' works
           .order('category', { ascending: true })
         if (error) throw error
-        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        const low = (data || []).filter((i: any) => {
+          const q = Number(i.current_quantity) || 0
+          const rp = Number(i.reorder_point) || 0
+          const min = Number(i.min_stock_threshold) || 0
+          return q <= 0.0001 || (min > 0 && q <= min + 0.0001) || (rp > 0 && q <= rp + 0.0001)
+        })
+        return new Response(JSON.stringify(low), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
     }
 

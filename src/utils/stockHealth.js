@@ -3,6 +3,7 @@
 // Pure: fed by the stock page's rows and a map of how many recipes use each item.
 import { getUnitType } from './unitUtils';
 import { displayUnit } from './stockCount';
+import { usagePerStockUnit } from './recipeGraph';
 
 const lower = (v) => String(v ?? '').trim().toLowerCase();
 const factorOf = (item) => Number(item?.conversion_factor) || 1;
@@ -152,9 +153,12 @@ const MERGE_MESSAGES = {
 const stockUnitOf = (item) => lower(item?.unit || item?.pack_unit);
 
 /** Same counting unit, recipe unit and converter: the two can be added as they are. */
+// Same set-up only when one counted unit also holds the same amount: a 325 ml soda and a
+// 1,250 ml soda are both bottles of ml, but merging them needs a ratio (same rule as SQL merge)
 export const sameUnitSetup = (a, b) => stockUnitOf(a) === stockUnitOf(b)
     && lower(a?.usage_unit) === lower(b?.usage_unit)
-    && factorOf(a) === factorOf(b);
+    && factorOf(a) === factorOf(b)
+    && Math.abs(usagePerStockUnit(a) - usagePerStockUnit(b)) < 1e-9;
 
 const BASE = { g: ['mass', 1], kg: ['mass', 1000], ml: ['volume', 1], l: ['volume', 1000] };
 
