@@ -472,7 +472,10 @@ function fullMenuPayload(data) {
     }
 }
 
-function generateStandaloneLandingHtml(data) {
+// utm_content that says the ad sold the location ("location", "map", "naga" ...) → location-first banner
+const LOCATION_AD_RE = /loc|map|direct|nav|near|naga|phaya|พญานาค|นำทาง/
+
+function generateStandaloneLandingHtml(data, opts = {}) {
     const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
     const menuItems = data.menuItems || []
     const categories = data.categories || []
@@ -637,6 +640,10 @@ function generateStandaloneLandingHtml(data) {
     const locationTextLo = escapeHtml(settings.link_location_text_lo || DEFAULT_SETTINGS.link_location_text_lo)
     // "11:00 - 21:30 น." → open and close times for the two-column hours grid
     const hoursSplit = hoursMain.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/)
+
+    // Location-first banner is decided here from the ad URL, so it is in the first paint and never pushes the page down.
+    // The CDN caches per full URL, so each utm_content gets its own copy.
+    const locationFirst = LOCATION_AD_RE.test(String(opts.utmContent || '').toLowerCase())
 
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
@@ -825,7 +832,7 @@ function generateStandaloneLandingHtml(data) {
         .fact-val { font-size: var(--text-md); font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: var(--space-2); }
         .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--color-accent-2); }
         .dot.closed { background: var(--color-neutral); }
-        .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
+        .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-ink); line-height: 1.4; }
         .loc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
         .loc-map-btn { flex-shrink: 0; min-height: 48px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .loc-map-btn:hover { background: var(--color-ink-2); }
@@ -887,7 +894,7 @@ function generateStandaloneLandingHtml(data) {
         @media (min-width: 480px) { .sets-title { font-size: 36px; } }
         @media (prefers-reduced-motion: no-preference) {
             /* Only when the guest switches tabs: the first paint (and the LCP photo inside it) is never faded in */
-            .set-panel.entering:not([hidden]) { animation: set-in 240ms var(--ease-out); }
+            .set-panel.entering:not([hidden]) { animation: set-in 180ms var(--ease-out); }
             @keyframes set-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         }
 
@@ -929,7 +936,7 @@ function generateStandaloneLandingHtml(data) {
         .tab-btn:hover { background: var(--color-paper-2); }
         .tab-btn.active { color: var(--color-ink); }
         /* One marker slides between the three equal cells (--tab-i is set by markSection) */
-        .tab-bar::after { content: ''; position: absolute; left: 0; bottom: 0; width: calc(100% / 3); height: 3px; background: var(--color-ink); transform: translateX(calc(var(--tab-i, 0) * 100%)); transition: transform 250ms var(--ease-out); pointer-events: none; }
+        .tab-bar::after { content: ''; position: absolute; left: 0; bottom: 0; width: calc(100% / 3); height: 3px; background: var(--color-ink); transform: translateX(calc(var(--tab-i, 0) * 100%)); transition: transform 180ms var(--ease-out); pointer-events: none; }
 
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
@@ -964,7 +971,7 @@ function generateStandaloneLandingHtml(data) {
         .item-row.zoomable { cursor: zoom-in; }
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: var(--text-md); font-weight: 600; line-height: 1.45; }
-        .item-name-th { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-neutral); }
+        .item-name-th { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-label); }
         .item-desc { font-size: var(--text-sm); color: var(--color-muted); margin-top: 2px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
         .modifier-tag { display: inline-block; font-size: var(--text-xs); font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--color-rule); border-radius: var(--radius); background: var(--color-paper-2); margin-bottom: 2px; }
         .item-price { font-size: var(--text-md); font-weight: 600; margin-top: var(--space-1); }
@@ -986,7 +993,7 @@ function generateStandaloneLandingHtml(data) {
         .hours-fact { gap: var(--space-1); padding-top: var(--space-4); padding-bottom: var(--space-4); }
         .hours-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
         .hours-main { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-        .hours-note { font-size: var(--text-md); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
+        .hours-note { font-size: var(--text-md); font-weight: 600; color: var(--color-ink); line-height: 1.4; }
         .hours-state { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
         .hours-state::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); }
         .hours-state.closed { color: var(--color-muted); }
@@ -1000,18 +1007,20 @@ function generateStandaloneLandingHtml(data) {
         .hg-time { font-size: clamp(36px, 10.5vw, 52px); font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--color-ink); }
         .hours-line { position: relative; height: 14px; }
         .hours-line::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-rule); }
-        .hl-fill { position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-ink); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1); }
-        .hl-last { position: absolute; top: 3px; left: calc(var(--l, 0) * 100%); width: 2px; height: 8px; margin-left: -1px; background: var(--color-accent); }
-        .hl-now { position: absolute; inset: 0; transform: translateX(calc(var(--p, 0) * 100%)); transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1); opacity: 0; }
+        .hl-fill { position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-ink); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 180ms var(--ease-out); }
+        .hl-last { position: absolute; top: 3px; left: calc(var(--l, 0) * 100%); width: 2px; height: 8px; margin-left: -1px; background: var(--color-muted); }
+        .hl-now { position: absolute; inset: 0; transform: translateX(calc(var(--p, 0) * 100%)); transition: transform 180ms var(--ease-out); opacity: 0; }
         .hl-now > span { position: absolute; left: -1px; top: 0; width: 2px; height: 14px; background: var(--color-ink); }
         .hours-line.live .hl-now { opacity: 1; }
         .hours-line.closed .hl-fill, .hours-line.closed .hl-now { opacity: 0; }
         .hours-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px var(--space-2); margin-top: var(--space-2); font-size: var(--text-md); color: var(--color-muted); line-height: 1.4; }
         .hc-time { display: inline-flex; align-items: flex-end; font-size: 22px; font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; }
         .hc-d { display: inline-block; height: 1em; overflow: hidden; }
-        .hc-strip { display: flex; flex-direction: column; transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .hc-strip { display: flex; flex-direction: column; transition: transform 180ms var(--ease-out); }
         .hc-strip > span { display: block; height: 1em; line-height: 1; text-align: center; }
         .hc-sep { padding: 0 1px; transform: translateY(-0.04em); }
+        .hours-count[hidden] { display: none; }
+        .hc-unit { font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
         .hc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
         /* Galleries */
@@ -1029,7 +1038,7 @@ function generateStandaloneLandingHtml(data) {
         .footer-brand { font-size: var(--text-md); font-weight: 700; }
         .footer-sub { font-size: var(--text-sm); color: var(--color-muted); }
         .footer-seo { font-size: var(--text-xs); line-height: 1.7; color: var(--color-muted); max-width: 46ch; }
-        .footer-copy { font-family: var(--font-mono); font-size: 11px; color: var(--color-neutral); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
+        .footer-copy { font-family: var(--font-mono); font-size: 11px; color: var(--color-label); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
 
         /* C4 sticky bar: full-width tabular cells */
         .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); background: var(--color-paper); border-top: 1px solid var(--color-ink); padding-bottom: env(safe-area-inset-bottom); }
@@ -1054,29 +1063,33 @@ function generateStandaloneLandingHtml(data) {
 
         /* Press feedback: everything tappable answers the thumb */
         .row-link, .sig-card, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-cell { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
-        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.985); }
-        .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out); }
-        .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); }
-        /* Lazy gallery photos resolve out of a soft blur when they arrive (class is added by script only) */
-        .gallery-item img { transition: transform 600ms var(--ease-out), opacity 400ms ease-in-out, filter 400ms ease-in-out; }
-        .gallery-item img.img-wait { opacity: 0; filter: blur(2px); }
+        /* Press lands fast (90ms) and lets go at the normal speed, so the thumb feels it */
+        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.97); transition-duration: 90ms; }
+        /* Full-width buttons keep their gentler scale (0.97 of 560px is too big a jump), but land as fast */
+        .set-btn:active, .full-menu-btn:active { transition-duration: 90ms; }
+        .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out), opacity 180ms var(--ease-out); }
+        /* Hover zoom only where there is a real hover; on phones it fired after a tap */
+        @media (hover: hover) { .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); } }
+        /* Photos still loading fade in on arrival over the paper-2 placeholder (class is added by script only) */
+        .sig-img-wrap img.img-wait, .gallery-item img.img-wait { opacity: 0; }
         .row-link:hover .arrow { transform: translateX(3px); }
         .row-link .arrow { transition: transform var(--dur) var(--ease-out); }
 
         /* Modals fade in, the picture settles */
-        .modal.open { animation: modal-in 220ms var(--ease-out); }
-        .modal.open .modal-content { animation: modal-pic 320ms var(--ease-out); }
+        /* The picture is handed up to you (rise, not zoom) */
+        .modal.open { animation: modal-in 180ms var(--ease-out); }
+        .modal.open .modal-content { animation: modal-pic 180ms var(--ease-out); }
         @keyframes modal-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modal-pic { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
-        /* Closing is quicker and quieter than opening; hideModal() drops the class after 150ms */
-        .modal.closing { display: flex; pointer-events: none; animation: modal-out 150ms var(--ease-out) forwards; }
-        .modal.closing .modal-content { animation: modal-pic-out 150ms var(--ease-out) forwards; }
+        @keyframes modal-pic { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        /* Closing is quicker and quieter than opening; hideModal() drops the class after 120ms */
+        .modal.closing { display: flex; pointer-events: none; animation: modal-out 120ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+        .modal.closing .modal-content { animation: modal-pic-out 120ms cubic-bezier(0.4, 0, 1, 1) forwards; }
         @keyframes modal-out { to { opacity: 0; } }
-        @keyframes modal-pic-out { to { opacity: 0; transform: scale(0.96); } }
+        @keyframes modal-pic-out { to { opacity: 0; transform: translateY(8px); } }
 
         /* Reveal on scroll: added by script only to things below the first screen, so nothing is hidden without JS and the first paint is untouched */
-        .reveal { opacity: 0; transform: translateY(16px); }
-        .reveal.in { opacity: 1; transform: none; transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); transition-delay: var(--d, 0ms); }
+        .reveal { opacity: 0; transform: translateY(8px); }
+        .reveal.in { opacity: 1; transform: none; transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); transition-delay: var(--d, 0ms); }
         #full-menu-content.opening { animation: menu-open 360ms var(--ease-out); }
         @keyframes menu-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
         /* Closing folds the menu up so what follows slides into place instead of jumping (height is set by toggleFullMenu) */
@@ -1169,12 +1182,12 @@ function generateStandaloneLandingHtml(data) {
 
         <main id="main">
 
-        <!-- Location-first banner: shown when utm_content says the ad sold the location -->
-        <section class="loc-hero" id="loc-hero" hidden>
+        <!-- Location-first banner: rendered only when utm_content says the ad sold the location -->
+        ${locationFirst ? `<section class="loc-hero" id="loc-hero">
             <div class="loc-hero-title">${tt(directionsSub, directionsSubEn, directionsSubZh, directionsSubLo)}</div>
             <div class="loc-hero-sub">${tt('ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ', 'By the Mekong · Walk-ins welcome · Parking')}</div>
             <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">${tt('นำทางมาร้าน', 'Get directions')} <span class="arrow">→</span></a>
-        </section>
+        </section>` : ''}
 
         ${setGroups.length > 0 ? `
         <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
@@ -1251,6 +1264,7 @@ function generateStandaloneLandingHtml(data) {
                 <span class="hours-count" id="hours-count" hidden>
                     <span class="hc-label"></span>
                     <span class="hc-time" aria-hidden="true"></span>
+                    <span class="hc-unit" aria-hidden="true" hidden></span>
                     <span class="hc-sr" role="status"></span>
                 </span>
             </div>
@@ -1569,10 +1583,11 @@ function generateStandaloneLandingHtml(data) {
                 });
             }, { rootMargin: '0px 0px -8% 0px' });
             const fold = window.innerHeight;
-            document.querySelectorAll('.section-header, .sig-card, #sec-menu > div > .item-row, .gallery-item, .row-link, .facts .fact, .full-menu-btn, .tags-wrap, footer').forEach(function(el) {
+            // One style, few targets: headings and photos only. Rows, facts and the footer just scroll in.
+            document.querySelectorAll('.section-header, .sig-card, .gallery-item').forEach(function(el) {
                 if (el.getBoundingClientRect().top < fold) return;
                 const sibs = Array.prototype.indexOf.call(el.parentNode.children, el);
-                el.style.setProperty('--d', (sibs % 4) * 70 + 'ms');
+                el.style.setProperty('--d', (sibs % 3) * 40 + 'ms');
                 el.classList.add('reveal');
                 io.observe(el);
             });
@@ -1581,7 +1596,7 @@ function generateStandaloneLandingHtml(data) {
         // ─── LAZY PHOTOS FADE IN ───
         // Only photos still loading are touched, so nothing is hidden without JS or when already cached
         (function() {
-            document.querySelectorAll('.gallery-item img[loading="lazy"]').forEach(function(img) {
+            document.querySelectorAll('.gallery-item img[loading="lazy"], .sig-img-wrap img[loading="lazy"]').forEach(function(img) {
                 if (img.complete) return;
                 img.classList.add('img-wait');
                 const done = function() { img.classList.remove('img-wait'); };
@@ -1645,7 +1660,7 @@ function generateStandaloneLandingHtml(data) {
                 const hoursLine = document.getElementById('status-hours');
                 if (!isOpen && hoursLine) hoursLine.innerHTML = TT('เปิด ' + m[1] + ':' + m[2] + ' น.', 'Opens ' + m[1] + ':' + m[2], m[1] + ':' + m[2] + ' 开门', 'ເປີດ ' + m[1] + ':' + m[2]);
 
-                // Last-order countdown: last 2 hours before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
+                // Last-order note: last hour before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
                 const k = (el.dataset.hours || '').match(/(?:ปิดรับออเดอร์|ครัวปิด)\\s*(\\d{1,2})[:.](\\d{2})/);
                 const note = document.getElementById('kitchen-note');
                 if (isOpen && k && note) {
@@ -1653,7 +1668,7 @@ function generateStandaloneLandingHtml(data) {
                     if (kitchen < open) kitchen += 24 * 60;
                     const nowAdj = now < open ? now + 24 * 60 : now;
                     const left = kitchen - nowAdj;
-                    if (left > 0 && left <= 120) {
+                    if (left > 0 && left <= 60) {
                         const h = Math.floor(left / 60), mm = left % 60;
                         // Each phrase stays on one line ("เหลืออีก 21 นาที" never splits)
                         note.innerHTML = TT('<span class="nb">ปิดรับออเดอร์ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>',
@@ -1674,9 +1689,11 @@ function generateStandaloneLandingHtml(data) {
         }
         updateOpenStatus();
 
-        // ─── LIVE COUNTDOWN in the hours card: last order / closing / opening, to the second ───
-        // Plain DOM + CSS transforms (no library), ticks once a second on the second boundary,
-        // sleeps while the tab is hidden. Each digit is a 0-9 strip that slides into place.
+        // ─── LIVE COUNTDOWN in the hours card: last order / closing / opening ───
+        // Shown only when the next change is an hour away or less: minutes only ("38 นาที"), seconds
+        // join in the last 10 minutes. A ticker hours out reads as urgency that isn't there.
+        // Plain DOM + CSS transforms (no library), ticks on the second boundary, sleeps while the tab is hidden.
+        // Each digit is a 0-9 strip that slides into place.
         (function() {
             const box = document.getElementById('hours-count');
             const src = document.getElementById('open-status');
@@ -1688,6 +1705,10 @@ function generateStandaloneLandingHtml(data) {
             const labelEl = box.querySelector('.hc-label');
             const timeEl = box.querySelector('.hc-time');
             const srEl = box.querySelector('.hc-sr');
+            const unitEl = box.querySelector('.hc-unit');
+            if (unitEl) unitEl.innerHTML = TT('นาที', 'min', '分钟', 'ນາທີ');
+            const SHOW_WITHIN = 3600;
+            const SECONDS_WITHIN = 600;
             const DAY = 86400;
             const open = (Number(hm[1]) * 60 + Number(hm[2])) * 60;
             let close = (Number(hm[3]) * 60 + Number(hm[4])) * 60;
@@ -1782,10 +1803,13 @@ function generateStandaloneLandingHtml(data) {
                     labelEl.innerHTML = TT(LABELS[kind][0], LABELS[kind][1]);
                     if (changed) updateOpenStatus();
                 }
-                const h = Math.floor(s.left / 3600);
-                const m = Math.floor((s.left % 3600) / 60);
+                drawLine(s);
+                if (s.left > SHOW_WITHIN) { box.hidden = true; return; }
+                const m = Math.floor(s.left / 60);
                 const sec = s.left % 60;
-                const str = (h ? h + ':' + pad(m) : String(m)) + ':' + pad(sec);
+                const minutesOnly = s.left > SECONDS_WITHIN;
+                const str = minutesOnly ? String(Math.ceil(s.left / 60)) : m + ':' + pad(sec);
+                if (unitEl) unitEl.hidden = !minutesOnly;
                 if (str.replace(/\\d/g, '0') !== shape) build(str);
                 else {
                     let i = 0;
@@ -1794,10 +1818,9 @@ function generateStandaloneLandingHtml(data) {
                 // Screen readers hear the minute, not every second
                 if (sec === 0 || !srEl.textContent) srEl.textContent = spoken(s.left);
                 box.hidden = false;
-                drawLine(s);
             }
 
-            // Timeline on the card's bottom divider. First paint starts at 0 and draws out to now.
+            // Timeline on the card's bottom divider
             const line = document.getElementById('hours-line');
             let lineShown = false;
             if (line && last !== null && last > open && last < close) line.style.setProperty('--l', String((last - open) / (close - open)));
@@ -1807,9 +1830,13 @@ function generateStandaloneLandingHtml(data) {
                 line.classList.toggle('closed', s.kind === 'open');
                 const p = s.kind === 'open' ? 0 : s.p;
                 if (!lineShown) {
+                    // First paint stays still: place the marker without a transition
                     lineShown = true;
+                    line.querySelectorAll('.hl-fill, .hl-now').forEach(function(el) { el.style.transition = 'none'; });
+                    line.style.setProperty('--p', String(p));
                     line.classList.add('live');
-                    requestAnimationFrame(function() { requestAnimationFrame(function() { line.style.setProperty('--p', String(p)); }); });
+                    void line.offsetWidth;
+                    line.querySelectorAll('.hl-fill, .hl-now').forEach(function(el) { el.style.transition = ''; });
                     return;
                 }
                 line.style.setProperty('--p', String(p));
@@ -1824,17 +1851,6 @@ function generateStandaloneLandingHtml(data) {
             schedule();
         })();
 
-        // ─── LOCATION-FIRST MODE: ad sold the location (utm_content like "location", "map", "naga") ───
-        // Deferred: getUtmParams() relies on constants declared further down this script
-        setTimeout(function() {
-            try {
-                const content = (getUtmParams().utm_content || '').toLowerCase();
-                if (/loc|map|direct|nav|near|naga|phaya|พญานาค|นำทาง/.test(content)) {
-                    document.getElementById('loc-hero').hidden = false;
-                }
-            } catch(e) {}
-        }, 0);
-
         // ─── MODAL HISTORY: phone back button / Esc closes the modal instead of leaving the page ───
         function pushModalState() {
             if (!(history.state && history.state.hausModal)) history.pushState({ hausModal: true }, '');
@@ -1848,7 +1864,7 @@ function generateStandaloneLandingHtml(data) {
             m.classList.remove('open');
             m.classList.add('closing');
             clearTimeout(m._closeTimer);
-            m._closeTimer = setTimeout(function() { m.classList.remove('closing'); }, 150);
+            m._closeTimer = setTimeout(function() { m.classList.remove('closing'); }, 120);
         }
         function showModal(m) {
             clearTimeout(m._closeTimer);
@@ -2393,7 +2409,7 @@ export default async function handler(req, res) {
         }
 
         // 4b. Generate Autonomous High-Performance Standalone HTML
-        const html = generateStandaloneLandingHtml(data)
+        const html = generateStandaloneLandingHtml(data, { utmContent: parsedUrl.searchParams.get('utm_content') || '' })
 
         // 5. Edge CDN Caching Strategy:
         // - Sub-30ms instant TTFB via Vercel Edge Cache with SWR (stale-while-revalidate=86400)
