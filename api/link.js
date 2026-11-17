@@ -75,8 +75,9 @@ const DEFAULT_SETTINGS = {
     link_location_text_en: "On Sunthorn Wichit Road, 2 minutes from Phaya Si Satta Nakharat (Naga) Square, by the Mekong, Nakhon Phanom",
     link_location_short: "ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ",
     link_directions_sub: "ห่าง 2 นาที จากลานพญานาค",
-    // "First time here?" chooser lists every available item in these categories (name contains)
-    link_set_category: "Set :",
+    // "First time here?" chooser lists every available item in these categories: comma list matched
+    // against the category's Thai or English name, case-insensitive (see isSetCategory)
+    link_set_category: "เซ็ต, Set",
     // The set listed first (tagged "เริ่มที่ชุดนี้") in each group: menu item id or part of its name
     link_starter_solo_item: "115",
     link_starter_item: "141",
@@ -414,8 +415,32 @@ function buildSetRow(item, spiceMap) {
         heat: heatHtml(spiceRange(name, spiceMap, item.id)),
         thumb: item.image_url ? optImg(item.image_url, 160, 70) : '',
         feature: item.image_url ? optImg(item.image_url, 720, 70) : '',
+        featureSm: item.image_url ? optImg(item.image_url, 480, 70) : '',
         bigImg: item.image_url ? optImg(item.image_url, 800) : ''
     }
+}
+
+// link_set_category → normalized keys. "Set :" (the old default) becomes "set"; the defaults are always
+// accepted too, so a stale stored value can't hide the chooser again.
+function setCategoryKeyList(setting) {
+    const norm = s => String(s || '').trim().toLowerCase().replace(/\s*[:：]\s*$/, '')
+    const keys = String(setting || '').split(',').concat(DEFAULT_SETTINGS.link_set_category.split(','))
+    return [...new Set(keys.map(norm).filter(Boolean))]
+}
+// A category is a set category when its Thai or English name equals a key or starts with it
+// ("Set Menus", "เซ็ต (2-4 คน)"). A Latin key must end on a word edge, so "set" never matches "Settings".
+function isSetCategory(category, keys) {
+    const names = [category.name, category.name_en].map(n => String(n || '').trim().toLowerCase()).filter(Boolean)
+    return names.some(n => keys.some(k => n === k || (n.startsWith(k) && !/[a-z0-9]/.test(n.charAt(k.length)))))
+}
+
+// "11:30-15:00" → is the current Asia/Bangkok time inside it?
+function inTimeWindow(range, date = new Date()) {
+    const w = String(range || '').match(/(\d{1,2})[:.](\d{2})\s*-\s*(\d{1,2})[:.](\d{2})/)
+    if (!w) return false
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date)
+    const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value)
+    return now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])
 }
 
 // Resolve a "menu item id or part of its name" setting to an item id
@@ -528,11 +553,8 @@ function generateStandaloneLandingHtml(data) {
     menuItems.forEach(item => { item.spice = spiceRange(item.name, spiceMap, item.id) })
 
     // "First time here?" chooser: every set, grouped by party size, configured starters first
-    const setCategoryKeys = String(settings.link_set_category || DEFAULT_SETTINGS.link_set_category)
-        .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-    const setCategoryIds = new Set(categories
-        .filter(c => setCategoryKeys.some(k => String(c.name || '').toLowerCase().includes(k)))
-        .map(c => c.id))
+    const setCategoryKeys = setCategoryKeyList(settings.link_set_category)
+    const setCategoryIds = new Set(categories.filter(c => isSetCategory(c, setCategoryKeys)).map(c => c.id))
     const starterIds = [settings.link_starter_solo_item, settings.link_starter_item, settings.link_starter_xl_item]
         .map(ref => resolveItemId(menuItems, ref))
         .filter(id => id !== null)
@@ -551,6 +573,19 @@ function generateStandaloneLandingHtml(data) {
     const defaultGroup = (setGroups.find(g => g.rows.some(r => r.starter && r.groupMin > 1))
         || setGroups.find(g => g.min > 1) || setGroups[0] || {}).key
     const lunchWindow = escapeHtml(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)
+    // Group shown on first paint: the solo sets during the lunch window (Asia/Bangkok), else the default.
+    // Chosen here rather than in the browser so the visible feature photo is the one preloaded as LCP.
+    const initialGroup = (setGroups.some(g => g.key === '1') && inTimeWindow(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)) ? '1' : defaultGroup
+    const initialSet = (setGroups.find(g => g.key === initialGroup) || { rows: [] }).rows[0]
+    // Largest image in the first mobile screen: the visible set photo, else the first signature dish.
+    // The preload carries the same srcset/sizes as the <img> so the browser fetches the file it will show.
+    const SET_FEATURE_SIZES = '(max-width: 560px) calc(100vw - 32px), 528px'
+    const SIG_SIZES = '(max-width: 480px) 33vw, 160px'
+    const lcpImage = initialSet && initialSet.feature
+        ? { href: initialSet.feature, srcset: `${initialSet.featureSm} 480w, ${initialSet.feature} 720w`, sizes: SET_FEATURE_SIZES }
+        : { href: sig1Img, srcset: `${sig1Img} 240w, ${sig1Img2x} 320w`, sizes: SIG_SIZES }
+    // With the set chooser on top, the signature photos sit below the first screen and must not compete with it
+    const sigLoading = initialSet ? 'loading="lazy"' : 'fetchpriority="high" loading="eager"'
 
     // Recommended Specialties: food only (merch stays in the full menu) and no sets (they live in the chooser)
     const hiddenCategoryNames = String(settings.link_hide_categories || DEFAULT_SETTINGS.link_hide_categories)
@@ -614,10 +649,9 @@ function generateStandaloneLandingHtml(data) {
     <meta name="twitter:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม">
     <meta name="twitter:image" content="${sig1Img}">
 
-    <!-- High Performance Preconnect & LCP Image Preload (Zero Render-Blocking Overhead) -->
+    <!-- Preconnect + LCP image preload (same srcset/sizes as the visible <img>, so it is never fetched twice) -->
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
-    <link rel="preload" as="image" href="${sig1Img}" fetchpriority="high">
-    <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
+    <link rel="preload" as="image" href="${lcpImage.href}" imagesrcset="${lcpImage.srcset}" imagesizes="${lcpImage.sizes}" fetchpriority="high">
     <meta name="rendered-at" content="${Date.now()}">
 
     <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
@@ -1113,7 +1147,7 @@ function generateStandaloneLandingHtml(data) {
 
         ${setGroups.length > 0 ? `
         <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
-        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" aria-labelledby="sets-title">
+        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" data-default="${escapeHtml(defaultGroup)}" aria-labelledby="sets-title">
             <div class="sets-head">
                 <h2 class="sets-title" id="sets-title">${tt('<span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span>', '<span class="nb">First time here?</span> <span class="nb">Pick a set for your group</span>')}</h2>
                 <p class="sets-walkin">${tt('ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ', 'No booking needed · walk in anytime · parking')}</p>
@@ -1121,13 +1155,13 @@ function generateStandaloneLandingHtml(data) {
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
-                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span></button>`).join('')}
+                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === initialGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span></button>`).join('')}
             </div>` : ''}
             ${setGroups.map(g => `
-            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
+            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === initialGroup ? '' : ' hidden'}>
                 ${g.rows.map((r, i) => i === 0 ? `
                 <article class="set-feature">
-                    ${r.feature ? `<img class="set-feature-img" src="${r.feature}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === defaultGroup ? 'eager' : 'lazy'}"${g.key === defaultGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
+                    ${r.feature ? `<img class="set-feature-img" src="${r.feature}" srcset="${r.featureSm} 480w, ${r.feature} 720w" sizes="${SET_FEATURE_SIZES}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === initialGroup ? 'eager' : 'lazy'}"${g.key === initialGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
                     <div class="set-feature-body">
                         <div class="set-feature-top">
                             <h3 class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</h3>
@@ -1141,7 +1175,7 @@ function generateStandaloneLandingHtml(data) {
                     </div>
                 </article>` : `
                 <div class="set-row">
-                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
+                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="${g.key === initialGroup ? 'eager' : 'lazy'}" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
                     <div class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</div>
                     <div class="set-price">
                         <span class="num">฿${r.price}</span>
@@ -1223,7 +1257,7 @@ function generateStandaloneLandingHtml(data) {
             <div class="sig-grid">
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="${SIG_SIZES}" alt="${sig1Name}" ${sigLoading} decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${tt(sig1Name, sig1NameEn, sigNames[0].zh, sigNames[0].lo)}</div>
@@ -1233,7 +1267,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="${SIG_SIZES}" alt="${sig2Name}" ${sigLoading} decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${tt(sig2Name, sig2NameEn, sigNames[1].zh, sigNames[1].lo)}</div>
@@ -1243,7 +1277,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="${SIG_SIZES}" alt="${sig3Name}" ${sigLoading} decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${tt(sig3Name, sig3NameEn, sigNames[2].zh, sigNames[2].lo)}</div>
@@ -1454,7 +1488,11 @@ function generateStandaloneLandingHtml(data) {
             try {
                 const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
                 const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value);
-                if (now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])) selectSetGroup('1', true);
+                // The server already picked the group; this only corrects a page served from the CDN cache across the window edge
+                const inLunch = now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4]);
+                const shown = (starterCard.querySelector('.set-panel:not([hidden])') || {}).dataset;
+                const target = inLunch ? '1' : starterCard.dataset.default;
+                if (target && shown && shown.group !== target) selectSetGroup(target, true);
             } catch(e) {}
         })();
 
