@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { buildStockSummaryMessage } from "./stockSummary.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1485,8 +1486,10 @@ Deno.serve(async (req) => {
                 created_at,
                 note,
                 stock_items (
+                  id,
                   name,
                   unit,
+                  category,
                   current_quantity,
                   min_stock_threshold,
                   reorder_point
@@ -1505,225 +1508,7 @@ Deno.serve(async (req) => {
 
             // Construct Reply
             let messages = []
-            const engTitle = "STOCK LOGS";
-
-            if (!transactions || transactions.length === 0) {
-              messages.push({
-                type: "flex",
-                altText: headerTitle,
-                contents: {
-                  type: "bubble",
-                  size: "mega",
-                  header: {
-                    type: "box",
-                    layout: "vertical",
-                    paddingAll: "20px",
-                    contents: [
-                      { type: "text", text: engTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: dateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
-                    ]
-                  },
-                  body: {
-                    type: "box",
-                    layout: "vertical",
-                    paddingAll: "20px",
-                    contents: [{ type: "text", text: "NO TRANSACTIONS RECORDED", color: "#888888", size: "xs", align: "center", weight: "bold" }]
-                  },
-                  styles: {
-                    header: {
-                      backgroundColor: "#F4F4F3",
-                      separator: true,
-                      separatorColor: "#E2E2E0"
-                    },
-                    body: {
-                      backgroundColor: "#FFFFFF"
-                    }
-                  }
-                }
-              })
-            } else {
-               const bubbles = []
-               let currentItems = []
-               
-               const logHeader = {
-                   type: "box",
-                   layout: "horizontal",
-                   margin: "sm",
-                   contents: [
-                       { type: "text", text: "TIME", color: "#888888", size: "xxs", weight: "bold", flex: 2 },
-                       { type: "text", text: "TRANSACTION DETAIL", color: "#888888", size: "xxs", weight: "bold", flex: 5 },
-                       { type: "text", text: "REMAINING", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
-                   ]
-               };
-               
-               transactions.forEach((tx: any, index: number) => {
-                 const qtyChange = Number(Number(tx.quantity_change).toFixed(4));
-                 const sign = qtyChange > 0 ? '+' : '';
-                 
-                 let time = ""
-                 try {
-                   time = new Date(new Date(tx.created_at).getTime() + (7 * 60 * 60 * 1000))
-                     .toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                 } catch (e) {
-                   time = tx.created_at.substring(11, 16)
-                 }
-                 
-                 const item = tx.stock_items
-                 const itemName = item?.name || 'Unknown Item'
-                 const itemUnit = item?.unit || ''
-                 
-                 const current = Number(item?.current_quantity) || 0
-                 const min = Number(item?.min_stock_threshold) || 0
-                 const reorder = Number(item?.reorder_point) || 0
-                 const EPSILON = 0.0001;
-
-                  let indicatorBarColor = '#2D804E';
-                  let rowBgColor = '#FFFFFF';
-                  let statusEmoji = '🟢 OK';
-
-                 if (current <= EPSILON) { 
-                     statusEmoji = '⚫ OUT';
-                     indicatorBarColor = '#4B4B4B';
-                     rowBgColor = '#F5F5F5';
-                 } else if (min > 0 && current <= min + EPSILON) { 
-                     statusEmoji = '🔴 CRIT';
-                     indicatorBarColor = '#E63946';
-                     rowBgColor = '#FFEBEB';
-                 } else if (reorder > 0 && current <= reorder + EPSILON) { 
-                     statusEmoji = '🟠 WARN';
-                     indicatorBarColor = '#F4A261';
-                     rowBgColor = '#FFF6EB';
-                 }
-
-                 const changeColor = qtyChange > 0 ? '#1B4D3E' : qtyChange < 0 ? '#8B0000' : '#666666';
-
-                 currentItems.push({
-                      type: "box",
-                      layout: "horizontal",
-                      backgroundColor: rowBgColor,
-                      cornerRadius: "md",
-                      paddingAll: "md",
-                      margin: "sm",
-                      contents: [
-                          // Left indicator bar
-                          {
-                              type: "box",
-                              layout: "vertical",
-                              width: "4px",
-                              backgroundColor: indicatorBarColor,
-                              cornerRadius: "sm",
-                              contents: []
-                          },
-                          // Time
-                          { 
-                              type: "text", 
-                              text: time, 
-                              color: "#444444", 
-                              size: "xs", 
-                              weight: "bold", 
-                              flex: 2, 
-                              gravity: "center",
-                              margin: "md"
-                          },
-                          // Item Name & transaction details
-                          {
-                              type: "box",
-                              layout: "vertical",
-                              flex: 5,
-                              margin: "md",
-                              contents: [
-                                  { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
-                                  { type: "text", text: `${sign}${qtyChange} ${itemUnit}`, color: changeColor, size: "xs", weight: "bold", margin: "xs" },
-                                  ...(tx.note ? [{
-                                      type: "text", text: `NOTE: ${tx.note}`, color: "#777777", size: "xxs", margin: "xs", wrap: true
-                                  }] : [])
-                              ]
-                          },
-                          // Balance & status
-                          {
-                              type: "box",
-                              layout: "vertical",
-                              flex: 3,
-                              margin: "md",
-                              contents: [
-                                  { 
-                                      type: "text", 
-                                      text: formatStockQty(current, itemUnit), 
-                                      color: "#1A1A1A", 
-                                      size: "xs", 
-                                      weight: "bold", 
-                                      align: "end",
-                                      wrap: true
-                                  },
-                                  { type: "text", text: statusEmoji, color: indicatorBarColor, size: "xxs", weight: "bold", margin: "xs", align: "end" }
-                              ]
-                          }
-                      ]
-                  })
-
-
-                 // Chunk into bubbles every 15 items
-                 if (currentItems.length >= 8 || index === transactions.length - 1) {
-                     const bodyContents = [
-                         logHeader,
-                         { type: "separator", margin: "md", color: "#1A1A1A" },
-                         ...currentItems
-                     ];
-
-                     bubbles.push({
-                         type: "bubble",
-                         size: "mega",
-                         header: {
-                             type: "box",
-                             layout: "vertical",
-                             paddingAll: "20px",
-                             contents: [
-                                 { type: "text", text: engTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-                                 { type: "text", text: `${dateStr.toUpperCase()} (PAGE ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
-                             ]
-                         },
-                         body: {
-                             type: "box",
-                             layout: "vertical",
-                             paddingAll: "20px",
-                             contents: bodyContents
-                         },
-                         styles: {
-                             header: {
-                                 backgroundColor: "#F4F4F3",
-                                 separator: true,
-                                 separatorColor: "#E2E2E0"
-                             },
-                             body: {
-                                 backgroundColor: "#FFFFFF"
-                             }
-                         }
-                     })
-                     currentItems = []
-                 }
-               })
-               
-               if (bubbles.length > 12) bubbles.length = 12;
-               const totalBubblesStock = bubbles.length;
-               let flexContentStock: any = { type: "carousel", contents: bubbles };
-               let flexSizeStock = new TextEncoder().encode(JSON.stringify(flexContentStock)).length;
-               while (flexSizeStock > 49000 && bubbles.length > 1) {
-                   bubbles.pop();
-                   flexContentStock = { type: "carousel", contents: bubbles };
-                   flexSizeStock = new TextEncoder().encode(JSON.stringify(flexContentStock)).length;
-               }
-               if (bubbles.length < totalBubblesStock) {
-                   const lastB = bubbles[bubbles.length - 1];
-                   lastB.body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
-                   lastB.body.contents.push({ type: "text", text: `...(แสดงได้ ${bubbles.length} จาก ${totalBubblesStock} หน้า เนื่องจากขนาดข้อความเกินขีดจำกัด)`, color: "#9E2D2D", size: "xs", margin: "md", align: "center", wrap: true });
-               }
-               console.log(`Flex stock: ${bubbles.length}/${totalBubblesStock} bubbles, ${flexSizeStock} bytes`);
-                messages.push({
-                    type: "flex",
-                    altText: headerTitle,
-                    contents: flexContentStock
-                })
-            }
+            messages.push(buildStockSummaryMessage(transactions || [], headerTitle.replace(/^📦s*/, ""), dateStr))
 
             console.log(`Sending Stock Reply (${messages.length} bubbles)`)
 
