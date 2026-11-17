@@ -894,7 +894,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         @media (min-width: 480px) { .sets-title { font-size: 36px; } }
         @media (prefers-reduced-motion: no-preference) {
             /* Only when the guest switches tabs: the first paint (and the LCP photo inside it) is never faded in */
-            .set-panel.entering:not([hidden]) { animation: set-in 240ms var(--ease-out); }
+            .set-panel.entering:not([hidden]) { animation: set-in 180ms var(--ease-out); }
             @keyframes set-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         }
 
@@ -936,7 +936,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .tab-btn:hover { background: var(--color-paper-2); }
         .tab-btn.active { color: var(--color-ink); }
         /* One marker slides between the three equal cells (--tab-i is set by markSection) */
-        .tab-bar::after { content: ''; position: absolute; left: 0; bottom: 0; width: calc(100% / 3); height: 3px; background: var(--color-ink); transform: translateX(calc(var(--tab-i, 0) * 100%)); transition: transform 250ms var(--ease-out); pointer-events: none; }
+        .tab-bar::after { content: ''; position: absolute; left: 0; bottom: 0; width: calc(100% / 3); height: 3px; background: var(--color-ink); transform: translateX(calc(var(--tab-i, 0) * 100%)); transition: transform 180ms var(--ease-out); pointer-events: none; }
 
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
@@ -1063,25 +1063,29 @@ function generateStandaloneLandingHtml(data, opts = {}) {
 
         /* Press feedback: everything tappable answers the thumb */
         .row-link, .sig-card, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-cell { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
-        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.985); }
-        .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out); }
-        .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); }
-        /* Lazy gallery photos resolve out of a soft blur when they arrive (class is added by script only) */
-        .gallery-item img { transition: transform 600ms var(--ease-out), opacity 400ms ease-in-out, filter 400ms ease-in-out; }
-        .gallery-item img.img-wait { opacity: 0; filter: blur(2px); }
+        /* Press lands fast (90ms) and lets go at the normal speed, so the thumb feels it */
+        .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.97); transition-duration: 90ms; }
+        /* Full-width buttons keep their gentler scale (0.97 of 560px is too big a jump), but land as fast */
+        .set-btn:active, .full-menu-btn:active { transition-duration: 90ms; }
+        .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out), opacity 180ms var(--ease-out); }
+        /* Hover zoom only where there is a real hover; on phones it fired after a tap */
+        @media (hover: hover) { .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); } }
+        /* Photos still loading fade in on arrival over the paper-2 placeholder (class is added by script only) */
+        .sig-img-wrap img.img-wait, .gallery-item img.img-wait { opacity: 0; }
         .row-link:hover .arrow { transform: translateX(3px); }
         .row-link .arrow { transition: transform var(--dur) var(--ease-out); }
 
         /* Modals fade in, the picture settles */
-        .modal.open { animation: modal-in 220ms var(--ease-out); }
-        .modal.open .modal-content { animation: modal-pic 320ms var(--ease-out); }
+        /* The picture is handed up to you (rise, not zoom) */
+        .modal.open { animation: modal-in 180ms var(--ease-out); }
+        .modal.open .modal-content { animation: modal-pic 180ms var(--ease-out); }
         @keyframes modal-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modal-pic { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
-        /* Closing is quicker and quieter than opening; hideModal() drops the class after 150ms */
-        .modal.closing { display: flex; pointer-events: none; animation: modal-out 150ms var(--ease-out) forwards; }
-        .modal.closing .modal-content { animation: modal-pic-out 150ms var(--ease-out) forwards; }
+        @keyframes modal-pic { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        /* Closing is quicker and quieter than opening; hideModal() drops the class after 120ms */
+        .modal.closing { display: flex; pointer-events: none; animation: modal-out 120ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+        .modal.closing .modal-content { animation: modal-pic-out 120ms cubic-bezier(0.4, 0, 1, 1) forwards; }
         @keyframes modal-out { to { opacity: 0; } }
-        @keyframes modal-pic-out { to { opacity: 0; transform: scale(0.96); } }
+        @keyframes modal-pic-out { to { opacity: 0; transform: translateY(8px); } }
 
         /* Reveal on scroll: added by script only to things below the first screen, so nothing is hidden without JS and the first paint is untouched */
         .reveal { opacity: 0; transform: translateY(8px); }
@@ -1592,7 +1596,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         // ─── LAZY PHOTOS FADE IN ───
         // Only photos still loading are touched, so nothing is hidden without JS or when already cached
         (function() {
-            document.querySelectorAll('.gallery-item img[loading="lazy"]').forEach(function(img) {
+            document.querySelectorAll('.gallery-item img[loading="lazy"], .sig-img-wrap img[loading="lazy"]').forEach(function(img) {
                 if (img.complete) return;
                 img.classList.add('img-wait');
                 const done = function() { img.classList.remove('img-wait'); };
@@ -1860,7 +1864,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             m.classList.remove('open');
             m.classList.add('closing');
             clearTimeout(m._closeTimer);
-            m._closeTimer = setTimeout(function() { m.classList.remove('closing'); }, 150);
+            m._closeTimer = setTimeout(function() { m.classList.remove('closing'); }, 120);
         }
         function showModal(m) {
             clearTimeout(m._closeTimer);
