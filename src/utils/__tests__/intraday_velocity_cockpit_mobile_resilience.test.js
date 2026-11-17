@@ -418,7 +418,7 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
 
         // 4. Solid single-pass fill for forecast fan (zero offscreen alpha buffer)
         expect(source.includes('pathForecastFan')).toBe(true)
-        expect(source.includes('oklch(94% 0.02 28)')).toBe(true)
+        expect(source.includes('oklch(92.60% 0.0095 352.37)')).toBe(true)
     })
 
     it('enforces Hallmark Zero-Icon discipline on AdminDashboard tab navigation', async () => {

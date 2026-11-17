@@ -748,7 +748,7 @@ export default function AdminBookings() {
                                 setCustomDate(e.target.value)
                                 setDatePreset('custom')
                             }}
-                            className={`h-10 px-2 rounded-lg border bg-[oklch(99%_0.004_28)] font-sans text-[13px] tabular-nums shrink-0 ${
+                            className={`h-10 px-2 rounded-lg border bg-[var(--color-paper)] font-sans text-[13px] tabular-nums shrink-0 ${
                                 datePreset === 'custom'
                                     ? 'border-[var(--color-ink)] text-[var(--color-ink)] font-medium'
                                     : 'border-[var(--color-rule)] text-[var(--color-muted)]'
@@ -955,7 +955,7 @@ export default function AdminBookings() {
                                                     {/* Merged & Transferred Table Indicator Badges */}
                                                     {transfer.isMergedSource && (
                                                         <div className="flex items-center gap-1">
-                                                            <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[11px] tabular-nums font-bold rounded-xs">
+                                                            <span className="px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] text-[11px] tabular-nums font-bold rounded-xs">
                                                                 รวมเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                             </span>
                                                         </div>
@@ -1025,12 +1025,12 @@ export default function AdminBookings() {
                                                         )}
 
                                                         {isUnpaid && (
-                                                            <span className="bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] px-1 border border-[oklch(70%_0.12_28)] text-[11px] font-bold">
+                                                            <span className="bg-[var(--color-paper-2)] text-[var(--brand-plum)] px-1 border border-[oklch(70%_0.1_348.33)] text-[11px] font-bold">
                                                                 ค้างจ่าย ฿{formatCurrency(totalAmt)}
                                                             </span>
                                                         )}
                                                         {isPartialPaid && (
-                                                            <span className="bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] px-1 border border-[oklch(70%_0.12_28)] text-[11px] font-bold">
+                                                            <span className="bg-[var(--color-paper-2)] text-[var(--brand-plum)] px-1 border border-[oklch(70%_0.1_348.33)] text-[11px] font-bold">
                                                                 ค้าง ฿{formatCurrency(remainingDue)}
                                                             </span>
                                                         )}
@@ -1042,7 +1042,7 @@ export default function AdminBookings() {
                                             <td className="p-3 border-r border-[var(--color-rule)]">
                                                 <div className="flex flex-col gap-1 items-start">
                                                     {transfer.isMergedSource ? (
-                                                        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-bold border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
+                                                        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-bold border bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
                                                             MERGED (โต๊ะรวม)
                                                         </span>
                                                     ) : (
@@ -1058,11 +1058,11 @@ export default function AdminBookings() {
                                                                 PAID (จ่ายแล้ว)
                                                             </span>
                                                         ) : isPartialPaid ? (
-                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[11px] tabular-nums font-bold border bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(60%_0.12_28)]">
+                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[11px] tabular-nums font-bold border bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]">
                                                                 มัดจำแล้ว (ค้าง ฿{formatCurrency(remainingDue)})
                                                             </span>
                                                         ) : isUnpaid ? (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] tabular-nums font-bold border-2 bg-[oklch(96%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]">
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] tabular-nums font-bold border-2 bg-[var(--color-paper)] text-[var(--brand-plum)] border-[var(--brand-plum)]">
                                                                 ยังไม่ได้จ่ายเงิน (UNPAID)
                                                             </span>
                                                         ) : null
@@ -1146,7 +1146,7 @@ export default function AdminBookings() {
                                                         <button 
                                                             type="button"
                                                             onClick={() => updateStatus(booking, 'completed')}
-                                                            className="px-2.5 py-1 bg-[var(--color-accent-2)] text-[oklch(97%_0.008_28)] border border-[var(--color-accent-2)] text-xs font-bold hover:opacity-90 transition-opacity"
+                                                            className="px-2.5 py-1 bg-[var(--color-accent-2)] text-[var(--color-paper)] border border-[var(--color-accent-2)] text-xs font-bold hover:opacity-90 transition-opacity"
                                                             title="Check Out / Complete"
                                                         >
                                                             [COMPLETE]
@@ -1194,15 +1194,15 @@ export default function AdminBookings() {
 
                         {/* Table Transfer Banner Strip */}
                         {transfer.isMergedSource && (
-                            <div className="p-3 bg-[oklch(94%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs tabular-nums font-bold space-y-1">
+                            <div className="p-3 bg-[var(--color-paper-2)] border-2 border-[var(--brand-plum)] text-[var(--brand-plum)] text-xs tabular-nums font-bold space-y-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[11px] font-black">
+                                    <span className="px-1.5 py-0.2 bg-[var(--brand-plum)] text-[var(--color-paper)] text-[11px] font-black">
                                         MERGED TABLE (โต๊ะรวม)
                                     </span>
                                     <span>บิลนี้ถูกรวมรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</span>
                                 </div>
                                 {transfer.originalTotal > 0 && (
-                                    <div className="text-xs text-[oklch(45%_0.10_28)] pl-1">
+                                    <div className="text-xs text-[var(--brand-plum)] pl-1">
                                         ยอดเงินเดิมก่อนรวมบิล: ฿{formatCurrency(transfer.originalTotal)}
                                     </div>
                                 )}
@@ -1211,7 +1211,7 @@ export default function AdminBookings() {
 
                         {transfer.isMergedTarget && (
                             <div className="p-3 bg-[oklch(92%_0.02_140)] border-2 border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs tabular-nums font-bold flex items-center gap-2">
-                                <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-[11px] font-black">
+                                <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] text-[11px] font-black">
                                     COMBINED TABLE (โต๊ะรวม)
                                 </span>
                                 <span>บิลนี้เป็นโต๊ะรวมที่รับการรวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong></span>
@@ -1220,7 +1220,7 @@ export default function AdminBookings() {
 
                         {transfer.isMoved && (
                             <div className="p-3 bg-[oklch(92%_0.02_220)] border-2 border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs tabular-nums font-bold flex items-center gap-2">
-                                <span className="px-1.5 py-0.2 bg-[oklch(40%_0.12_220)] text-[oklch(97%_0.008_28)] text-[11px] font-black">
+                                <span className="px-1.5 py-0.2 bg-[oklch(40%_0.12_220)] text-[var(--color-paper)] text-[11px] font-black">
                                     MOVED TABLE (ย้ายโต๊ะ)
                                 </span>
                                 <span>ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong> {transfer.moveTimestamp && `(${transfer.moveTimestamp})`}</span>
@@ -1333,11 +1333,11 @@ export default function AdminBookings() {
                                             ชำระครบแล้ว (PAID)
                                         </span>
                                     ) : isPartialPaid ? (
-                                        <span className="px-2 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] tabular-nums font-bold text-[11px] ">
+                                        <span className="px-2 py-0.5 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] tabular-nums font-bold text-[11px] ">
                                             มัดจำแล้ว ฿{formatCurrency(paymentInfo.depAmt)} (รอเก็บ ฿{formatCurrency(remainingDue)})
                                         </span>
                                     ) : isUnpaid ? (
-                                        <span className="px-2.5 py-1 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] tabular-nums font-bold text-xs  ">
+                                        <span className="px-2.5 py-1 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-2 border-[var(--brand-plum)] tabular-nums font-bold text-xs  ">
                                             ยังไม่ได้จ่ายเงิน (UNPAID)
                                         </span>
                                     ) : null}
@@ -1510,7 +1510,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
 
                 {/* Transfer Info Banner if Merged / Moved */}
                 {transfer.isMergedSource && (
-                    <div className="mb-4 p-2.5 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs tabular-nums font-bold">
+                    <div className="mb-4 p-2.5 bg-[var(--color-paper-2)] border border-[var(--brand-plum)] text-[var(--brand-plum)] text-xs tabular-nums font-bold">
                         [MERGED] โต๊ะรวม: บิลนี้โอนรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว
                     </div>
                 )}

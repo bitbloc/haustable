@@ -4,10 +4,10 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { diffRecipeRows } from '../../utils/recipeVersions';
 
-const RULE = 'border-[oklch(85%_0.012_28)]';
-const MUTED = 'text-[oklch(42%_0.010_28)]';
-const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
-const ACCENT = 'text-[oklch(52%_0.16_28)]';
+const RULE = 'border-[var(--color-rule)]';
+const MUTED = 'text-[var(--color-muted)]';
+const NEUTRAL = 'text-[var(--color-neutral)]';
+const ACCENT = 'text-[var(--brand-plum)]';
 const q = (n) => String(Math.round((Number(n) || 0) * 10000) / 10000);
 const when = (iso) => new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -38,7 +38,7 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
     return createPortal(
         <div className="fixed inset-0 z-[90] bg-black/60 flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
             <div role="dialog" aria-modal="true" aria-labelledby="recipe-history-title"
-                className={`w-full sm:max-w-lg max-h-[88dvh] flex flex-col bg-[oklch(97%_0.008_28)] border ${RULE} text-[oklch(18%_0.012_28)] font-sans`}
+                className={`w-full sm:max-w-lg max-h-[88dvh] flex flex-col bg-[var(--color-paper)] border ${RULE} text-[var(--color-ink)] font-sans`}
                 onClick={e => e.stopPropagation()}>
                 <div className={`shrink-0 grid grid-cols-[1fr_auto] border-b ${RULE}`}>
                     <div className="px-4 pt-4 pb-3">
@@ -46,9 +46,9 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                         <h2 id="recipe-history-title" className="font-bold text-base leading-7">ประวัติการแก้สูตร</h2>
                         <p className={`text-[12px] leading-5 ${MUTED}`}>เก็บทุกครั้งที่กดบันทึก "ใช้เวอร์ชันนี้" จะโหลดกลับเข้าตัวแก้ ต้องกดบันทึกอีกครั้งถึงจะมีผล</p>
                     </div>
-                    <button type="button" onClick={onClose} className={`px-4 border-l ${RULE} font-bold text-[13px] ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>ปิด</button>
+                    <button type="button" onClick={onClose} className={`px-4 border-l ${RULE} font-bold text-[13px] ${MUTED} hover:bg-[var(--color-paper-2)] cursor-pointer`}>ปิด</button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-y-auto bg-[oklch(99%_0.004_28)]">
+                <div className="flex-1 min-h-0 overflow-y-auto bg-[var(--color-paper)]">
                     {loading ? (
                         <p className={`p-6 text-[14px] ${NEUTRAL}`}>กำลังโหลด...</p>
                     ) : missing ? (
@@ -56,7 +56,7 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                     ) : versions.length === 0 ? (
                         <p className={`p-6 text-[14px] leading-6 ${MUTED}`}>ยังไม่มีประวัติ จะเริ่มเก็บตั้งแต่การบันทึกครั้งถัดไป</p>
                     ) : (
-                        <ol className="divide-y divide-[oklch(90%_0.008_28)]">
+                        <ol className="divide-y divide-[var(--color-paper-3)]">
                             {versions.map((v, i) => {
                                 const prev = versions[i + 1];
                                 const d = prev ? diffRecipeRows(prev.rows || [], v.rows || []) : null;
@@ -89,7 +89,7 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                                             )}
                                         </div>
                                         {isOpen && (
-                                            <ul className={`mt-2 border ${RULE} divide-y divide-[oklch(92%_0.006_28)]`}>
+                                            <ul className={`mt-2 border ${RULE} divide-y divide-[var(--color-paper-2)]`}>
                                                 {(v.rows || []).map((r, j) => (
                                                     <li key={j} className="grid grid-cols-[1fr_auto] gap-3 px-2.5 py-1.5 text-[13px] leading-5">
                                                         <span className="break-words min-w-0">{r.name}</span>

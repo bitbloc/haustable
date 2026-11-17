@@ -252,7 +252,7 @@ export default function ExpenseLedgerPrintView({
             `}} />
 
             {/* Top Toolbar (Hidden on Print) */}
-            <div className="w-full max-w-5xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 sm:px-6 py-3 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
+            <div className="w-full max-w-5xl bg-[var(--color-ink)] text-[var(--color-paper)] px-4 sm:px-6 py-3 border border-[var(--color-rule)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
@@ -261,7 +261,7 @@ export default function ExpenseLedgerPrintView({
                         <ArrowLeft size={14} />
                         <span>BACK</span>
                     </button>
-                    <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                    <span className="font-bold text-[var(--brand-plum)] uppercase tracking-wider">
                         [ EXPENSE LEDGER REPORT ]
                     </span>
                     <span className="text-zinc-400">

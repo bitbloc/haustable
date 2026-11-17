@@ -1037,7 +1037,7 @@ export default function MemberCard() {
                                                             key={i} 
                                                             className={`h-10 rounded-[6px] border flex items-center justify-center font-mono text-xs font-bold transition-all ${
                                                                 isStamped 
-                                                                    ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(45%_0.16_28)] shadow-inner' 
+                                                                    ? 'bg-[var(--brand-plum)] text-white border-[var(--brand-plum)] shadow-inner' 
                                                                     : 'bg-[#F5F5F2] text-zinc-300 border-[#D1D1CD]'
                                                             }`}
                                                         >

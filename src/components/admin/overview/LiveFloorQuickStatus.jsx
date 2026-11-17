@@ -270,41 +270,41 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
     }
 
     return (
-        <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-4 md:p-6 mb-8">
+        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 md:p-6 mb-8">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-rule)]">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
-                        <h2 className="tabular-nums text-sm md:text-base font-bold text-[oklch(18%_0.012_28)]">
+                        <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)]" />
+                        <h2 className="tabular-nums text-sm md:text-base font-bold text-[var(--color-ink)]">
                             LIVE FLOOR & 1-TAP TABLE BLOCK
                         </h2>
                     </div>
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
+                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums mt-0.5">
                         Tap empty table to block 2h for walk-in • Tap occupied table to release
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     {/* Legend badges */}
-                    <div className="hidden sm:flex items-center gap-2 tabular-nums text-xs text-[oklch(42%_0.010_28)]">
+                    <div className="hidden sm:flex items-center gap-2 tabular-nums text-xs text-[var(--color-muted)]">
                         <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" /> FREE
                         </span>
                         <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" /> OCCUPIED
+                            <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)]" /> OCCUPIED
                         </span>
                         <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-[oklch(60%_0.15_60)]" /> UPCOMING
                         </span>
                         <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(35%_0.010_28)]" /> BLOCKED
+                            <span className="w-2 h-2 rounded-full bg-[oklch(35%_0.01_348.33)]" /> BLOCKED
                         </span>
                     </div>
 
                     <Link 
                         to="/admin/tables" 
-                        className="inline-flex items-center gap-1 tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-sm transition-colors"
+                        className="inline-flex items-center gap-1 tabular-nums text-xs font-bold text-[var(--color-ink)] hover:text-[var(--brand-plum)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] px-3 py-1.5 rounded-sm transition-colors"
                     >
                         FULL FLOORPLAN ➔
                     </Link>
@@ -313,18 +313,18 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
             {/* Table Matrix Grid */}
             {loading ? (
-                <div className="py-12 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)] ">
+                <div className="py-12 text-center tabular-nums text-xs text-[var(--color-neutral)] ">
                     LOADING LIVE FLOOR STATUS...
                 </div>
             ) : tables.length === 0 ? (
-                <div className="py-12 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)]">
+                <div className="py-12 text-center tabular-nums text-xs text-[var(--color-neutral)]">
                     NO TABLES CONFIGURED IN SYSTEM
                 </div>
             ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5 pt-4">
                     {tables.map(table => {
                         const state = getTableState(table.id)
-                        let bgStyle = 'bg-[oklch(98%_0.006_28)] text-[oklch(18%_0.012_28)] border-[oklch(82%_0.012_28)] hover:border-[oklch(45%_0.08_140)]'
+                        let bgStyle = 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[oklch(82%_0.012_348.33)] hover:border-[oklch(45%_0.08_140)]'
                         let statusTag = 'FREE'
                         let tagStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
 
@@ -344,21 +344,21 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
                         if (state.status === 'occupied') {
                             bgStyle = isLongStay 
-                                ? 'bg-[oklch(96%_0.03_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]' 
+                                ? 'bg-[oklch(96%_0.03_348.33)] text-[var(--color-ink)] border-[var(--brand-plum)] ring-1 ring-[var(--brand-plum)]' 
                                 : isWarning 
-                                    ? 'bg-[oklch(96%_0.03_65)] text-[oklch(18%_0.012_28)] border-[oklch(80%_0.06_65)]' 
-                                    : 'bg-[oklch(95%_0.02_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)]'
+                                    ? 'bg-[oklch(96%_0.03_65)] text-[var(--color-ink)] border-[oklch(80%_0.06_65)]' 
+                                    : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--brand-plum)]'
                             statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()} • ${formattedDur}` : `${formattedDur}`
-                            tagStyle = isLongStay ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
+                            tagStyle = isLongStay ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' : 'bg-[var(--brand-plum)] text-[var(--color-paper)]'
                         } else if (state.status === 'upcoming') {
-                            bgStyle = 'bg-[oklch(96%_0.02_60)] text-[oklch(18%_0.012_28)] border-[oklch(60%_0.15_60)]'
+                            bgStyle = 'bg-[oklch(96%_0.02_60)] text-[var(--color-ink)] border-[oklch(60%_0.15_60)]'
                             const bTime = state.booking?.booking_time ? new Date(state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''
                             statusTag = bTime ? `RES ${bTime}` : 'RESERVED'
-                            tagStyle = 'bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]'
+                            tagStyle = 'bg-[oklch(60%_0.15_60)] text-[var(--color-ink)]'
                         } else if (state.status === 'blocked') {
-                            bgStyle = 'bg-[oklch(30%_0.010_28)] text-[oklch(97%_0.008_28)] border-[oklch(20%_0.010_28)]'
+                            bgStyle = 'bg-[oklch(30%_0.01_348.33)] text-[var(--color-paper)] border-[var(--color-ink)]'
                             statusTag = 'BLOCKED'
-                            tagStyle = 'bg-black/40 text-[oklch(97%_0.008_28)]'
+                            tagStyle = 'bg-black/40 text-[var(--color-paper)]'
                         }
 
                         return (
@@ -376,12 +376,12 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                                     </span>
                                     <div className="flex items-center gap-1">
                                         {transfer.isMergedTarget && (
-                                            <span className="bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
+                                            <span className="bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
                                                 +{transfer.mergedFromTables.join(',')}
                                             </span>
                                         )}
                                         {transfer.isMoved && (
-                                            <span className="bg-[oklch(45%_0.08_220)] text-[oklch(97%_0.008_28)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
+                                            <span className="bg-[oklch(45%_0.08_220)] text-[var(--color-paper)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
                                                 ย้าย
                                             </span>
                                         )}
@@ -393,7 +393,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
                                 {hasCallStaff || hasCallBill ? (
                                     <div className="mt-2">
-                                        <span className="tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs block text-center truncate bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)]">
+                                        <span className="tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs block text-center truncate bg-[oklch(78%_0.18_65)] text-[var(--color-ink)]">
                                             {hasCallBill ? 'CALL BILL' : 'CALL STAFF'}
                                         </span>
                                     </div>
@@ -413,19 +413,19 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
             {/* Inspection / Action Modal */}
             {selectedTableData && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-rule)]">
                             <div>
-                                <span className="tabular-nums text-xs font-bold text-[oklch(55%_0.010_28)]">
+                                <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)]">
                                     TABLE INSPECTION
                                 </span>
-                                <h3 className="tabular-nums text-lg font-bold text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-lg font-bold text-[var(--color-ink)]">
                                     {selectedTableData.table.table_name} ({selectedTableData.table.capacity} Pax)
                                 </h3>
                             </div>
                             <button 
                                 onClick={() => setSelectedTableData(null)}
-                                className="tabular-nums text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1"
+                                className="tabular-nums text-xs font-bold text-[var(--color-muted)] hover:text-[var(--color-ink)] p-1"
                             >
                                 ✕ CLOSE
                             </button>
@@ -447,38 +447,38 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                                             <span>ลูกค้าย้ายมาจาก โต๊ะ {modalTransfer.movedFromTable}</span>
                                         </div>
                                     )}
-                                    <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-sm border border-[oklch(88%_0.008_28)] space-y-1.5">
+                                    <div className="bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-paper-3)] space-y-1.5">
                                         <div className="flex justify-between">
-                                            <span className="text-[oklch(55%_0.010_28)]">GUEST NAME</span>
-                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                            <span className="text-[var(--color-neutral)]">GUEST NAME</span>
+                                            <span className="font-bold text-[var(--color-ink)]">
                                                 {selectedTableData.state.booking.pickup_contact_name || selectedTableData.state.booking.profiles?.display_name || 'Guest'}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-[oklch(55%_0.010_28)]">TYPE</span>
-                                            <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                            <span className="text-[var(--color-neutral)]">TYPE</span>
+                                            <span className="font-bold text-[var(--brand-plum)]">
                                                 {selectedTableData.state.booking.booking_type}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-[oklch(55%_0.010_28)]">START TIME</span>
+                                            <span className="text-[var(--color-neutral)]">START TIME</span>
                                             <span className="font-bold">
                                                 {formatThaiTimeOnly(selectedTableData.state.booking.booking_time)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-[oklch(55%_0.010_28)]">ELAPSED (เวลาที่ใช้บริการ)</span>
-                                            <span className="font-bold tabular-nums text-[oklch(52%_0.16_28)]">
+                                            <span className="text-[var(--color-neutral)]">ELAPSED (เวลาที่ใช้บริการ)</span>
+                                            <span className="font-bold tabular-nums text-[var(--brand-plum)]">
                                                 {formatThaiDuration(calculateDurationMinutes(selectedTableData.state.booking.booking_time, currentTime))}
                                             </span>
                                         </div>
                                         {selectedTableData.state.booking.customer_note && (
-                                            <div className="pt-1 text-xs text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
+                                            <div className="pt-1 text-xs text-[var(--color-muted)] border-t border-[var(--color-paper-3)]">
                                                 Note: "{selectedTableData.state.booking.customer_note}"
                                             </div>
                                         )}
                                         {modalTransfer.cleanRemark && (
-                                            <div className="pt-1 text-xs text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
+                                            <div className="pt-1 text-xs text-[var(--color-muted)] border-t border-[var(--color-paper-3)]">
                                                 Remark: "{modalTransfer.cleanRemark}"
                                             </div>
                                         )}
@@ -488,19 +488,19 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                         })()}
 
                         {!selectedTableData.state.booking && (
-                            <div className="my-6 py-4 text-center tabular-nums text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] rounded-xs border border-[oklch(88%_0.010_28)]">
+                            <div className="my-6 py-4 text-center tabular-nums text-xs text-[var(--color-neutral)] bg-[var(--color-paper-2)] rounded-xs border border-[var(--color-paper-3)]">
                                 โต๊ะว่าง พร้อมเปิดบริการที่หน้าเครื่อง POS
                             </div>
                         )}
 
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
-                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-[var(--color-rule)]">
+                            <span className="tabular-nums text-xs text-[var(--color-neutral)]">
                                 [INFO] การเปิดโต๊ะ เช็คบิล และเคลียร์โต๊ะ ดำเนินการผ่านเครื่อง POS หน้าร้าน
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setSelectedTableData(null)}
-                                className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-xs rounded-sm cursor-pointer whitespace-nowrap self-end sm:self-auto"
+                                className="px-5 py-2 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] font-bold text-xs rounded-sm cursor-pointer whitespace-nowrap self-end sm:self-auto"
                             >
                                 ✕ ปิดหน้าต่าง
                             </button>

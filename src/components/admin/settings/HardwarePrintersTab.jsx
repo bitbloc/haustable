@@ -643,7 +643,7 @@ export default function HardwarePrintersTab({
                             }}
                             className={`px-3 py-1 text-[11px] font-mono font-bold uppercase rounded-md border transition-colors cursor-pointer touch-manipulation ${
                                 audioMuted 
-                                    ? 'bg-amber-600 text-[oklch(97%_0.008_28)] border-amber-700 hover:bg-amber-700' 
+                                    ? 'bg-amber-600 text-[var(--color-paper)] border-amber-700 hover:bg-amber-700' 
                                     : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                             }`}
                         >
@@ -739,7 +739,7 @@ export default function HardwarePrintersTab({
                             }}
                             className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${
                                 isTestingAudio
-                                    ? 'bg-[var(--color-accent)] text-[oklch(97%_0.008_28)] opacity-90 cursor-not-allowed'
+                                    ? 'bg-[var(--color-accent)] text-[var(--color-paper)] opacity-90 cursor-not-allowed'
                                     : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
                             }`}
                         >
@@ -1096,20 +1096,20 @@ export default function HardwarePrintersTab({
                         </div>
 
                         {/* Simulated Thermal Paper Card */}
-                        <div className="w-full max-w-[320px] bg-[oklch(99%_0.004_28)] border border-[var(--color-rule)] shadow-lg p-5 text-[oklch(18%_0.012_28)] font-mono text-[11px] leading-snug rounded-t-xl select-none">
+                        <div className="w-full max-w-[320px] bg-[var(--color-paper)] border border-[var(--color-rule)] shadow-lg p-5 text-[var(--color-ink)] font-mono text-[11px] leading-snug rounded-t-xl select-none">
                             {previewTab === 'billing' ? (
                                 <div className="text-center pb-2 mb-2">
                                     <div className="font-bold text-base tracking-tight uppercase">
                                         {settings.receipt_shop_name || 'IN THE HAUS'}
                                     </div>
                                     {settings.receipt_shop_address && (
-                                        <div className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">{settings.receipt_shop_address}</div>
+                                        <div className="text-[11px] text-[var(--color-muted)] mt-0.5">{settings.receipt_shop_address}</div>
                                     )}
                                     {settings.receipt_shop_phone && (
-                                        <div className="text-[11px] text-[oklch(42%_0.010_28)]">TEL: {settings.receipt_shop_phone}</div>
+                                        <div className="text-[11px] text-[var(--color-muted)]">TEL: {settings.receipt_shop_phone}</div>
                                     )}
                                     {settings.receipt_shop_vat && (
-                                        <div className="text-[11px] text-[oklch(42%_0.010_28)]">TAX ID: {settings.receipt_shop_vat}</div>
+                                        <div className="text-[11px] text-[var(--color-muted)]">TAX ID: {settings.receipt_shop_vat}</div>
                                     )}
                                 </div>
                             ) : (
@@ -1126,7 +1126,7 @@ export default function HardwarePrintersTab({
                             </div>
 
                             {/* Queue & Table Box */}
-                            <div className="border-2 border-[oklch(18%_0.012_28)] p-2 text-center my-3 bg-[oklch(97%_0.008_28)]">
+                            <div className="border-2 border-[var(--color-ink)] p-2 text-center my-3 bg-[var(--color-paper)]">
                                 <div className="text-sm font-bold uppercase">โต๊ะ 04 (TABLE 04)</div>
                                 <div className="text-xs font-bold mt-0.5">คิว: #HAUS-102</div>
                             </div>
@@ -1151,14 +1151,14 @@ export default function HardwarePrintersTab({
                                     <span className="flex-1 pr-1 truncate">ข้าวผัดกระเพราเนื้อสับไข่ดาว</span>
                                     <span className="shrink-0 tabular-nums">145.-</span>
                                 </div>
-                                <div className="text-[11px] text-[oklch(42%_0.010_28)] pl-6">+ ไข่ดาวสุกพิเศษ</div>
+                                <div className="text-[11px] text-[var(--color-muted)] pl-6">+ ไข่ดาวสุกพิเศษ</div>
 
                                 <div className="flex justify-between items-start font-bold">
                                     <span className="w-6 shrink-0">2x</span>
                                     <span className="flex-1 pr-1 truncate">MATCHA LATTE ICE</span>
                                     <span className="shrink-0 tabular-nums">240.-</span>
                                 </div>
-                                <div className="text-[11px] text-[oklch(42%_0.010_28)] pl-6">+ หวาน 50%</div>
+                                <div className="text-[11px] text-[var(--color-muted)] pl-6">+ หวาน 50%</div>
                             </div>
 
                             {/* Divider Line */}
@@ -1192,7 +1192,7 @@ export default function HardwarePrintersTab({
                             {/* ASCII Footer */}
                             {previewTab === 'billing' && (
                                 <>
-                                    <div className="text-center my-3 whitespace-pre font-mono text-[11px] font-bold leading-tight bg-[oklch(97%_0.008_28)] p-2 rounded border border-dashed border-[oklch(85%_0.012_28)]">
+                                    <div className="text-center my-3 whitespace-pre font-mono text-[11px] font-bold leading-tight bg-[var(--color-paper)] p-2 rounded border border-dashed border-[var(--color-rule)]">
                                         {printerConfig.footer_ascii_art || `T H A N K   Y O U\n  S E E   Y O U   A G A I N`}
                                     </div>
                                     <div className="text-center font-bold text-[11px] uppercase tracking-wider">

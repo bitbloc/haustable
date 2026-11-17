@@ -336,7 +336,7 @@ export default function GeneralBookingSettingsTab({
                     <button
                         type="button"
                         onClick={handleSavePolicies}
-                        className="flex items-center justify-center gap-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] px-5 py-2.5 rounded-xl tabular-nums font-bold text-xs transition-colors cursor-pointer "
+                        className="flex items-center justify-center gap-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-5 py-2.5 rounded-xl tabular-nums font-bold text-xs transition-colors cursor-pointer "
                     >
                         <Save size={15} /> บันทึกการตั้งค่า
                     </button>
@@ -558,7 +558,7 @@ export default function GeneralBookingSettingsTab({
                             type="button"
                             onClick={handleTestEasySlip}
                             disabled={testingEasySlip}
-                            className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[oklch(18%_0.012_28)] rounded-lg text-xs tabular-nums font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                            className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)] rounded-lg text-xs tabular-nums font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
                         >
                             <RefreshCw size={13} className={testingEasySlip ? 'animate-spin' : ''} />
                             <span>{testingEasySlip ? 'กำลังตรวจสอบ...' : 'ทดสอบการเชื่อมต่อ API'}</span>

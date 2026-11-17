@@ -50,15 +50,15 @@ export default function TrafficAndVelocityDuo({
     const seatUtilPct = totalSeats > 0 ? Math.min(100, Math.round((peakSeatsOccupied / totalSeats) * 100)) : 0
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
             
             {/* Header with Operational Indicators */}
-            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
+            <div className="p-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
                         FLOW
                     </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
+                    <span className="font-bold text-[var(--color-ink)]  ">
                         TRAFFIC & SALES VELOCITY // คนเข้าร้านคู่ขนานความเร็วยอดขาย
                     </span>
                 </div>
@@ -66,14 +66,14 @@ export default function TrafficAndVelocityDuo({
                 {/* Live Operational Metrics */}
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5 text-xs">
-                        <span className="text-[oklch(42%_0.010_28)]">CONVERSION:</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                        <span className="text-[var(--color-muted)]">CONVERSION:</span>
+                        <span className="font-bold text-[var(--color-ink)] tabular-nums">
                             {totalOrders} / {walkInEstimates || totalGuests} ({conversionPct}%)
                         </span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs border-l border-[oklch(85%_0.012_28)] pl-3">
-                        <span className="text-[oklch(42%_0.010_28)]">SEAT PEAK:</span>
-                        <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                    <div className="flex items-center gap-1.5 text-xs border-l border-[var(--color-rule)] pl-3">
+                        <span className="text-[var(--color-muted)]">SEAT PEAK:</span>
+                        <span className="font-bold text-[var(--brand-plum)] tabular-nums">
                             {peakSeatsOccupied} / {totalSeats} ที่นั่ง ({seatUtilPct}%)
                         </span>
                     </div>
@@ -85,24 +85,24 @@ export default function TrafficAndVelocityDuo({
                 
                 {/* 1. TRAFFIC: GUESTS / HOUR */}
                 <div className="space-y-1.5">
-                    <div className="flex items-center justify-between tabular-nums text-xs text-[oklch(42%_0.010_28)]">
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="flex items-center justify-between tabular-nums text-xs text-[var(--color-muted)]">
+                        <span className="font-bold text-[var(--color-ink)]">
                             01 // TRAFFIC (GUESTS / HOUR · จำนวนลูกค้าเข้าร้าน)
                         </span>
                         <span>รวม {totalGuests} ท่าน</span>
                     </div>
                     <div className="overflow-x-auto pb-1">
-                        <div className="grid grid-cols-[repeat(13,minmax(38px,1fr))] min-w-[520px] gap-1 bg-[oklch(94%_0.010_28)] p-2 border border-[oklch(85%_0.012_28)] tabular-nums text-center">
+                        <div className="grid grid-cols-[repeat(13,minmax(38px,1fr))] min-w-[520px] gap-1 bg-[var(--color-paper-2)] p-2 border border-[var(--color-rule)] tabular-nums text-center">
                             {timeline.map(slot => (
                                 <div key={`traffic_${slot.hour}`} className="space-y-1">
-                                    <div className="text-xs text-[oklch(55%_0.010_28)]">{slot.hour}</div>
+                                    <div className="text-xs text-[var(--color-neutral)]">{slot.hour}</div>
                                     <div 
                                         className={`py-1 text-xs font-bold tabular-nums transition-colors ${
                                             slot.guests > 0 
                                                 ? slot.isCurrent 
-                                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 
-                                                    : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                : 'text-[oklch(75%_0.010_28)]'
+                                                    ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' 
+                                                    : 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                : 'text-[oklch(75%_0.01_348.33)]'
                                         }`}
                                     >
                                         {slot.guests || '-'}
@@ -115,24 +115,24 @@ export default function TrafficAndVelocityDuo({
 
                 {/* 2. SALES VELOCITY: ฿ / HOUR */}
                 <div className="space-y-1.5">
-                    <div className="flex items-center justify-between tabular-nums text-xs text-[oklch(42%_0.010_28)]">
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="flex items-center justify-between tabular-nums text-xs text-[var(--color-muted)]">
+                        <span className="font-bold text-[var(--color-ink)]">
                             02 // SALES VELOCITY (ยอดขายรายชั่วโมง ฿ / HOUR)
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)]">ความเร็วยอดขายรายชั่วโมง</span>
+                        <span className="text-[var(--color-neutral)]">ความเร็วยอดขายรายชั่วโมง</span>
                     </div>
                     <div className="overflow-x-auto pb-1">
-                        <div className="grid grid-cols-[repeat(13,minmax(38px,1fr))] min-w-[520px] gap-1 bg-[oklch(94%_0.010_28)] p-2 border border-[oklch(85%_0.012_28)] tabular-nums text-center">
+                        <div className="grid grid-cols-[repeat(13,minmax(38px,1fr))] min-w-[520px] gap-1 bg-[var(--color-paper-2)] p-2 border border-[var(--color-rule)] tabular-nums text-center">
                             {timeline.map(slot => (
                                 <div key={`sales_${slot.hour}`} className="space-y-1">
-                                    <div className="text-xs text-[oklch(55%_0.010_28)]">{slot.hour}</div>
+                                    <div className="text-xs text-[var(--color-neutral)]">{slot.hour}</div>
                                     <div 
                                         className={`py-1 text-xs font-bold tabular-nums truncate px-0.5 transition-colors ${
                                             slot.amount > 0 
                                                 ? slot.isCurrent 
-                                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 
-                                                    : 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)]'
-                                                : 'text-[oklch(75%_0.010_28)]'
+                                                    ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' 
+                                                    : 'bg-[oklch(45%_0.08_140)] text-[var(--color-paper)]'
+                                                : 'text-[oklch(75%_0.01_348.33)]'
                                         }`}
                                     >
                                         {slot.amount > 0 ? `฿${Math.round(slot.amount)}` : '-'}

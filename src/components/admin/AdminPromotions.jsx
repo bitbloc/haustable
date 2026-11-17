@@ -17,14 +17,14 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
     return (
         <div className="space-y-6">
             {/* Inner Sub-tab Switcher if accessed directly */}
-            <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] tabular-nums text-xs w-full sm:w-max overflow-x-auto gap-1">
+            <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-sm border border-[var(--color-rule)] tabular-nums text-xs w-full sm:w-max overflow-x-auto gap-1">
                 <button
                     type="button"
                     onClick={() => setActiveTab('promo')}
                     className={`px-3 py-1.5 rounded-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'promo'
-                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
-                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                            : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                     }`}
                 >
                     <Tag size={13} />
@@ -35,8 +35,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     onClick={() => setActiveTab('rewards')}
                     className={`px-3 py-1.5 rounded-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'rewards'
-                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
-                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                            : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                     }`}
                 >
                     <Gift size={13} />
@@ -47,8 +47,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     onClick={() => setActiveTab('stamps')}
                     className={`px-3 py-1.5 rounded-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         activeTab === 'stamps'
-                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
-                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                            : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                     }`}
                 >
                     <Award size={13} />

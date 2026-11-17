@@ -62,35 +62,35 @@ export default function OperationalMarginBreakdown({
     }, [grossSales, discounts, fixedExpenses, foodCostPct, packagingPct, platformFeePct, customFoodCost, customPackaging, customPlatformFee])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
             
             {/* Header Strip */}
-            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs">
+            <div className="p-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
                         P&L // MARGINS
                     </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
+                    <span className="font-bold text-[var(--color-ink)]  ">
                         OPERATIONAL CONTRIBUTION & COST BREAKDOWN // ต้นทุนจริงและกำไรหน้างาน
                     </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-[oklch(42%_0.010_28)]">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
                     <span>CONTRIBUTION: <strong className="text-[oklch(45%_0.08_140)]">{metrics.contributionPct}%</strong></span>
                     <span>|</span>
-                    <span>NET ACCOUNTING: <strong className="text-[oklch(18%_0.012_28)]">{metrics.netProfitMarginPct}%</strong></span>
+                    <span>NET ACCOUNTING: <strong className="text-[var(--color-ink)]">{metrics.netProfitMarginPct}%</strong></span>
                 </div>
             </div>
 
             {/* Split View: Operational Contribution vs Accounting Bottom Line */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[oklch(85%_0.012_28)] tabular-nums text-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[var(--color-rule)] tabular-nums text-xs">
                 
                 {/* Left 7 Cols: Operational Contribution (กำไรจากการขายจริงหน้างาน) */}
                 <div className="p-4 md:p-5 lg:col-span-7 space-y-4">
-                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
-                        <span className="font-bold text-[oklch(18%_0.012_28)] ">
+                    <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2">
+                        <span className="font-bold text-[var(--color-ink)] ">
                             01 // OPERATIONAL CONTRIBUTION (กำไรหน้างาน)
                         </span>
-                        <span className="text-xs text-[oklch(55%_0.010_28)]">
+                        <span className="text-xs text-[var(--color-neutral)]">
                             ขายแล้วร้านเหลือเงินจริงเท่าไร
                         </span>
                     </div>
@@ -98,51 +98,51 @@ export default function OperationalMarginBreakdown({
                     <div className="space-y-2.5">
                         {/* Sales */}
                         <div className="flex items-center justify-between">
-                            <span className="text-[oklch(18%_0.012_28)] font-bold">ยอดขายรวม (Gross Sales)</span>
+                            <span className="text-[var(--color-ink)] font-bold">ยอดขายรวม (Gross Sales)</span>
                             <div className="text-right">
-                                <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{metrics.sales.toLocaleString()}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] ml-2">100.0%</span>
+                                <span className="font-bold text-[var(--color-ink)] tabular-nums">฿{metrics.sales.toLocaleString()}</span>
+                                <span className="text-xs text-[var(--color-neutral)] ml-2">100.0%</span>
                             </div>
                         </div>
 
                         {/* Deductions */}
-                        <div className="space-y-1.5 pl-3 border-l-2 border-[oklch(85%_0.012_28)]">
-                            <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                        <div className="space-y-1.5 pl-3 border-l-2 border-[var(--color-rule)]">
+                            <div className="flex items-center justify-between text-[var(--color-muted)]">
                                 <span>- Food & Beverage Cost (วัตถุดิบ)</span>
                                 <div className="text-right tabular-nums">
-                                    <span className="text-[oklch(52%_0.16_28)]">-฿{metrics.foodCostAmt.toLocaleString()}</span>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] ml-2">{metrics.foodCostCalcPct}%</span>
+                                    <span className="text-[var(--brand-plum)]">-฿{metrics.foodCostAmt.toLocaleString()}</span>
+                                    <span className="text-xs text-[var(--color-neutral)] ml-2">{metrics.foodCostCalcPct}%</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                            <div className="flex items-center justify-between text-[var(--color-muted)]">
                                 <span>- Packaging & Disposables (กล่อง/ถุง)</span>
                                 <div className="text-right tabular-nums">
-                                    <span className="text-[oklch(52%_0.16_28)]">-฿{metrics.packagingAmt.toLocaleString()}</span>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] ml-2">{metrics.packagingCalcPct}%</span>
+                                    <span className="text-[var(--brand-plum)]">-฿{metrics.packagingAmt.toLocaleString()}</span>
+                                    <span className="text-xs text-[var(--color-neutral)] ml-2">{metrics.packagingCalcPct}%</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                            <div className="flex items-center justify-between text-[var(--color-muted)]">
                                 <span>- Platform Fees (GP LINE MAN / Grab)</span>
                                 <div className="text-right tabular-nums">
-                                    <span className="text-[oklch(52%_0.16_28)]">-฿{metrics.platformFeeAmt.toLocaleString()}</span>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] ml-2">{metrics.platformCalcPct}%</span>
+                                    <span className="text-[var(--brand-plum)]">-฿{metrics.platformFeeAmt.toLocaleString()}</span>
+                                    <span className="text-xs text-[var(--color-neutral)] ml-2">{metrics.platformCalcPct}%</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                            <div className="flex items-center justify-between text-[var(--color-muted)]">
                                 <span>- Discounts / xhaus Credits (ส่วนลด)</span>
                                 <div className="text-right tabular-nums">
-                                    <span className="text-[oklch(52%_0.16_28)]">-฿{metrics.discountAmt.toLocaleString()}</span>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] ml-2">{metrics.discountCalcPct}%</span>
+                                    <span className="text-[var(--brand-plum)]">-฿{metrics.discountAmt.toLocaleString()}</span>
+                                    <span className="text-xs text-[var(--color-neutral)] ml-2">{metrics.discountCalcPct}%</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Contribution Total */}
-                        <div className="pt-2 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between bg-[oklch(94%_0.010_28)] p-2">
-                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                        <div className="pt-2 border-t border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper-2)] p-2">
+                            <span className="font-bold text-[var(--color-ink)]">
                                 = GROSS CONTRIBUTION (กำไรส่วนเพิ่มหน้างาน)
                             </span>
                             <div className="text-right tabular-nums">
@@ -158,39 +158,39 @@ export default function OperationalMarginBreakdown({
                 </div>
 
                 {/* Right 5 Cols: Fixed Costs & Net Accounting Profit */}
-                <div className="p-4 md:p-5 lg:col-span-5 space-y-4 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
-                        <span className="font-bold text-[oklch(18%_0.012_28)] ">
+                <div className="p-4 md:p-5 lg:col-span-5 space-y-4 bg-[var(--color-paper)]">
+                    <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2">
+                        <span className="font-bold text-[var(--color-ink)] ">
                             02 // NET OPERATING (กำไรสุทธิทางบัญชี)
                         </span>
-                        <span className="text-xs text-[oklch(55%_0.010_28)]">
+                        <span className="text-xs text-[var(--color-neutral)]">
                             หลังหักโสหุ้ยร้าน
                         </span>
                     </div>
 
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                        <div className="flex items-center justify-between text-[var(--color-muted)]">
                             <span>กำไรส่วนเพิ่มหน้างาน</span>
-                            <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                            <span className="font-bold text-[var(--color-ink)] tabular-nums">
                                 ฿{metrics.operationalGrossContribution.toLocaleString()}
                             </span>
                         </div>
 
-                        <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                        <div className="flex items-center justify-between text-[var(--color-muted)]">
                             <span>- รายจ่ายคงที่ประจำวัน (Store Expenses)</span>
-                            <span className="text-[oklch(52%_0.16_28)] font-bold tabular-nums">
+                            <span className="text-[var(--brand-plum)] font-bold tabular-nums">
                                 -฿{metrics.fixedExpenses.toLocaleString()}
                             </span>
                         </div>
 
-                        <div className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
-                            <span className="text-xs text-[oklch(42%_0.010_28)] block ">
+                        <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] space-y-1">
+                            <span className="text-xs text-[var(--color-muted)] block ">
                                 NET OPERATING PROFIT
                             </span>
-                            <div className=" text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                            <div className=" text-2xl font-bold text-[var(--color-ink)] tabular-nums">
                                 ฿{metrics.netOperatingProfit.toLocaleString()}
                             </div>
-                            <span className="text-xs text-[oklch(55%_0.010_28)] block">
+                            <span className="text-xs text-[var(--color-neutral)] block">
                                 Net Margin: ~{metrics.netProfitMarginPct}% ของยอดขาย
                             </span>
                         </div>

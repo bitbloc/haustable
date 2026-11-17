@@ -31,13 +31,13 @@ const writeDraft = (draft) => {
 const baht = (n) => `฿${Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const qty = (n) => Number(Number(n || 0).toFixed(3)).toLocaleString('th-TH', { maximumFractionDigits: 3 });
 
-const INK = 'text-[oklch(18%_0.012_28)]';
-const MUTED = 'text-[oklch(42%_0.010_28)]';
-const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
-const RULE = 'border-[oklch(85%_0.012_28)]';
-const ACCENT = 'text-[oklch(52%_0.16_28)]';
-const segBtn = (active) => `relative h-9 px-3 rounded text-sm whitespace-nowrap transition-colors cursor-pointer ${active ? 'text-[oklch(18%_0.012_28)] font-semibold' : `${NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`;
-const segPill = 'absolute inset-0 rounded bg-[oklch(99%_0.004_28)] shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]';
+const INK = 'text-[var(--color-ink)]';
+const MUTED = 'text-[var(--color-muted)]';
+const NEUTRAL = 'text-[var(--color-neutral)]';
+const RULE = 'border-[var(--color-rule)]';
+const ACCENT = 'text-[var(--brand-plum)]';
+const segBtn = (active) => `relative h-9 px-3 rounded text-sm whitespace-nowrap transition-colors cursor-pointer ${active ? 'text-[var(--color-ink)] font-semibold' : `${NEUTRAL} hover:text-[var(--color-ink)]`}`;
+const segPill = 'absolute inset-0 rounded bg-[var(--color-paper)] shadow-[0_1px_2px_oklch(21.78%_0_0/0.12)]';
 
 /**
  * Goods in: what arrived, how many, what the bill says. One save adds the stock,
@@ -207,11 +207,11 @@ export default function StockReceivePage() {
     };
 
     return (
-        <div className={`min-h-screen bg-[oklch(97%_0.008_28)] ${INK} font-sans pb-28`}>
-            <header className={`sticky top-0 z-20 bg-[oklch(97%_0.008_28)] border-b ${RULE}`}>
-                <div className={`max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[oklch(85%_0.012_28)] border-x ${RULE}`}>
+        <div className={`min-h-screen bg-[var(--color-paper)] ${INK} font-sans pb-28`}>
+            <header className={`sticky top-0 z-20 bg-[var(--color-paper)] border-b ${RULE}`}>
+                <div className={`max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[var(--color-rule)] border-x ${RULE}`}>
                     <button type="button" onClick={() => navigate('/staff/stock')}
-                        className={`px-4 font-bold text-[14px] ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer`}>
+                        className={`px-4 font-bold text-[14px] ${MUTED} hover:bg-[var(--color-paper-2)] cursor-pointer`}>
                         กลับ
                     </button>
                     <div className="px-4 py-2.5">
@@ -221,7 +221,7 @@ export default function StockReceivePage() {
                 </div>
             </header>
 
-            <main className={`max-w-3xl mx-auto border-x ${RULE} bg-[oklch(99%_0.004_28)] min-h-[60vh]`}>
+            <main className={`max-w-3xl mx-auto border-x ${RULE} bg-[var(--color-paper)] min-h-[60vh]`}>
                 {result ? (
                     <motion.section {...fade} className="p-4 space-y-4" aria-labelledby="receive-result">
                         <div>
@@ -237,7 +237,7 @@ export default function StockReceivePage() {
                             </p>
                         </div>
                         {Array.isArray(result.lines) && (
-                            <ol className={`border ${RULE} divide-y divide-[oklch(90%_0.008_28)]`}>
+                            <ol className={`border ${RULE} divide-y divide-[var(--color-paper-3)]`}>
                                 {result.lines.map(l => (
                                     <li key={l.stock_item_id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2">
                                         <span className="font-bold text-[14px] leading-6 min-w-0 break-words">{l.name}</span>
@@ -252,20 +252,20 @@ export default function StockReceivePage() {
                                 ))}
                             </ol>
                         )}
-                        <div className={`grid grid-cols-2 border ${RULE} divide-x divide-[oklch(85%_0.012_28)]`}>
-                            <button type="button" onClick={startNext} className="py-3 font-bold text-[14px] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">รับบิลถัดไป</button>
+                        <div className={`grid grid-cols-2 border ${RULE} divide-x divide-[var(--color-rule)]`}>
+                            <button type="button" onClick={startNext} className="py-3 font-bold text-[14px] hover:bg-[var(--color-paper-2)] cursor-pointer">รับบิลถัดไป</button>
                             <button type="button" onClick={() => navigate('/staff/stock')}
-                                className="py-3 font-bold text-[14px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(25%_0.012_28)] cursor-pointer">กลับหน้าคลัง</button>
+                                className="py-3 font-bold text-[14px] bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)] cursor-pointer">กลับหน้าคลัง</button>
                         </div>
                     </motion.section>
                 ) : (
                     <>
                         {/* Bill */}
-                        <section className={`p-3 border-b ${RULE} bg-[oklch(98%_0.004_28)] grid gap-2 sm:grid-cols-2`} aria-label="ข้อมูลบิล">
+                        <section className={`p-3 border-b ${RULE} bg-[var(--color-paper)] grid gap-2 sm:grid-cols-2`} aria-label="ข้อมูลบิล">
                             <label className="block">
                                 <span className={`block text-[12px] leading-5 ${MUTED} mb-1`}>ร้าน / ผู้ขาย</span>
                                 <input type="text" value={vendor} onChange={e => setVendor(e.target.value)} list="receive-vendors" placeholder="เช่น Makro, ตลาด"
-                                    className={`w-full h-11 px-3 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`} />
+                                    className={`w-full h-11 px-3 rounded-md border ${RULE} bg-[var(--color-paper)] text-base outline-none transition-colors focus:border-[var(--color-ink)]`} />
                                 <datalist id="receive-vendors">
                                     {[...new Set(['Makro', 'Siam Makro', 'ตลาด', ...recentExpenses.map(e => e.vendor_name).filter(Boolean)])].map(v => <option key={v} value={v} />)}
                                 </datalist>
@@ -273,7 +273,7 @@ export default function StockReceivePage() {
                             <label className="block">
                                 <span className={`block text-[12px] leading-5 ${MUTED} mb-1`}>โน้ต (ไม่บังคับ)</span>
                                 <input type="text" value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="เลขที่บิล หรือหมายเหตุ"
-                                    className={`w-full h-11 px-3 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`} />
+                                    className={`w-full h-11 px-3 rounded-md border ${RULE} bg-[var(--color-paper)] text-base outline-none transition-colors focus:border-[var(--color-ink)]`} />
                             </label>
                         </section>
 
@@ -281,19 +281,19 @@ export default function StockReceivePage() {
                         <section className={`p-3 border-b ${RULE} space-y-2`} aria-label="เพิ่มรายการ">
                             <div className="flex gap-2">
                                 <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาวัตถุดิบที่รับเข้า..."
-                                    aria-label="ค้นหาวัตถุดิบ" className={`flex-1 min-w-0 h-11 px-3 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`} />
+                                    aria-label="ค้นหาวัตถุดิบ" className={`flex-1 min-w-0 h-11 px-3 rounded-md border ${RULE} bg-[var(--color-paper)] text-base outline-none transition-colors focus:border-[var(--color-ink)]`} />
                                 <button type="button" onClick={() => { setScanning(s => !s); gateRef.current.reset(); }} aria-pressed={scanning}
-                                    className={`h-11 px-4 shrink-0 rounded-md border text-sm font-semibold transition-colors cursor-pointer ${scanning ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : `${RULE} bg-[oklch(99%_0.004_28)] hover:border-[oklch(18%_0.012_28)]`}`}>
+                                    className={`h-11 px-4 shrink-0 rounded-md border text-sm font-semibold transition-colors cursor-pointer ${scanning ? 'border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-paper)]' : `${RULE} bg-[var(--color-paper)] hover:border-[var(--color-ink)]`}`}>
                                     {scanning ? 'กำลังสแกน' : 'สแกน'}
                                 </button>
                             </div>
                             <AnimatePresence initial={false}>
                             {matches.length > 0 && (
-                                <motion.ul key="matches" {...fade} className={`rounded-md overflow-hidden border ${RULE} divide-y divide-[oklch(90%_0.008_28)]`}>
+                                <motion.ul key="matches" {...fade} className={`rounded-md overflow-hidden border ${RULE} divide-y divide-[var(--color-paper-3)]`}>
                                     {matches.map(i => (
                                         <li key={i.id}>
                                             <button type="button" onClick={() => { addItem(i.id, 1); setSearch(''); }}
-                                                className="w-full text-left px-3 py-2 grid grid-cols-[1fr_auto] gap-3 items-baseline hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                                                className="w-full text-left px-3 py-2 grid grid-cols-[1fr_auto] gap-3 items-baseline hover:bg-[var(--color-paper-2)] cursor-pointer">
                                                 <span className="font-bold text-[14px] leading-6 break-words min-w-0">{i.name}</span>
                                                 <span className={`text-[12px] ${NEUTRAL}`}>{displayUnit(i.unit)}</span>
                                             </button>
@@ -315,7 +315,7 @@ export default function StockReceivePage() {
                         ) : lines.length === 0 ? (
                             <p className={`p-6 text-[14px] leading-6 ${MUTED}`}>ค้นหาหรือสแกนของที่รับเข้า ใส่จำนวนตามหน่วยนับในคลัง และราคารวมตามบิล</p>
                         ) : (
-                            <ul className="divide-y divide-[oklch(90%_0.008_28)]" aria-label="รายการรับเข้า">
+                            <ul className="divide-y divide-[var(--color-paper-3)]" aria-label="รายการรับเข้า">
                                 <AnimatePresence initial={false}>
                                 {lines.map(l => {
                                     const item = itemsById.get(l.stockItemId);
@@ -323,20 +323,20 @@ export default function StockReceivePage() {
                                     const err = errors[l.key];
                                     const u = displayUnit(item?.unit);
                                     return (
-                                        <motion.li key={l.key} layout={!reduceMotion} {...fade} className={`px-3 py-3 space-y-2 ${err ? 'bg-[oklch(97%_0.02_28)]' : ''}`}>
+                                        <motion.li key={l.key} layout={!reduceMotion} {...fade} className={`px-3 py-3 space-y-2 ${err ? 'bg-[var(--color-paper)]' : ''}`}>
                                             <div className="grid grid-cols-[1fr_auto] gap-3 items-baseline">
                                                 <span className="font-bold text-base leading-6 break-words min-w-0">{item?.name || 'ไม่พบวัตถุดิบ'}</span>
                                                 <button type="button" onClick={() => setLines(prev => prev.filter(x => x.key !== l.key))}
-                                                    className={`text-[12px] font-bold ${NEUTRAL} hover:text-[oklch(52%_0.16_28)] cursor-pointer`}>ลบ</button>
+                                                    className={`text-[12px] font-bold ${NEUTRAL} hover:text-[var(--error-red)] cursor-pointer`}>ลบ</button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <label className={`flex items-center h-11 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] transition-colors focus-within:border-[oklch(18%_0.012_28)]`}>
+                                                <label className={`flex items-center h-11 rounded-md border ${RULE} bg-[var(--color-paper)] transition-colors focus-within:border-[var(--color-ink)]`}>
                                                     <input type="text" inputMode="decimal" value={l.quantity} onChange={e => updateLine(l.key, { quantity: e.target.value })}
                                                         aria-label={`จำนวน ${item?.name || ''}`} placeholder="0"
                                                         className="w-full min-w-0 p-2 bg-transparent tabular-nums font-bold text-base text-right outline-none" />
                                                     <span className={`pr-2 text-[12px] shrink-0 ${MUTED}`}>{u}</span>
                                                 </label>
-                                                <label className={`flex items-center h-11 rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] transition-colors focus-within:border-[oklch(18%_0.012_28)]`}>
+                                                <label className={`flex items-center h-11 rounded-md border ${RULE} bg-[var(--color-paper)] transition-colors focus-within:border-[var(--color-ink)]`}>
                                                     <span className={`pl-2 text-[12px] shrink-0 ${MUTED}`}>รวม ฿</span>
                                                     <input type="text" inputMode="decimal" value={l.lineTotal} onChange={e => updateLine(l.key, { lineTotal: e.target.value })}
                                                         aria-label={`ราคารวม ${item?.name || ''}`} placeholder="ตามบิล"
@@ -354,7 +354,7 @@ export default function StockReceivePage() {
                                                     </span>
                                                     <label className={`flex items-center gap-1.5 text-[12px] leading-5 ${MUTED} cursor-pointer select-none`}>
                                                         <input type="checkbox" checked={l.updateCost !== false} onChange={e => updateLine(l.key, { updateCost: e.target.checked })}
-                                                            className="w-4 h-4 accent-[oklch(18%_0.012_28)]" />
+                                                            className="w-4 h-4 accent-[var(--color-ink)]" />
                                                         อัปเดตราคาทุน
                                                     </label>
                                                 </div>
@@ -371,9 +371,9 @@ export default function StockReceivePage() {
                         )}
 
                         {/* Expense */}
-                        <section className={`p-3 border-t ${RULE} bg-[oklch(98%_0.004_28)] space-y-2`} aria-label="ค่าใช้จ่าย">
+                        <section className={`p-3 border-t ${RULE} bg-[var(--color-paper)] space-y-2`} aria-label="ค่าใช้จ่าย">
                             <span className={`block text-[12px] leading-5 font-bold ${MUTED}`}>ค่าใช้จ่ายของบิลนี้</span>
-                            <div className="grid grid-cols-3 p-1 rounded-md bg-[oklch(94%_0.010_28)]" role="radiogroup" aria-label="ค่าใช้จ่าย">
+                            <div className="grid grid-cols-3 p-1 rounded-md bg-[var(--color-paper-2)]" role="radiogroup" aria-label="ค่าใช้จ่าย">
                                 {[['new', 'สร้างใหม่'], ['link', 'ผูกที่บันทึกไว้'], ['none', 'ไม่บันทึก']].map(([v, label]) => (
                                     <button key={v} type="button" role="radio" aria-checked={expenseMode === v} onClick={() => setExpenseMode(v)} className={segBtn(expenseMode === v)}>
                                         {expenseMode === v && <motion.span layoutId="receive-expense-pill" className={segPill} transition={pill} />}
@@ -384,7 +384,7 @@ export default function StockReceivePage() {
                             <AnimatePresence mode="wait" initial={false}>
                             {expenseMode === 'new' && (
                                 <motion.div key="new" {...fade} className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                    <div className="inline-grid grid-cols-3 p-1 rounded-md bg-[oklch(94%_0.010_28)]" role="radiogroup" aria-label="วิธีจ่าย">
+                                    <div className="inline-grid grid-cols-3 p-1 rounded-md bg-[var(--color-paper-2)]" role="radiogroup" aria-label="วิธีจ่าย">
                                         {[['CASH', 'เงินสด'], ['TRANSFER', 'โอน'], ['CREDIT', 'เครดิต']].map(([v, label]) => (
                                             <button key={v} type="button" role="radio" aria-checked={payment === v} onClick={() => setPayment(v)} className={segBtn(payment === v)}>
                                                 {payment === v && <motion.span layoutId="receive-pay-pill" className={segPill} transition={pill} />}
@@ -393,7 +393,7 @@ export default function StockReceivePage() {
                                         ))}
                                     </div>
                                     <label className={`flex items-center gap-2 text-[14px] leading-5 ${MUTED} cursor-pointer select-none`}>
-                                        <input type="checkbox" checked={vatIncluded} onChange={e => setVatIncluded(e.target.checked)} className="w-4 h-4 accent-[oklch(18%_0.012_28)]" />
+                                        <input type="checkbox" checked={vatIncluded} onChange={e => setVatIncluded(e.target.checked)} className="w-4 h-4 accent-[var(--color-ink)]" />
                                         ใบกำกับภาษี (รวม VAT 7%)
                                     </label>
                                 </motion.div>
@@ -402,11 +402,11 @@ export default function StockReceivePage() {
                                 <motion.div key="link" {...fade}>{recentExpenses.length === 0 ? (
                                     <p className={`text-[14px] leading-6 ${MUTED}`}>ไม่มีค่าใช้จ่ายใน 14 วันที่ผ่านมา</p>
                                 ) : (
-                                    <ul className={`rounded-md border ${RULE} bg-[oklch(99%_0.004_28)] divide-y divide-[oklch(90%_0.008_28)] max-h-64 overflow-y-auto`} role="radiogroup" aria-label="ค่าใช้จ่ายที่บันทึกไว้">
+                                    <ul className={`rounded-md border ${RULE} bg-[var(--color-paper)] divide-y divide-[var(--color-paper-3)] max-h-64 overflow-y-auto`} role="radiogroup" aria-label="ค่าใช้จ่ายที่บันทึกไว้">
                                         {recentExpenses.map(e => (
                                             <li key={e.id}>
                                                 <button type="button" role="radio" aria-checked={linkedExpenseId === e.id} onClick={() => setLinkedExpenseId(e.id)}
-                                                    className={`w-full text-left px-3 py-2 grid grid-cols-[1fr_auto] gap-x-3 cursor-pointer ${linkedExpenseId === e.id ? 'bg-[oklch(94%_0.010_28)] shadow-[inset_3px_0_0_oklch(18%_0.012_28)]' : 'hover:bg-[oklch(97%_0.008_28)]'}`}>
+                                                    className={`w-full text-left px-3 py-2 grid grid-cols-[1fr_auto] gap-x-3 cursor-pointer ${linkedExpenseId === e.id ? 'bg-[var(--color-paper-2)] shadow-[inset_3px_0_0_var(--color-ink)]' : 'hover:bg-[var(--color-paper)]'}`}>
                                                     <span className="font-bold text-[14px] leading-6 break-words min-w-0">{e.vendor_name || e.title}</span>
                                                     <span className="tabular-nums text-[14px] tabular-nums">{baht(e.amount)}</span>
                                                     <span className={`text-[12px] leading-5 break-words ${NEUTRAL}`}>{e.title}</span>
@@ -426,7 +426,7 @@ export default function StockReceivePage() {
             </main>
 
             {!result && (
-                <footer className={`fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t ${RULE}`}>
+                <footer className={`fixed bottom-0 inset-x-0 z-20 bg-[var(--color-paper)] border-t ${RULE}`}>
                     <div className={`max-w-3xl mx-auto flex items-center gap-3 px-3 py-3 border-x ${RULE}`}>
                         <span className={`flex-1 min-w-0 text-[14px] leading-5 ${MUTED}`}>
                             <span className={`tabular-nums font-bold ${INK}`}>{lines.length}</span> รายการ
@@ -434,7 +434,7 @@ export default function StockReceivePage() {
                             <span className={`block text-[12px] ${NEUTRAL}`}>ร่างเก็บไว้ในเครื่องนี้ กลับมาทำต่อได้</span>
                         </span>
                         <button type="button" onClick={handleSave} disabled={saving || !lines.length || Boolean(problem)}
-                            className="h-12 px-6 shrink-0 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold text-base transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
+                            className="h-12 px-6 shrink-0 rounded-md bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold text-base transition-[background-color,opacity,transform] hover:bg-[var(--color-ink)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
                             {saving ? 'กำลังบันทึก...' : 'บันทึกรับเข้า'}
                         </button>
                     </div>

@@ -883,24 +883,24 @@ export default function ArcadeLobby() {
         }
 
         #arcade-lobby-root {
-          --color-paper: oklch(97% 0.008 28);
-          --color-paper-2: oklch(94% 0.010 28);
-          --color-paper-3: oklch(91% 0.012 28);
-          --color-rule: oklch(85% 0.012 28);
-          --color-neutral: oklch(55% 0.010 28);
-          --color-muted: oklch(42% 0.010 28);
-          --color-ink: oklch(18% 0.012 28);
-          --color-ink-2: oklch(35% 0.010 28);
-          --color-accent: oklch(52% 0.16 28);
+          --color-paper: oklch(96.20% 0.0115 84.58);
+          --color-paper-2: oklch(92.60% 0.0095 352.37);
+          --color-paper-3: oklch(89.47% 0.0128 345.51);
+          --color-rule: oklch(85.05% 0.0113 348.48);
+          --color-neutral: oklch(48.01% 0.0120 345.78);
+          --color-muted: oklch(41.84% 0.0124 345.90);
+          --color-ink: oklch(21.78% 0 0);
+          --color-ink-2: oklch(35% 0.01 348.33);
+          --color-accent: oklch(25.18% 0.1001 348.33);
           --color-accent-2: oklch(45% 0.08 140);
-          --color-brand: oklch(52% 0.16 28);
+          --color-brand: oklch(25.18% 0.1001 348.33);
           background-color: var(--color-paper);
           color: var(--color-ink);
         }
       `}</style>
 
       {activeTableId && (
-        <div className="w-full bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] py-2 px-4 sm:px-8 flex items-center justify-between border-b border-[oklch(45%_0.16_28)] shadow-md sticky top-0 z-40">
+        <div className="w-full bg-[var(--brand-plum)] text-[var(--color-paper)] py-2 px-4 sm:px-8 flex items-center justify-between border-b border-[var(--brand-plum)] shadow-md sticky top-0 z-40">
           <div className="flex items-center gap-2 font-mono text-[11px]">
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping"></span>
             <span className="font-bold uppercase tracking-wider">

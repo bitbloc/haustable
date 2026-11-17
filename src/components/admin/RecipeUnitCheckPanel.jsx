@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import { findRecipeUnitIssues } from '../../utils/recipeUnits';
 
-const RULE = 'border-[oklch(85%_0.012_28)]';
-const MUTED = 'text-[oklch(42%_0.010_28)]';
-const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
+const RULE = 'border-[var(--color-rule)]';
+const MUTED = 'text-[var(--color-muted)]';
+const NEUTRAL = 'text-[var(--color-neutral)]';
 const fmt = (n) => String(Math.round(Number(n || 0) * 10000) / 10000);
 
 /**
@@ -66,22 +66,22 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
     if (loading) return null;
     if (issues.length === 0) {
         return (
-            <p className={`border ${RULE} bg-[oklch(99%_0.004_28)] px-3 py-2 font-sans text-[12px] leading-5 ${NEUTRAL}`}>
+            <p className={`border ${RULE} bg-[var(--color-paper)] px-3 py-2 font-sans text-[12px] leading-5 ${NEUTRAL}`}>
                 หน่วยในสูตรตรงกับหน่วยใช้ของวัตถุดิบทุกแถว
             </p>
         );
     }
 
     return (
-        <section className={`border ${RULE} bg-[oklch(99%_0.004_28)] font-sans text-[oklch(18%_0.012_28)]`} aria-labelledby="recipe-unit-check">
-            <div className={`px-3 py-2.5 border-b ${RULE} bg-[oklch(98%_0.004_28)]`}>
+        <section className={`border ${RULE} bg-[var(--color-paper)] font-sans text-[var(--color-ink)]`} aria-labelledby="recipe-unit-check">
+            <div className={`px-3 py-2.5 border-b ${RULE} bg-[var(--color-paper)]`}>
                 <h2 id="recipe-unit-check" className="font-bold text-[15px] leading-6">หน่วยในสูตรไม่ตรง {issues.length} แถว</h2>
                 <p className={`text-[12px] leading-5 ${MUTED}`}>
                     ต้นทุนและการตัดสต๊อกอ่านตัวเลขเป็นหน่วยใช้ของวัตถุดิบ แถวเหล่านี้จึงคิดผิดจนกว่าจะแก้
                     {convertible > 0 && ` · แปลงอัตโนมัติได้ ${convertible} แถว`}
                 </p>
             </div>
-            <ul className="divide-y divide-[oklch(90%_0.008_28)]">
+            <ul className="divide-y divide-[var(--color-paper-3)]">
                 {issues.map(i => (
                     <li key={i.rowId} className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-4 gap-y-2 px-3 py-2.5 items-center">
                         <div className="min-w-0">
@@ -106,7 +106,7 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
                             )}
                             {onOpenRecipe && i.parentKind === 'menu' && (
                                 <button type="button" onClick={() => onOpenRecipe(i)}
-                                    className={`px-3 py-1.5 border ${RULE} bg-[oklch(99%_0.004_28)] text-[13px] font-bold ${MUTED} hover:bg-[oklch(94%_0.010_28)] cursor-pointer whitespace-nowrap`}>
+                                    className={`px-3 py-1.5 border ${RULE} bg-[var(--color-paper)] text-[13px] font-bold ${MUTED} hover:bg-[var(--color-paper-2)] cursor-pointer whitespace-nowrap`}>
                                     เปิดสูตร
                                 </button>
                             )}

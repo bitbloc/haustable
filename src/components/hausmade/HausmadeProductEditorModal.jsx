@@ -581,7 +581,7 @@ export default function HausmadeProductEditorModal({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="fixed inset-0 bg-[oklch(18%_0.012_28)]/70 backdrop-blur-sm"
+                    className="fixed inset-0 bg-[var(--color-ink)]/70 backdrop-blur-sm"
                 />
 
                 {/* Modal Window Container */}
@@ -590,22 +590,22 @@ export default function HausmadeProductEditorModal({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.97, y: 15 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                    className="relative w-full max-w-3xl bg-[oklch(97%_0.008_28)] border-2 border-[oklch(18%_0.012_28)] shadow-2xl z-10 flex flex-col max-h-[92vh] font-sans my-auto text-[oklch(18%_0.012_28)]"
+                    className="relative w-full max-w-3xl bg-[var(--color-paper)] border-2 border-[var(--color-ink)] shadow-2xl z-10 flex flex-col max-h-[92vh] font-sans my-auto text-[var(--color-ink)]"
                 >
                     {/* Header Bar */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex-shrink-0">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex-shrink-0">
                         <div>
-                            <span className="font-mono text-[10px] font-bold tracking-widest text-[oklch(52%_0.16_28)] uppercase block">
+                            <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--brand-plum)] uppercase block">
                                 // HAUSMADE CATALOG & INVENTORY BACKOFFICE
                             </span>
-                            <h2 className="font-mono text-sm font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                            <h2 className="font-mono text-sm font-bold uppercase tracking-tight text-[var(--color-ink)]">
                                 [ {product ? 'EDIT PRODUCT // แก้ไขข้อมูลสินค้า' : 'CREATE PRODUCT // เพิ่มสินค้าใหม่'} ]
                             </h2>
                         </div>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] transition-colors px-2 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] cursor-pointer"
+                            className="font-mono text-xs font-bold text-[var(--color-ink)] hover:text-[var(--brand-plum)] transition-colors px-2 py-1 border border-[var(--color-rule)] bg-[var(--color-paper)] cursor-pointer"
                         >
                             [ ESC / ปิด ]
                         </button>
@@ -615,18 +615,18 @@ export default function HausmadeProductEditorModal({
                     <form onSubmit={handleSave} className="p-6 overflow-y-auto flex-grow flex flex-col gap-6 font-mono text-xs">
 
                         {/* SECTION 1: MULTI-PHOTO GALLERY & UPLOAD MANAGER */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 flex flex-col gap-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[oklch(85%_0.012_28)] pb-3">
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-rule)] pb-3">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[11px] font-bold uppercase text-[oklch(18%_0.012_28)] block">
+                                        <span className="text-[11px] font-bold uppercase text-[var(--color-ink)] block">
                                             [ คลังรูปภาพสินค้า (PRODUCT PHOTO GALLERY) ]
                                         </span>
-                                        <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold">
+                                        <span className="px-2 py-0.5 bg-[var(--color-ink)] text-white font-mono text-[9px] font-bold">
                                             {images.length} รูป
                                         </span>
                                     </div>
-                                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-sans mt-0.5 leading-relaxed">
+                                    <p className="text-[10px] text-[var(--color-neutral)] font-sans mt-0.5 leading-relaxed">
                                         อัปโหลดได้หลายภาพ (มุมมองด้านหน้า, ด้านหลัง, ป้ายสินค้า, รายละเอียดเนื้อผ้า) ระบบจะบีบอัดและปรับสัดส่วน Retina อัตโนมัติ
                                     </p>
                                 </div>
@@ -644,7 +644,7 @@ export default function HausmadeProductEditorModal({
                                         type="button"
                                         disabled={uploadProgress}
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="px-3.5 py-1.5 bg-[oklch(52%_0.16_28)] text-white font-bold text-[11px] uppercase hover:bg-[oklch(45%_0.16_28)] transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                                        className="px-3.5 py-1.5 bg-[var(--brand-plum)] text-white font-bold text-[11px] uppercase hover:bg-[var(--brand-plum)] transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
                                     >
                                         <span>{uploadProgress ? `⏳ กำลังอัปโหลด (${uploadingCount})...` : '📸 + เลือกรูปภาพ (หลายรูป)'}</span>
                                     </button>
@@ -664,12 +664,12 @@ export default function HausmadeProductEditorModal({
                                         }
                                     }}
                                     placeholder="หรือวาง URL รูปภาพเพิ่มเติม: https://..."
-                                    className="flex-1 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-[11px] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                    className="flex-1 px-3 py-1.5 bg-white border border-[var(--color-rule)] text-[11px] focus:outline-none focus:border-[var(--brand-plum)]"
                                 />
                                 <button
                                     type="button"
                                     onClick={handleAddUrlImage}
-                                    className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold text-[10px] uppercase hover:bg-black transition-colors whitespace-nowrap cursor-pointer"
+                                    className="px-3 py-1.5 bg-[var(--color-ink)] text-white font-bold text-[10px] uppercase hover:bg-black transition-colors whitespace-nowrap cursor-pointer"
                                 >
                                     + เพิ่มรูป
                                 </button>
@@ -679,13 +679,13 @@ export default function HausmadeProductEditorModal({
                             {images.length === 0 ? (
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="py-8 text-center border-2 border-dashed border-[oklch(85%_0.012_28)] bg-white/70 hover:bg-white hover:border-[oklch(52%_0.16_28)] transition-all cursor-pointer flex flex-col items-center justify-center gap-2"
+                                    className="py-8 text-center border-2 border-dashed border-[var(--color-rule)] bg-white/70 hover:bg-white hover:border-[var(--brand-plum)] transition-all cursor-pointer flex flex-col items-center justify-center gap-2"
                                 >
                                     <span className="text-2xl">📸</span>
-                                    <span className="text-[11px] text-[oklch(18%_0.012_28)] font-bold uppercase">
+                                    <span className="text-[11px] text-[var(--color-ink)] font-bold uppercase">
                                         [ ยังไม่มีรูปภาพสินค้า — คลิกที่นี่เพื่อเลือกอัปโหลดรูปภาพ ]
                                     </span>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                    <span className="text-[10px] text-[var(--color-neutral)] font-sans">
                                         รองรับการเลือกไฟล์ทีละหลายรูปพร้อมกัน (JPG, PNG, WEBP)
                                     </span>
                                 </div>
@@ -699,12 +699,12 @@ export default function HausmadeProductEditorModal({
                                                 key={`${imgUrl}-${idx}`}
                                                 className={`relative bg-white border flex flex-col justify-between overflow-hidden group shadow-2xs transition-all ${
                                                     isCover
-                                                        ? 'border-2 border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]'
-                                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                        ? 'border-2 border-[var(--brand-plum)] ring-1 ring-[var(--brand-plum)]'
+                                                        : 'border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                                                 }`}
                                             >
                                                 {/* Image Thumbnail */}
-                                                <div className="w-full h-32 bg-[oklch(94%_0.010_28)] relative overflow-hidden flex items-center justify-center">
+                                                <div className="w-full h-32 bg-[var(--color-paper-2)] relative overflow-hidden flex items-center justify-center">
                                                     <img
                                                         src={imgUrl}
                                                         alt={`Product visual ${idx + 1}`}
@@ -714,12 +714,12 @@ export default function HausmadeProductEditorModal({
                                                     {/* Cover Badge vs Order Badge */}
                                                     <div className="absolute top-1.5 left-1.5 z-10">
                                                         {isCover ? (
-                                                            <span className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                                            <span className="px-2 py-0.5 bg-[var(--brand-plum)] text-white font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
                                                                 <span>★</span>
                                                                 <span>COVER</span>
                                                             </span>
                                                         ) : (
-                                                            <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)]/80 text-white font-mono text-[9px] font-bold">
+                                                            <span className="px-1.5 py-0.5 bg-[var(--color-ink)]/80 text-white font-mono text-[9px] font-bold">
                                                                 #{idx + 1}
                                                             </span>
                                                         )}
@@ -737,12 +737,12 @@ export default function HausmadeProductEditorModal({
                                                 </div>
 
                                                 {/* Card Action Strip */}
-                                                <div className="p-2 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)] flex flex-col gap-1.5">
+                                                <div className="p-2 bg-[var(--color-paper)] border-t border-[var(--color-rule)] flex flex-col gap-1.5">
                                                     {!isCover && (
                                                         <button
                                                             type="button"
                                                             onClick={() => handleSetCover(idx)}
-                                                            className="w-full py-1 text-[9px] font-bold uppercase bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] hover:text-[oklch(52%_0.16_28)] transition-colors cursor-pointer text-center"
+                                                            className="w-full py-1 text-[9px] font-bold uppercase bg-white border border-[var(--color-rule)] hover:border-[var(--brand-plum)] hover:text-[var(--brand-plum)] transition-colors cursor-pointer text-center"
                                                         >
                                                             [ ★ ตั้งเป็นรูปปก ]
                                                         </button>
@@ -754,7 +754,7 @@ export default function HausmadeProductEditorModal({
                                                             disabled={idx === 0}
                                                             onClick={() => handleMoveImage(idx, -1)}
                                                             title="เลื่อนไปซ้าย"
-                                                            className="flex-1 py-1 bg-white border border-[oklch(85%_0.012_28)] text-[10px] font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-30 cursor-pointer text-center"
+                                                            className="flex-1 py-1 bg-white border border-[var(--color-rule)] text-[10px] font-bold text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] disabled:opacity-30 cursor-pointer text-center"
                                                         >
                                                             ◀
                                                         </button>
@@ -763,7 +763,7 @@ export default function HausmadeProductEditorModal({
                                                             disabled={idx === images.length - 1}
                                                             onClick={() => handleMoveImage(idx, 1)}
                                                             title="เลื่อนไปขวา"
-                                                            className="flex-1 py-1 bg-white border border-[oklch(85%_0.012_28)] text-[10px] font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-30 cursor-pointer text-center"
+                                                            className="flex-1 py-1 bg-white border border-[var(--color-rule)] text-[10px] font-bold text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] disabled:opacity-30 cursor-pointer text-center"
                                                         >
                                                             ▶
                                                         </button>
@@ -775,8 +775,8 @@ export default function HausmadeProductEditorModal({
                                 </div>
                             )}
 
-                            <div className="text-[10px] text-[oklch(55%_0.010_28)] font-sans border-t border-[oklch(85%_0.012_28)]/60 pt-2 flex items-center gap-1.5">
-                                <span className="font-mono text-[oklch(52%_0.16_28)] font-bold">[ TIP ]</span>
+                            <div className="text-[10px] text-[var(--color-neutral)] font-sans border-t border-[var(--color-rule)]/60 pt-2 flex items-center gap-1.5">
+                                <span className="font-mono text-[var(--brand-plum)] font-bold">[ TIP ]</span>
                                 <span>รูปภาพลำดับแรก (COVER) จะถูกนำไปแสดงเป็นภาพหลักบนหน้าร้านและใบเสร็จ รูปอื่นๆ จะแสดงในแกลเลอรีให้ลูกค้าคลิกเลือกดูได้อย่างสวยงาม</span>
                             </div>
                         </div>
@@ -785,7 +785,7 @@ export default function HausmadeProductEditorModal({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2 flex flex-col gap-1">
-                                <label className="font-bold text-[11px] uppercase text-[oklch(18%_0.012_28)]">
+                                <label className="font-bold text-[11px] uppercase text-[var(--color-ink)]">
                                     ชื่อสินค้า (Product Name) *
                                 </label>
                                 <input
@@ -794,12 +794,12 @@ export default function HausmadeProductEditorModal({
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="เช่น HAUSMADE Heavyweight T-Shirt (Terracotta Edition)"
-                                    className="px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] font-sans text-sm focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                    className="px-3 py-2 bg-white border border-[var(--color-rule)] font-sans text-sm focus:outline-none focus:border-[var(--brand-plum)]"
                                 />
                             </div>
 
                             <div className="flex flex-col gap-1">
-                                <label className="font-bold text-[11px] uppercase text-[oklch(18%_0.012_28)]">
+                                <label className="font-bold text-[11px] uppercase text-[var(--color-ink)]">
                                     ราคาจำหน่าย (Price THB ฿) *
                                 </label>
                                 <input
@@ -810,12 +810,12 @@ export default function HausmadeProductEditorModal({
                                     value={price}
                                     onChange={(e) => setPrice(e.target.value)}
                                     placeholder="590"
-                                    className="px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] text-sm font-bold text-[oklch(52%_0.16_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                    className="px-3 py-2 bg-white border border-[var(--color-rule)] text-sm font-bold text-[var(--brand-plum)] focus:outline-none focus:border-[var(--brand-plum)]"
                                 />
                             </div>
 
                             <div className="flex flex-col gap-1">
-                                <label className="font-bold text-[11px] uppercase text-[oklch(18%_0.012_28)]">
+                                <label className="font-bold text-[11px] uppercase text-[var(--color-ink)]">
                                     หมวดหมู่คอลเลกชัน (Collection Tag)
                                 </label>
                                 <select
@@ -827,7 +827,7 @@ export default function HausmadeProductEditorModal({
                                             setIsPreOrder(true)
                                         }
                                     }}
-                                    className="px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] text-xs focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                    className="px-3 py-2 bg-white border border-[var(--color-rule)] text-xs focus:outline-none focus:border-[var(--brand-plum)]"
                                 >
                                     {CATEGORY_PRESETS.map(c => (
                                         <option key={c.key} value={c.key}>{c.label}</option>
@@ -836,7 +836,7 @@ export default function HausmadeProductEditorModal({
                             </div>
 
                             <div className="sm:col-span-2 flex flex-col gap-1">
-                                <label className="font-bold text-[11px] uppercase text-[oklch(18%_0.012_28)]">
+                                <label className="font-bold text-[11px] uppercase text-[var(--color-ink)]">
                                     คำอธิบายสินค้า & สตอรี่ (Rich Description)
                                 </label>
                                 <textarea
@@ -844,7 +844,7 @@ export default function HausmadeProductEditorModal({
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="เขียนอธิบายเนื้อผ้า, สัดส่วน, ฟิลลิ่ง, กลิ่นรสเมล็ดกาแฟ, วิธีการดูแลรักษา..."
-                                    className="px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] font-sans text-xs focus:outline-none focus:border-[oklch(52%_0.16_28)] leading-relaxed"
+                                    className="px-3 py-2 bg-white border border-[var(--color-rule)] font-sans text-xs focus:outline-none focus:border-[var(--brand-plum)] leading-relaxed"
                                 />
                             </div>
                         </div>
@@ -853,14 +853,14 @@ export default function HausmadeProductEditorModal({
                         <div className={`p-4 border transition-all ${
                             isPreOrder
                                 ? 'bg-[oklch(45%_0.08_140)]/10 border-[oklch(45%_0.08_140)]'
-                                : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                : 'bg-[var(--color-paper-2)] border-[var(--color-rule)]'
                         }`}>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <span className="font-bold text-xs uppercase block text-[oklch(18%_0.012_28)]">
+                                    <span className="font-bold text-xs uppercase block text-[var(--color-ink)]">
                                         [ โหมดสินค้าสั่งจองล่วงหน้า (PRE-ORDER) ]
                                     </span>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                    <span className="text-[10px] text-[var(--color-neutral)] font-sans">
                                         เปิดรับออเดอร์ก่อนผลิตจริง พร้อมระบุรอบจัดส่งให้ลูกค้าทราบอย่างโปร่งใส
                                     </span>
                                 </div>
@@ -918,13 +918,13 @@ export default function HausmadeProductEditorModal({
                         </div>
 
                         {/* SECTION 4: T-SHIRT SIZES & VARIANTS MATRIX */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-white p-4 flex flex-col gap-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[oklch(85%_0.012_28)] pb-3">
+                        <div className="border border-[var(--color-rule)] bg-white p-4 flex flex-col gap-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-rule)] pb-3">
                                 <div>
-                                    <span className="font-bold text-xs uppercase text-[oklch(18%_0.012_28)] block">
+                                    <span className="font-bold text-xs uppercase text-[var(--color-ink)] block">
                                         [ ตัวเลือกสินค้า & สต็อกแยกไซส์ (VARIANTS MATRIX) ]
                                     </span>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                    <span className="text-[10px] text-[var(--color-neutral)] font-sans">
                                         จัดการไซส์เสื้อ (S - 4XL), ระดับการบด, หรือตัวเลือกสินค้าพร้อมสต็อกรายชิ้น
                                     </span>
                                 </div>
@@ -933,7 +933,7 @@ export default function HausmadeProductEditorModal({
                                     <button
                                         type="button"
                                         onClick={handleApplyTshirtSizePreset}
-                                        className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] text-white font-bold text-[10px] uppercase hover:opacity-90 transition-opacity cursor-pointer"
+                                        className="px-3 py-1.5 bg-[var(--brand-plum)] text-white font-bold text-[10px] uppercase hover:opacity-90 transition-opacity cursor-pointer"
                                     >
                                         [ 👕 + ใช้ไซส์เสื้อมาตรฐาน S-4XL ]
                                     </button>
@@ -943,7 +943,7 @@ export default function HausmadeProductEditorModal({
                             {/* Variant Group Name */}
                             {hasVariants && (
                                 <div className="flex items-center gap-3">
-                                    <label className="text-[11px] font-bold uppercase text-[oklch(55%_0.010_28)]">
+                                    <label className="text-[11px] font-bold uppercase text-[var(--color-neutral)]">
                                         ชื่อกลุ่มตัวเลือก:
                                     </label>
                                     <input
@@ -951,7 +951,7 @@ export default function HausmadeProductEditorModal({
                                         value={variantGroupName}
                                         onChange={(e) => setVariantGroupName(e.target.value)}
                                         placeholder="เช่น ขนาดไซส์ (Size)"
-                                        className="px-2.5 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold text-[oklch(18%_0.012_28)]"
+                                        className="px-2.5 py-1 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-bold text-[var(--color-ink)]"
                                     />
                                 </div>
                             )}
@@ -961,7 +961,7 @@ export default function HausmadeProductEditorModal({
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left font-mono text-[11px] border-collapse">
                                         <thead>
-                                            <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] text-[10px]">
+                                            <tr className="border-b border-[var(--color-rule)] text-[var(--color-neutral)] text-[10px]">
                                                 <th className="py-2">ตัวเลือก / ไซส์</th>
                                                 <th className="py-2 w-28">ราคาบวกเพิ่ม (฿)</th>
                                                 <th className="py-2 w-24">สต็อก (ชิ้น)</th>
@@ -971,14 +971,14 @@ export default function HausmadeProductEditorModal({
                                         </thead>
                                         <tbody>
                                             {variants.map((v, idx) => (
-                                                <tr key={idx} className="border-b border-[oklch(85%_0.012_28)]/40 hover:bg-[oklch(97%_0.008_28)]">
+                                                <tr key={idx} className="border-b border-[var(--color-rule)]/40 hover:bg-[var(--color-paper)]">
                                                     <td className="py-1.5 pr-2">
                                                         <input
                                                             type="text"
                                                             value={v.name}
                                                             onChange={(e) => handleUpdateVariant(idx, 'name', e.target.value)}
                                                             placeholder="เช่น S (อก 37.0 นิ้ว)"
-                                                            className="w-full px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] font-sans text-xs"
+                                                            className="w-full px-2 py-1 bg-white border border-[var(--color-rule)] font-sans text-xs"
                                                         />
                                                     </td>
                                                     <td className="py-1.5 pr-2">
@@ -987,7 +987,7 @@ export default function HausmadeProductEditorModal({
                                                             value={v.price_modifier}
                                                             onChange={(e) => handleUpdateVariant(idx, 'price_modifier', e.target.value)}
                                                             placeholder="0"
-                                                            className="w-full px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] text-xs text-right"
+                                                            className="w-full px-2 py-1 bg-white border border-[var(--color-rule)] text-xs text-right"
                                                         />
                                                     </td>
                                                     <td className="py-1.5 pr-2">
@@ -996,7 +996,7 @@ export default function HausmadeProductEditorModal({
                                                             value={v.stock}
                                                             onChange={(e) => handleUpdateVariant(idx, 'stock', e.target.value)}
                                                             placeholder="99"
-                                                            className="w-full px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] text-xs text-right font-bold text-[oklch(52%_0.16_28)]"
+                                                            className="w-full px-2 py-1 bg-white border border-[var(--color-rule)] text-xs text-right font-bold text-[var(--brand-plum)]"
                                                         />
                                                     </td>
                                                     <td className="py-1.5 text-center">
@@ -1027,7 +1027,7 @@ export default function HausmadeProductEditorModal({
                                     </table>
                                 </div>
                             ) : (
-                                <div className="py-6 text-center text-[11px] text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)]">
+                                <div className="py-6 text-center text-[11px] text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)]">
                                     [ ยังไม่มีตัวเลือกย่อย — สินค้านี้มีราคาและสต็อกเดียว ]
                                 </div>
                             )}
@@ -1036,7 +1036,7 @@ export default function HausmadeProductEditorModal({
                                 <button
                                     type="button"
                                     onClick={handleAddVariantRow}
-                                    className="px-3 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[10px] font-bold uppercase hover:bg-[oklch(97%_0.008_28)]"
+                                    className="px-3 py-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[10px] font-bold uppercase hover:bg-[var(--color-paper)]"
                                 >
                                     + เพิ่มตัวเลือกแบบกำหนดเอง
                                 </button>
@@ -1056,17 +1056,17 @@ export default function HausmadeProductEditorModal({
                         </div>
 
                         {/* SECTION 5: MARKETING & HERO CAROUSEL SETTINGS */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 flex flex-col gap-3">
-                            <span className="font-bold text-xs uppercase text-[oklch(18%_0.012_28)] block">
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 flex flex-col gap-3">
+                            <span className="font-bold text-xs uppercase text-[var(--color-ink)] block">
                                 [ การแสดงผล & HERO BANNER ]
                             </span>
 
-                            <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)]/60 pb-3">
+                            <div className="flex items-center justify-between border-b border-[var(--color-rule)]/60 pb-3">
                                 <div>
                                     <span className="font-bold text-[11px] uppercase block">
                                         ⭐ ปักหมุดบน Hero Banner หน้าร้าน
                                     </span>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                    <span className="text-[10px] text-[var(--color-neutral)] font-sans">
                                         แสดงรูปและชื่อสินค้าเป็นสไลด์เด่นหน้าแรกของร้าน HAUSMADE
                                     </span>
                                 </div>
@@ -1077,7 +1077,7 @@ export default function HausmadeProductEditorModal({
                                         onChange={(e) => setIsHeroFeatured(e.target.checked)}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[oklch(52%_0.16_28)]"></div>
+                                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--brand-plum)]"></div>
                                 </label>
                             </div>
 
@@ -1086,7 +1086,7 @@ export default function HausmadeProductEditorModal({
                                     <span className="font-bold text-[11px] uppercase block">
                                         📦 สถานะเปิดจำหน่าย (Available for Sale)
                                     </span>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                    <span className="text-[10px] text-[var(--color-neutral)] font-sans">
                                         เปิด/ปิดการมองเห็นและการสั่งซื้อบนหน้าร้าน
                                     </span>
                                 </div>
@@ -1097,7 +1097,7 @@ export default function HausmadeProductEditorModal({
                                         onChange={(e) => setIsAvailable(e.target.checked)}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[oklch(18%_0.012_28)]"></div>
+                                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-ink)]"></div>
                                 </label>
                             </div>
                         </div>
@@ -1105,11 +1105,11 @@ export default function HausmadeProductEditorModal({
                     </form>
 
                     {/* Footer Actions */}
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs flex-shrink-0">
+                    <div className="p-4 bg-[var(--color-paper-2)] border-t border-[var(--color-rule)] flex items-center justify-between font-mono text-xs flex-shrink-0">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] uppercase hover:bg-white transition-colors"
+                            className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-muted)] uppercase hover:bg-white transition-colors"
                         >
                             [ ยกเลิก / CANCEL ]
                         </button>
@@ -1118,7 +1118,7 @@ export default function HausmadeProductEditorModal({
                             type="button"
                             disabled={isSaving}
                             onClick={handleSave}
-                            className="px-6 py-2 bg-[oklch(52%_0.16_28)] text-white font-bold uppercase tracking-wider hover:bg-[oklch(45%_0.16_28)] shadow-md transition-all cursor-pointer flex items-center gap-2"
+                            className="px-6 py-2 bg-[var(--brand-plum)] text-white font-bold uppercase tracking-wider hover:bg-[var(--brand-plum)] shadow-md transition-all cursor-pointer flex items-center gap-2"
                         >
                             {isSaving ? (
                                 <>

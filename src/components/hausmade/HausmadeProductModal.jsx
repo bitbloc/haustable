@@ -195,7 +195,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 backdrop-blur-sm"
+                    className="fixed inset-0 bg-[var(--color-ink)]/60 backdrop-blur-sm"
                 />
 
                 {/* Modal Container */}
@@ -204,21 +204,21 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 12 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                    className="relative w-full max-w-lg bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] font-sans"
+                    className="relative w-full max-w-lg bg-[var(--color-paper)] border border-[var(--color-rule)] shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] font-sans"
                 >
                     {/* Header Bar */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex-shrink-0">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex-shrink-0">
                         <div>
-                            <span className="font-mono text-[10px] font-bold tracking-widest text-[oklch(52%_0.16_28)] uppercase block">
+                            <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--brand-plum)] uppercase block">
                                 // HAUSMADE SPECIFICATION & GALLERY
                             </span>
-                            <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                            <span className="font-mono text-xs font-bold text-[var(--color-ink)] uppercase">
                                 [ PRODUCT // CUSTOMIZATION ]
                             </span>
                         </div>
                         <button
                             onClick={onClose}
-                            className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] transition-colors px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] cursor-pointer"
+                            className="font-mono text-[11px] font-bold text-[var(--color-ink)] hover:text-[var(--brand-plum)] transition-colors px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper)] cursor-pointer"
                         >
                             [ ESC / CLOSE ]
                         </button>
@@ -230,7 +230,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                         {/* 1. INTERACTIVE MULTI-IMAGE GALLERY VIEWPORT */}
                         {currentImage ? (
                             <div className="flex flex-col gap-2.5">
-                                <div className="w-full h-64 sm:h-72 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] overflow-hidden relative group select-none">
+                                <div className="w-full h-64 sm:h-72 bg-[var(--color-paper-2)] border border-[var(--color-rule)] overflow-hidden relative group select-none">
                                     <AnimatePresence mode="wait">
                                         <motion.img
                                             key={currentImage}
@@ -254,7 +254,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                     e.stopPropagation()
                                                     setActiveImgIdx(prev => (prev > 0 ? prev - 1 : productImages.length - 1))
                                                 }}
-                                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[oklch(18%_0.012_28)]/80 hover:bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold flex items-center justify-center transition-all shadow-md cursor-pointer z-10"
+                                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[var(--color-ink)]/80 hover:bg-[var(--color-ink)] text-white font-mono text-xs font-bold flex items-center justify-center transition-all shadow-md cursor-pointer z-10"
                                                 title="รูปก่อนหน้า"
                                             >
                                                 ◀
@@ -265,7 +265,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                     e.stopPropagation()
                                                     setActiveImgIdx(prev => (prev < productImages.length - 1 ? prev + 1 : 0))
                                                 }}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[oklch(18%_0.012_28)]/80 hover:bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold flex items-center justify-center transition-all shadow-md cursor-pointer z-10"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[var(--color-ink)]/80 hover:bg-[var(--color-ink)] text-white font-mono text-xs font-bold flex items-center justify-center transition-all shadow-md cursor-pointer z-10"
                                                 title="รูปถัดไป"
                                             >
                                                 ▶
@@ -278,13 +278,13 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                         <button
                                             type="button"
                                             onClick={() => setIsLightboxOpen(true)}
-                                            className="px-2 py-0.5 bg-[oklch(18%_0.012_28)]/80 hover:bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 cursor-pointer"
+                                            className="px-2 py-0.5 bg-[var(--color-ink)]/80 hover:bg-[var(--color-ink)] text-white font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 cursor-pointer"
                                             title="คลิกเพื่อดูภาพขยายเต็มจอ"
                                         >
                                             <span>🔍 ZOOM</span>
                                         </button>
                                         {productImages.length > 1 && (
-                                            <div className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold tracking-wider">
+                                            <div className="px-2 py-0.5 bg-[var(--color-ink)] text-white font-mono text-[9px] font-bold tracking-wider">
                                                 [ {String(activeImgIdx + 1).padStart(2, '0')} / {String(productImages.length).padStart(2, '0')} ]
                                             </div>
                                         )}
@@ -292,7 +292,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
 
                                     {/* Stock warning pill */}
                                     {maxAvailableStock > 0 && maxAvailableStock <= 5 && (
-                                        <div className="absolute bottom-2 left-2 bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm z-10">
+                                        <div className="absolute bottom-2 left-2 bg-[var(--brand-plum)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm z-10">
                                             [ เหลือเพียง {maxAvailableStock} ชิ้นสุดท้าย ]
                                         </div>
                                     )}
@@ -308,10 +308,10 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                     key={idx}
                                                     type="button"
                                                     onClick={() => setActiveImgIdx(idx)}
-                                                    className={`w-14 h-14 flex-shrink-0 bg-[oklch(94%_0.010_28)] overflow-hidden transition-all cursor-pointer relative ${
+                                                    className={`w-14 h-14 flex-shrink-0 bg-[var(--color-paper-2)] overflow-hidden transition-all cursor-pointer relative ${
                                                         isActive
-                                                            ? 'border-2 border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
-                                                            : 'border border-[oklch(85%_0.012_28)] opacity-60 hover:opacity-100'
+                                                            ? 'border-2 border-[var(--brand-plum)] ring-2 ring-[var(--brand-plum)]/30'
+                                                            : 'border border-[var(--color-rule)] opacity-60 hover:opacity-100'
                                                     }`}
                                                 >
                                                     <img
@@ -320,7 +320,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                         className="w-full h-full object-cover"
                                                     />
                                                     {idx === 0 && (
-                                                        <span className="absolute bottom-0 inset-x-0 bg-[oklch(18%_0.012_28)] text-white text-[7px] font-mono font-bold uppercase text-center">
+                                                        <span className="absolute bottom-0 inset-x-0 bg-[var(--color-ink)] text-white text-[7px] font-mono font-bold uppercase text-center">
                                                             COVER
                                                         </span>
                                                     )}
@@ -331,7 +331,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                 )}
                             </div>
                         ) : (
-                            <div className="w-full h-28 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase">
+                            <div className="w-full h-28 bg-[var(--color-paper-2)] border border-[var(--color-rule)] flex items-center justify-center font-mono text-[11px] text-[var(--color-neutral)] uppercase">
                                 [ HAUSMADE NAKHON PHANOM // ORIGINAL CRAFT ]
                             </div>
                         )}
@@ -339,20 +339,20 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                         <div>
                             <div className="flex justify-between items-start gap-3">
                                 <div>
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block mb-1">
+                                    <span className="font-mono text-[10px] font-bold text-[var(--brand-plum)] uppercase tracking-wider block mb-1">
                                         // {product.menu_categories?.name || product.category || 'HAUSMADE CRAFT'}
                                     </span>
-                                    <h3 className="text-xl font-bold text-[oklch(18%_0.012_28)] tracking-tight leading-snug">
+                                    <h3 className="text-xl font-bold text-[var(--color-ink)] tracking-tight leading-snug">
                                         {product.name}
                                     </h3>
                                 </div>
-                                <div className="font-mono text-lg font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
+                                <div className="font-mono text-lg font-bold text-[var(--color-ink)] whitespace-nowrap">
                                     ฿{unitPrice.toLocaleString()}.-
                                 </div>
                             </div>
 
                             {product.description && (
-                                <p className="text-xs text-[oklch(42%_0.010_28)] mt-2 leading-relaxed font-sans whitespace-pre-line">
+                                <p className="text-xs text-[var(--color-muted)] mt-2 leading-relaxed font-sans whitespace-pre-line">
                                     {product.description}
                                 </p>
                             )}
@@ -366,7 +366,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
 
                                     <span className="uppercase">[ PRE-ORDER // สินค้าเปิดสั่งจองล่วงหน้า ]</span>
                                 </div>
-                                <p className="text-[11px] text-[oklch(18%_0.012_28)] font-sans mt-0.5 leading-relaxed">
+                                <p className="text-[11px] text-[var(--color-ink)] font-sans mt-0.5 leading-relaxed">
                                     สินค้าชิ้นนี้ผลิตสดใหม่ตามรอบสั่งจอง กำหนดการจัดส่งพัสดุ: <strong className="font-mono text-[oklch(45%_0.08_140)]">{getPreOrderEta(product)}</strong>
                                 </p>
                             </div>
@@ -374,26 +374,26 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
 
                         {/* Artisanal Craft Metadata Box (Coffee / Sauce / Batch) */}
                         {hasCraftSpecs && (
-                            <div className="p-3.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-[11px] flex flex-col gap-1.5">
-                                <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                            <div className="p-3.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-[11px] flex flex-col gap-1.5">
+                                <span className="text-[10px] font-bold text-[var(--brand-plum)] uppercase tracking-wider">
                                     [ CRAFT BATCH & ORIGIN METADATA ]
                                 </span>
                                 {(craftSpecs.origin || product.origin) && (
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)]/60 pb-1">
-                                        <span className="text-[oklch(55%_0.010_28)]">ORIGIN / แหล่งปลูก:</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">{craftSpecs.origin || product.origin}</span>
+                                    <div className="flex justify-between border-b border-[var(--color-rule)]/60 pb-1">
+                                        <span className="text-[var(--color-neutral)]">ORIGIN / แหล่งปลูก:</span>
+                                        <span className="font-bold text-[var(--color-ink)]">{craftSpecs.origin || product.origin}</span>
                                     </div>
                                 )}
                                 {(craftSpecs.process || craftSpecs.roast_level) && (
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)]/60 pb-1">
-                                        <span className="text-[oklch(55%_0.010_28)]">ROAST / PROCESS:</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">{craftSpecs.process || craftSpecs.roast_level}</span>
+                                    <div className="flex justify-between border-b border-[var(--color-rule)]/60 pb-1">
+                                        <span className="text-[var(--color-neutral)]">ROAST / PROCESS:</span>
+                                        <span className="font-bold text-[var(--color-ink)]">{craftSpecs.process || craftSpecs.roast_level}</span>
                                     </div>
                                 )}
                                 {(craftSpecs.tasting_notes || product.tasting_notes) && (
                                     <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)]">TASTING NOTES:</span>
-                                        <span className="font-bold text-[oklch(52%_0.16_28)] text-right">{craftSpecs.tasting_notes || product.tasting_notes}</span>
+                                        <span className="text-[var(--color-neutral)]">TASTING NOTES:</span>
+                                        <span className="font-bold text-[var(--brand-plum)] text-right">{craftSpecs.tasting_notes || product.tasting_notes}</span>
                                     </div>
                                 )}
                             </div>
@@ -401,7 +401,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
 
                         {/* Option Groups (Size, Grind, Packaging) with Variant Stock Indicator & Size Chart */}
                         {optionGroups.length > 0 && (
-                            <div className="flex flex-col gap-5 border-t border-[oklch(85%_0.012_28)] pt-5">
+                            <div className="flex flex-col gap-5 border-t border-[var(--color-rule)] pt-5">
                                 {optionGroups.map((group) => {
                                     const gName = (group.name || '').toLowerCase()
                                     const isSizeGroup = gName.includes('size') || gName.includes('ไซส์') || gName.includes('ขนาด') || isApparelProduct
@@ -410,11 +410,11 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                         <div key={group.id} className="flex flex-col gap-2.5">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                                    <span className="font-mono text-[11px] font-bold text-[var(--color-ink)] uppercase">
                                                         [ {group.name} ]
                                                     </span>
                                                     {group.is_required && (
-                                                        <span className="font-mono text-[9px] text-[oklch(52%_0.16_28)] uppercase font-bold">
+                                                        <span className="font-mono text-[9px] text-[var(--brand-plum)] uppercase font-bold">
                                                             *จำเป็น
                                                         </span>
                                                     )}
@@ -425,7 +425,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowSizeChart(prev => !prev)}
-                                                        className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] uppercase underline cursor-pointer flex items-center gap-1"
+                                                        className="font-mono text-[10px] font-bold text-[var(--brand-plum)] hover:text-[var(--color-ink)] uppercase underline cursor-pointer flex items-center gap-1"
                                                     >
                                                         <span>📏 {showSizeChart ? '[ ซ่อนตารางไซส์ ]' : '[ ดูตารางไซส์ (SIZE CHART) ]'}</span>
                                                     </button>
@@ -438,21 +438,21 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                     initial={{ opacity: 0, height: 0 }}
                                                     animate={{ opacity: 1, height: 'auto' }}
                                                     exit={{ opacity: 0, height: 0 }}
-                                                    className="border-2 border-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 font-mono text-xs flex flex-col gap-2.5 overflow-hidden"
+                                                    className="border-2 border-[var(--color-ink)] bg-[var(--color-paper-2)] p-4 font-mono text-xs flex flex-col gap-2.5 overflow-hidden"
                                                 >
-                                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
+                                                    <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
                                                         <div>
-                                                            <span className="font-black text-sm uppercase tracking-tight text-[oklch(18%_0.012_28)] block">
+                                                            <span className="font-black text-sm uppercase tracking-tight text-[var(--color-ink)] block">
                                                                 SIZE CHART // ตารางไซส์เสื้อ
                                                             </span>
-                                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">
+                                                            <span className="text-[10px] text-[var(--color-neutral)] block">
                                                                 T-SHIRT SIZING GUIDE (INCHES / นิ้ว)
                                                             </span>
                                                         </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowSizeChart(false)}
-                                                            className="text-[10px] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] uppercase"
+                                                            className="text-[10px] text-[var(--color-neutral)] hover:text-[var(--color-ink)] uppercase"
                                                         >
                                                             [ CLOSE / ปิด ]
                                                         </button>
@@ -461,7 +461,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                     <div className="overflow-x-auto">
                                                         <table className="w-full text-center border-collapse">
                                                             <thead>
-                                                                <tr className="border-b-2 border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold text-[11px]">
+                                                                <tr className="border-b-2 border-[var(--color-ink)] text-[var(--color-ink)] font-bold text-[11px]">
                                                                     <th className="py-2 text-left font-black">ขนาด</th>
                                                                     <th className="py-2">อก (Chest)</th>
                                                                     <th className="py-2">ยาว (Length)</th>
@@ -476,10 +476,10 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                                     return (
                                                                         <tr
                                                                             key={row.size}
-                                                                            className={`border-b border-[oklch(85%_0.012_28)]/60 text-[11px] transition-colors ${
+                                                                            className={`border-b border-[var(--color-rule)]/60 text-[11px] transition-colors ${
                                                                                 isRowSelected
-                                                                                    ? 'bg-[oklch(52%_0.16_28)]/15 font-bold text-[oklch(52%_0.16_28)]'
-                                                                                    : 'text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                                                                    ? 'bg-[var(--brand-plum)]/15 font-bold text-[var(--brand-plum)]'
+                                                                                    : 'text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
                                                                             }`}
                                                                         >
                                                                             <td className="py-2 text-left font-black">{row.size}</td>
@@ -514,16 +514,16 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                                             onClick={() => handleOptionChange(group, choice)}
                                                             className={`px-3.5 py-2.5 text-left border font-mono text-[11px] transition-all flex flex-col justify-between gap-1.5 cursor-pointer ${
                                                                 isSoldOut
-                                                                    ? 'border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]/50 text-[oklch(55%_0.010_28)] opacity-50 cursor-not-allowed'
+                                                                    ? 'border-dashed border-[var(--color-rule)] bg-[var(--color-paper-2)]/50 text-[var(--color-neutral)] opacity-50 cursor-not-allowed'
                                                                     : isSelected
-                                                                        ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(18%_0.012_28)] font-bold shadow-xs'
-                                                                        : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                                        ? 'border-[var(--brand-plum)] bg-[var(--brand-plum)]/10 text-[var(--color-ink)] font-bold shadow-xs'
+                                                                        : 'border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)]'
                                                             }`}
                                                         >
                                                             <div className="flex items-center justify-between w-full">
                                                                 <span className="font-bold text-xs">{choice.name}</span>
                                                                 {choicePrice > 0 && (
-                                                                    <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                                    <span className="text-[10px] text-[var(--brand-plum)] font-bold">
                                                                         +฿{choicePrice}
                                                                     </span>
                                                                 )}
@@ -531,25 +531,25 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
 
                                                             {/* Quick Size Measurements Subtitle */}
                                                             {sizeDim && (
-                                                                <div className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                                                <div className="text-[10px] text-[var(--color-neutral)] font-sans">
                                                                     อก {sizeDim.chest} · ยาว {sizeDim.length} {sizeDim.sleeve ? `· แขน ${sizeDim.sleeve}` : ''}
                                                                 </div>
                                                             )}
 
                                                             {/* Stock Status Badge per Variant */}
-                                                            <div className="flex items-center justify-between w-full text-[9px] border-t border-[oklch(85%_0.012_28)]/40 pt-1">
+                                                            <div className="flex items-center justify-between w-full text-[9px] border-t border-[var(--color-rule)]/40 pt-1">
                                                                 {isSoldOut ? (
                                                                     <span className="text-red-600 font-bold">[ SOLD OUT // หมด ]</span>
                                                                 ) : isLowStock ? (
-                                                                    <span className="text-[oklch(52%_0.16_28)] font-bold">● เหลือ {choiceStock} ชิ้น</span>
+                                                                    <span className="text-[var(--brand-plum)] font-bold">● เหลือ {choiceStock} ชิ้น</span>
                                                                 ) : choiceStock !== null ? (
                                                                     <span className="text-[oklch(45%_0.08_140)]">มีสินค้า ({choiceStock})</span>
                                                                 ) : (
-                                                                    <span className="text-[oklch(55%_0.010_28)]">พร้อมส่ง</span>
+                                                                    <span className="text-[var(--color-neutral)]">พร้อมส่ง</span>
                                                                 )}
 
                                                                 {isSelected && (
-                                                                    <span className="font-bold text-[oklch(52%_0.16_28)]">[ SELECTED ]</span>
+                                                                    <span className="font-bold text-[var(--brand-plum)]">[ SELECTED ]</span>
                                                                 )}
                                                             </div>
                                                         </button>
@@ -563,8 +563,8 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                         )}
 
                         {/* Gift Note / Greeting Card (Optional Craft Feature) */}
-                        <div className="flex flex-col gap-2 border-t border-[oklch(85%_0.012_28)] pt-4">
-                            <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                        <div className="flex flex-col gap-2 border-t border-[var(--color-rule)] pt-4">
+                            <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                 [ ฝากข้อความ / การ์ดของฝาก (OPTIONAL) ]
                             </span>
                             <input
@@ -572,28 +572,28 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                 value={giftNote}
                                 onChange={(e) => setGiftNote(e.target.value)}
                                 placeholder="เช่น เขียนการ์ดสุขสันต์วันเกิด / บดสำหรับ Cold Brew"
-                                className="w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full px-3 py-2 bg-white border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                             />
                         </div>
 
                         {/* Quantity Counter with Stock Safeguard */}
-                        <div className="flex items-center justify-between border-t border-[oklch(85%_0.012_28)] pt-5">
+                        <div className="flex items-center justify-between border-t border-[var(--color-rule)] pt-5">
                             <div className="flex flex-col">
-                                <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                <span className="font-mono text-[11px] font-bold text-[var(--color-ink)] uppercase">
                                     [ QUANTITY // จำนวน ]
                                 </span>
                                 {maxAvailableStock < 999 && (
-                                    <span className="font-mono text-[10px] text-[oklch(52%_0.16_28)]">
+                                    <span className="font-mono text-[10px] text-[var(--brand-plum)]">
                                         (สั่งได้สูงสุด {maxAvailableStock} ชิ้น)
                                     </span>
                                 )}
                             </div>
 
-                            <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                            <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper-2)]">
                                 <button
                                     type="button"
                                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    className="w-9 h-9 font-mono text-sm font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                    className="w-9 h-9 font-mono text-sm font-bold text-[var(--color-ink)] hover:bg-[var(--color-rule)] transition-colors cursor-pointer"
                                 >
                                     -
                                 </button>
@@ -604,7 +604,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                     type="button"
                                     disabled={quantity >= maxAvailableStock}
                                     onClick={() => setQuantity(Math.min(maxAvailableStock, quantity + 1))}
-                                    className="w-9 h-9 font-mono text-sm font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(85%_0.012_28)] transition-colors disabled:opacity-30 cursor-pointer"
+                                    className="w-9 h-9 font-mono text-sm font-bold text-[var(--color-ink)] hover:bg-[var(--color-rule)] transition-colors disabled:opacity-30 cursor-pointer"
                                 >
                                     +
                                 </button>
@@ -613,21 +613,21 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
 
                         {/* Validation Error Message */}
                         {validationMsg && (
-                            <div className="p-2.5 border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] font-mono text-xs font-bold">
+                            <div className="p-2.5 border border-[var(--brand-plum)] bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] font-mono text-xs font-bold">
                                 [ ! ]: {validationMsg}
                             </div>
                         )}
                     </div>
 
                     {/* Footer Action Bar */}
-                    <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center gap-3 flex-shrink-0">
+                    <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex items-center gap-3 flex-shrink-0">
                         <button
                             type="button"
                             onClick={handleConfirm}
                             className={`w-full py-3.5 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between px-6 cursor-pointer shadow-xs ${
                                 isPreOrderItem(product)
                                     ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'
-                                    : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)]'
+                                    : 'bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--brand-plum)]'
                             }`}
                         >
                             <span>
@@ -646,17 +646,17 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-60 bg-[oklch(18%_0.012_28)]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 select-none"
+                            className="fixed inset-0 z-60 bg-[var(--color-ink)]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 select-none"
                             onClick={() => setIsLightboxOpen(false)}
                         >
                             {/* Lightbox Top Bar */}
-                            <div className="w-full max-w-4xl flex items-center justify-between text-[oklch(97%_0.008_28)] font-mono text-xs z-10">
+                            <div className="w-full max-w-4xl flex items-center justify-between text-[var(--color-paper)] font-mono text-xs z-10">
                                 <div className="flex items-center gap-3">
-                                    <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                    <span className="font-bold text-[var(--brand-plum)]">
                                         // {product.name}
                                     </span>
                                     {productImages.length > 1 && (
-                                        <span className="text-[oklch(85%_0.012_28)]">
+                                        <span className="text-[var(--color-rule)]">
                                             [ {activeImgIdx + 1} / {productImages.length} ]
                                         </span>
                                     )}
@@ -683,7 +683,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     transition={{ duration: 0.2 }}
-                                    className="max-h-[75vh] max-w-full object-contain border border-[oklch(85%_0.012_28)]/30 shadow-2xl"
+                                    className="max-h-[75vh] max-w-full object-contain border border-[var(--color-rule)]/30 shadow-2xl"
                                 />
 
                                 {/* Lightbox Navigation Buttons */}
@@ -728,7 +728,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                                             onClick={() => setActiveImgIdx(idx)}
                                             className={`w-12 h-12 flex-shrink-0 bg-black/40 overflow-hidden transition-all cursor-pointer ${
                                                 idx === activeImgIdx
-                                                    ? 'border-2 border-[oklch(52%_0.16_28)] scale-105'
+                                                    ? 'border-2 border-[var(--brand-plum)] scale-105'
                                                     : 'border border-white/20 opacity-50 hover:opacity-100'
                                             }`}
                                         >

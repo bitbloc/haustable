@@ -60,76 +60,76 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
     }, [topMenuData])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
             {/* Header */}
-            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs">
+            <div className="p-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
                         STRATEGY
                     </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
+                    <span className="font-bold text-[var(--color-ink)]  ">
                         MENU ENGINEERING // เมทริกซ์กลยุทธ์เมนู (4 QUADRANTS)
                     </span>
                 </div>
-                <span className="text-xs text-[oklch(42%_0.010_28)]">
+                <span className="text-xs text-[var(--color-muted)]">
                     วิเคราะห์ยอดขายคู่กับมาร์จิ้นเพื่อปรับกลยุทธ์
                 </span>
             </div>
 
             {/* 4 Quadrants Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[oklch(85%_0.012_28)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--color-rule)]">
                 
                 {/* Column Left: High Margin Quadrants (Stars + Niche) */}
-                <div className="divide-y divide-[oklch(85%_0.012_28)]">
+                <div className="divide-y divide-[var(--color-rule)]">
                     
                     {/* Quadrant 1: STARS (High Sales + High Margin) */}
-                    <div className="p-4 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="p-4 space-y-2 bg-[var(--color-paper)]">
                         <div className="flex items-center justify-between tabular-nums text-xs">
-                            <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
+                            <span className="font-bold text-[var(--brand-plum)] flex items-center gap-1.5">
                                 [STARS] เมนูดาวเด่น // ขายดี + กำไรสูง
                             </span>
-                            <span className="text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="text-xs text-[var(--color-neutral)]">
                                 {quadrants.stars.length} รายการ
                             </span>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)]">
                             กลยุทธ์: เป็นเสาหลักของร้าน รักษาคุณภาพ วัตถุดิบห้ามขาด
                         </p>
                         <div className="space-y-1.5 pt-1">
                             {quadrants.stars.slice(0, 3).map(item => (
-                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 border border-[oklch(85%_0.012_28)]">
-                                    <span className="font-sans font-medium text-[oklch(18%_0.012_28)] truncate max-w-[200px]">{item.name}</span>
-                                    <span className="text-[oklch(52%_0.16_28)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
+                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[var(--color-paper-2)] px-2.5 py-1.5 border border-[var(--color-rule)]">
+                                    <span className="font-sans font-medium text-[var(--color-ink)] truncate max-w-[200px]">{item.name}</span>
+                                    <span className="text-[var(--brand-plum)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
                                 </div>
                             ))}
                             {quadrants.stars.length === 0 && (
-                                <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
+                                <div className="text-xs text-[var(--color-neutral)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
                             )}
                         </div>
                     </div>
 
                     {/* Quadrant 3: NICHE (Low Sales + High Margin) */}
-                    <div className="p-4 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="p-4 space-y-2 bg-[var(--color-paper)]">
                         <div className="flex items-center justify-between tabular-nums text-xs">
                             <span className="font-bold text-[oklch(45%_0.08_140)] flex items-center gap-1.5">
                                 [NICHE] เมนูพรีเมียม // กำไรสูงต่อจาน แต่ขายน้อย
                             </span>
-                            <span className="text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="text-xs text-[var(--color-neutral)]">
                                 {quadrants.niche.length} รายการ
                             </span>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)]">
                             กลยุทธ์: ดันขึ้นหน้าแรกของแอป/เล่มเมนู หรือทำโปรจับคู่เซต
                         </p>
                         <div className="space-y-1.5 pt-1">
                             {quadrants.niche.slice(0, 3).map(item => (
-                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 border border-[oklch(85%_0.012_28)]">
-                                    <span className="font-sans font-medium text-[oklch(18%_0.012_28)] truncate max-w-[200px]">{item.name}</span>
+                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[var(--color-paper-2)] px-2.5 py-1.5 border border-[var(--color-rule)]">
+                                    <span className="font-sans font-medium text-[var(--color-ink)] truncate max-w-[200px]">{item.name}</span>
                                     <span className="text-[oklch(45%_0.08_140)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
                                 </div>
                             ))}
                             {quadrants.niche.length === 0 && (
-                                <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
+                                <div className="text-xs text-[var(--color-neutral)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
                             )}
                         </div>
                     </div>
@@ -137,56 +137,56 @@ export default function MenuEngineeringMatrix({ topMenuData = [] }) {
                 </div>
 
                 {/* Column Right: Low Margin Quadrants (Volume + Problems) */}
-                <div className="divide-y divide-[oklch(85%_0.012_28)]">
+                <div className="divide-y divide-[var(--color-rule)]">
                     
                     {/* Quadrant 2: VOLUME (High Sales + Low Margin) */}
-                    <div className="p-4 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="p-4 space-y-2 bg-[var(--color-paper)]">
                         <div className="flex items-center justify-between tabular-nums text-xs">
-                            <span className="font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                            <span className="font-bold text-[var(--color-ink)] flex items-center gap-1.5">
                                 [VOLUME] เมนูปริมาณ // ขายดีแต่มาร์จิ้นต่ำ
                             </span>
-                            <span className="text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="text-xs text-[var(--color-neutral)]">
                                 {quadrants.volume.length} รายการ
                             </span>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)]">
                             กลยุทธ์: ปรับราคาขึ้น 5–10 บาท หรือเจรจาต้นทุนซัพพลายเออร์
                         </p>
                         <div className="space-y-1.5 pt-1">
                             {quadrants.volume.slice(0, 3).map(item => (
-                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 border border-[oklch(85%_0.012_28)]">
-                                    <span className="font-sans font-medium text-[oklch(18%_0.012_28)] truncate max-w-[200px]">{item.name}</span>
-                                    <span className="text-[oklch(18%_0.012_28)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
+                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[var(--color-paper-2)] px-2.5 py-1.5 border border-[var(--color-rule)]">
+                                    <span className="font-sans font-medium text-[var(--color-ink)] truncate max-w-[200px]">{item.name}</span>
+                                    <span className="text-[var(--color-ink)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
                                 </div>
                             ))}
                             {quadrants.volume.length === 0 && (
-                                <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
+                                <div className="text-xs text-[var(--color-neutral)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
                             )}
                         </div>
                     </div>
 
                     {/* Quadrant 4: PROBLEMS (Low Sales + Low Margin) */}
-                    <div className="p-4 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="p-4 space-y-2 bg-[var(--color-paper)]">
                         <div className="flex items-center justify-between tabular-nums text-xs">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] flex items-center gap-1.5">
+                            <span className="font-bold text-[var(--color-muted)] flex items-center gap-1.5">
                                 [REVIEW] เมนูรอทบทวน // ขายน้อย + กำไรต่ำ
                             </span>
-                            <span className="text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="text-xs text-[var(--color-neutral)]">
                                 {quadrants.problems.length} รายการ
                             </span>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)]">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)]">
                             กลยุทธ์: ปรับปรุงสูตร หรือตัดออกจากเมนูประจำเพื่อลด Stock
                         </p>
                         <div className="space-y-1.5 pt-1">
                             {quadrants.problems.slice(0, 3).map(item => (
-                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 border border-[oklch(85%_0.012_28)]">
-                                    <span className="font-sans font-medium text-[oklch(18%_0.012_28)] truncate max-w-[200px]">{item.name}</span>
-                                    <span className="text-[oklch(42%_0.010_28)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
+                                <div key={item.id || item.name} className="flex items-center justify-between text-xs tabular-nums bg-[var(--color-paper-2)] px-2.5 py-1.5 border border-[var(--color-rule)]">
+                                    <span className="font-sans font-medium text-[var(--color-ink)] truncate max-w-[200px]">{item.name}</span>
+                                    <span className="text-[var(--color-muted)] font-bold">฿{item.revenue?.toLocaleString()} ({item.units} จาน)</span>
                                 </div>
                             ))}
                             {quadrants.problems.length === 0 && (
-                                <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
+                                <div className="text-xs text-[var(--color-neutral)] tabular-nums py-1">- ไม่มีข้อมูล -</div>
                             )}
                         </div>
                     </div>

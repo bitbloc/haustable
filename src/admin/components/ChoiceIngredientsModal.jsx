@@ -6,11 +6,11 @@ import { supabase } from '../../lib/supabaseClient'
 import { ITEM_TYPE_LABELS, getItemType } from '../../utils/recipeGraph'
 import { planChoiceIngredientSave, validateChoiceIngredients } from '../../utils/optionIngredients'
 
-const INK = 'text-[oklch(18%_0.012_28)]'
-const MUTED = 'text-[oklch(42%_0.010_28)]'
-const NEUTRAL = 'text-[oklch(55%_0.010_28)]'
-const RULE = 'border-[oklch(85%_0.012_28)]'
-const FOCUS = 'focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]'
+const INK = 'text-[var(--color-ink)]'
+const MUTED = 'text-[var(--color-muted)]'
+const NEUTRAL = 'text-[var(--color-neutral)]'
+const RULE = 'border-[var(--color-rule)]'
+const FOCUS = 'focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]'
 
 let keySeq = 0
 const nextKey = () => `row_${++keySeq}`
@@ -153,7 +153,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="choice-ingredients-title"
-                className={`bg-[oklch(98%_0.004_28)] border ${RULE} w-full sm:max-w-xl max-h-[92vh] flex flex-col rounded-t-sm sm:rounded-sm shadow-xl font-sans`}
+                className={`bg-[var(--color-paper)] border ${RULE} w-full sm:max-w-xl max-h-[92vh] flex flex-col rounded-t-sm sm:rounded-sm shadow-xl font-sans`}
                 onClick={e => e.stopPropagation()}
             >
                 <div className={`px-5 pt-5 pb-4 border-b ${RULE}`}>
@@ -186,7 +186,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                     const unit = item?.usage_unit || item?.unit || ''
                                     const err = errors[row.key]
                                     return (
-                                        <li key={row.key} className={`border ${err ? 'border-red-300' : RULE} rounded-xs bg-[oklch(97%_0.008_28)] p-3`}>
+                                        <li key={row.key} className={`border ${err ? 'border-red-300' : RULE} rounded-xs bg-[var(--color-paper)] p-3`}>
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <p className={`text-sm font-bold leading-snug ${INK}`}>{item?.name || 'ไม่พบวัตถุดิบ'}</p>
@@ -213,15 +213,15 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                             onClick={() => updateRow(row.key, { sign: value })}
                                                             className={`px-3 py-2 cursor-pointer transition-colors duration-150 ${FOCUS} ${
                                                                 row.sign === value
-                                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                                    : `bg-[oklch(98%_0.004_28)] ${MUTED} hover:bg-[oklch(94%_0.010_28)]`
+                                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                                    : `bg-[var(--color-paper)] ${MUTED} hover:bg-[var(--color-paper-2)]`
                                                             }`}
                                                         >
                                                             {label}
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <label className={`flex items-center border ${RULE} rounded-xs bg-[oklch(98%_0.004_28)] focus-within:border-[oklch(52%_0.16_28)]`}>
+                                                <label className={`flex items-center border ${RULE} rounded-xs bg-[var(--color-paper)] focus-within:border-[var(--brand-plum)]`}>
                                                     <input
                                                         type="text"
                                                         inputMode="decimal"
@@ -237,7 +237,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                     value={row.menu_item_id ?? ''}
                                                     onChange={e => updateRow(row.key, { menu_item_id: e.target.value === '' ? null : Number(e.target.value) })}
                                                     aria-label="ใช้กับเมนู"
-                                                    className={`col-span-2 sm:col-span-1 w-full border ${RULE} rounded-xs bg-[oklch(98%_0.004_28)] px-2 py-2 text-xs ${INK} ${FOCUS}`}
+                                                    className={`col-span-2 sm:col-span-1 w-full border ${RULE} rounded-xs bg-[var(--color-paper)] px-2 py-2 text-xs ${INK} ${FOCUS}`}
                                                 >
                                                     <option value="">ทุกเมนู</option>
                                                     {menus.map(m => <option key={m.id} value={m.id}>เฉพาะ {m.name}</option>)}
@@ -258,16 +258,16 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="พิมพ์ชื่อวัตถุดิบ เช่น ช็อต, นมโอ๊ต"
-                                    className={`w-full border ${RULE} rounded-xs bg-[oklch(98%_0.004_28)] px-3 py-2 text-sm ${INK} outline-none focus:border-[oklch(52%_0.16_28)]`}
+                                    className={`w-full border ${RULE} rounded-xs bg-[var(--color-paper)] px-3 py-2 text-sm ${INK} outline-none focus:border-[var(--brand-plum)]`}
                                 />
                                 {matches.length > 0 && (
-                                    <ul className={`mt-1 border ${RULE} rounded-xs bg-[oklch(98%_0.004_28)] divide-y divide-[oklch(90%_0.010_28)]`}>
+                                    <ul className={`mt-1 border ${RULE} rounded-xs bg-[var(--color-paper)] divide-y divide-[var(--color-paper-3)]`}>
                                         {matches.map(i => (
                                             <li key={i.id}>
                                                 <button
                                                     type="button"
                                                     onClick={() => addItem(i)}
-                                                    className={`w-full text-left px-3 py-2 flex items-baseline justify-between gap-3 hover:bg-[oklch(94%_0.010_28)] cursor-pointer ${FOCUS}`}
+                                                    className={`w-full text-left px-3 py-2 flex items-baseline justify-between gap-3 hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}
                                                 >
                                                     <span className={`text-sm leading-snug ${INK}`}>{i.name}</span>
                                                     <span className={`tabular-nums text-xs shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {i.usage_unit || i.unit || '-'}</span>
@@ -295,7 +295,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                         type="button"
                         onClick={onClose}
                         disabled={saving}
-                        className={`flex-1 px-3 py-2.5 border ${RULE} bg-[oklch(94%_0.010_28)] ${INK} text-xs tabular-nums font-bold rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
+                        className={`flex-1 px-3 py-2.5 border ${RULE} bg-[var(--color-paper-2)] ${INK} text-xs tabular-nums font-bold rounded-sm hover:bg-[var(--color-paper-3)] transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
                     >
                         ยกเลิก
                     </button>
@@ -303,7 +303,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                         type="button"
                         onClick={handleSave}
                         disabled={saving || loading || missing}
-                        className={`flex-1 px-3 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)] text-[oklch(97%_0.008_28)] text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
+                        className={`flex-1 px-3 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer disabled:opacity-50 ${FOCUS}`}
                     >
                         {saving ? 'กำลังบันทึก…' : 'บันทึก'}
                     </button>

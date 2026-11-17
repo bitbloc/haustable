@@ -12,20 +12,20 @@
  */
 
 .stock-page {
-  --sp-paper:       oklch(97% 0.008 28);   /* ground, from the brand */
-  --sp-card:        oklch(99.3% 0.003 28); /* surface, one step off the ground */
-  --sp-paper-2:     oklch(94% 0.010 28);   /* raised / secondary fill */
-  --sp-ink:         oklch(18% 0.012 28);
-  --sp-ink-2:       oklch(42% 0.010 28);   /* muted, 7:1 on card */
-  --sp-ink-3:       oklch(50% 0.010 28);   /* faint, still ≥ 4.5:1 on card and ground */
-  --sp-border:      oklch(88% 0.010 28);   /* card edges */
-  --sp-rule:        oklch(92% 0.008 28);   /* row rules, one step lighter */
-  --sp-control:     oklch(82% 0.012 28);   /* control borders, one step darker */
-  --sp-accent:      oklch(52% 0.16 28);    /* the one hue: out and low */
-  --sp-accent-ink:  oklch(40% 0.13 28);    /* text on the pale pair */
-  --sp-accent-pale: oklch(95% 0.025 28);
-  --sp-on-ink:      oklch(97% 0.008 28);
-  --sp-focus:       oklch(60% 0.15 28);
+  --sp-paper:       var(--color-paper);   /* ground, from the brand */
+  --sp-card:        var(--color-paper); /* surface, one step off the ground */
+  --sp-paper-2:     var(--color-paper-2);   /* raised / secondary fill */
+  --sp-ink:         var(--color-ink);
+  --sp-ink-2:       var(--color-muted);   /* muted, 7:1 on card */
+  --sp-ink-3:       var(--color-neutral);   /* faint, still ≥ 4.5:1 on card and ground */
+  --sp-border:      var(--color-paper-3);   /* card edges */
+  --sp-rule:        var(--color-paper-2);   /* row rules, one step lighter */
+  --sp-control:     oklch(82% 0.012 348.33);   /* control borders, one step darker */
+  --sp-accent:      var(--brand-plum);    /* the one hue: out and low */
+  --sp-accent-ink:  var(--brand-plum);    /* text on the pale pair */
+  --sp-accent-pale: oklch(95% 0.025 348.33);
+  --sp-on-ink:      var(--color-paper);
+  --sp-focus:       var(--brand-plum);
 
   --sp-font: 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
   --sp-gap: 12px;
@@ -163,10 +163,10 @@
   text-align: left;
   transition: background-color var(--sp-dur) var(--sp-ease), transform var(--sp-dur) var(--sp-ease);
 }
-.sp-cta:hover { background: oklch(91.5% 0.011 28); }
+.sp-cta:hover { background: var(--color-paper-3); }
 .sp-cta:active { transform: scale(0.985); }
 .sp-cta--ink { background: var(--sp-ink); color: var(--sp-on-ink); }
-.sp-cta--ink:hover { background: oklch(25% 0.012 28); }
+.sp-cta--ink:hover { background: var(--color-ink); }
 .sp-cta__label { font-size: 16px; line-height: 1.5; font-weight: 600; }
 .sp-cta__hint { font-size: 12px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
@@ -504,7 +504,7 @@
 .sk-notice { padding: 12px 16px; border: 1px solid var(--sp-accent-ink); border-radius: var(--sp-r-card); background: var(--sp-accent-pale); color: var(--sp-accent-ink); font-size: 14px; line-height: 1.6; display: grid; gap: 8px; }
 
 .sk-sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
-.sk-sheet__veil { position: absolute; inset: 0; border: 0; background: oklch(18% 0.012 28 / 0.45); cursor: default; }
+.sk-sheet__veil { position: absolute; inset: 0; border: 0; background: oklch(21.78% 0 0/ 0.45); cursor: default; }
 .sk-sheet__body { position: relative; display: grid; gap: 12px; width: 100%; max-width: 480px; max-height: 92dvh; overflow-y: auto; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); border: 1px solid var(--sp-border); border-bottom: 0; border-radius: var(--sp-r-card) var(--sp-r-card) 0 0; background: var(--sp-card); }
 .sk-sheet__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-gap); }
 .sk-sheet__head h2 { font-size: 16px; line-height: 1.6; font-weight: 600; }

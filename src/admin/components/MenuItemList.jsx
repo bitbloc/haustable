@@ -15,9 +15,9 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     if (!isOpen) return null
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
-                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
-                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
+                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[var(--color-ink)]">{title}</h3>
+                <p className="text-[13px] text-[var(--color-muted)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
                 <div className="flex gap-2 mt-5">
                     <button
                         type="button"
@@ -29,10 +29,10 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[var(--color-paper)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${
                             isDanger
                                 ? 'bg-red-700 hover:bg-red-800'
-                                : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
+                                : 'bg-[var(--color-ink)] hover:bg-[var(--color-ink)]'
                         }`}
                     >
                         {confirmText}
@@ -86,17 +86,17 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
     // Overlay Render (Dragging Preview)
     if (isOverlay) {
         return (
-            <div className="bg-[oklch(98%_0.004_28)] border-2 border-[oklch(52%_0.16_28)] rounded-sm p-3 flex gap-3 shadow-2xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px]">
-                <div className="w-16 h-16 bg-[oklch(94%_0.010_28)] rounded-sm overflow-hidden shrink-0 border border-[oklch(85%_0.012_28)]">
+            <div className="bg-[var(--color-paper)] border-2 border-[var(--brand-plum)] rounded-sm p-3 flex gap-3 shadow-2xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px]">
+                <div className="w-16 h-16 bg-[var(--color-paper-2)] rounded-sm overflow-hidden shrink-0 border border-[var(--color-rule)]">
                     {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[oklch(55%_0.010_28)]"><ImageIcon size={18} /></div>
+                        <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)]"><ImageIcon size={18} /></div>
                     )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h4 className="font-bold truncate text-sm text-[oklch(18%_0.012_28)]">{item.name}</h4>
-                    <div className="text-[oklch(52%_0.16_28)] font-bold text-sm mt-0.5 tabular-nums">฿{item.price}</div>
+                    <h4 className="font-bold truncate text-sm text-[var(--color-ink)]">{item.name}</h4>
+                    <div className="text-[var(--brand-plum)] font-bold text-sm mt-0.5 tabular-nums">฿{item.price}</div>
                 </div>
             </div>
         )
@@ -106,10 +106,10 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`bg-[oklch(98.5%_0.005_28)] border rounded-lg p-3 flex flex-col gap-3 relative select-none group transition-colors duration-150 cursor-pointer ${
+            className={`bg-[var(--color-paper)] border rounded-lg p-3 flex flex-col gap-3 relative select-none group transition-colors duration-150 cursor-pointer ${
                 isOutOfStock 
-                    ? 'border-[oklch(88%_0.010_28)] bg-[oklch(95%_0.008_28)]/70 opacity-75' 
-                    : 'border-[oklch(88%_0.012_28)] hover:border-[oklch(70%_0.012_28)]'
+                    ? 'border-[var(--color-paper-3)] bg-[var(--color-paper-2)]/70 opacity-75' 
+                    : 'border-[var(--color-paper-3)] hover:border-[oklch(70%_0.012_348.33)]'
             }`}
             onClick={() => {
                 if (!isDragging) handleEdit(item)
@@ -118,17 +118,17 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
             {/* Left Image & Details */}
             <div className="flex-1 min-w-0 flex gap-3 pointer-events-none">
                 {/* Image */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[oklch(94%_0.010_28)] rounded-sm overflow-hidden shrink-0 relative border border-[oklch(85%_0.012_28)]">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--color-paper-2)] rounded-sm overflow-hidden shrink-0 relative border border-[var(--color-rule)]">
                     {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[oklch(55%_0.010_28)]">
+                        <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)]">
                             <ImageIcon size={20} />
                         </div>
                     )}
                     {isOutOfStock && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-[11px] tabular-nums font-bold text-[oklch(97%_0.008_28)] bg-red-700 px-1 py-0.5 rounded-xs">
+                            <span className="text-[11px] tabular-nums font-bold text-[var(--color-paper)] bg-red-700 px-1 py-0.5 rounded-xs">
                                 หมด
                             </span>
                         </div>
@@ -139,20 +139,20 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                     <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="font-semibold line-clamp-2 text-sm leading-5 text-[oklch(18%_0.012_28)]" title={item.name}>
+                            <h4 className="font-semibold line-clamp-2 text-sm leading-5 text-[var(--color-ink)]" title={item.name}>
                                 {item.name}
                             </h4>
                         </div>
-                        <div className="font-semibold text-[oklch(18%_0.012_28)] text-sm mt-1 tabular-nums">
+                        <div className="font-semibold text-[var(--color-ink)] text-sm mt-1 tabular-nums">
                             ฿{item.price}
                         </div>
-                        <div className="text-xs text-[oklch(55%_0.010_28)] line-clamp-1 mt-0.5 font-sans" title={item.description}>
+                        <div className="text-xs text-[var(--color-neutral)] line-clamp-1 mt-0.5 font-sans" title={item.description}>
                             {item.description || 'ไม่มีคำอธิบาย'}
                         </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span className="text-[11px] tabular-nums text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded-xs">
+                        <span className="text-[11px] tabular-nums text-[var(--color-muted)] bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-1.5 py-0.5 rounded-xs">
                             {item.menu_categories?.name || item.category || 'ทั่วไป'}
                         </span>
                         {item.remaining_stock !== null && item.remaining_stock !== undefined && (
@@ -161,7 +161,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                                     ? 'bg-red-50 text-red-700 border-red-300'
                                     : item.remaining_stock <= 5
                                         ? 'bg-amber-50 text-amber-900 border-amber-300'
-                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
+                                        : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
                             }`}>
                                 สต็อก: {item.remaining_stock}
                             </span>
@@ -176,7 +176,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
             </div>
 
             {/* Right Action Column */}
-            <div className="flex flex-row-reverse items-center justify-between gap-2 pt-2.5 border-t border-[oklch(92%_0.008_28)]">
+            <div className="flex flex-row-reverse items-center justify-between gap-2 pt-2.5 border-t border-[var(--color-paper-2)]">
                 {/* Top Action Icons */}
                 <div 
                     className="flex items-center gap-1"
@@ -188,7 +188,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             e.stopPropagation()
                             handleDuplicate(item)
                         }} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                         title="คัดลอกเมนูนี้"
                     >
                         <Copy size={14} />
@@ -198,7 +198,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             e.stopPropagation()
                             handleEdit(item)
                         }} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                         title="แก้ไขเมนู"
                     >
                         <Edit2 size={14} />
@@ -208,7 +208,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             e.stopPropagation()
                             handleDelete(item.id, item.name)
                         }} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                         title="ลบเมนู"
                     >
                         <Trash2 size={14} />
@@ -219,7 +219,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                         ref={setActivatorNodeRef}
                         {...attributes}
                         {...listeners}
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-grab active:cursor-grabbing hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors duration-150 flex items-center justify-center touch-none"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] cursor-grab active:cursor-grabbing hover:bg-[var(--color-paper-2)] rounded-sm transition-colors duration-150 flex items-center justify-center touch-none"
                         style={{ width: '28px', height: '28px', touchAction: 'none' }}
                         title="ลากเพื่อเรียงลำดับ"
                     >
@@ -237,10 +237,10 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     <button
                         onClick={(e) => handleToggleRecommended(e, item)}
                         aria-pressed={isRecommended === true}
-                        className={`px-2 py-1 rounded-xs text-xs font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-xs font-bold border transition-colors duration-150 cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${
                             isRecommended
-                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] hover:bg-[oklch(47%_0.16_28)]'
-                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
+                                ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)] hover:bg-[var(--brand-plum)]'
+                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)] hover:text-[var(--color-ink)] hover:border-[var(--brand-plum)]'
                         }`}
                         title={isRecommended ? 'คลิกเพื่อนำออกจากเมนูแนะนำ' : 'คลิกเพื่อเพิ่มเป็นเมนูแนะนำ'}
                     >
@@ -250,7 +250,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     {/* Quick Stock Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleToggleStock(e, item)}
-                        className={`px-2 py-1 rounded-xs text-xs tabular-nums font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-xs tabular-nums font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${
                             item.is_available !== false 
                                 ? 'bg-[oklch(95%_0.03_150)] text-[oklch(32%_0.08_150)] border-[oklch(85%_0.05_150)] hover:bg-[oklch(92%_0.04_150)]' 
                                 : 'bg-[oklch(95%_0.03_25)] text-[oklch(42%_0.14_25)] border-[oklch(85%_0.06_25)] hover:bg-[oklch(92%_0.04_25)]'
@@ -263,10 +263,10 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     {/* Quick Pickup Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleTogglePickup(e, item)}
-                        className={`px-2 py-1 rounded-xs text-xs tabular-nums font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`px-2 py-1 rounded-xs text-xs tabular-nums font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${
                             item.is_pickup_available !== false 
-                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]' 
-                                : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                ? 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-3)]' 
+                                : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)]'
                         }`}
                         title="สิทธิ์สั่ง Pick-up ล่วงหน้า"
                     >
@@ -310,8 +310,8 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             ref={setNodeRef}
             style={style}
             onClick={() => handleEdit(item)}
-            className={`border-b border-[oklch(85%_0.012_28)] text-xs tabular-nums hover:bg-[oklch(95%_0.008_28)] transition-colors duration-150 cursor-pointer ${
-                isOutOfStock ? 'bg-[oklch(96%_0.006_28)]/60 text-[oklch(55%_0.010_28)]' : 'bg-[oklch(98%_0.004_28)] text-[oklch(18%_0.012_28)]'
+            className={`border-b border-[var(--color-rule)] text-xs tabular-nums hover:bg-[var(--color-paper-2)] transition-colors duration-150 cursor-pointer ${
+                isOutOfStock ? 'bg-[var(--color-paper)]/60 text-[var(--color-neutral)]' : 'bg-[var(--color-paper)] text-[var(--color-ink)]'
             }`}
         >
             {/* Drag Handle */}
@@ -320,7 +320,7 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                     ref={setActivatorNodeRef}
                     {...attributes}
                     {...listeners}
-                    className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-grab active:cursor-grabbing hover:bg-[oklch(92%_0.010_28)] rounded-xs inline-flex items-center justify-center touch-none"
+                    className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] cursor-grab active:cursor-grabbing hover:bg-[var(--color-paper-2)] rounded-xs inline-flex items-center justify-center touch-none"
                     title="ลากเพื่อเรียงลำดับ"
                 >
                     <GripVertical size={14} />
@@ -329,11 +329,11 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
 
             {/* Thumbnail */}
             <td className="py-2 px-3 w-12">
-                <div className="w-10 h-10 bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden border border-[oklch(85%_0.012_28)] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 bg-[var(--color-paper-2)] rounded-xs overflow-hidden border border-[var(--color-rule)] flex items-center justify-center shrink-0">
                     {item.image_url ? (
                         <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                     ) : (
-                        <ImageIcon size={14} className="text-[oklch(55%_0.010_28)]" />
+                        <ImageIcon size={14} className="text-[var(--color-neutral)]" />
                     )}
                 </div>
             </td>
@@ -341,20 +341,20 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
             {/* Name & Category */}
             <td className="py-2 px-3">
                 <div className="flex items-center gap-2">
-                    <span className="font-bold font-sans text-sm text-[oklch(18%_0.012_28)] leading-normal">{item.name}</span>
+                    <span className="font-bold font-sans text-sm text-[var(--color-ink)] leading-normal">{item.name}</span>
                     {item.is_drink_stamp_eligible && (
                         <span className="text-[11px] tabular-nums font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
                             10 FREE 1
                         </span>
                     )}
                 </div>
-                <div className="text-xs text-[oklch(55%_0.010_28)] font-sans truncate max-w-xs">
+                <div className="text-xs text-[var(--color-neutral)] font-sans truncate max-w-xs">
                     {item.menu_categories?.name || item.category || 'ทั่วไป'} {item.description && `• ${item.description}`}
                 </div>
             </td>
 
             {/* Price */}
-            <td className="py-2 px-3 text-right font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
+            <td className="py-2 px-3 text-right font-bold text-sm text-[var(--brand-plum)] tabular-nums">
                 ฿{item.price}
             </td>
 
@@ -366,12 +366,12 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                             ? 'bg-red-50 text-red-700 border-red-300'
                             : item.remaining_stock <= 5
                                 ? 'bg-amber-50 text-amber-900 border-amber-300'
-                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
+                                : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
                     }`}>
                         {item.remaining_stock}
                     </span>
                 ) : (
-                    <span className="text-xs text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
+                    <span className="text-xs text-[var(--color-neutral)]">ไม่จำกัด</span>
                 )}
             </td>
 
@@ -382,8 +382,8 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                     aria-pressed={item.is_recommended === true}
                     className={`px-2 py-1 rounded-xs text-xs font-bold font-sans border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                         item.is_recommended
-                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
+                            ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)]'
+                            : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'
                     }`}
                     title={item.is_recommended ? 'นำออกจากเมนูแนะนำ' : 'เพิ่มเป็นเมนูแนะนำ'}
                 >
@@ -411,8 +411,8 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                     onClick={(e) => handleTogglePickup(e, item)}
                     className={`px-2 py-1 rounded-xs text-xs font-bold border transition-colors duration-150 cursor-pointer ${
                         item.is_pickup_available !== false
-                            ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
-                            : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                            ? 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
+                            : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)]'
                     }`}
                 >
                     {item.is_pickup_available !== false ? 'Pick-up' : 'No-Pick'}
@@ -424,21 +424,21 @@ const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
                 <div className="flex items-center justify-end gap-1">
                     <button
                         onClick={() => handleDuplicate(item)}
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors duration-150 cursor-pointer"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs transition-colors duration-150 cursor-pointer"
                         title="คัดลอก"
                     >
                         <Copy size={13} />
                     </button>
                     <button
                         onClick={() => handleEdit(item)}
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors duration-150 cursor-pointer"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs transition-colors duration-150 cursor-pointer"
                         title="แก้ไข"
                     >
                         <Edit2 size={13} />
                     </button>
                     <button
                         onClick={() => handleDelete(item.id, item.name)}
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer"
                         title="ลบ"
                     >
                         <Trash2 size={13} />
@@ -1214,12 +1214,12 @@ export default function MenuItemList() {
     const modalMargin = modalPrice > 0 ? ((modalProfit / modalPrice) * 100).toFixed(1) : 0
 
     return (
-        <div className="text-[oklch(18%_0.012_28)] pb-12 animate-fade-in font-sans">
+        <div className="text-[var(--color-ink)] pb-12 animate-fade-in font-sans">
             {/* Count, view switch and the main action. The tab above already names this view. */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <p className="text-[13px] text-[oklch(42%_0.010_28)] tabular-nums">
+                <p className="text-[13px] text-[var(--color-muted)] tabular-nums">
                     แสดง {filteredMenuItems.length} จาก {menuItems.length} เมนู
-                    {isSavingOrder && <span className="ml-2 text-[oklch(52%_0.16_28)]">กำลังบันทึกลำดับ...</span>}
+                    {isSavingOrder && <span className="ml-2 text-[var(--brand-plum)]">กำลังบันทึกลำดับ...</span>}
                 </p>
                 <div className="flex items-center gap-2">
                     <AdminFilterChips
@@ -1282,16 +1282,16 @@ export default function MenuItemList() {
 
             {/* Recommended Panel: what the customer table page shows in its showcase row, in that order */}
             {!loading && (
-                <section className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm mb-5 " aria-labelledby="rec-panel-title">
-                    <div className="px-3 py-2.5 flex items-center justify-between gap-3 border-b border-[oklch(85%_0.012_28)]">
+                <section className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm mb-5 " aria-labelledby="rec-panel-title">
+                    <div className="px-3 py-2.5 flex items-center justify-between gap-3 border-b border-[var(--color-rule)]">
                         <div className="min-w-0">
-                            <h3 id="rec-panel-title" className="text-sm font-bold text-[oklch(18%_0.012_28)] leading-normal">
+                            <h3 id="rec-panel-title" className="text-sm font-bold text-[var(--color-ink)] leading-normal">
                                 เมนูแนะนำ
-                                <span className="ml-2 text-xs font-normal text-[oklch(55%_0.010_28)] tabular-nums">
+                                <span className="ml-2 text-xs font-normal text-[var(--color-neutral)] tabular-nums">
                                     แสดง {recommendedShownIds.size} / {RECOMMENDED_SLOTS} ช่อง
                                 </span>
                             </h3>
-                            <p className="text-[13px] text-[oklch(55%_0.010_28)] leading-normal">
+                            <p className="text-[13px] text-[var(--color-neutral)] leading-normal">
                                 หน้าสั่งอาหารที่โต๊ะแสดง {RECOMMENDED_SLOTS} รายการแรกที่มีของ เรียงตามลำดับนี้
                             </p>
                         </div>
@@ -1299,7 +1299,7 @@ export default function MenuItemList() {
                             <button
                                 type="button"
                                 onClick={() => setSelectedCategoryTab('recommended')}
-                                className="shrink-0 text-xs font-bold text-[oklch(52%_0.16_28)] hover:underline underline-offset-2 cursor-pointer whitespace-nowrap"
+                                className="shrink-0 text-xs font-bold text-[var(--brand-plum)] hover:underline underline-offset-2 cursor-pointer whitespace-nowrap"
                             >
                                 กรองเฉพาะเมนูแนะนำ
                             </button>
@@ -1307,7 +1307,7 @@ export default function MenuItemList() {
                     </div>
 
                     {recommendedItems.length === 0 ? (
-                        <p className="px-3 py-4 text-[13px] text-[oklch(55%_0.010_28)] leading-normal">
+                        <p className="px-3 py-4 text-[13px] text-[var(--color-neutral)] leading-normal">
                             ยังไม่มีเมนูแนะนำ กดปุ่ม "แนะนำ" ที่การ์ดเมนูด้านล่างเพื่อเพิ่ม
                         </p>
                     ) : (
@@ -1318,21 +1318,21 @@ export default function MenuItemList() {
                                 return (
                                     <li
                                         key={item.id}
-                                        className={`px-3 py-2 flex items-center gap-3 border-b last:border-b-0 border-[oklch(90%_0.010_28)] ${isShown ? '' : 'bg-[oklch(96%_0.006_28)]'}`}
+                                        className={`px-3 py-2 flex items-center gap-3 border-b last:border-b-0 border-[var(--color-paper-3)] ${isShown ? '' : 'bg-[var(--color-paper)]'}`}
                                     >
-                                        <span className="w-5 shrink-0 text-xs text-[oklch(55%_0.010_28)] tabular-nums text-right">{index + 1}</span>
-                                        <div className={`w-10 h-10 shrink-0 bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden border border-[oklch(85%_0.012_28)] flex items-center justify-center ${isShown ? '' : 'opacity-60'}`}>
+                                        <span className="w-5 shrink-0 text-xs text-[var(--color-neutral)] tabular-nums text-right">{index + 1}</span>
+                                        <div className={`w-10 h-10 shrink-0 bg-[var(--color-paper-2)] rounded-xs overflow-hidden border border-[var(--color-rule)] flex items-center justify-center ${isShown ? '' : 'opacity-60'}`}>
                                             {item.image_url ? (
                                                 <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                                             ) : (
-                                                <ImageIcon size={14} className="text-[oklch(55%_0.010_28)]" />
+                                                <ImageIcon size={14} className="text-[var(--color-neutral)]" />
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className={`text-sm font-bold truncate leading-normal ${isShown ? 'text-[oklch(18%_0.012_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                            <div className={`text-sm font-bold truncate leading-normal ${isShown ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
                                                 {item.name}
                                             </div>
-                                            <div className="text-xs leading-normal text-[oklch(55%_0.010_28)]">
+                                            <div className="text-xs leading-normal text-[var(--color-neutral)]">
                                                 <span className=" tabular-nums">฿{item.price}</span>
                                                 {isOut ? (
                                                     <span className="ml-2 text-red-700">ของหมด · ไม่แสดง</span>
@@ -1341,12 +1341,12 @@ export default function MenuItemList() {
                                                 ) : null}
                                             </div>
                                         </div>
-                                        <div className="flex items-stretch shrink-0 border border-[oklch(85%_0.012_28)] rounded-xs divide-x divide-[oklch(85%_0.012_28)] overflow-hidden">
+                                        <div className="flex items-stretch shrink-0 border border-[var(--color-rule)] rounded-xs divide-x divide-[var(--color-rule)] overflow-hidden">
                                             <button
                                                 type="button"
                                                 onClick={() => handleMoveRecommended(item, -1)}
                                                 disabled={index === 0 || isSavingOrder}
-                                                className="w-9 h-9 flex items-center justify-center text-sm text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(80%_0.010_28)] disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
+                                                className="w-9 h-9 flex items-center justify-center text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] disabled:text-[oklch(80%_0.01_348.33)] disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
                                                 aria-label={`เลื่อน ${item.name} ขึ้น`}
                                             >
                                                 ↑
@@ -1355,7 +1355,7 @@ export default function MenuItemList() {
                                                 type="button"
                                                 onClick={() => handleMoveRecommended(item, 1)}
                                                 disabled={index === recommendedItems.length - 1 || isSavingOrder}
-                                                className="w-9 h-9 flex items-center justify-center text-sm text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(80%_0.010_28)] disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
+                                                className="w-9 h-9 flex items-center justify-center text-sm text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] disabled:text-[oklch(80%_0.01_348.33)] disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
                                                 aria-label={`เลื่อน ${item.name} ลง`}
                                             >
                                                 ↓
@@ -1363,7 +1363,7 @@ export default function MenuItemList() {
                                             <button
                                                 type="button"
                                                 onClick={(e) => handleToggleRecommended(e, item)}
-                                                className="w-9 h-9 flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                                                className="w-9 h-9 flex items-center justify-center text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 cursor-pointer"
                                                 aria-label={`นำ ${item.name} ออกจากเมนูแนะนำ`}
                                                 title="นำออกจากเมนูแนะนำ"
                                             >
@@ -1382,11 +1382,11 @@ export default function MenuItemList() {
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="h-28 bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)]" />
+                        <div key={i} className="h-28 bg-[var(--color-paper-2)] rounded-sm border border-[var(--color-rule)]" />
                     ))}
                 </div>
             ) : filteredMenuItems.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] tabular-nums text-xs">
+                <div className="text-center py-16 border border-dashed border-[var(--color-rule)] rounded-sm bg-[var(--color-paper)] text-[var(--color-neutral)] tabular-nums text-xs">
                     ไม่พบเมนูที่ตรงกับเงื่อนไขการค้นหา
                 </div>
             ) : viewMode === 'table' ? (
@@ -1397,10 +1397,10 @@ export default function MenuItemList() {
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                 >
-                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] rounded-sm overflow-x-auto ">
+                    <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] rounded-sm overflow-x-auto ">
                         <table className="w-full border-collapse tabular-nums text-[13px] text-left min-w-[700px]">
                             <thead>
-                                <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-xs">
+                                <tr className="border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-muted)] text-xs">
                                     <th className="py-2.5 px-3 w-8 text-center">#</th>
                                     <th className="py-2.5 px-3 w-12 text-center">รูป</th>
                                     <th className="py-2.5 px-3 font-bold">ชื่อเมนู / หมวดหมู่</th>
@@ -1465,59 +1465,59 @@ export default function MenuItemList() {
             {/* Create / Edit Planar Modal */}
             {isModalOpen && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-[oklch(98%_0.004_28)] w-full max-w-xl rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] font-sans">
+                    <div className="bg-[var(--color-paper)] w-full max-w-xl rounded-sm border border-[var(--color-rule)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] font-sans">
                         {/* Modal Header */}
-                        <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-[oklch(98%_0.004_28)] z-10">
+                        <div className="p-4 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)] z-10">
                             <div>
-                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[var(--color-ink)]">
                                     {editingItem ? 'แก้ไขเมนู' : 'สร้างเมนูใหม่'}
                                 </h3>
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
+                                <p className="text-[13px] text-[var(--color-neutral)] tabular-nums mt-0.5">
                                     {editingItem ? `รหัสเมนู #${editingItem.id}` : 'กรอกรายละเอียดและบันทึกเข้าแค็ตตาล็อก'}
                                 </p>
                             </div>
                             <button 
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                             >
                                 <X size={18} />
                             </button>
                         </div>
 
                         {/* Modal Body: Planar Form Sections */}
-                        <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[oklch(98%_0.004_28)]">
+                        <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[var(--color-paper)]">
                             {/* Section 1: Image Upload */}
-                            <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-2">
+                            <div className="pb-4 border-b border-[var(--color-rule)]">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-2">
                                     รูปภาพเมนู (Menu Image)
                                 </label>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-20 h-20 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden relative group shrink-0">
+                                    <div className="w-20 h-20 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs overflow-hidden relative group shrink-0">
                                         {previewUrl ? (
                                             <>
                                                 <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={handleRemoveImage}
-                                                    className="absolute top-1 right-1 bg-black/70 text-[oklch(97%_0.008_28)] p-1 rounded-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                                    className="absolute top-1 right-1 bg-black/70 text-[var(--color-paper)] p-1 rounded-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                                     title="ลบรูปภาพ"
                                                 >
                                                     <X size={12} />
                                                 </button>
                                             </>
                                         ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] gap-1">
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-[var(--color-neutral)] gap-1">
                                                 <ImageIcon size={20} />
                                                 <span className="text-xs tabular-nums">ไม่มีรูป</span>
                                             </div>
                                         )}
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="inline-block bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-xs tabular-nums font-bold text-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 ">
+                                        <label className="inline-block bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-xs tabular-nums font-bold text-xs cursor-pointer hover:bg-[var(--color-paper-3)] transition-colors duration-150 ">
                                             <span>เลือกรูปภาพ</span>
                                             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                         </label>
-                                        <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums leading-tight">
+                                        <p className="text-[13px] text-[var(--color-neutral)] tabular-nums leading-tight">
                                             รองรับ JPG, PNG, WEBP (ระบบจะปรับขนาดและบีบอัดอัตโนมัติ)
                                         </p>
                                     </div>
@@ -1525,9 +1525,9 @@ export default function MenuItemList() {
                             </div>
 
                             {/* Section 2: Name & Category Inputs */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-[var(--color-rule)]">
                                 <div>
-                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1">
                                         ชื่อเมนู *
                                     </label>
                                     <input
@@ -1535,19 +1535,19 @@ export default function MenuItemList() {
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="เช่น Iced Americano, Matcha Latte"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1">
                                         หมวดหมู่ *
                                     </label>
                                     <select
                                         value={formData.category_id}
                                         onChange={e => handleCategoryChangeInForm(e.target.value)}
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 cursor-pointer"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150 cursor-pointer"
                                         required
                                     >
                                         {categories.map(c => (
@@ -1558,9 +1558,9 @@ export default function MenuItemList() {
                             </div>
 
                             {/* Section 3: Pricing, Stock & Food Cost Breakdown */}
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pb-4 border-b border-[var(--color-rule)]">
                                 <div>
-                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1">
                                         ราคาขาย (บาท) *
                                     </label>
                                     <input
@@ -1569,13 +1569,13 @@ export default function MenuItemList() {
                                         value={formData.price}
                                         onChange={e => setFormData({ ...formData, price: e.target.value })}
                                         placeholder="0.00"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-sm text-[oklch(18%_0.012_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 tabular-nums"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2 text-sm text-[var(--color-ink)] text-right focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150 tabular-nums"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1">
                                         สต็อกคงเหลือ (ชิ้น)
                                     </label>
                                     <input
@@ -1585,21 +1585,21 @@ export default function MenuItemList() {
                                         value={formData.remaining_stock}
                                         onChange={e => setFormData({ ...formData, remaining_stock: e.target.value })}
                                         placeholder="ไม่จำกัด"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-sm text-[oklch(52%_0.16_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 tabular-nums"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2 text-sm text-[var(--brand-plum)] text-right focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150 tabular-nums"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-neutral)] mb-1">
                                         ต้นทุน (Recipe Cost)
                                     </label>
-                                    <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs font-bold text-right text-[oklch(42%_0.010_28)] tabular-nums">
+                                    <div className="p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs text-xs font-bold text-right text-[var(--color-muted)] tabular-nums">
                                         ฿{modalCost.toFixed(2)}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs tabular-nums font-bold text-[var(--color-neutral)] mb-1">
                                         GP Margin (%)
                                     </label>
                                     <div className={`p-2 border rounded-xs text-xs font-bold text-right tabular-nums ${
@@ -1611,8 +1611,8 @@ export default function MenuItemList() {
                             </div>
 
                             {/* Section 4: Description */}
-                            <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1">
+                            <div className="pb-4 border-b border-[var(--color-rule)]">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1">
                                     คำอธิบายเมนู (Description)
                                 </label>
                                 <textarea
@@ -1620,61 +1620,61 @@ export default function MenuItemList() {
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                     rows={2}
                                     placeholder="เช่น เมล็ด House Blend คั่วกลาง โน้ตช็อกโกแลตและคาราเมล"
-                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150"
                                 />
                             </div>
 
                             {/* Section 5: Planar Operational Toggles */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-4 border-b border-[var(--color-rule)]">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[var(--color-paper)] rounded-xs border border-[var(--color-rule)] cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_available}
                                         onChange={e => setFormData({ ...formData, is_available: e.target.checked })}
-                                        className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
+                                        className="w-4 h-4 accent-[var(--brand-plum)]"
                                     />
                                     <div>
-                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">มีสินค้า (In Stock)</div>
-                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">เปิดให้สั่งซื้อได้</div>
+                                        <div className="text-xs tabular-nums font-bold text-[var(--color-ink)]">มีสินค้า (In Stock)</div>
+                                        <div className="text-xs text-[var(--color-neutral)] tabular-nums">เปิดให้สั่งซื้อได้</div>
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[var(--color-paper)] rounded-xs border border-[var(--color-rule)] cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_recommended}
                                         onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })}
-                                        className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
+                                        className="w-4 h-4 accent-[var(--brand-plum)]"
                                     />
                                     <div>
-                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">เมนูแนะนำ (Recommended)</div>
-                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">แสดงแถบไฮไลต์ REC</div>
+                                        <div className="text-xs tabular-nums font-bold text-[var(--color-ink)]">เมนูแนะนำ (Recommended)</div>
+                                        <div className="text-xs text-[var(--color-neutral)] tabular-nums">แสดงแถบไฮไลต์ REC</div>
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[var(--color-paper)] rounded-xs border border-[var(--color-rule)] cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_pickup_available}
                                         onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })}
-                                        className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
+                                        className="w-4 h-4 accent-[var(--brand-plum)]"
                                     />
                                     <div>
-                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">รับ Pick-up หน้าร้าน</div>
-                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">สั่งล่วงหน้าผ่านเว็บ</div>
+                                        <div className="text-xs tabular-nums font-bold text-[var(--color-ink)]">รับ Pick-up หน้าร้าน</div>
+                                        <div className="text-xs text-[var(--color-neutral)] tabular-nums">สั่งล่วงหน้าผ่านเว็บ</div>
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[var(--color-paper)] rounded-xs border border-[var(--color-rule)] cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_drink_stamp_eligible}
                                         onChange={e => setFormData({ ...formData, is_drink_stamp_eligible: e.target.checked })}
-                                        className="w-4 h-4 accent-[oklch(52%_0.16_28)]"
+                                        className="w-4 h-4 accent-[var(--brand-plum)]"
                                     />
                                     <div>
-                                        <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">สะสมแก้ว 10 ฟรี 1</div>
-                                        <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">สิทธิ์ Drink Stamp</div>
+                                        <div className="text-xs tabular-nums font-bold text-[var(--color-ink)]">สะสมแก้ว 10 ฟรี 1</div>
+                                        <div className="text-xs text-[var(--color-neutral)] tabular-nums">สิทธิ์ Drink Stamp</div>
                                     </div>
                                 </label>
                             </div>
@@ -1683,30 +1683,30 @@ export default function MenuItemList() {
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block">
+                                        <label className="text-xs tabular-nums font-bold text-[var(--color-muted)] block">
                                             กลุ่มตัวเลือกเสริม (Option Groups)
                                         </label>
-                                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">
+                                        <span className="text-xs text-[var(--color-neutral)] tabular-nums">
                                             เลือกกลุ่มตัวเลือกที่เมนูนี้รองรับ เช่น ความหวาน, นม, ท็อปปิ้ง
                                         </span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setIsOptionPickerOpen(!isOptionPickerOpen)}
-                                        className="text-xs tabular-nums font-bold text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-xs hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] transition-colors duration-150 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                        className="text-xs tabular-nums font-bold text-[var(--brand-plum)] border border-[var(--brand-plum)] px-2.5 py-1 rounded-xs hover:bg-[var(--brand-plum)] hover:text-[var(--color-paper)] transition-colors duration-150 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                     >
                                         <Plus size={13} /> {isOptionPickerOpen ? 'ปิดหน้าต่างเลือก' : 'เลือกกลุ่มตัวเลือก'}
                                     </button>
                                 </div>
 
                                 {isOptionPickerOpen && (
-                                    <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xs space-y-2 ">
+                                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3 rounded-xs space-y-2 ">
                                         <input
                                             type="text"
                                             placeholder="ค้นหากลุ่มตัวเลือก..."
                                             value={optionPickerSearch}
                                             onChange={e => setOptionPickerSearch(e.target.value)}
-                                            className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2.5 py-1.5 text-sm focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs px-2.5 py-1.5 text-sm focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                         />
 
                                         <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
@@ -1716,7 +1716,7 @@ export default function MenuItemList() {
                                                     <label 
                                                         key={og.id} 
                                                         className={`flex items-center justify-between p-2 rounded-xs border text-xs cursor-pointer transition-colors duration-150 ${
-                                                            isChecked ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(98%_0.004_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                                            isChecked ? 'bg-[var(--color-paper-2)] border-[var(--brand-plum)] font-bold' : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:bg-[var(--color-paper)]'
                                                         }`}
                                                     >
                                                         <div className="flex items-center gap-2">
@@ -1728,11 +1728,11 @@ export default function MenuItemList() {
                                                                         isChecked ? prev.filter(id => id !== og.id) : [...prev, og.id]
                                                                     )
                                                                 }}
-                                                                className="w-3.5 h-3.5 accent-[oklch(52%_0.16_28)]"
+                                                                className="w-3.5 h-3.5 accent-[var(--brand-plum)]"
                                                             />
                                                             <span>{og.name}</span>
                                                         </div>
-                                                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">
+                                                        <span className="text-xs text-[var(--color-neutral)] tabular-nums">
                                                             {(og.option_choices || []).length} choices
                                                         </span>
                                                     </label>
@@ -1750,13 +1750,13 @@ export default function MenuItemList() {
                                         return (
                                             <span 
                                                 key={groupId}
-                                                className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-xs text-xs tabular-nums font-bold flex items-center gap-1.5 "
+                                                className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2.5 py-1 rounded-xs text-xs tabular-nums font-bold flex items-center gap-1.5 "
                                             >
                                                 <span>{group.name}</span>
                                                 <button
                                                     type="button"
                                                     onClick={() => setSelectedOptionGroups(prev => prev.filter(id => id !== groupId))}
-                                                    className="text-[oklch(55%_0.010_28)] hover:text-red-700 cursor-pointer"
+                                                    className="text-[var(--color-neutral)] hover:text-red-700 cursor-pointer"
                                                 >
                                                     <X size={12} />
                                                 </button>
@@ -1764,7 +1764,7 @@ export default function MenuItemList() {
                                         )
                                     })}
                                     {selectedOptionGroups.length === 0 && (
-                                        <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)]">
+                                        <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                             ยังไม่ได้เชื่อมโยงกลุ่มตัวเลือกเสริม
                                         </span>
                                     )}
@@ -1773,7 +1773,7 @@ export default function MenuItemList() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-2">
+                        <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex gap-2">
                             <button 
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}

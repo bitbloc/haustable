@@ -70,11 +70,11 @@ function LiveDurationBadge({ startTime }) {
     
     let pillStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
     if (elapsedMins >= 75) {
-        pillStyle = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
+        pillStyle = 'bg-[var(--brand-plum)] text-[var(--color-paper)]'
     } else if (elapsedMins >= 45) {
-        pillStyle = 'bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)]'
+        pillStyle = 'bg-[oklch(75%_0.18_65)] text-[var(--color-ink)]'
     } else {
-        pillStyle = 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)]'
+        pillStyle = 'bg-[oklch(45%_0.08_140)] text-[var(--color-paper)]'
     }
 
     return (
@@ -294,29 +294,29 @@ function OverviewTableCard({
         return 'calm'
     }, [isOccupied, orderDiffMins])
 
-    let borderClass = 'border-[oklch(85%_0.012_28)]'
-    let bgClass = 'bg-[oklch(97%_0.008_28)]'
-    let leftAccentClass = 'border-l-[oklch(85%_0.012_28)]'
+    let borderClass = 'border-[var(--color-rule)]'
+    let bgClass = 'bg-[var(--color-paper)]'
+    let leftAccentClass = 'border-l-[var(--color-rule)]'
 
     if (isOccupied) {
         if (item.hasCallBill || item.hasCallStaff) {
-            borderClass = 'border-[oklch(52%_0.16_28)]'
-            leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] '
+            borderClass = 'border-[var(--brand-plum)]'
+            leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[var(--brand-plum)] '
         } else if (isFreshOrder) {
             // First 10 minutes: Beacon pulse strictly on the left terracotta strip, text and card remain 100% solid
-            borderClass = 'border-[oklch(85%_0.012_28)]'
-            leftAccentClass = 'border-l-4 sm:border-l-[6px] border-l-[oklch(52%_0.16_28)] animate-rams-strip-pulse'
+            borderClass = 'border-[var(--color-rule)]'
+            leftAccentClass = 'border-l-4 sm:border-l-[6px] border-l-[var(--brand-plum)] animate-rams-strip-pulse'
         } else if (urgency === 'cooling') {
             // 10-15m: Still, warm muted accent
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(75%_0.14_45)]'
         } else {
             // > 15m: Still, normal calm border
-            leftAccentClass = 'border-l border-l-[oklch(85%_0.012_28)]'
+            leftAccentClass = 'border-l border-l-[var(--color-rule)]'
         }
     } else if (isUpcoming) {
-        bgClass = 'bg-[oklch(95%_0.010_28)]'
+        bgClass = 'bg-[var(--color-paper-2)]'
     } else if (isBlocked) {
-        bgClass = 'bg-[oklch(92%_0.010_28)]'
+        bgClass = 'bg-[var(--color-paper-2)]'
     }
 
     // Micro-timeline: reverse rounds so newest is on top
@@ -329,17 +329,17 @@ function OverviewTableCard({
         <div
             onClick={isOccupied ? () => onInspect(item) : undefined}
             className={`${cfg.cardPadding} rounded-xs border transition-colors duration-150 min-w-0 w-full overflow-hidden ${
-                isOccupied ? 'cursor-pointer hover:border-[oklch(18%_0.012_28)]' : 'cursor-default'
+                isOccupied ? 'cursor-pointer hover:border-[var(--color-ink)]' : 'cursor-default'
             } flex flex-col justify-between ${bgClass} ${borderClass} ${leftAccentClass}`}
         >
             {/* 1. Header (Magazine Editorial Hierarchy) */}
             <div>
-                <div className="flex items-start justify-between pb-2 border-b border-[oklch(88%_0.012_28)]">
+                <div className="flex items-start justify-between pb-2 border-b border-[var(--color-paper-3)]">
                     {/* Left Column: Table Context */}
                     <div>
                         <div className="flex items-baseline gap-2 flex-wrap">
                             <span className={`tabular-nums ${cfg.tableName} ${
-                                urgency === 'urgent' ? 'text-[oklch(52%_0.16_28)] font-black' : 'text-[oklch(18%_0.012_28)] font-bold'
+                                urgency === 'urgent' ? 'text-[var(--brand-plum)] font-black' : 'text-[var(--color-ink)] font-bold'
                             }`}>
                                 {item.table.table_name}
                             </span>
@@ -354,16 +354,16 @@ function OverviewTableCard({
                                 </span>
                             )}
                             {isFreshOrder && (
-                                <span className="tabular-nums text-[11px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] whitespace-nowrap ">
+                                <span className="tabular-nums text-[11px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-xs bg-[var(--brand-plum)] text-[var(--color-paper)] whitespace-nowrap ">
                                     ● มีออเดอร์ใหม่
                                 </span>
                             )}
                         </div>
-                        <div className={`tabular-nums text-[oklch(55%_0.010_28)] mt-0.5 flex items-center gap-1.5 flex-wrap ${cfg.paxTime}`}>
+                        <div className={`tabular-nums text-[var(--color-neutral)] mt-0.5 flex items-center gap-1.5 flex-wrap ${cfg.paxTime}`}>
                             {isOccupied ? (
                                 <>
                                     <span>{guestCount} ท่าน · {formatThaiTimeOnly(item.booking?.booking_time)}</span>
-                                    <span className="text-[oklch(42%_0.010_28)]">
+                                    <span className="text-[var(--color-muted)]">
                                         (นั่ง <LiveDuration startTime={item.startTime} />)
                                     </span>
                                 </>
@@ -381,28 +381,28 @@ function OverviewTableCard({
                     <div className="text-right">
                         {isOccupied ? (
                             <>
-                                <div className={` font-bold text-[oklch(18%_0.012_28)] tabular-nums ${cfg.headerAmount}`}>
+                                <div className={` font-bold text-[var(--color-ink)] tabular-nums ${cfg.headerAmount}`}>
                                     ฿{item.billTotal.toLocaleString()}
                                 </div>
                                 <div className="flex items-center justify-end gap-1 mt-0.5 text-xs sm:text-xs tabular-nums">
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                                         isFreshOrder
-                                            ? 'bg-[oklch(52%_0.16_28)]'
+                                            ? 'bg-[var(--brand-plum)]'
                                             : urgency === 'cooling'
                                                 ? 'bg-[oklch(75%_0.14_45)]'
-                                                : 'bg-[oklch(55%_0.010_28)]'
+                                                : 'bg-[var(--color-neutral)]'
                                     }`} />
-                                    <span className={urgency === 'urgent' ? 'font-bold text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}>
+                                    <span className={urgency === 'urgent' ? 'font-bold text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'}>
                                         <LiveRelativeTime timeIso={item.latestOrderIso} />
                                     </span>
                                 </div>
                             </>
                         ) : isUpcoming ? (
-                            <span className={`inline-block font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(42%_0.010_28)] tabular-nums ${cfg.liveTag}`}>
+                            <span className={`inline-block font-bold rounded-xs bg-[var(--color-paper-2)] text-[var(--color-muted)] tabular-nums ${cfg.liveTag}`}>
                                 RESERVED
                             </span>
                         ) : isBlocked ? (
-                            <span className={`inline-block font-bold rounded-xs bg-[oklch(88%_0.010_28)] text-[oklch(42%_0.010_28)] tabular-nums ${cfg.liveTag}`}>
+                            <span className={`inline-block font-bold rounded-xs bg-[var(--color-paper-3)] text-[var(--color-muted)] tabular-nums ${cfg.liveTag}`}>
                                 BLOCKED
                             </span>
                         ) : (
@@ -415,7 +415,7 @@ function OverviewTableCard({
 
                 {/* Call Alert Badge */}
                 {(item.hasCallBill || item.hasCallStaff) && (
-                    <div className={`mt-2 bg-[oklch(92%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-bold rounded-xs flex items-center justify-between animate-pulse ${cfg.alertBox}`}>
+                    <div className={`mt-2 bg-[var(--color-paper-2)] border border-[var(--error-red)] text-[var(--error-red)] font-bold rounded-xs flex items-center justify-between animate-pulse ${cfg.alertBox}`}>
                         <span>[ALERT] {item.hasCallBill ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}</span>
                         <button
                             type="button"
@@ -429,7 +429,7 @@ function OverviewTableCard({
 
                 {/* Customer Note */}
                 {item.booking?.customer_note && (
-                    <div className="mt-2 bg-[oklch(94%_0.010_28)] border-l-2 border-[oklch(75%_0.12_45)] px-2 py-1 rounded-xs text-[oklch(42%_0.010_28)] text-xs tabular-nums truncate">
+                    <div className="mt-2 bg-[var(--color-paper-2)] border-l-2 border-[oklch(75%_0.12_45)] px-2 py-1 rounded-xs text-[var(--color-muted)] text-xs tabular-nums truncate">
                         โน้ต: "{item.booking.customer_note}"
                     </div>
                 )}
@@ -438,7 +438,7 @@ function OverviewTableCard({
                 {isOccupied ? (
                     <div className="mt-2 pt-1">
                         {orderItems.length === 0 ? (
-                            <div className={`text-[oklch(55%_0.010_28)] tabular-nums py-3 text-center ${cfg.paxTime}`}>
+                            <div className={`text-[var(--color-neutral)] tabular-nums py-3 text-center ${cfg.paxTime}`}>
                                 ยังไม่มีรายการสั่งอาหาร
                             </div>
                         ) : reversedRounds.length === 1 ? (
@@ -451,20 +451,20 @@ function OverviewTableCard({
                                 return (
                                     <div ref={listRef} style={listClip} className={`${cfg.listMaxHeight} overflow-hidden ${cfg.itemSpacing}`}>
                                         {isSingleRoundFresh && (
-                                            <div className="flex items-center justify-between pb-1 mb-1 border-b border-[oklch(88%_0.012_28)] tabular-nums text-xs">
-                                                <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
+                                            <div className="flex items-center justify-between pb-1 mb-1 border-b border-[var(--color-paper-3)] tabular-nums text-xs">
+                                                <span className="font-bold text-[var(--brand-plum)] flex items-center gap-1.5">
                                                     <span className="relative flex h-2 w-2 shrink-0">
-                                                        <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(52%_0.16_28)] opacity-75" />
-                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[oklch(52%_0.16_28)] animate-rams-heartbeat" />
+                                                        <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--brand-plum)] opacity-75" />
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--brand-plum)] animate-rams-heartbeat" />
                                                     </span>
                                                     <span>สั่งใหม่ · {singleRound.timeStr || formatThaiTimeOnly(item.booking?.booking_time)} น.</span>
                                                 </span>
-                                                <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums text-xs">
+                                                <span className="font-bold text-[var(--brand-plum)] tabular-nums text-xs">
                                                     {singleRound.items.length} รายการ
                                                 </span>
                                             </div>
                                         )}
-                                        <div className={`${cfg.itemSpacing} divide-y divide-[oklch(92%_0.010_28)]`}>
+                                        <div className={`${cfg.itemSpacing} divide-y divide-[var(--color-paper-2)]`}>
                                             {singleRound.items.map((it, idx) => {
                                                 const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                 const price = Number(it.price_at_time || it.menu_items?.price || 0)
@@ -476,19 +476,19 @@ function OverviewTableCard({
                                                         <div className="flex items-start gap-1.5 min-w-0 flex-1">
                                                             <span className={` tabular-nums shrink-0 mt-0.5 ${
                                                                 isSingleRoundFresh 
-                                                                    ? 'text-[oklch(52%_0.16_28)] font-black text-xs' 
-                                                                    : `text-[oklch(18%_0.012_28)] font-bold ${cfg.itemQty}`
+                                                                    ? 'text-[var(--brand-plum)] font-black text-xs' 
+                                                                    : `text-[var(--color-ink)] font-bold ${cfg.itemQty}`
                                                             }`}>
                                                                 {it.quantity}×
                                                             </span>
                                                             <div className="min-w-0 flex-1">
-                                                                <span className={`block leading-snug break-words ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'font-medium text-[oklch(18%_0.012_28)]'} ${cfg.itemName}`}>
+                                                                <span className={`block leading-snug break-words ${isSingleRoundFresh ? 'font-bold text-[var(--color-ink)]' : 'font-medium text-[var(--color-ink)]'} ${cfg.itemName}`}>
                                                                     {itemName}
                                                                 </span>
                                                                 {optList.length > 0 && (
-                                                                    <div className="text-xs tabular-nums text-[oklch(45%_0.10_28)] mt-0.5 space-y-0.5">
+                                                                    <div className="text-xs tabular-nums text-[var(--brand-plum)] mt-0.5 space-y-0.5">
                                                                         {optList.map((opt, oIdx) => (
-                                                                            <span key={oIdx} className="block leading-tight text-[oklch(50%_0.08_28)]">
+                                                                            <span key={oIdx} className="block leading-tight text-[oklch(50%_0.08_348.33)]">
                                                                                 + {opt}
                                                                             </span>
                                                                         ))}
@@ -496,7 +496,7 @@ function OverviewTableCard({
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <span className={` tabular-nums shrink-0 mt-0.5 ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'text-[oklch(42%_0.010_28)]'} ${cfg.itemPrice}`}>
+                                                        <span className={` tabular-nums shrink-0 mt-0.5 ${isSingleRoundFresh ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-muted)]'} ${cfg.itemPrice}`}>
                                                             ฿{lineTotal.toLocaleString()}
                                                         </span>
                                                     </div>
@@ -520,25 +520,25 @@ function OverviewTableCard({
                                         // ACTIVE FRESH ROUND: Clean & Bold, zero boxed frames, heartbeat red beacon
                                         return (
                                             <div key={round.roundNumber} className="space-y-1 pb-1">
-                                                <div className="flex items-center justify-between pb-1 border-b border-[oklch(88%_0.012_28)] tabular-nums text-xs">
+                                                <div className="flex items-center justify-between pb-1 border-b border-[var(--color-paper-3)] tabular-nums text-xs">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                         <span className="relative flex h-2 w-2 shrink-0">
-                                                            <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(52%_0.16_28)] opacity-75" />
-                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[oklch(52%_0.16_28)] animate-rams-heartbeat" />
+                                                            <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--brand-plum)] opacity-75" />
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--brand-plum)] animate-rams-heartbeat" />
                                                         </span>
-                                                        <span className="font-bold text-[oklch(52%_0.16_28)] text-xs tracking-tight">
+                                                        <span className="font-bold text-[var(--brand-plum)] text-xs tracking-tight">
                                                             รอบ {round.roundNumber} สั่งใหม่
                                                         </span>
-                                                        <span className="text-[oklch(55%_0.010_28)] text-xs">
+                                                        <span className="text-[var(--color-neutral)] text-xs">
                                                             · {round.timeStr} น.
                                                         </span>
                                                     </div>
-                                                    <span className=" font-bold text-[oklch(52%_0.16_28)] tabular-nums text-xs">
+                                                    <span className=" font-bold text-[var(--brand-plum)] tabular-nums text-xs">
                                                         {round.items.length} รายการ
                                                     </span>
                                                 </div>
 
-                                                <div className={`${cfg.itemSpacing} divide-y divide-[oklch(92%_0.010_28)]`}>
+                                                <div className={`${cfg.itemSpacing} divide-y divide-[var(--color-paper-2)]`}>
                                                     {round.items.map((it, idx) => {
                                                         const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                         const price = Number(it.price_at_time || it.menu_items?.price || 0)
@@ -548,15 +548,15 @@ function OverviewTableCard({
                                                         return (
                                                             <div key={it.id || idx} className={`${rowIn(it.id)} ${rowIn(it.id)} pt-1.5 first:pt-1 flex items-start justify-between gap-2`}>
                                                                 <div className="flex items-start gap-1.5 min-w-0 flex-1">
-                                                                    <span className=" font-black text-[oklch(52%_0.16_28)] tabular-nums shrink-0 text-xs mt-0.5">
+                                                                    <span className=" font-black text-[var(--brand-plum)] tabular-nums shrink-0 text-xs mt-0.5">
                                                                         {it.quantity}×
                                                                     </span>
                                                                     <div className="min-w-0 flex-1">
-                                                                        <span className={`block leading-snug break-words font-bold text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
+                                                                        <span className={`block leading-snug break-words font-bold text-[var(--color-ink)] ${cfg.itemName}`}>
                                                                             {itemName}
                                                                         </span>
                                                                         {optList.length > 0 && (
-                                                                            <div className="text-xs tabular-nums text-[oklch(52%_0.16_28)] font-semibold mt-0.5 space-y-0.5">
+                                                                            <div className="text-xs tabular-nums text-[var(--brand-plum)] font-semibold mt-0.5 space-y-0.5">
                                                                                 {optList.map((opt, oIdx) => (
                                                                                     <span key={oIdx} className="block leading-tight">
                                                                                         + {opt}
@@ -566,7 +566,7 @@ function OverviewTableCard({
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                                <span className={` font-bold tabular-nums text-[oklch(18%_0.012_28)] shrink-0 mt-0.5 ${cfg.itemPrice}`}>
+                                                                <span className={` font-bold tabular-nums text-[var(--color-ink)] shrink-0 mt-0.5 ${cfg.itemPrice}`}>
                                                                     ฿{lineTotal.toLocaleString()}
                                                                 </span>
                                                             </div>
@@ -579,8 +579,8 @@ function OverviewTableCard({
 
                                     // PAST COMPLETED ROUND: Settled subdued styling, separated by clean hairline divider
                                     return (
-                                        <div key={round.roundNumber} className="pt-1.5 border-t border-[oklch(88%_0.012_28)] opacity-65 hover:opacity-100 transition-opacity space-y-1">
-                                            <div className="flex items-center justify-between tabular-nums text-xs pb-0.5 text-[oklch(55%_0.010_28)]">
+                                        <div key={round.roundNumber} className="pt-1.5 border-t border-[var(--color-paper-3)] opacity-65 hover:opacity-100 transition-opacity space-y-1">
+                                            <div className="flex items-center justify-between tabular-nums text-xs pb-0.5 text-[var(--color-neutral)]">
                                                 <span className="font-medium">
                                                     {round.isInitial ? 'รอบ 1 (เปิดโต๊ะ)' : `รอบ ${round.roundNumber}`} · {round.timeStr} น.
                                                 </span>
@@ -589,7 +589,7 @@ function OverviewTableCard({
                                                 </span>
                                             </div>
 
-                                            <div className={`${cfg.itemSpacing} divide-y divide-[oklch(93%_0.008_28)] pl-0.5`}>
+                                            <div className={`${cfg.itemSpacing} divide-y divide-[var(--color-paper-2)] pl-0.5`}>
                                                 {round.items.map((it, idx) => {
                                                     const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                     const price = Number(it.price_at_time || it.menu_items?.price || 0)
@@ -597,17 +597,17 @@ function OverviewTableCard({
                                                     const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
 
                                                     return (
-                                                        <div key={it.id || idx} className={`${rowIn(it.id)} ${rowIn(it.id)} pt-1.5 first:pt-0.5 flex items-start justify-between gap-2 text-[oklch(45%_0.010_28)]`}>
+                                                        <div key={it.id || idx} className={`${rowIn(it.id)} ${rowIn(it.id)} pt-1.5 first:pt-0.5 flex items-start justify-between gap-2 text-[var(--color-muted)]`}>
                                                             <div className="flex items-start gap-1.5 min-w-0 flex-1">
-                                                                <span className=" text-[oklch(55%_0.010_28)] font-semibold tabular-nums shrink-0 text-xs mt-0.5">
+                                                                <span className=" text-[var(--color-neutral)] font-semibold tabular-nums shrink-0 text-xs mt-0.5">
                                                                     {it.quantity}×
                                                                 </span>
                                                                 <div className="min-w-0 flex-1">
-                                                                    <span className={`block leading-snug break-words text-[oklch(42%_0.010_28)] ${cfg.itemName}`}>
+                                                                    <span className={`block leading-snug break-words text-[var(--color-muted)] ${cfg.itemName}`}>
                                                                         {itemName}
                                                                     </span>
                                                                     {optList.length > 0 && (
-                                                                        <div className="text-xs tabular-nums text-[oklch(52%_0.010_28)] mt-0.5 space-y-0.5 opacity-80">
+                                                                        <div className="text-xs tabular-nums text-[var(--color-neutral)] mt-0.5 space-y-0.5 opacity-80">
                                                                             {optList.map((opt, oIdx) => (
                                                                                 <span key={oIdx} className="block leading-tight">
                                                                                     + {opt}
@@ -617,7 +617,7 @@ function OverviewTableCard({
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <span className=" tabular-nums text-[oklch(50%_0.010_28)] shrink-0 text-xs mt-0.5">
+                                                            <span className=" tabular-nums text-[var(--color-neutral)] shrink-0 text-xs mt-0.5">
                                                                 ฿{lineTotal.toLocaleString()}
                                                             </span>
                                                         </div>
@@ -631,27 +631,27 @@ function OverviewTableCard({
                         )}
                     </div>
                 ) : isUpcoming ? (
-                    <div className={`mt-3 py-3 px-2 bg-[oklch(94%_0.010_28)] rounded-xs border border-dashed border-[oklch(85%_0.012_28)] text-center ${cfg.orderCountHeader}`}>
-                        <span className="font-bold text-[oklch(18%_0.012_28)] block">
+                    <div className={`mt-3 py-3 px-2 bg-[var(--color-paper-2)] rounded-xs border border-dashed border-[var(--color-rule)] text-center ${cfg.orderCountHeader}`}>
+                        <span className="font-bold text-[var(--color-ink)] block">
                             จอง {formatThaiTimeOnly(item.booking?.booking_time)}
                         </span>
-                        <span className={`text-[oklch(55%_0.010_28)] block ${cfg.paxTime}`}>
+                        <span className={`text-[var(--color-neutral)] block ${cfg.paxTime}`}>
                             {item.booking?.customer_name || 'ลูกค้า'} ({guestCount} ท่าน)
                         </span>
                     </div>
                 ) : (
-                    <div className={`mt-4 py-4 text-center text-[oklch(60%_0.010_28)] ${cfg.orderCountHeader}`}>
+                    <div className={`mt-4 py-4 text-center text-[var(--color-neutral)] ${cfg.orderCountHeader}`}>
                         โต๊ะว่าง พร้อมเปิดบริการ
                     </div>
                 )}
             </div>
 
             {/* 3. Footer Control Bar (Single Hairline, No Redundant Total) */}
-            <div className="mt-3 pt-2 border-t border-[oklch(88%_0.012_28)] flex items-center justify-between text-xs">
+            <div className="mt-3 pt-2 border-t border-[var(--color-paper-3)] flex items-center justify-between text-xs">
                 {isOccupied ? (
                     <>
-                        <div className="flex items-center gap-1.5 text-[oklch(55%_0.010_28)] font-sans">
-                            <span className="font-semibold text-[oklch(18%_0.012_28)]">
+                        <div className="flex items-center gap-1.5 text-[var(--color-neutral)] font-sans">
+                            <span className="font-semibold text-[var(--color-ink)]">
                                 รวม {orderItems.length} รายการ
                             </span>
                             {roundsInfo?.hasAdditionalOrders && (
@@ -667,7 +667,7 @@ function OverviewTableCard({
                                     e.stopPropagation()
                                     onInspect(item)
                                 }}
-                                className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-medium rounded-lg cursor-pointer transition-colors flex items-center gap-1"
+                                className="px-2.5 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[var(--color-ink)] text-xs font-medium rounded-lg cursor-pointer transition-colors flex items-center gap-1"
                             >
                                 <span>ดูบิลเต็ม ({orderItems.length})</span>
                                 <span className="opacity-60 text-xs" aria-hidden="true">&rarr;</span>
@@ -675,18 +675,18 @@ function OverviewTableCard({
                         )}
                     </>
                 ) : isUpcoming ? (
-                    <div className="w-full flex items-center justify-between text-[oklch(55%_0.010_28)]">
+                    <div className="w-full flex items-center justify-between text-[var(--color-neutral)]">
                         <span className="font-medium text-xs">จองล่วงหน้า</span>
-                        <span className="tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)]">
+                        <span className="tabular-nums font-bold text-xs text-[var(--color-ink)]">
                             {formatThaiTimeOnly(item.booking?.booking_time)}
                         </span>
                     </div>
                 ) : isBlocked ? (
-                    <div className="w-full text-center text-[oklch(55%_0.010_28)] text-xs tabular-nums">
+                    <div className="w-full text-center text-[var(--color-neutral)] text-xs tabular-nums">
                         BLOCKED
                     </div>
                 ) : (
-                    <div className="w-full flex items-center justify-between text-[oklch(55%_0.010_28)]">
+                    <div className="w-full flex items-center justify-between text-[var(--color-neutral)]">
                         <span className="text-xs">พร้อมรับลูกค้า</span>
                         <span className="tabular-nums text-xs text-[oklch(45%_0.08_140)] font-bold">ว่าง</span>
                     </div>
@@ -1254,19 +1254,19 @@ export default function SimplifiedLiveOverview({
         <div
             ref={containerRef}
             className={`space-y-4 font-sans select-none transition-all duration-200 ${
-                isFullscreen ? 'fixed inset-0 z-50 bg-[oklch(97%_0.008_28)] p-4 md:p-6 overflow-y-auto' : ''
+                isFullscreen ? 'fixed inset-0 z-50 bg-[var(--color-paper)] p-4 md:p-6 overflow-y-auto' : ''
             }`}
         >
             {/* Dedicated Floating Exit & Size Bar when in Fullscreen Mode */}
             {isFullscreen && (
                 <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
                     {/* Sort in Fullscreen */}
-                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-xs font-sans shadow-lg">
+                    <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper)] p-0.5 rounded-xs text-xs font-sans shadow-lg">
                         <button
                             type="button"
                             onClick={() => handleSetSortBy('table')}
                             className={`px-2 py-1 rounded-xs font-semibold text-xs cursor-pointer ${
-                                sortBy === 'table' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'text-[oklch(55%_0.010_28)]'
+                                sortBy === 'table' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'text-[var(--color-neutral)]'
                             }`}
                             title="เรียงตามเลขโต๊ะ"
                         >
@@ -1276,18 +1276,18 @@ export default function SimplifiedLiveOverview({
                             type="button"
                             onClick={() => handleSetSortBy('recent')}
                             className={`px-2 py-1 rounded-xs font-semibold text-xs cursor-pointer flex items-center gap-1 ${
-                                sortBy === 'recent' ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold' : 'text-[oklch(55%_0.010_28)]'
+                                sortBy === 'recent' ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] font-bold' : 'text-[var(--color-neutral)]'
                             }`}
                             title="เรียงตามออเดอร์ล่าสุด"
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(97%_0.008_28)] shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-paper)] shrink-0" />
                             <span>สั่งล่าสุด</span>
                         </button>
                     </div>
 
                     {/* Size in Fullscreen */}
-                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-xs font-sans shadow-lg">
-                        <span className="tabular-nums text-[11px] text-[oklch(42%_0.010_28)] px-1.5 font-bold hidden sm:inline">ขนาด:</span>
+                    <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper)] p-0.5 rounded-xs text-xs font-sans shadow-lg">
+                        <span className="tabular-nums text-[11px] text-[var(--color-muted)] px-1.5 font-bold hidden sm:inline">ขนาด:</span>
                         {[
                             { id: 'sm', label: 'เล็ก' },
                             { id: 'md', label: 'กลาง' },
@@ -1300,8 +1300,8 @@ export default function SimplifiedLiveOverview({
                                 onClick={() => handleSetOverviewSize(opt.id)}
                                 className={`px-2 py-1 rounded-xs font-semibold text-xs transition-all cursor-pointer ${
                                     overviewSize === opt.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold'
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                                 title={`ปรับขนาด: ${opt.label}`}
                             >
@@ -1312,7 +1312,7 @@ export default function SimplifiedLiveOverview({
                     <button
                         type="button"
                         onClick={handleToggleFullscreen}
-                        className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(88%_0.012_28)] tabular-nums text-xs font-semibold rounded-xl shadow-lg cursor-pointer flex items-center gap-1.5 transition-colors"
+                        className="px-3.5 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[oklch(28%_0.012_348.33)] border border-[var(--color-paper-3)] tabular-nums text-xs font-semibold rounded-xl shadow-lg cursor-pointer flex items-center gap-1.5 transition-colors"
                         title="ออกจากโหมดเต็มจอ (ESC)"
                     >
                         <span>ออกจากโหมดเต็มจอ</span>
@@ -1322,22 +1322,22 @@ export default function SimplifiedLiveOverview({
             )}
 
             {/* 1. Hero Pulse or Compact Floor Control Bar */}
-            <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 sm:p-5 rounded-2xl ">
+            <div className="border border-[var(--color-paper-3)] bg-[var(--color-paper)] p-4 sm:p-5 rounded-2xl ">
                 {!hideHeroKpis && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(88%_0.012_28)] mb-4 pb-4 border-b border-[oklch(88%_0.012_28)]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-paper-3)] mb-4 pb-4 border-b border-[var(--color-paper-3)]">
                         {/* KPI 1: LIVE NOW / FLOOR STATUS / DATE SUMMARY */}
                         <div className="pt-2 first:pt-0 sm:pt-0 sm:px-4 first:pl-0">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                <span className="text-xs font-medium text-[var(--color-muted)]">
                                     {!isToday ? 'สรุปยอดประจำวัน' : isShiftOpen ? 'โต๊ะที่กำลังใช้บริการ' : 'สถานะหน้าร้าน'}
                                 </span>
-                                <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[oklch(55%_0.010_28)]' : isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[var(--color-neutral)]' : isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[var(--color-neutral)]'}`} />
                             </div>
                             <div className="mt-1 flex items-baseline gap-2">
-                                <h2 className=" text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                <h2 className=" text-3xl sm:text-4xl font-bold text-[var(--color-ink)] tabular-nums">
                                     {!isToday ? liveBookings.length : (isShiftOpen ? counts.occupied : 0)}
                                 </h2>
-                                <span className="font-sans text-xs text-[oklch(50%_0.010_28)] font-medium">
+                                <span className="font-sans text-xs text-[var(--color-neutral)] font-medium">
                                     {!isToday 
                                         ? `ออเดอร์ที่บันทึก · ${liveBookings.length} รายการ`
                                         : isShiftOpen 
@@ -1351,15 +1351,15 @@ export default function SimplifiedLiveOverview({
                         {/* KPI 2: PEOPLE IN STORE / GUESTS ON DATE */}
                         <div className="pt-3 sm:pt-0 sm:px-4">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                <span className="text-xs font-medium text-[var(--color-muted)]">
                                     {!isToday ? 'จำนวนลูกค้าทั้งหมด' : 'ลูกค้าในร้านตอนนี้'}
                                 </span>
                             </div>
                             <div className="mt-1 flex items-baseline gap-2">
-                                <div className=" text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                <div className=" text-3xl sm:text-4xl font-bold text-[var(--color-ink)] tabular-nums">
                                     {!isToday ? totalGuestsOnDate : (isShiftOpen ? counts.totalGuests : 0)}
                                 </div>
-                                <span className="font-sans text-xs text-[oklch(50%_0.010_28)] font-medium">
+                                <span className="font-sans text-xs text-[var(--color-neutral)] font-medium">
                                     {!isToday 
                                         ? `ท่านตลอดวัน (${formatThaiDateOnly(selectedDate)})`
                                         : isShiftOpen 
@@ -1377,29 +1377,29 @@ export default function SimplifiedLiveOverview({
                             return (
                                 <div className="pt-3 sm:pt-0 sm:px-4">
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="text-xs font-medium text-[oklch(48%_0.010_28)]">
+                                        <span className="text-xs font-medium text-[var(--color-muted)]">
                                             {!isToday ? 'ยอดขายประจำวัน (ชำระแล้ว)' : 'ยอดขายวันนี้ (ชำระแล้ว)'}
                                         </span>
-                                        <span className=" text-xs font-medium text-[oklch(50%_0.010_28)] tabular-nums">
+                                        <span className=" text-xs font-medium text-[var(--color-neutral)] tabular-nums">
                                             {trendText}
                                         </span>
                                     </div>
                                     <div className="mt-1">
-                                        <div className=" text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                        <div className=" text-3xl sm:text-4xl font-bold text-[var(--color-ink)] tabular-nums">
                                             ฿{revenueToday.toLocaleString()}
                                         </div>
-                                        <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-[oklch(88%_0.012_28)] text-xs tabular-nums">
-                                            <span className="font-sans text-[oklch(48%_0.010_28)]">
+                                        <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-[var(--color-paper-3)] text-xs tabular-nums">
+                                            <span className="font-sans text-[var(--color-muted)]">
                                                 ยังไม่คิดเงิน ({resolvedUnpaidCount} บิล):
                                             </span>
-                                            <span className={`font-semibold ${resolvedUnpaidRevenue > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(50%_0.010_28)]'}`}>
+                                            <span className={`font-semibold ${resolvedUnpaidRevenue > 0 ? 'text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'}`}>
                                                 ฿{resolvedUnpaidRevenue.toLocaleString()}
                                             </span>
                                         </div>
                                         {resolvedUnpaidRevenue > 0 && (
-                                            <div className="flex items-center justify-between gap-2 mt-0.5 text-xs text-[oklch(45%_0.010_28)] tabular-nums">
+                                            <div className="flex items-center justify-between gap-2 mt-0.5 text-xs text-[var(--color-muted)] tabular-nums">
                                                 <span className="font-sans">รวมยอดคาดการณ์:</span>
-                                                <span className="font-semibold text-[oklch(18%_0.012_28)]">
+                                                <span className="font-semibold text-[var(--color-ink)]">
                                                     ฿{(revenueToday + resolvedUnpaidRevenue).toLocaleString()}
                                                 </span>
                                             </div>
@@ -1413,8 +1413,8 @@ export default function SimplifiedLiveOverview({
 
                 {/* Sub-bar: the floor's status, the card/list switch, and the rarer settings behind one control */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-[13px]">
-                    <div className="flex items-center gap-2 text-[oklch(42%_0.010_28)] flex-wrap">
-                        <span className="font-medium text-[oklch(18%_0.012_28)]">{!isToday ? 'ภาพรวมผังโต๊ะ' : 'ผังโต๊ะสด'}</span>
+                    <div className="flex items-center gap-2 text-[var(--color-muted)] flex-wrap">
+                        <span className="font-medium text-[var(--color-ink)]">{!isToday ? 'ภาพรวมผังโต๊ะ' : 'ผังโต๊ะสด'}</span>
                         <span aria-hidden="true">·</span>
                         <span>{!isToday ? `บันทึกย้อนหลัง (${counts.total} โต๊ะ)` : isShiftOpen ? `${counts.occupied} โต๊ะกำลังทาน` : 'ปิดกะหน้าร้าน (0 โต๊ะกำลังทาน)'}</span>
                     </div>
@@ -1523,14 +1523,14 @@ export default function SimplifiedLiveOverview({
                         onClick={() => setSelectedFilter(chip.id)}
                         className={`px-3 py-1.5 rounded-xl font-medium transition-colors whitespace-nowrap border cursor-pointer flex items-center gap-2 ${
                             selectedFilter === chip.id
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] '
-                                : 'bg-[oklch(95.5%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(88%_0.012_28)] hover:bg-[oklch(92%_0.010_28)]'
-                        } ${chip.alert ? 'ring-1 ring-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]' : ''}`}
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] '
+                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-paper-3)] hover:bg-[var(--color-paper-2)]'
+                        } ${chip.alert ? 'ring-1 ring-[var(--error-red)] text-[var(--error-red)]' : ''}`}
                     >
-                        {chip.isDefault && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />}
+                        {chip.isDefault && <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-plum)] shrink-0" />}
                         <span>{chip.label}</span>
                         <span className={`px-1.5 py-0.5 text-[11px] font-semibold rounded-md tabular-nums ${
-                            selectedFilter === chip.id ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(89%_0.010_28)] text-[oklch(28%_0.012_28)]'
+                            selectedFilter === chip.id ? 'bg-[var(--color-paper)]/20 text-[var(--color-paper)]' : 'bg-[var(--color-paper-3)] text-[oklch(28%_0.012_348.33)]'
                         }`}>
                             {chip.count}
                         </span>
@@ -1540,15 +1540,15 @@ export default function SimplifiedLiveOverview({
 
             {/* 3. Table Views Based on Zoom Level */}
             {isDataLoading ? (
-                <div className="py-16 text-center text-xs text-[oklch(55%_0.010_28)] font-sans border border-dashed border-[oklch(88%_0.012_28)] rounded-2xl">
+                <div className="py-16 text-center text-xs text-[var(--color-neutral)] font-sans border border-dashed border-[var(--color-paper-3)] rounded-2xl">
                     กำลังดึงข้อมูลโต๊ะสดแบบเรียลไทม์...
                 </div>
             ) : filteredFloor.length === 0 ? (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 font-sans border border-[oklch(88%_0.012_28)] bg-[oklch(98.5%_0.005_28)] rounded-lg">
-                    <p className="flex items-center gap-2.5 text-[13px] text-[oklch(42%_0.010_28)]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 font-sans border border-[var(--color-paper-3)] bg-[var(--color-paper)] rounded-lg">
+                    <p className="flex items-center gap-2.5 text-[13px] text-[var(--color-muted)]">
                         <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] shrink-0" />
                         <span>
-                            <span className="font-medium text-[oklch(18%_0.012_28)]">
+                            <span className="font-medium text-[var(--color-ink)]">
                                 {selectedFilter === 'occupied' ? 'ยังไม่มีโต๊ะเปิด' : 'ไม่มีโต๊ะในหมวดนี้'}
                             </span>
                             {selectedFilter === 'occupied' && <> · ว่างพร้อมบริการทั้ง {counts.total} โต๊ะ</>}
@@ -1564,11 +1564,11 @@ export default function SimplifiedLiveOverview({
                 /* -------------------------------------------------------------
                    LIST VIEW: SUMMARY TABLE
                 ------------------------------------------------------------- */
-                <div className="border border-[oklch(88%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-2xl overflow-hidden ">
+                <div className="border border-[var(--color-paper-3)] bg-[var(--color-paper)] rounded-2xl overflow-hidden ">
                     <div className="overflow-x-auto">
                         <table className="text-[13px] w-full text-left border-collapse font-sans">
                             <thead>
-                                <tr className={`bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] font-bold ${cfg.tableHeading}`}>
+                                <tr className={`bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-[var(--color-muted)] font-bold ${cfg.tableHeading}`}>
                                     <th className={`${cfg.tableRowPadding} whitespace-nowrap`}>โต๊ะ / ความจุ</th>
                                     <th className={`${cfg.tableRowPadding} whitespace-nowrap`}>เวลา / สถานะ</th>
                                     <th className={`${cfg.tableRowPadding} whitespace-nowrap`}>รายการอาหารที่สั่ง</th>
@@ -1576,7 +1576,7 @@ export default function SimplifiedLiveOverview({
                                     <th className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>รายละเอียด</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[oklch(88%_0.012_28)]">
+                            <tbody className="divide-y divide-[var(--color-paper-3)]">
                                 {filteredFloor.map(item => {
                                     const isOccupied = item.state.status === 'occupied'
                                     const isUpcoming = item.state.status === 'upcoming'
@@ -1606,20 +1606,20 @@ export default function SimplifiedLiveOverview({
                                             key={item.table.id}
                                             onClick={canInspect ? () => setInspectingTable(item) : undefined}
                                             className={`transition-colors select-none ${
-                                                canInspect ? 'cursor-pointer hover:bg-[oklch(94%_0.010_28)]' : 'cursor-default'
+                                                canInspect ? 'cursor-pointer hover:bg-[var(--color-paper-2)]' : 'cursor-default'
                                             } ${
-                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : isRowFresh ? 'bg-[oklch(95%_0.02_28)]' : ''
+                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : isRowFresh ? 'bg-[var(--color-paper-2)]' : ''
                                             }`}
                                         >
                                             {/* Table & Pax */}
                                             <td className={`${cfg.tableRowPadding} whitespace-nowrap ${
-                                                isRowFresh ? 'border-l-4 sm:border-l-[6px] border-l-[oklch(52%_0.16_28)] animate-rams-strip-pulse' : 'border-l-4 sm:border-l-[6px] border-l-transparent'
+                                                isRowFresh ? 'border-l-4 sm:border-l-[6px] border-l-[var(--brand-plum)] animate-rams-strip-pulse' : 'border-l-4 sm:border-l-[6px] border-l-transparent'
                                             }`}>
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`tabular-nums ${isRowFresh ? 'font-black text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'} ${cfg.tableNameList}`}>
+                                                    <span className={`tabular-nums ${isRowFresh ? 'font-black text-[var(--brand-plum)]' : 'text-[var(--color-ink)]'} ${cfg.tableNameList}`}>
                                                         {item.table.table_name}
                                                     </span>
-                                                    <span className={`tabular-nums bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs font-semibold ${cfg.roundsBadge}`}>
+                                                    <span className={`tabular-nums bg-[var(--color-paper-3)] text-[var(--color-muted)] rounded-xs font-semibold ${cfg.roundsBadge}`}>
                                                         {item.table.capacity} Pax
                                                     </span>
                                                     {item.transfer?.isMergedTarget && (
@@ -1633,7 +1633,7 @@ export default function SimplifiedLiveOverview({
                                                         </span>
                                                     )}
                                                     {isRowFresh && (
-                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tabular-nums font-black text-[11px] whitespace-nowrap ">
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[var(--brand-plum)] text-[var(--color-paper)] tabular-nums font-black text-[11px] whitespace-nowrap ">
                                                             ● สั่งใหม่
                                                         </span>
                                                     )}
@@ -1646,25 +1646,25 @@ export default function SimplifiedLiveOverview({
                                                     {isOccupied ? (
                                                         <>
                                                             <LiveDurationBadge startTime={item.startTime} />
-                                                            <span className={` text-[oklch(55%_0.010_28)] hidden sm:inline tabular-nums ${cfg.paxTime}`}>
+                                                            <span className={` text-[var(--color-neutral)] hidden sm:inline tabular-nums ${cfg.paxTime}`}>
                                                                 (เริ่ม {formatThaiTimeOnly(item.booking?.booking_time)})
                                                             </span>
                                                             {item.latestOrderIso && (
                                                                 <span className={`tabular-nums font-bold ${
                                                                     isRowFresh 
-                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] ' 
-                                                                        : 'bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]'
+                                                                        ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] ' 
+                                                                        : 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--color-rule)]'
                                                                 } rounded-xs tabular-nums px-1.5 py-0.5 ${cfg.roundsBadge}`} title={`สั่งล่าสุดเวลา ${item.latestOrderTimeStr} น.`}>
                                                                     สั่งล่าสุด {item.latestOrderTimeStr} (<LiveRelativeTime timeIso={item.latestOrderIso} />)
                                                                 </span>
                                                             )}
                                                         </>
                                                     ) : isUpcoming ? (
-                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)] ${cfg.roundsBadge}`}>
+                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-[var(--color-ink)] ${cfg.roundsBadge}`}>
                                                             จองล่วงหน้า
                                                         </span>
                                                     ) : isBlocked ? (
-                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[oklch(18%_0.012_28)]/40 text-[oklch(97%_0.008_28)] tabular-nums ${cfg.roundsBadge}`}>
+                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[var(--color-ink)]/40 text-[var(--color-paper)] tabular-nums ${cfg.roundsBadge}`}>
                                                             BLOCKED
                                                         </span>
                                                     ) : (
@@ -1675,7 +1675,7 @@ export default function SimplifiedLiveOverview({
 
                                                     {/* Call Alert Badge */}
                                                     {(item.hasCallBill || item.hasCallStaff) && (
-                                                        <span className={`px-1.5 py-0.5 font-semibold bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] rounded-md ${cfg.roundsBadge}`}>
+                                                        <span className={`px-1.5 py-0.5 font-semibold bg-[oklch(75%_0.18_65)] text-[var(--color-ink)] rounded-md ${cfg.roundsBadge}`}>
                                                             {item.hasCallBill ? 'เช็คบิล' : 'เรียกพนักงาน'}
                                                         </span>
                                                     )}
@@ -1687,46 +1687,46 @@ export default function SimplifiedLiveOverview({
                                                 {isOccupied ? (
                                                     isRowFresh && isMultiRound && latestRound ? (
                                                         <div className="flex items-center gap-1.5 truncate">
-                                                            <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tabular-nums font-black rounded-2xs text-[11px] whitespace-nowrap shrink-0 ">
+                                                            <span className="px-1.5 py-0.5 bg-[var(--brand-plum)] text-[var(--color-paper)] tabular-nums font-black rounded-2xs text-[11px] whitespace-nowrap shrink-0 ">
                                                                 ● รอบ {latestRound.roundNumber} สั่งใหม่
                                                             </span>
-                                                            <span className={`font-bold text-[oklch(18%_0.012_28)] truncate ${cfg.paxTime}`}>
+                                                            <span className={`font-bold text-[var(--color-ink)] truncate ${cfg.paxTime}`}>
                                                                 {latestRoundItems.map(it => `${it.quantity}x ${it.custom_name || it.menu_items?.name || 'อาหาร'}`).join(', ')}
                                                             </span>
                                                             {previousRoundsItemsCount > 0 && (
-                                                                <span className="text-[oklch(55%_0.010_28)] font-normal whitespace-nowrap text-xs">
+                                                                <span className="text-[var(--color-neutral)] font-normal whitespace-nowrap text-xs">
                                                                     (+ก่อนหน้า {previousRoundsItemsCount} รายการ)
                                                                 </span>
                                                             )}
                                                             {canInspect && (
-                                                                <span className="text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline text-xs">
+                                                                <span className="text-[var(--brand-plum)] font-bold whitespace-nowrap ml-1 underline text-xs">
                                                                     [ดูบิลเต็ม]
                                                                 </span>
                                                             )}
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5 truncate">
-                                                            <span className={`font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap ${cfg.paxTime}`}>
+                                                            <span className={`font-bold text-[var(--color-ink)] whitespace-nowrap ${cfg.paxTime}`}>
                                                                 {orderItems.length} รายการ{item.orderRoundsInfo?.hasAdditionalOrders ? ` (${item.orderRoundsInfo.totalRounds} รอบ)` : ''}:
                                                             </span>
-                                                            <span className={`text-[oklch(55%_0.010_28)] truncate ${cfg.paxTime}`}>
+                                                            <span className={`text-[var(--color-neutral)] truncate ${cfg.paxTime}`}>
                                                                 {foodText}
                                                             </span>
                                                             {canInspect && (
-                                                                <span className={`text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
+                                                                <span className={`text-[var(--brand-plum)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
                                                                     [ดูบิลเต็ม]
                                                                 </span>
                                                             )}
                                                         </div>
                                                     )
                                                 ) : (
-                                                    <span className={`text-[oklch(60%_0.010_28)] ${cfg.paxTime}`}>-</span>
+                                                    <span className={`text-[var(--color-neutral)] ${cfg.paxTime}`}>-</span>
                                                 )}
                                             </td>
 
                                             {/* Total Amount */}
                                             <td className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>
-                                                <span className={` text-[oklch(18%_0.012_28)] tabular-nums ${cfg.tableAmountList}`}>
+                                                <span className={` text-[var(--color-ink)] tabular-nums ${cfg.tableAmountList}`}>
                                                     {isOccupied ? `฿${item.billTotal.toLocaleString()}` : '-'}
                                                 </span>
                                             </td>
@@ -1742,19 +1742,19 @@ export default function SimplifiedLiveOverview({
                                                                     e.stopPropagation()
                                                                     setInspectingTable(item)
                                                                 }}
-                                                                className={`font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer flex items-center gap-1 ${cfg.tableActionBtn}`}
+                                                                className={`font-bold bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-xs cursor-pointer flex items-center gap-1 ${cfg.tableActionBtn}`}
                                                                 title="แตะเพื่อดูเช็คลิสต์รายการอาหารครบถ้วน"
                                                             >
                                                                 <span>ดูบิลอาหาร ({orderItems.length})</span>
                                                                 <span aria-hidden="true">&rarr;</span>
                                                             </button>
                                                         ) : (
-                                                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)] font-semibold">
+                                                            <span className="tabular-nums text-xs text-[var(--color-neutral)] font-semibold">
                                                                 {orderItems.length} รายการ
                                                             </span>
                                                         )
                                                     ) : (
-                                                        <span className={`text-[oklch(60%_0.010_28)] ${cfg.paxTime}`}>โต๊ะว่าง</span>
+                                                        <span className={`text-[var(--color-neutral)] ${cfg.paxTime}`}>โต๊ะว่าง</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -1800,38 +1800,38 @@ export default function SimplifiedLiveOverview({
                         animate={{ opacity: 1, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
                         exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } }}
                         onClick={() => setInspectingTable(null)}
-                        className="admin-scrim fixed inset-0 bg-[oklch(18%_0.012_28)]/60 z-[60] flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
+                        className="admin-scrim fixed inset-0 bg-[var(--color-ink)]/60 z-[60] flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
                     >
                         <motion.div
                             initial={reduceMotion ? false : { scale: 0.96 }}
                             animate={{ scale: 1, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
                             exit={reduceMotion ? undefined : { scale: 0.96, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] } }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm max-w-lg w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden font-sans animate-in zoom-in-95 duration-200"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm max-w-lg w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden font-sans animate-in zoom-in-95 duration-200"
                         >
                             {/* Modal Header */}
-                            <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-rule)]">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h3 className="tabular-nums text-xl font-bold text-[oklch(18%_0.012_28)]">
+                                        <h3 className="tabular-nums text-xl font-bold text-[var(--color-ink)]">
                                             {inspectingTable.table.table_name}
                                         </h3>
-                                    <span className="tabular-nums text-xs px-2 py-0.5 bg-[oklch(90%_0.010_28)] rounded-xs text-[oklch(18%_0.012_28)] font-semibold">
+                                    <span className="tabular-nums text-xs px-2 py-0.5 bg-[var(--color-paper-3)] rounded-xs text-[var(--color-ink)] font-semibold">
                                         {inspectingTable.table.capacity} Pax
                                     </span>
                                 </div>
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                                     {inspectingTable.state.status === 'occupied' ? (
                                         <>
-                                            เริ่มเปิดโต๊ะ: <span className="tabular-nums font-semibold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(inspectingTable.booking?.booking_time)}</span>
-                                            {' '}• นั่งมาแล้ว <span className="font-semibold text-[oklch(52%_0.16_28)]"><LiveDuration startTime={inspectingTable.startTime} /></span>
+                                            เริ่มเปิดโต๊ะ: <span className="tabular-nums font-semibold text-[var(--color-ink)]">{formatThaiTimeOnly(inspectingTable.booking?.booking_time)}</span>
+                                            {' '}• นั่งมาแล้ว <span className="font-semibold text-[var(--brand-plum)]"><LiveDuration startTime={inspectingTable.startTime} /></span>
                                             {inspectingTable.latestOrderIso && (() => {
                                                 const latestDiffMins = (Date.now() - new Date(inspectingTable.latestOrderIso).getTime()) / 60000
                                                 const isModalOrderFresh = latestDiffMins >= 0 && latestDiffMins <= 10
                                                 return (
                                                     <>
-                                                        {' '}• <span className={`inline-flex items-center gap-1 font-semibold ${isModalOrderFresh ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>
-                                                            {isModalOrderFresh && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />}
+                                                        {' '}• <span className={`inline-flex items-center gap-1 font-semibold ${isModalOrderFresh ? 'text-[var(--brand-plum)]' : 'text-[var(--color-muted)]'}`}>
+                                                            {isModalOrderFresh && <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-plum)] shrink-0" />}
                                                             สั่งล่าสุดเมื่อ {inspectingTable.latestOrderTimeStr} น. (<LiveRelativeTime timeIso={inspectingTable.latestOrderIso} />)
                                                         </span>
                                                     </>
@@ -1839,7 +1839,7 @@ export default function SimplifiedLiveOverview({
                                             })()}
                                             {inspectingRounds.hasAdditionalOrders && (
                                                 <>
-                                                    {' '}• รวม <span className="font-semibold text-[oklch(18%_0.012_28)]">{inspectingRounds.totalRounds} รอบ</span>
+                                                    {' '}• รวม <span className="font-semibold text-[var(--color-ink)]">{inspectingRounds.totalRounds} รอบ</span>
                                                 </>
                                             )}
                                         </>
@@ -1851,7 +1851,7 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setInspectingTable(null)}
-                                className="text-xs font-medium text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-lg bg-[oklch(94%_0.010_28)] cursor-pointer transition-colors"
+                                className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-ink)] px-2.5 py-1 rounded-lg bg-[var(--color-paper-2)] cursor-pointer transition-colors"
                             >
                                 ปิด
                             </button>
@@ -1861,35 +1861,35 @@ export default function SimplifiedLiveOverview({
                         {inspectingTable.transfer?.isMergedTarget && (
                             <div className="mt-3 p-2.5 bg-[oklch(95%_0.02_140)] border border-[oklch(82%_0.04_140)] rounded-xs flex items-center justify-between text-xs tabular-nums text-[oklch(28%_0.08_140)]">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] rounded-xs text-[11px] font-bold">รวมโต๊ะ</span>
+                                    <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] rounded-xs text-[11px] font-bold">รวมโต๊ะ</span>
                                     <span>รวมรายการอาหารมาจาก <strong>{inspectingTable.transfer.mergedFromTableDisplay || `โต๊ะ ${inspectingTable.transfer.mergedFromTables.join(', ')}`}</strong></span>
                                 </div>
                             </div>
                         )}
                         {inspectingTable.transfer?.isMoved && (
                             <div className="mt-3 p-2.5 bg-[oklch(95%_0.02_220)] border border-[oklch(82%_0.04_220)] rounded-xs flex items-center gap-2 text-xs tabular-nums text-[oklch(28%_0.10_220)]">
-                                <span className="px-1.5 py-0.5 bg-[oklch(40%_0.10_220)] text-[oklch(97%_0.008_28)] rounded-xs text-[11px] font-bold">ย้ายโต๊ะ</span>
+                                <span className="px-1.5 py-0.5 bg-[oklch(40%_0.10_220)] text-[var(--color-paper)] rounded-xs text-[11px] font-bold">ย้ายโต๊ะ</span>
                                 <span>ย้ายมาจาก <strong>โต๊ะ {inspectingTable.transfer.movedFromTable}</strong></span>
                             </div>
                         )}
 
                         {/* Customer / Transfer Note */}
                         {(inspectingTable.booking?.customer_note || inspectingTable.transfer?.cleanRemark) && (
-                            <div className="mt-3 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-xs text-[oklch(42%_0.010_28)] rounded-xs space-y-1">
+                            <div className="mt-3 p-2 bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] text-xs text-[var(--color-muted)] rounded-xs space-y-1">
                                 {inspectingTable.booking?.customer_note && <div>โน้ตลูกค้า: "{inspectingTable.booking.customer_note}"</div>}
                                 {inspectingTable.transfer?.cleanRemark && <div>หมายเหตุ: "{inspectingTable.transfer.cleanRemark}"</div>}
                             </div>
                         )}
 
                         {/* Full Items Checklist Area */}
-                        <div className="flex-1 overflow-y-auto py-3 divide-y divide-[oklch(88%_0.012_28)] text-xs">
-                            <div className="pb-2 flex justify-between font-bold text-xs text-[oklch(55%_0.010_28)]">
+                        <div className="flex-1 overflow-y-auto py-3 divide-y divide-[var(--color-paper-3)] text-xs">
+                            <div className="pb-2 flex justify-between font-bold text-xs text-[var(--color-neutral)]">
                                 <span>รายการอาหาร & ตัวเลือก</span>
                                 <span className="tabular-nums  ">AMOUNT</span>
                             </div>
 
                             {inspectingTable.orderItems.length === 0 ? (
-                                <div className="py-10 text-center text-[oklch(55%_0.010_28)]">
+                                <div className="py-10 text-center text-[var(--color-neutral)]">
                                     ยังไม่มีรายการอาหารสำหรับโต๊ะนี้
                                 </div>
                             ) : inspectingRounds.hasAdditionalOrders ? (
@@ -1912,35 +1912,35 @@ export default function SimplifiedLiveOverview({
                                             // ACTIVE FRESH ROUND: Clean & Bold, zero boxed frames, heartbeat red beacon
                                             return (
                                                 <div key={round.roundNumber} className="py-2.5 first:pt-0 space-y-1.5">
-                                                    <div className="flex items-center justify-between tabular-nums text-xs pb-1 border-b border-[oklch(88%_0.012_28)]">
+                                                    <div className="flex items-center justify-between tabular-nums text-xs pb-1 border-b border-[var(--color-paper-3)]">
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className="relative flex h-2 w-2 shrink-0">
-                                                                <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(52%_0.16_28)] opacity-75" />
-                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[oklch(52%_0.16_28)] animate-rams-heartbeat" />
+                                                                <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--brand-plum)] opacity-75" />
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--brand-plum)] animate-rams-heartbeat" />
                                                             </span>
-                                                            <span className="font-bold text-[oklch(52%_0.16_28)] text-xs tracking-tight">
+                                                            <span className="font-bold text-[var(--brand-plum)] text-xs tracking-tight">
                                                                 รอบที่ {round.roundNumber} (สั่งใหม่ล่าสุด)
                                                             </span>
-                                                            <span className="font-bold text-[oklch(38%_0.14_28)]">
+                                                            <span className="font-bold text-[var(--brand-plum)]">
                                                                 สั่งเมื่อ {round.timeStr} น.
                                                             </span>
                                                             {round.timeIso && (
-                                                                <span className="text-xs font-semibold text-[oklch(52%_0.16_28)]">
+                                                                <span className="text-xs font-semibold text-[var(--brand-plum)]">
                                                                     (<LiveRelativeTime timeIso={round.timeIso} />)
                                                                 </span>
                                                             )}
                                                             {round.elapsedFromStartMinutes > 0 && (
-                                                                <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">
+                                                                <span className="text-xs font-normal text-[var(--color-muted)]">
                                                                     (+{round.elapsedFromStartMinutes} นาทีหลังเปิดโต๊ะ)
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums text-xs">
+                                                        <span className="font-bold text-[var(--brand-plum)] tabular-nums text-xs">
                                                             {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
                                                         </span>
                                                     </div>
 
-                                                    <div className="divide-y divide-[oklch(90%_0.010_28)]">
+                                                    <div className="divide-y divide-[var(--color-paper-3)]">
                                                         {round.items.map((item, idx) => {
                                                             const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
                                                             const price = Number(item.price_at_time || item.menu_items?.price || 0)
@@ -1950,15 +1950,15 @@ export default function SimplifiedLiveOverview({
                                                             return (
                                                                 <div key={item.id || idx} className="py-2 first:pt-1 flex items-start justify-between gap-3">
                                                                     <div className="flex items-start gap-2.5">
-                                                                        <span className=" font-black text-[oklch(52%_0.16_28)] text-base tabular-nums mt-0.5 shrink-0">
+                                                                        <span className=" font-black text-[var(--brand-plum)] text-base tabular-nums mt-0.5 shrink-0">
                                                                             {item.quantity}×
                                                                         </span>
                                                                         <div>
-                                                                            <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal block">
+                                                                            <span className="font-sans font-bold text-sm text-[var(--color-ink)] leading-normal block">
                                                                                 {itemName}
                                                                             </span>
                                                                             {optList.length > 0 && (
-                                                                                <div className="text-xs text-[oklch(52%_0.16_28)] space-y-0.5 mt-1 font-semibold">
+                                                                                <div className="text-xs text-[var(--brand-plum)] space-y-0.5 mt-1 font-semibold">
                                                                                     {optList.map((optStr, optIdx) => (
                                                                                         <span key={optIdx} className="block">
                                                                                             • {optStr}
@@ -1969,11 +1969,11 @@ export default function SimplifiedLiveOverview({
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right shrink-0">
-                                                                        <span className=" font-bold text-[oklch(18%_0.012_28)] tabular-nums text-sm">
+                                                                        <span className=" font-bold text-[var(--color-ink)] tabular-nums text-sm">
                                                                             ฿{lineTotal.toLocaleString()}
                                                                         </span>
                                                                         {item.quantity > 1 && (
-                                                                            <span className="block text-xs text-[oklch(55%_0.010_28)] tabular-nums">
+                                                                            <span className="block text-xs text-[var(--color-neutral)] tabular-nums">
                                                                                 (@ ฿{price.toLocaleString()})
                                                                             </span>
                                                                         )}
@@ -1989,7 +1989,7 @@ export default function SimplifiedLiveOverview({
                                         // PAST COMPLETED ROUND: Settled subdued styling
                                         return (
                                             <div key={round.roundNumber} className={`py-2.5 first:pt-0 ${hasAnyFreshRound ? 'opacity-70 hover:opacity-100 transition-opacity' : ''}`}>
-                                                <div className="flex items-center justify-between tabular-nums text-xs pb-1 border-b border-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)]">
+                                                <div className="flex items-center justify-between tabular-nums text-xs pb-1 border-b border-[var(--color-paper-3)] text-[var(--color-neutral)]">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-bold">
                                                             {round.isInitial ? 'รอบที่ 1 (เปิดโต๊ะ)' : `รอบที่ ${round.roundNumber} (สั่งก่อนหน้า)`}
@@ -2006,12 +2006,12 @@ export default function SimplifiedLiveOverview({
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <span className="tabular-nums text-[oklch(50%_0.010_28)]">
+                                                    <span className="tabular-nums text-[var(--color-neutral)]">
                                                         {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
                                                     </span>
                                                 </div>
 
-                                                <div className="divide-y divide-[oklch(93%_0.008_28)] pl-1">
+                                                <div className="divide-y divide-[var(--color-paper-2)] pl-1">
                                                     {round.items.map((item, idx) => {
                                                         const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
                                                         const price = Number(item.price_at_time || item.menu_items?.price || 0)
@@ -2019,17 +2019,17 @@ export default function SimplifiedLiveOverview({
                                                         const optList = formatOrderItemOptions(item.selected_options)
 
                                                         return (
-                                                            <div key={item.id || idx} className="py-2 flex items-start justify-between gap-3 text-[oklch(45%_0.010_28)]">
+                                                            <div key={item.id || idx} className="py-2 flex items-start justify-between gap-3 text-[var(--color-muted)]">
                                                                 <div className="flex items-start gap-2.5">
-                                                                    <span className=" font-medium text-[oklch(55%_0.010_28)] text-sm tabular-nums mt-0.5 shrink-0">
+                                                                    <span className=" font-medium text-[var(--color-neutral)] text-sm tabular-nums mt-0.5 shrink-0">
                                                                         {item.quantity}×
                                                                     </span>
                                                                     <div>
-                                                                        <span className="font-sans font-medium text-sm text-[oklch(35%_0.012_28)] leading-normal block">
+                                                                        <span className="font-sans font-medium text-sm text-[oklch(35%_0.012_348.33)] leading-normal block">
                                                                             {itemName}
                                                                         </span>
                                                                         {optList.length > 0 && (
-                                                                            <div className="text-xs text-[oklch(55%_0.010_28)] space-y-0.5 mt-1">
+                                                                            <div className="text-xs text-[var(--color-neutral)] space-y-0.5 mt-1">
                                                                                 {optList.map((optStr, optIdx) => (
                                                                                     <span key={optIdx} className="block">
                                                                                         • {optStr}
@@ -2040,11 +2040,11 @@ export default function SimplifiedLiveOverview({
                                                                     </div>
                                                                 </div>
                                                                 <div className="text-right shrink-0">
-                                                                    <span className=" tabular-nums text-sm text-[oklch(45%_0.010_28)]">
+                                                                    <span className=" tabular-nums text-sm text-[var(--color-muted)]">
                                                                         ฿{lineTotal.toLocaleString()}
                                                                     </span>
                                                                     {item.quantity > 1 && (
-                                                                        <span className="block text-xs text-[oklch(55%_0.010_28)] tabular-nums">
+                                                                        <span className="block text-xs text-[var(--color-neutral)] tabular-nums">
                                                                             (@ ฿{price.toLocaleString()})
                                                                         </span>
                                                                     )}
@@ -2070,24 +2070,24 @@ export default function SimplifiedLiveOverview({
                                         <div key={item.id || idx} className="py-2.5 flex items-start justify-between gap-3">
                                             <div className="flex items-start gap-2.5">
                                                 <span className={` tabular-nums mt-0.5 shrink-0 ${
-                                                    isItemFresh ? 'font-black text-[oklch(52%_0.16_28)] text-base' : 'font-bold text-[oklch(18%_0.012_28)] text-sm'
+                                                    isItemFresh ? 'font-black text-[var(--brand-plum)] text-base' : 'font-bold text-[var(--color-ink)] text-sm'
                                                 }`}>
                                                     {item.quantity}×
                                                 </span>
                                                 <div>
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className={`font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal ${isItemFresh ? 'font-black' : ''}`}>
+                                                        <span className={`font-sans font-bold text-sm text-[var(--color-ink)] leading-normal ${isItemFresh ? 'font-black' : ''}`}>
                                                             {itemName}
                                                         </span>
                                                         {isItemFresh && (
                                                             <span className="relative flex h-2 w-2 shrink-0">
-                                                                <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(52%_0.16_28)] opacity-75" />
-                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[oklch(52%_0.16_28)] animate-rams-heartbeat" />
+                                                                <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--brand-plum)] opacity-75" />
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--brand-plum)] animate-rams-heartbeat" />
                                                             </span>
                                                         )}
                                                     </div>
                                                     {optList.length > 0 && (
-                                                        <div className="text-xs text-[oklch(52%_0.16_28)] space-y-0.5 mt-1">
+                                                        <div className="text-xs text-[var(--brand-plum)] space-y-0.5 mt-1">
                                                             {optList.map((optStr, optIdx) => (
                                                                 <span key={optIdx} className="block font-medium">
                                                                     • {optStr}
@@ -2098,11 +2098,11 @@ export default function SimplifiedLiveOverview({
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <span className=" font-bold text-[oklch(18%_0.012_28)] tabular-nums text-sm">
+                                                <span className=" font-bold text-[var(--color-ink)] tabular-nums text-sm">
                                                     ฿{lineTotal.toLocaleString()}
                                                 </span>
                                                 {item.quantity > 1 && (
-                                                    <span className="block text-xs text-[oklch(55%_0.010_28)] tabular-nums">
+                                                    <span className="block text-xs text-[var(--color-neutral)] tabular-nums">
                                                         (@ ฿{price.toLocaleString()})
                                                     </span>
                                                 )}
@@ -2114,34 +2114,34 @@ export default function SimplifiedLiveOverview({
                         </div>
 
                         {/* Bill Total Footer */}
-                        <div className="pt-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 rounded-sm space-y-2 text-xs">
+                        <div className="pt-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 rounded-sm space-y-2 text-xs">
                             {inspectingRounds.hasAdditionalOrders && (
-                                <div className="flex items-center gap-1.5 flex-wrap tabular-nums text-xs text-[oklch(42%_0.010_28)] pb-2 border-b border-[oklch(88%_0.012_28)]">
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">สรุปยอดตามรอบ:</span>
+                                <div className="flex items-center gap-1.5 flex-wrap tabular-nums text-xs text-[var(--color-muted)] pb-2 border-b border-[var(--color-paper-3)]">
+                                    <span className="font-bold text-[var(--color-ink)]">สรุปยอดตามรอบ:</span>
                                     {inspectingRounds.rounds.map(r => (
-                                        <span key={r.roundNumber} className="bg-[oklch(90%_0.010_28)] px-2 py-0.5 rounded-xs">
+                                        <span key={r.roundNumber} className="bg-[var(--color-paper-3)] px-2 py-0.5 rounded-xs">
                                             {r.isInitial ? 'รอบ 1' : `รอบ ${r.roundNumber} (สั่งเพิ่ม)`}: ฿{r.totalAmount.toLocaleString()} ({r.items.length} รายการ)
                                         </span>
                                     ))}
                                 </div>
                             )}
-                            <div className="flex justify-between items-center text-sm font-bold text-[oklch(18%_0.012_28)]">
+                            <div className="flex justify-between items-center text-sm font-bold text-[var(--color-ink)]">
                                 <span>ยอดรวมค่าอาหารทั้งบิล ({inspectingTable.orderItems.length} รายการ):</span>
-                                <span className=" text-base text-[oklch(52%_0.16_28)] tabular-nums">
+                                <span className=" text-base text-[var(--brand-plum)] tabular-nums">
                                     ฿{inspectingTable.billTotal.toLocaleString()}
                                 </span>
                             </div>
                         </div>
 
                         {/* Modal Footer (Read-only Remote Cockpit) */}
-                        <div className="pt-3 mt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[oklch(85%_0.012_28)]">
-                            <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)]">
+                        <div className="pt-3 mt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[var(--color-rule)]">
+                            <span className="text-xs tabular-nums text-[var(--color-neutral)]">
                                 [INFO] การเช็คบิลและเคลียร์โต๊ะ ดำเนินการผ่าน POS หน้าร้าน
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setInspectingTable(null)}
-                                className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-medium text-xs rounded-xl cursor-pointer whitespace-nowrap transition-colors"
+                                className="px-5 py-2 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] font-medium text-xs rounded-xl cursor-pointer whitespace-nowrap transition-colors"
                             >
                                 ปิดหน้าต่าง
                             </button>

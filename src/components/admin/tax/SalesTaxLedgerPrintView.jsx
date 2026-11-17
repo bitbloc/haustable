@@ -231,7 +231,7 @@ export default function SalesTaxLedgerPrintView({
             `}} />
 
             {/* Top Navigation & Action Toolbar (Hidden in Print) */}
-            <div className="w-full max-w-5xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 sm:px-6 py-3 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
+            <div className="w-full max-w-5xl bg-[var(--color-ink)] text-[var(--color-paper)] px-4 sm:px-6 py-3 border border-[var(--color-rule)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
@@ -241,7 +241,7 @@ export default function SalesTaxLedgerPrintView({
                         <span>BACK</span>
                     </button>
                     <div>
-                        <div className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                        <div className="font-bold text-[var(--brand-plum)] uppercase tracking-wider">
                             [ {reportTitle} ]
                         </div>
                         <div className="text-[10px] text-zinc-400">
@@ -413,7 +413,7 @@ export default function SalesTaxLedgerPrintView({
                                                             <td className="py-1.5 px-1.5 text-right font-mono font-semibold text-zinc-900 whitespace-nowrap">
                                                                 {isCancelled ? '0.00' : preVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                             </td>
-                                                            <td className="py-1.5 px-1 text-right font-mono font-semibold text-[oklch(52%_0.16_28)] whitespace-nowrap">
+                                                            <td className="py-1.5 px-1 text-right font-mono font-semibold text-[var(--brand-plum)] whitespace-nowrap">
                                                                 {isCancelled ? '0.00' : vat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                             </td>
                                                             <td className="py-1.5 px-1.5 text-right font-mono font-bold text-zinc-950 whitespace-nowrap">
@@ -467,7 +467,7 @@ export default function SalesTaxLedgerPrintView({
                                             {isVatRegistered && (
                                                 <div className="flex justify-end gap-4">
                                                     <span className="text-zinc-600">ภาษีมูลค่าเพิ่ม 7% รวม:</span>
-                                                    <strong className="text-[oklch(52%_0.16_28)] font-bold">฿{totalVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                                    <strong className="text-[var(--brand-plum)] font-bold">฿{totalVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                                 </div>
                                             )}
                                             <div className="flex justify-end gap-4 text-[12pt] pt-1 border-t border-zinc-300">

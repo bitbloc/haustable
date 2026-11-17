@@ -235,7 +235,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0"
-                className={`flex-1 min-w-0 h-12 rounded-md border ${ui.RULE} ${ui.PAPER} text-center text-2xl font-semibold tabular-nums ${ui.INK} outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`}
+                className={`flex-1 min-w-0 h-12 rounded-md border ${ui.RULE} ${ui.PAPER} text-center text-2xl font-semibold tabular-nums ${ui.INK} outline-none transition-colors focus:border-[var(--color-ink)]`}
             />
             <button type="button" onClick={() => quickAdd(1)} className={ui.stepBtn} aria-label="เพิ่ม 1">+</button>
         </div>
@@ -243,7 +243,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[oklch(18%_0.012_28/0.45)]"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[oklch(21.78%_0_0/0.45)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { duration: 0.18 } }}
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -253,7 +253,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 role="dialog"
                 aria-modal="true"
                 aria-label={`ปรับสต๊อก ${item.name}`}
-                className={`${ui.PAPER} w-full sm:max-w-sm border ${ui.RULE} rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(18%_0.012_28/0.14)] flex flex-col max-h-[92vh] overflow-hidden`}
+                className={`${ui.PAPER} w-full sm:max-w-sm border ${ui.RULE} rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(21.78%_0_0/0.14)] flex flex-col max-h-[92vh] overflow-hidden`}
             >
                 {/* Header: photo, name, what is in stock now */}
                 <div className="px-4 pt-4 pb-3 flex items-start gap-3">
@@ -282,12 +282,12 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                 role="tab"
                                 aria-selected={mode === m.id}
                                 onClick={() => setMode(m.id)}
-                                className={`relative h-9 rounded text-sm transition-colors ${mode === m.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[oklch(18%_0.012_28)]`}`}
+                                className={`relative h-9 rounded text-sm transition-colors ${mode === m.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[var(--color-ink)]`}`}
                             >
                                 {mode === m.id && (
                                     <motion.span
                                         layoutId="adjust-mode-pill"
-                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(18%_0.012_28/0.12)]`}
+                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(21.78%_0_0/0.12)]`}
                                         transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: ui.EASE }}
                                     />
                                 )}
@@ -330,10 +330,10 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                             role="switch"
                                             aria-checked={partialAmount > 0}
                                             onClick={() => setPartialAmount(partialAmount > 0 ? 0 : 0.5)}
-                                            className={`relative w-11 h-6 rounded-full transition-colors ${partialAmount > 0 ? 'bg-[oklch(18%_0.012_28)]' : 'bg-[oklch(85%_0.012_28)]'}`}
+                                            className={`relative w-11 h-6 rounded-full transition-colors ${partialAmount > 0 ? 'bg-[var(--color-ink)]' : 'bg-[var(--color-rule)]'}`}
                                         >
                                             <motion.span
-                                                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[oklch(99%_0.004_28)]"
+                                                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[var(--color-paper)]"
                                                 animate={{ x: partialAmount > 0 ? 20 : 0 }}
                                                 transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: ui.EASE }}
                                             />

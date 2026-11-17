@@ -359,7 +359,7 @@ export default function HausmadeCartDrawer({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 backdrop-blur-sm"
+                    className="fixed inset-0 bg-[var(--color-ink)]/60 backdrop-blur-sm"
                 />
 
                 {/* Drawer Panel */}
@@ -368,21 +368,21 @@ export default function HausmadeCartDrawer({
                     animate={{ x: 0 }}
                     exit={{ x: '100%' }}
                     transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                    className="relative w-full max-w-lg h-full bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col z-10 overflow-hidden"
+                    className="relative w-full max-w-lg h-full bg-[var(--color-paper)] border-l border-[var(--color-rule)] shadow-2xl flex flex-col z-10 overflow-hidden"
                 >
                     {/* Header Bar */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex-shrink-0">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex-shrink-0">
                         <div>
-                            <span className="font-mono text-[10px] font-bold tracking-widest text-[oklch(52%_0.16_28)] uppercase block">
+                            <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--brand-plum)] uppercase block">
                                 // HAUSMADE SHOPPING CART
                             </span>
-                            <h2 className="text-lg font-bold text-[oklch(18%_0.012_28)] font-mono uppercase">
+                            <h2 className="text-lg font-bold text-[var(--color-ink)] font-mono uppercase">
                                 [ CART // ตะกร้าสินค้า ({cartItemCount}) ]
                             </h2>
                         </div>
                         <button
                             onClick={onClose}
-                            className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] transition-colors px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]"
+                            className="font-mono text-[11px] font-bold text-[var(--color-ink)] hover:text-[var(--brand-plum)] transition-colors px-2.5 py-1 border border-[var(--color-rule)] bg-[var(--color-paper)]"
                         >
                             [ ESC / CLOSE ]
                         </button>
@@ -398,10 +398,10 @@ export default function HausmadeCartDrawer({
                                     <span className="font-mono text-[10px] font-bold text-[oklch(45%_0.08_140)] uppercase tracking-wider block mb-1">
                                         [ ORDER TRANSMITTED // สั่งซื้อสำเร็จ ]
                                     </span>
-                                    <h3 className="text-lg font-bold text-[oklch(18%_0.012_28)]">
+                                    <h3 className="text-lg font-bold text-[var(--color-ink)]">
                                         ขอบคุณสำหรับคำสั่งซื้อ HAUSMADE
                                     </h3>
-                                    <p className="text-xs text-[oklch(42%_0.010_28)] mt-1 leading-relaxed">
+                                    <p className="text-xs text-[var(--color-muted)] mt-1 leading-relaxed">
                                         {submittedOrder.isPreOrder 
                                             ? 'ระบบได้รับสลิปคำสั่งซื้อพรีออเดอร์เรียบร้อยแล้ว ทีมงานจะจัดเตรียมผลิตและจัดส่งตามรอบที่กำหนด'
                                             : 'ระบบได้รับสลิปการชำระเงินเรียบร้อยแล้ว ทีมงานจะดำเนินการแพ็คสินค้าและจัดส่งให้โดยเร็วที่สุด'
@@ -409,30 +409,30 @@ export default function HausmadeCartDrawer({
                                     </p>
                                 </div>
 
-                                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2.5 font-mono text-[12px]">
-                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
-                                        <span className="text-[oklch(55%_0.010_28)]">TRACKING TOKEN:</span>
+                                <div className="p-4 border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-col gap-2.5 font-mono text-[12px]">
+                                    <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
+                                        <span className="text-[var(--color-neutral)]">TRACKING TOKEN:</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-[oklch(52%_0.16_28)]">{submittedOrder.trackingToken}</span>
+                                            <span className="font-bold text-[var(--brand-plum)]">{submittedOrder.trackingToken}</span>
                                             <button
                                                 onClick={() => handleCopy(submittedOrder.trackingToken, 'คัดลอก Tracking Token แล้ว!')}
-                                                className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-white text-[10px] uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors"
+                                                className="px-2 py-0.5 border border-[var(--color-rule)] bg-white text-[10px] uppercase hover:bg-[var(--color-ink)] hover:text-white transition-colors"
                                             >
                                                 [ COPY ]
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
-                                        <span className="text-[oklch(55%_0.010_28)]">FULFILMENT:</span>
+                                    <div className="flex justify-between border-b border-[var(--color-rule)] pb-2">
+                                        <span className="text-[var(--color-neutral)]">FULFILMENT:</span>
                                         <span className="font-bold">{submittedOrder.fulfilmentMode === 'shipping' ? '🚚 จัดส่งพัสดุเอกชน' : '🏪 รับหน้าร้าน'}</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
-                                        <span className="text-[oklch(55%_0.010_28)]">DESTINATION:</span>
+                                    <div className="flex justify-between border-b border-[var(--color-rule)] pb-2">
+                                        <span className="text-[var(--color-neutral)]">DESTINATION:</span>
                                         <span className="font-bold text-right max-w-[200px] truncate">{submittedOrder.shippingAddress}</span>
                                     </div>
                                     <div className="flex justify-between pt-1">
-                                        <span className="text-[oklch(55%_0.010_28)]">TOTAL PAID:</span>
-                                        <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">฿{submittedOrder.totalAmount.toLocaleString()}.-</span>
+                                        <span className="text-[var(--color-neutral)]">TOTAL PAID:</span>
+                                        <span className="font-bold text-sm text-[var(--color-ink)]">฿{submittedOrder.totalAmount.toLocaleString()}.-</span>
                                     </div>
                                 </div>
 
@@ -445,7 +445,7 @@ export default function HausmadeCartDrawer({
                                 <div className="flex flex-col gap-2.5">
                                     <a
                                         href={`/tracking/${submittedOrder.trackingToken}`}
-                                        className="w-full py-3.5 bg-[oklch(52%_0.16_28)] text-white font-mono text-[12px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity text-center"
+                                        className="w-full py-3.5 bg-[var(--brand-plum)] text-white font-mono text-[12px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity text-center"
                                     >
                                         [ TRACK ORDER // ติดตามสถานะพัสดุ ]
                                     </a>
@@ -454,7 +454,7 @@ export default function HausmadeCartDrawer({
                                             setSubmittedOrder(null)
                                             onClose()
                                         }}
-                                        className="w-full py-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors text-center"
+                                        className="w-full py-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] transition-colors text-center"
                                     >
                                         [ RETURN TO STORE // กลับสู่หน้าร้าน ]
                                     </button>
@@ -484,7 +484,7 @@ export default function HausmadeCartDrawer({
                                                 return (
                                                     <div key={order.id} className="p-2.5 bg-white border border-amber-500/30 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
                                                         <div>
-                                                            <div className="font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5 flex-wrap">
+                                                            <div className="font-bold text-[var(--color-ink)] flex items-center gap-1.5 flex-wrap">
                                                                 <span>{order.tracking_token || `#${order.id.slice(0, 8)}`}</span>
                                                                 {order.is_preorder && (
                                                                     <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-white text-[9px] font-bold">
@@ -492,14 +492,14 @@ export default function HausmadeCartDrawer({
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
-                                                                ยอดสุทธิ ฿{Number(order.total_amount || 0).toLocaleString()} · สถานะ: <strong className="text-[oklch(18%_0.012_28)]">{statusMap[order.status] || order.status}</strong>
+                                                            <div className="text-[10px] text-[var(--color-neutral)] mt-0.5">
+                                                                ยอดสุทธิ ฿{Number(order.total_amount || 0).toLocaleString()} · สถานะ: <strong className="text-[var(--color-ink)]">{statusMap[order.status] || order.status}</strong>
                                                             </div>
                                                         </div>
                                                         <Link
                                                             to={`/tracking/${order.tracking_token || order.id}`}
                                                             onClick={onClose}
-                                                            className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-white text-[10px] font-bold uppercase transition-colors text-center whitespace-nowrap"
+                                                            className="px-2.5 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--brand-plum)] text-white text-[10px] font-bold uppercase transition-colors text-center whitespace-nowrap"
                                                         >
                                                             [ ติดตามสถานะ ➔ ]
                                                         </Link>
@@ -512,19 +512,19 @@ export default function HausmadeCartDrawer({
 
                                 {/* MEMBERSHIP REQUIREMENT GATE BANNER */}
                                 {!isMember && (
-                                    <div className="p-4 bg-[oklch(94%_0.010_28)] border-2 border-[oklch(52%_0.16_28)] font-mono flex flex-col gap-2.5 shadow-xs">
-                                        <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold text-xs">
+                                    <div className="p-4 bg-[var(--color-paper-2)] border-2 border-[var(--brand-plum)] font-mono flex flex-col gap-2.5 shadow-xs">
+                                        <div className="flex items-center gap-2 text-[var(--brand-plum)] font-bold text-xs">
                                             <LogIn size={15} className="shrink-0" />
                                             <span>[ สมาชิก HAUSMADE เท่านั้น // MEMBERSHIP REQUIRED ]</span>
                                         </div>
-                                        <p className="text-xs text-[oklch(18%_0.012_28)] font-sans leading-relaxed">
+                                        <p className="text-xs text-[var(--color-ink)] font-sans leading-relaxed">
                                             กรุณาเข้าสู่ระบบ หรือสมัครสมาชิกก่อนทำการสั่งซื้อ / สั่งจอง เพื่อรับสิทธิ์สะสมแต้ม xhaus และติดตามสถานะพัสดุ
                                         </p>
                                         <div className="flex items-center gap-2 pt-1">
                                             <button
                                                 type="button"
                                                 onClick={() => setShowAuthModal(true)}
-                                                className="flex-1 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white text-xs font-bold uppercase transition-colors text-center cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                                                className="flex-1 py-2 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white text-xs font-bold uppercase transition-colors text-center cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
                                             >
                                                 <UserPlus size={13} />
                                                 <span>[ 🔑 เข้าสู่ระบบ / สมัครสมาชิก ]</span>
@@ -532,7 +532,7 @@ export default function HausmadeCartDrawer({
                                             <Link
                                                 to="/member-card"
                                                 onClick={onClose}
-                                                className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase transition-colors text-center"
+                                                className="px-3 py-2 border border-[var(--color-rule)] bg-white hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] text-xs font-bold uppercase transition-colors text-center"
                                             >
                                                 [ 💳 บัตรสมาชิก ]
                                             </Link>
@@ -542,17 +542,17 @@ export default function HausmadeCartDrawer({
 
                                 {/* Fulfilment Switcher (Tabular Dial) */}
                                 <div className="flex flex-col gap-2">
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                         [ FULFILMENT MODE // วิธีรับสินค้า ]
                                     </span>
-                                    <div className="grid grid-cols-2 gap-2 bg-[oklch(94%_0.010_28)] p-1 border border-[oklch(85%_0.012_28)]">
+                                    <div className="grid grid-cols-2 gap-2 bg-[var(--color-paper-2)] p-1 border border-[var(--color-rule)]">
                                         <button
                                             type="button"
                                             onClick={() => setFulfilmentMode('shipping')}
                                             className={`py-2.5 px-3 font-mono text-[11px] font-bold transition-all border ${
                                                 fulfilmentMode === 'shipping'
-                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                    : 'bg-transparent text-[oklch(42%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                    : 'bg-transparent text-[var(--color-muted)] border-transparent hover:text-[var(--color-ink)]'
                                             }`}
                                         >
                                             [ DELIVER // ส่งพัสดุ ]
@@ -562,8 +562,8 @@ export default function HausmadeCartDrawer({
                                             onClick={() => setFulfilmentMode('pickup')}
                                             className={`py-2.5 px-3 font-mono text-[11px] font-bold transition-all border ${
                                                 fulfilmentMode === 'pickup'
-                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                    : 'bg-transparent text-[oklch(42%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                    : 'bg-transparent text-[var(--color-muted)] border-transparent hover:text-[var(--color-ink)]'
                                             }`}
                                         >
                                             [ PICKUP // รับหน้าร้าน ]
@@ -573,20 +573,20 @@ export default function HausmadeCartDrawer({
 
                                 {/* Free Shipping Progress Bar */}
                                 {fulfilmentMode === 'shipping' && (settings.freeShippingMinItems > 0 || settings.freeShippingMinAmount > 0) && (
-                                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col gap-2">
+                                    <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3.5 flex flex-col gap-2">
                                         <div className="flex justify-between font-mono text-[10px] font-bold">
-                                            <span className="text-[oklch(18%_0.012_28)]">
+                                            <span className="text-[var(--color-ink)]">
                                                 {isFreeShipping
                                                     ? '[ FREE SHIPPING UNLOCKED // ได้รับสิทธิ์จัดส่งฟรี ]'
                                                     : `[ PROMOTION // ซื้อครบ ${settings.freeShippingMinItems > 0 ? `${settings.freeShippingMinItems} ชิ้น` : ''} ${settings.freeShippingMinAmount > 0 ? `หรือ ฿${settings.freeShippingMinAmount}.-` : ''} ส่งฟรี ]`}
                                             </span>
-                                            <span className="text-[oklch(52%_0.16_28)] font-bold">
+                                            <span className="text-[var(--brand-plum)] font-bold">
                                                 {isFreeShipping ? 'FREE' : `${cartItemCount}/${settings.freeShippingMinItems} ITEMS`}
                                             </span>
                                         </div>
-                                        <div className="w-full h-2 bg-[oklch(85%_0.012_28)] overflow-hidden">
+                                        <div className="w-full h-2 bg-[var(--color-rule)] overflow-hidden">
                                             <motion.div
-                                                className="h-full bg-[oklch(52%_0.16_28)]"
+                                                className="h-full bg-[var(--brand-plum)]"
                                                 initial={{ width: 0 }}
                                                 animate={{
                                                     width: `${Math.min(100, Math.max(
@@ -598,7 +598,7 @@ export default function HausmadeCartDrawer({
                                             />
                                         </div>
                                         {!isFreeShipping && (
-                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                            <span className="font-mono text-[10px] text-[var(--color-neutral)]">
                                                 * ซื้อเพิ่มอีก {itemsNeededForFreeShipping > 0 ? `${itemsNeededForFreeShipping} ชิ้น` : ''} {amountNeededForFreeShipping > 0 ? `หรือ ฿${amountNeededForFreeShipping}.-` : ''} เพื่อรับสิทธิ์ส่งฟรีทั่วประเทศ
                                             </span>
                                         )}
@@ -608,14 +608,14 @@ export default function HausmadeCartDrawer({
                                 {/* Cart Items List */}
                                 <div className="flex flex-col gap-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                        <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                             [ ITEMS SUMMARY // รายการสินค้าในตะกร้า ({cartItemCount} ชิ้น) ]
                                         </span>
                                         {cart.length > 0 && (
                                             <button
                                                 type="button"
                                                 onClick={handleClearCart}
-                                                className="font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase font-bold cursor-pointer transition-colors"
+                                                className="font-mono text-[10px] text-[var(--brand-plum)] hover:underline uppercase font-bold cursor-pointer transition-colors"
                                             >
                                                 [ ✕ ล้างตะกร้า ]
                                             </button>
@@ -631,14 +631,14 @@ export default function HausmadeCartDrawer({
                                                 <span>⏳</span>
                                                 <span className="uppercase">[ มีสินค้าพรีออเดอร์ในคำสั่งซื้อ ]</span>
                                             </div>
-                                            <p className="text-[11px] text-[oklch(18%_0.012_28)] font-sans leading-relaxed">
+                                            <p className="text-[11px] text-[var(--color-ink)] font-sans leading-relaxed">
                                                 พัสดุในออเดอร์นี้จะจัดส่งพร้อมกันตามรอบสินค้าพรีออเดอร์ ({preOrderItemsInCart.map(i => i.preOrderEta || '5-7 วัน').filter(Boolean)[0] || 'ตามรอบการผลิต'})
                                             </p>
                                         </div>
                                     )}
 
                                     {cart.length === 0 ? (
-                                        <div className="p-8 border border-dashed border-[oklch(85%_0.012_28)] text-center font-mono text-xs text-[oklch(55%_0.010_28)] uppercase">
+                                        <div className="p-8 border border-dashed border-[var(--color-rule)] text-center font-mono text-xs text-[var(--color-neutral)] uppercase">
                                             [ CART IS EMPTY // ตะกร้าสินค้าว่างเปล่า ]
                                         </div>
                                     ) : (
@@ -646,11 +646,11 @@ export default function HausmadeCartDrawer({
                                             {cart.map((item) => (
                                                 <div
                                                     key={item.cartKey}
-                                                    className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex items-center justify-between gap-3"
+                                                    className="p-3 border border-[var(--color-rule)] bg-[var(--color-paper)] flex items-center justify-between gap-3"
                                                 >
                                                     <div className="flex items-center gap-3 min-w-0">
                                                         {item.image_url && (
-                                                            <div className="w-12 h-12 shrink-0 border border-[oklch(85%_0.012_28)] bg-white overflow-hidden p-0.5 flex items-center justify-center">
+                                                            <div className="w-12 h-12 shrink-0 border border-[var(--color-rule)] bg-white overflow-hidden p-0.5 flex items-center justify-center">
                                                                 <img
                                                                     src={item.image_url}
                                                                     alt={item.name}
@@ -660,7 +660,7 @@ export default function HausmadeCartDrawer({
                                                         )}
                                                         <div className="flex flex-col min-w-0">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-bold text-[13px] text-[oklch(18%_0.012_28)] truncate">
+                                                                <span className="font-bold text-[13px] text-[var(--color-ink)] truncate">
                                                                     {item.name}
                                                                 </span>
                                                             {item.isPreOrder && (
@@ -670,7 +670,7 @@ export default function HausmadeCartDrawer({
                                                             )}
                                                         </div>
                                                         {item.optionsText && (
-                                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                                            <span className="font-mono text-[10px] text-[var(--color-neutral)] mt-0.5">
                                                                 {item.optionsText}
                                                             </span>
                                                         )}
@@ -679,18 +679,18 @@ export default function HausmadeCartDrawer({
                                                                 รอบส่ง: {item.preOrderEta}
                                                             </span>
                                                         )}
-                                                        <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] mt-1">
+                                                        <span className="font-mono text-[11px] font-bold text-[var(--color-ink)] mt-1">
                                                             ฿{(item.price + (item.optionsPrice || 0)).toLocaleString()}.-
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <div className="flex items-center gap-3 shrink-0">
-                                                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                                                        <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper-2)]">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => updateQuantity(item.cartKey, -1)}
-                                                                className="w-7 h-7 font-mono text-xs font-bold text-[oklch(18%_0.012_28)]"
+                                                                className="w-7 h-7 font-mono text-xs font-bold text-[var(--color-ink)]"
                                                             >
                                                                 -
                                                             </button>
@@ -700,7 +700,7 @@ export default function HausmadeCartDrawer({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => updateQuantity(item.cartKey, 1)}
-                                                                className="w-7 h-7 font-mono text-xs font-bold text-[oklch(18%_0.012_28)]"
+                                                                className="w-7 h-7 font-mono text-xs font-bold text-[var(--color-ink)]"
                                                             >
                                                                 +
                                                             </button>
@@ -709,7 +709,7 @@ export default function HausmadeCartDrawer({
                                                         <button
                                                             type="button"
                                                             onClick={() => removeFromCart(item.cartKey)}
-                                                            className="font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase"
+                                                            className="font-mono text-[10px] text-[var(--brand-plum)] hover:underline uppercase"
                                                         >
                                                             [ REMOVE ]
                                                         </button>
@@ -721,8 +721,8 @@ export default function HausmadeCartDrawer({
                                 </div>
 
                                 {/* Promo Code Section */}
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 flex flex-col gap-2">
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 flex flex-col gap-2">
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                         [ PROMO CODE // โค้ดส่วนลด ]
                                     </span>
                                     <div className="flex gap-2">
@@ -732,13 +732,13 @@ export default function HausmadeCartDrawer({
                                             value={promoCode}
                                             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                                             disabled={!!appliedPromo}
-                                            className="flex-1 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] font-mono text-xs uppercase focus:outline-none focus:border-[oklch(52%_0.16_28)] disabled:bg-[oklch(94%_0.010_28)]"
+                                            className="flex-1 px-3 py-1.5 bg-white border border-[var(--color-rule)] font-mono text-xs uppercase focus:outline-none focus:border-[var(--brand-plum)] disabled:bg-[var(--color-paper-2)]"
                                         />
                                         {appliedPromo ? (
                                             <button
                                                 type="button"
                                                 onClick={removePromo}
-                                                className="px-3 py-1.5 border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)] text-white font-mono text-xs font-bold uppercase"
+                                                className="px-3 py-1.5 border border-[var(--brand-plum)] bg-[var(--brand-plum)] text-white font-mono text-xs font-bold uppercase"
                                             >
                                                 [ ลบโค้ด ]
                                             </button>
@@ -747,14 +747,14 @@ export default function HausmadeCartDrawer({
                                                 type="button"
                                                 onClick={handleApplyPromoCode}
                                                 disabled={!promoCode.trim() || isPromoValidating}
-                                                className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold uppercase hover:bg-[oklch(52%_0.16_28)] transition-colors disabled:opacity-50"
+                                                className="px-4 py-1.5 bg-[var(--color-ink)] text-white font-mono text-xs font-bold uppercase hover:bg-[var(--brand-plum)] transition-colors disabled:opacity-50"
                                             >
                                                 {isPromoValidating ? '...' : '[ APPLY ]'}
                                             </button>
                                         )}
                                     </div>
                                     {promoError && (
-                                        <span className="font-mono text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                        <span className="font-mono text-[10px] text-[var(--brand-plum)] font-bold">
                                             [ ! ]: {promoError}
                                         </span>
                                     )}
@@ -766,10 +766,10 @@ export default function HausmadeCartDrawer({
                                 </div>
 
                                 {/* CRM xhaus Loyalty & Rewards Card */}
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col gap-3 font-mono">
-                                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3.5 flex flex-col gap-3 font-mono">
+                                    <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                                            <span className="text-[10px] font-bold text-[var(--brand-plum)] uppercase tracking-wider">
                                                 // XHAUS LOYALTY & REWARDS
                                             </span>
                                             {memberTierInfo && (
@@ -782,22 +782,22 @@ export default function HausmadeCartDrawer({
                                             )}
                                         </div>
                                         {memberProfile ? (
-                                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                            <span className="text-xs font-bold text-[var(--color-ink)]">
                                                 {availableXhausBalance.toLocaleString()} xhaus
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                            <span className="text-[10px] text-[var(--color-neutral)]">
                                                 [ GUEST ]
                                             </span>
                                         )}
                                     </div>
 
                                     {/* Projected Earn */}
-                                    <div className="flex items-center justify-between text-xs bg-[oklch(97%_0.008_28)] p-2 border border-[oklch(85%_0.012_28)]">
-                                        <span className="text-[oklch(42%_0.010_28)]">
+                                    <div className="flex items-center justify-between text-xs bg-[var(--color-paper)] p-2 border border-[var(--color-rule)]">
+                                        <span className="text-[var(--color-muted)]">
                                             ✨ ช้อปครั้งนี้รับแต้ม ({memberTierInfo?.multiplier || 1.0}x):
                                         </span>
-                                        <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                        <span className="font-bold text-[var(--brand-plum)]">
                                             +{projectedCoinsEarned} xhaus
                                         </span>
                                     </div>
@@ -806,7 +806,7 @@ export default function HausmadeCartDrawer({
                                     {memberProfile && availableXhausBalance > 0 && (
                                         <div className="flex flex-col gap-2 pt-1">
                                             <div className="flex items-center justify-between text-[11px]">
-                                                <span className="text-[oklch(55%_0.010_28)]">
+                                                <span className="text-[var(--color-neutral)]">
                                                     ใช้แต้ม xhaus แลกส่วนลด (1 xhaus = ฿1.-):
                                                 </span>
                                                 {xhausDiscountAmount > 0 && (
@@ -825,13 +825,13 @@ export default function HausmadeCartDrawer({
                                                     value={redeemedCoinsInput || ''}
                                                     onChange={(e) => setRedeemedCoinsInput(Math.max(0, parseInt(e.target.value) || 0))}
                                                     placeholder="จำนวนแต้มที่จะแลก"
-                                                    className="flex-1 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-xs font-mono focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                    className="flex-1 px-3 py-1.5 bg-white border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--brand-plum)]"
                                                 />
                                                 {redeemedCoinsInput > 0 && (
                                                     <button
                                                         type="button"
                                                         onClick={() => setRedeemedCoinsInput(0)}
-                                                        className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] text-[10px] font-bold uppercase"
+                                                        className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-white text-[var(--color-neutral)] hover:text-[var(--color-ink)] text-[10px] font-bold uppercase"
                                                     >
                                                         [ ล้าง ]
                                                     </button>
@@ -844,7 +844,7 @@ export default function HausmadeCartDrawer({
                                                     <button
                                                         type="button"
                                                         onClick={() => setRedeemedCoinsInput(50)}
-                                                        className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white text-[9px] font-bold uppercase transition-colors"
+                                                        className="px-2 py-1 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-white text-[9px] font-bold uppercase transition-colors"
                                                     >
                                                         [ 50 xhaus ]
                                                     </button>
@@ -853,7 +853,7 @@ export default function HausmadeCartDrawer({
                                                     <button
                                                         type="button"
                                                         onClick={() => setRedeemedCoinsInput(100)}
-                                                        className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white text-[9px] font-bold uppercase transition-colors"
+                                                        className="px-2 py-1 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-white text-[9px] font-bold uppercase transition-colors"
                                                     >
                                                         [ 100 xhaus ]
                                                     </button>
@@ -861,14 +861,14 @@ export default function HausmadeCartDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => setRedeemedCoinsInput(Math.min(availableXhausBalance, cartSubtotal))}
-                                                    className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white text-[9px] font-bold uppercase transition-colors"
+                                                    className="px-2 py-1 bg-white border border-[var(--color-rule)] hover:bg-[var(--brand-plum)] hover:text-white text-[9px] font-bold uppercase transition-colors"
                                                 >
                                                     [ แลกสูงสุด ]
                                                 </button>
                                             </div>
 
                                             {xhausDiscountCalculation?.error && (
-                                                <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                <span className="text-[10px] text-[var(--brand-plum)] font-bold">
                                                     [ ! ]: {xhausDiscountCalculation.error}
                                                 </span>
                                             )}
@@ -877,14 +877,14 @@ export default function HausmadeCartDrawer({
                                 </div>
 
                                 {/* Form Inputs Section */}
-                                <form onSubmit={handleSubmitOrder} className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-5">
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                <form onSubmit={handleSubmitOrder} className="flex flex-col gap-4 border-t border-[var(--color-rule)] pt-5">
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                         [ RECIPIENT DETAILS // ข้อมูลผู้รับ ]
                                     </span>
 
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                            <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                 ชื่อผู้รับ *
                                             </label>
                                             <input
@@ -893,11 +893,11 @@ export default function HausmadeCartDrawer({
                                                 value={contactName}
                                                 onChange={(e) => setContactName(e.target.value)}
                                                 placeholder="ชื่อ-นามสกุล"
-                                                className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                             />
                                         </div>
                                         <div>
-                                            <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                            <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                 เบอร์โทรศัพท์ * (9-10 หลัก)
                                             </label>
                                             <input
@@ -906,7 +906,7 @@ export default function HausmadeCartDrawer({
                                                 value={contactPhone}
                                                 onChange={(e) => setContactPhone(e.target.value)}
                                                 placeholder="08X-XXX-XXXX"
-                                                className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                             />
                                             {contactPhone && contactPhone.replace(/\D/g, '').length > 0 && contactPhone.replace(/\D/g, '').length < 9 && (
                                                 <p className="text-[9px] text-amber-700 font-mono mt-1">
@@ -920,7 +920,7 @@ export default function HausmadeCartDrawer({
                                     {fulfilmentMode === 'shipping' ? (
                                         <div className="flex flex-col gap-3">
                                             <div>
-                                                <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                     ที่อยู่จัดส่ง (บ้านเลขที่ / ถนน / ซอย / หมู่บ้าน) *
                                                 </label>
                                                 <input
@@ -929,13 +929,13 @@ export default function HausmadeCartDrawer({
                                                     value={addressLine}
                                                     onChange={(e) => setAddressLine(e.target.value)}
                                                     placeholder="123/45 ถ.สุนทรวิจิตร..."
-                                                    className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                 />
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                    <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                         ตำบล / แขวง
                                                     </label>
                                                     <input
@@ -943,11 +943,11 @@ export default function HausmadeCartDrawer({
                                                         value={subDistrict}
                                                         onChange={(e) => setSubDistrict(e.target.value)}
                                                         placeholder="ในเมือง"
-                                                        className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                    <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                         อำเภอ / เขต
                                                     </label>
                                                     <input
@@ -955,14 +955,14 @@ export default function HausmadeCartDrawer({
                                                         value={district}
                                                         onChange={(e) => setDistrict(e.target.value)}
                                                         placeholder="เมืองนครพนม"
-                                                        className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                    <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                         จังหวัด *
                                                     </label>
                                                     <input
@@ -971,11 +971,11 @@ export default function HausmadeCartDrawer({
                                                         value={province}
                                                         onChange={(e) => setProvince(e.target.value)}
                                                         placeholder="นครพนม"
-                                                        className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                    <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                         รหัสไปรษณีย์ *
                                                     </label>
                                                     <input
@@ -984,7 +984,7 @@ export default function HausmadeCartDrawer({
                                                         value={postalCode}
                                                         onChange={(e) => setPostalCode(e.target.value)}
                                                         placeholder="48000"
-                                                        className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                     />
                                                 </div>
                                             </div>
@@ -992,34 +992,34 @@ export default function HausmadeCartDrawer({
                                     ) : (
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                     วันที่รับ *
                                                 </label>
                                                 <select
                                                     value={pickupDate}
                                                     onChange={(e) => setPickupDate(e.target.value)}
-                                                    className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                 >
                                                     <option value="today">วันนี้ (Today)</option>
                                                     <option value="tomorrow">พรุ่งนี้ (Tomorrow)</option>
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                                <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                                     เวลานัดรับ *
                                                 </label>
                                                 <input
                                                     type="time"
                                                     value={pickupTime}
                                                     onChange={(e) => setPickupTime(e.target.value)}
-                                                    className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                                 />
                                             </div>
                                         </div>
                                     )}
 
                                     <div>
-                                        <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                             หมายเหตุเพิ่มเติม (Optional)
                                         </label>
                                         <input
@@ -1027,30 +1027,30 @@ export default function HausmadeCartDrawer({
                                             value={specialRequest}
                                             onChange={(e) => setSpecialRequest(e.target.value)}
                                             placeholder="เช่น ฝากไว้หน้าบ้าน / บดละเอียดสำหรับ Moka pot"
-                                            className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                            className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)]"
                                         />
                                     </div>
 
                                     {/* Payment Section */}
-                                    <div className="border-t border-[oklch(85%_0.012_28)] pt-5 flex flex-col gap-3">
+                                    <div className="border-t border-[var(--color-rule)] pt-5 flex flex-col gap-3">
                                         <div className="flex items-center justify-between">
-                                            <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                            <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                                 [ PAYMENT // เลือกช่องทางชำระเงิน ]
                                             </span>
-                                            <span className="font-mono text-[10px] font-bold bg-[oklch(18%_0.012_28)] text-white px-2 py-0.5">
+                                            <span className="font-mono text-[10px] font-bold bg-[var(--color-ink)] text-white px-2 py-0.5">
                                                 ฿{finalTotalAmount.toLocaleString()}.-
                                             </span>
                                         </div>
 
                                         {/* Dual Payment Selector (Dieter Rams Tabular Layout) */}
-                                        <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+                                        <div className="grid grid-cols-2 border border-[var(--color-rule)] bg-[var(--color-paper)]">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     setPaymentMethod('promptpay');
                                                     if (slipFile) handleFileChange({ target: { files: [slipFile] } });
                                                 }}
-                                                className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold uppercase transition-all ${paymentMethod === 'promptpay' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                                className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold uppercase transition-all ${paymentMethod === 'promptpay' ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                             >
                                                 <QrCode size={13} />
                                                 <span>พร้อมเพย์ QR</span>
@@ -1061,32 +1061,32 @@ export default function HausmadeCartDrawer({
                                                     setPaymentMethod('truewallet');
                                                     if (slipFile) handleFileChange({ target: { files: [slipFile] } });
                                                 }}
-                                                className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold uppercase transition-all border-l border-[oklch(85%_0.012_28)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                                className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold uppercase transition-all border-l border-[var(--color-rule)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                             >
                                                 <Wallet size={13} />
                                                 <span>TrueMoney</span>
                                             </button>
                                         </div>
 
-                                        <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col items-center gap-3">
+                                        <div className="p-4 border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-col items-center gap-3">
                                             {paymentMethod === 'promptpay' ? (
                                                 <>
                                                     {settings.paymentQrUrl ? (
                                                         <img
                                                             src={settings.paymentQrUrl}
                                                             alt="PromptPay QR Code"
-                                                            className="w-44 h-44 object-contain border border-[oklch(85%_0.012_28)] bg-white p-2"
+                                                            className="w-44 h-44 object-contain border border-[var(--color-rule)] bg-white p-2"
                                                         />
                                                     ) : (
-                                                        <div className="w-44 h-44 border border-dashed border-[oklch(85%_0.012_28)] bg-white flex items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] text-center p-4">
+                                                        <div className="w-44 h-44 border border-dashed border-[var(--color-rule)] bg-white flex items-center justify-center font-mono text-[10px] text-[var(--color-neutral)] text-center p-4">
                                                             [ PROMPTPAY QR CODE ]
                                                         </div>
                                                     )}
 
                                                     <div className="text-center font-mono text-xs flex flex-col items-center gap-1">
-                                                        <div className="font-bold text-[oklch(18%_0.012_28)]">{settings.promptpayName || settings.bankAccountName}</div>
-                                                        <div className="text-[oklch(52%_0.16_28)] font-bold">{settings.promptpayId || settings.bankAccountNo}</div>
-                                                        <div className="text-[oklch(55%_0.010_28)] text-[10px]">{settings.bankName}</div>
+                                                        <div className="font-bold text-[var(--color-ink)]">{settings.promptpayName || settings.bankAccountName}</div>
+                                                        <div className="text-[var(--brand-plum)] font-bold">{settings.promptpayId || settings.bankAccountNo}</div>
+                                                        <div className="text-[var(--color-neutral)] text-[10px]">{settings.bankName}</div>
                                                     </div>
 
                                                     {/* 1-Click Copy Buttons */}
@@ -1094,14 +1094,14 @@ export default function HausmadeCartDrawer({
                                                         <button
                                                             type="button"
                                                             onClick={() => handleCopy((settings.promptpayId || settings.bankAccountNo).replace(/-/g, ''), 'คัดลอกเลขบัญชีแล้ว!')}
-                                                            className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                            className="flex-1 py-1.5 px-2 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
                                                         >
                                                             [ COPY ACCT NO. ]
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => handleCopy(finalTotalAmount.toFixed(2), 'คัดลอกยอดเงินแล้ว!')}
-                                                            className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                            className="flex-1 py-1.5 px-2 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
                                                         >
                                                             [ COPY ฿{finalTotalAmount.toLocaleString()} ]
                                                         </button>
@@ -1113,22 +1113,22 @@ export default function HausmadeCartDrawer({
                                                         <img
                                                             src={settings.trueWalletQrUrl || settings.paymentQrUrl}
                                                             alt="TrueMoney QR Code"
-                                                            className="w-44 h-44 object-contain border border-[oklch(85%_0.012_28)] bg-white p-2"
+                                                            className="w-44 h-44 object-contain border border-[var(--color-rule)] bg-white p-2"
                                                         />
                                                     ) : (
-                                                        <div className="w-44 h-44 border border-dashed border-[oklch(85%_0.012_28)] bg-white flex items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] text-center p-4">
+                                                        <div className="w-44 h-44 border border-dashed border-[var(--color-rule)] bg-white flex items-center justify-center font-mono text-[10px] text-[var(--color-neutral)] text-center p-4">
                                                             [ TRUEMONEY QR CODE ]
                                                         </div>
                                                     )}
 
                                                     <div className="text-center font-mono text-xs flex flex-col items-center gap-1">
                                                         {settings.trueWalletName && (
-                                                            <div className="font-bold text-[oklch(18%_0.012_28)]">{settings.trueWalletName}</div>
+                                                            <div className="font-bold text-[var(--color-ink)]">{settings.trueWalletName}</div>
                                                         )}
                                                         {settings.trueWalletPhone ? (
-                                                            <div className="text-[oklch(52%_0.16_28)] font-bold">{settings.trueWalletPhone}</div>
+                                                            <div className="text-[var(--brand-plum)] font-bold">{settings.trueWalletPhone}</div>
                                                         ) : (
-                                                            <div className="text-[oklch(55%_0.010_28)] text-[10px]">สแกนผ่านแอป TrueMoney Wallet</div>
+                                                            <div className="text-[var(--color-neutral)] text-[10px]">สแกนผ่านแอป TrueMoney Wallet</div>
                                                         )}
                                                     </div>
 
@@ -1138,7 +1138,7 @@ export default function HausmadeCartDrawer({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleCopy(settings.trueWalletPhone.replace(/-/g, ''), 'คัดลอกเบอร์ TrueMoney แล้ว!')}
-                                                                className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                                className="flex-1 py-1.5 px-2 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
                                                             >
                                                                 [ COPY PHONE ]
                                                             </button>
@@ -1146,7 +1146,7 @@ export default function HausmadeCartDrawer({
                                                         <button
                                                             type="button"
                                                             onClick={() => handleCopy(finalTotalAmount.toFixed(2), 'คัดลอกยอดเงินแล้ว!')}
-                                                            className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                            className="flex-1 py-1.5 px-2 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
                                                         >
                                                             [ COPY ฿{finalTotalAmount.toLocaleString()} ]
                                                         </button>
@@ -1163,22 +1163,22 @@ export default function HausmadeCartDrawer({
 
                                         {/* Slip Uploader with Preview & Live Verification Feedback */}
                                         <div className="flex flex-col gap-2">
-                                            <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block">
+                                            <label className="font-mono text-[10px] text-[var(--color-muted)] uppercase block">
                                                 แนบสลิปการชำระเงิน *
                                             </label>
 
                                             {slipPreviewUrl ? (
-                                                <div className="relative border border-[oklch(85%_0.012_28)] bg-white p-2 flex items-center justify-between">
+                                                <div className="relative border border-[var(--color-rule)] bg-white p-2 flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <img src={slipPreviewUrl} alt="Slip Preview" className="w-12 h-12 object-cover border" />
-                                                        <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] truncate max-w-[180px]">
+                                                        <span className="font-mono text-xs font-bold text-[var(--color-ink)] truncate max-w-[180px]">
                                                             {slipFile?.name || 'slip.jpg'}
                                                         </span>
                                                     </div>
                                                     <button
                                                         type="button"
                                                         onClick={handleRemoveSlip}
-                                                        className="px-2.5 py-1 border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-mono text-[10px] font-bold uppercase hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors cursor-pointer"
+                                                        className="px-2.5 py-1 border border-[var(--brand-plum)] text-[var(--brand-plum)] font-mono text-[10px] font-bold uppercase hover:bg-[var(--brand-plum)] hover:text-white transition-colors cursor-pointer"
                                                     >
                                                         [ เปลี่ยนรูป ]
                                                     </button>
@@ -1188,14 +1188,14 @@ export default function HausmadeCartDrawer({
                                                     type="file"
                                                     accept="image/*"
                                                     onChange={handleFileChange}
-                                                    className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)] cursor-pointer"
+                                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--brand-plum)] cursor-pointer"
                                                 />
                                             )}
 
                                             {/* Verification Progress Card */}
                                             {isVerifyingSlip && (
-                                                <div className="bg-white border border-[oklch(85%_0.012_28)] p-2.5 flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)] animate-pulse">
-                                                    <RefreshCw size={14} className="animate-spin text-[oklch(18%_0.012_28)] shrink-0" />
+                                                <div className="bg-white border border-[var(--color-rule)] p-2.5 flex items-center gap-2 font-mono text-[11px] text-[var(--color-neutral)] animate-pulse">
+                                                    <RefreshCw size={14} className="animate-spin text-[var(--color-ink)] shrink-0" />
                                                     <span>กำลังตรวจสอบสลิปอัตโนมัติผ่าน EasySlip...</span>
                                                 </div>
                                             )}
@@ -1227,7 +1227,7 @@ export default function HausmadeCartDrawer({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setAllowManualFallback(true)}
-                                                                className="text-[10px] font-bold text-[oklch(18%_0.012_28)] underline hover:opacity-75 cursor-pointer"
+                                                                className="text-[10px] font-bold text-[var(--color-ink)] underline hover:opacity-75 cursor-pointer"
                                                             >
                                                                 ส่งสลิปนี้ให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง (Manual Review)
                                                             </button>
@@ -1244,8 +1244,8 @@ export default function HausmadeCartDrawer({
                                     </div>
 
                                     {/* Cost Breakdown */}
-                                    <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2 font-mono text-xs">
-                                        <div className="flex justify-between text-[oklch(42%_0.010_28)]">
+                                    <div className="p-4 border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-col gap-2 font-mono text-xs">
+                                        <div className="flex justify-between text-[var(--color-muted)]">
                                             <span>ยอดรวมสินค้า ({cartItemCount} ชิ้น):</span>
                                             <span>฿{cartSubtotal.toLocaleString()}.-</span>
                                         </div>
@@ -1256,30 +1256,30 @@ export default function HausmadeCartDrawer({
                                             </div>
                                         )}
                                         {xhausDiscountAmount > 0 && (
-                                            <div className="flex justify-between text-[oklch(52%_0.16_28)] font-bold">
+                                            <div className="flex justify-between text-[var(--brand-plum)] font-bold">
                                                 <span>ส่วนลดแต้ม xhaus ({effectiveXhausRedeemed} xhaus):</span>
                                                 <span>-฿{xhausDiscountAmount.toLocaleString()}.-</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between text-[oklch(42%_0.010_28)]">
+                                        <div className="flex justify-between text-[var(--color-muted)]">
                                             <span>ค่าจัดส่งพัสดุ:</span>
                                             {fulfilmentMode === 'pickup' ? (
                                                 <span>฿0 (รับหน้าร้าน)</span>
                                             ) : isFreeShipping ? (
-                                                <span className="text-[oklch(52%_0.16_28)] font-bold">฿0 (ส่งฟรี)</span>
+                                                <span className="text-[var(--brand-plum)] font-bold">฿0 (ส่งฟรี)</span>
                                             ) : (
                                                 <span>฿{calculatedShippingFee.toLocaleString()}.-</span>
                                             )}
                                         </div>
-                                        <div className="flex justify-between text-sm font-bold text-[oklch(18%_0.012_28)] border-t border-[oklch(85%_0.012_28)] pt-2 mt-1">
+                                        <div className="flex justify-between text-sm font-bold text-[var(--color-ink)] border-t border-[var(--color-rule)] pt-2 mt-1">
                                             <span>ยอดชำระสุทธิ:</span>
-                                            <span className="text-[oklch(52%_0.16_28)]">฿{finalTotalAmount.toLocaleString()}.-</span>
+                                            <span className="text-[var(--brand-plum)]">฿{finalTotalAmount.toLocaleString()}.-</span>
                                         </div>
                                     </div>
 
                                     {/* Error Messages */}
                                     {(validationError || submitError) && (
-                                        <div className="p-3 border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] font-mono text-xs font-bold">
+                                        <div className="p-3 border border-[var(--brand-plum)] bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] font-mono text-xs font-bold">
                                             [ ERROR ]: {validationError || submitError}
                                         </div>
                                     )}
@@ -1289,7 +1289,7 @@ export default function HausmadeCartDrawer({
                                         <button
                                             type="button"
                                             onClick={() => setShowAuthModal(true)}
-                                            className="w-full py-4 bg-[oklch(52%_0.16_28)] text-white font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(45%_0.16_28)] transition-colors flex items-center justify-between px-6 cursor-pointer shadow-md"
+                                            className="w-full py-4 bg-[var(--brand-plum)] text-white font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[var(--brand-plum)] transition-colors flex items-center justify-between px-6 cursor-pointer shadow-md"
                                         >
                                             <span className="flex items-center gap-2">
                                                 <LogIn size={15} />
@@ -1313,7 +1313,7 @@ export default function HausmadeCartDrawer({
                                             className={`w-full py-4 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between px-6 shadow-md cursor-pointer ${
                                                 hasPreOrderInCart
                                                     ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'
-                                                    : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)]'
+                                                    : 'bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--brand-plum)]'
                                             }`}
                                         >
                                             <span>

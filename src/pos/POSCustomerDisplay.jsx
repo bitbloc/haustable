@@ -552,40 +552,40 @@ export default function POSCustomerDisplay() {
         const activeSlide = slideshowImages[currentSlideIndex];
 
         return (
-            <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex flex-col font-sans select-none overflow-hidden">
+            <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex flex-col font-sans select-none overflow-hidden">
                 
                 {/* Structural Top Masthead (1px Brutalist Cellular Division) */}
-                <header className="h-14 border-b border-[oklch(85%_0.012_28)]/20 flex items-stretch bg-[oklch(18%_0.012_28)] shrink-0 z-20">
+                <header className="h-14 border-b border-[var(--color-rule)]/20 flex items-stretch bg-[var(--color-ink)] shrink-0 z-20">
                     {/* Brand Cell */}
-                    <div className="flex items-center gap-3 px-5 border-r border-[oklch(85%_0.012_28)]/20 shrink-0">
+                    <div className="flex items-center gap-3 px-5 border-r border-[var(--color-rule)]/20 shrink-0">
                         <VenueLogo className="h-8 max-w-[140px] object-contain filter drop-shadow brightness-110" />
-                        <div className="h-5 w-px bg-[oklch(85%_0.012_28)]/20" />
+                        <div className="h-5 w-px bg-[var(--color-rule)]/20" />
                         <div className="flex flex-col">
-                            <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[oklch(97%_0.008_28)] uppercase leading-none">
+                            <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[var(--color-paper)] uppercase leading-none">
                                 IN THE HAUS
                             </span>
-                            <span className="font-sans text-[8.5px] text-[oklch(55%_0.010_28)] tracking-wider mt-0.5">
+                            <span className="font-sans text-[8.5px] text-[var(--color-neutral)] tracking-wider mt-0.5">
                                 จริตจัดรสชัดเจน · นครพนม
                             </span>
                         </div>
                     </div>
 
                     {/* Ambient Marquee Ticker Cell */}
-                    <div className="flex-1 overflow-hidden flex items-center px-4 border-r border-[oklch(85%_0.012_28)]/20">
-                        <div className="whitespace-nowrap font-mono text-[10px] tracking-[0.25em] text-[oklch(55%_0.010_28)] uppercase animate-marquee">
+                    <div className="flex-1 overflow-hidden flex items-center px-4 border-r border-[var(--color-rule)]/20">
+                        <div className="whitespace-nowrap font-mono text-[10px] tracking-[0.25em] text-[var(--color-neutral)] uppercase animate-marquee">
                             IN THE HAUS · SPECIALTY COFFEE & MODERN THAI CUISINE · EST. 2024 · ARTISANAL DINING · HAUS TABLE OS · 
                         </div>
                     </div>
 
                     {/* Live Clock & Terminal Beacon Cell */}
-                    <div className="flex items-center gap-4 px-5 shrink-0 bg-[oklch(22%_0.012_28)]">
+                    <div className="flex items-center gap-4 px-5 shrink-0 bg-[var(--color-ink)]">
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
                             <span className="font-mono text-[9px] font-bold tracking-widest text-[oklch(45%_0.08_140)] uppercase">
                                 TERMINAL 01 · ONLINE
                             </span>
                         </div>
-                        <div className="h-5 w-px bg-[oklch(85%_0.012_28)]/20" />
+                        <div className="h-5 w-px bg-[var(--color-rule)]/20" />
                         <StandbyClock />
                     </div>
                 </header>
@@ -594,7 +594,7 @@ export default function POSCustomerDisplay() {
                 <div className="flex-1 flex min-h-0 overflow-hidden">
                     
                     {/* Left Panel: Hero Menu Specimen Showcase (55% Width) */}
-                    <div className="w-[55%] h-full relative overflow-hidden bg-black border-r border-[oklch(85%_0.012_28)]/20 flex flex-col justify-between">
+                    <div className="w-[55%] h-full relative overflow-hidden bg-black border-r border-[var(--color-rule)]/20 flex flex-col justify-between">
                         <AnimatePresence mode="wait">
                             {activeSlide ? (
                                 <motion.div
@@ -618,42 +618,42 @@ export default function POSCustomerDisplay() {
                                         }}
                                     />
                                     {/* Architectural Gradient Wash */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[oklch(18%_0.012_28)] via-[oklch(18%_0.012_28)]/30 to-black/40" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-ink)] via-[var(--color-ink)]/30 to-black/40" />
 
                                     {/* Tabular Specimen Badge */}
-                                    <div className="absolute bottom-5 left-5 right-5 bg-[oklch(18%_0.012_28)]/95 backdrop-blur-md border border-[oklch(85%_0.012_28)]/30 p-4 rounded-xl shadow-2xl flex items-center justify-between">
+                                    <div className="absolute bottom-5 left-5 right-5 bg-[var(--color-ink)]/95 backdrop-blur-md border border-[var(--color-rule)]/30 p-4 rounded-xl shadow-2xl flex items-center justify-between">
                                         <div className="min-w-0 pr-3">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[oklch(52%_0.16_28)] uppercase">
+                                                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[var(--brand-plum)] uppercase">
                                                     SPEC // 0{((currentSlideIndex + 1) % 99)}
                                                 </span>
-                                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                                <span className="text-[9px] font-mono text-[var(--color-neutral)] uppercase tracking-wider">
                                                     · {activeSlide.category || 'FEATURED'}
                                                 </span>
                                             </div>
-                                            <h3 className="text-base lg:text-lg font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)] truncate">
+                                            <h3 className="text-base lg:text-lg font-bold uppercase tracking-tight text-[var(--color-paper)] truncate">
                                                 {activeSlide.name}
                                             </h3>
                                         </div>
 
-                                        <div className="bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-3 py-1.5 rounded-lg shrink-0 font-mono font-bold text-sm tracking-tight shadow-md">
+                                        <div className="bg-[var(--brand-plum)] text-[var(--color-paper)] px-3 py-1.5 rounded-lg shrink-0 font-mono font-bold text-sm tracking-tight shadow-md">
                                             ฿{parseFloat(activeSlide.price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                         </div>
                                     </div>
 
                                     {/* Architectural Progress Indicator & Slide Logo */}
-                                    <div className="absolute top-4 left-5 flex items-center gap-1.5 bg-[oklch(18%_0.012_28)]/80 px-2.5 py-1 rounded-full border border-[oklch(85%_0.012_28)]/20 backdrop-blur-xs font-mono text-[9px] text-[oklch(97%_0.008_28)]">
-                                        <span className="text-[oklch(52%_0.16_28)] font-bold">{String(currentSlideIndex + 1).padStart(2, '0')}</span>
-                                        <span className="text-[oklch(55%_0.010_28)]">/</span>
-                                        <span className="text-[oklch(55%_0.010_28)]">{String(slideshowImages.length || 1).padStart(2, '0')}</span>
+                                    <div className="absolute top-4 left-5 flex items-center gap-1.5 bg-[var(--color-ink)]/80 px-2.5 py-1 rounded-full border border-[var(--color-rule)]/20 backdrop-blur-xs font-mono text-[9px] text-[var(--color-paper)]">
+                                        <span className="text-[var(--brand-plum)] font-bold">{String(currentSlideIndex + 1).padStart(2, '0')}</span>
+                                        <span className="text-[var(--color-neutral)]">/</span>
+                                        <span className="text-[var(--color-neutral)]">{String(slideshowImages.length || 1).padStart(2, '0')}</span>
                                     </div>
 
-                                    <div className="absolute top-4 right-5 z-10 opacity-90 flex items-center bg-[oklch(18%_0.012_28)]/80 px-3 py-1.5 rounded-full border border-[oklch(85%_0.012_28)]/20 backdrop-blur-xs">
+                                    <div className="absolute top-4 right-5 z-10 opacity-90 flex items-center bg-[var(--color-ink)]/80 px-3 py-1.5 rounded-full border border-[var(--color-rule)]/20 backdrop-blur-xs">
                                         <VenueLogo className="h-5 max-w-[100px] object-contain filter drop-shadow brightness-110" />
                                     </div>
                                 </motion.div>
                             ) : (
-                                <div className="h-full flex items-center justify-center font-mono text-xs tracking-widest text-[oklch(55%_0.010_28)] uppercase">
+                                <div className="h-full flex items-center justify-center font-mono text-xs tracking-widest text-[var(--color-neutral)] uppercase">
                                     IN THE HAUS TABLE SHOWCASE
                                 </div>
                             )}
@@ -661,29 +661,29 @@ export default function POSCustomerDisplay() {
                     </div>
 
                     {/* Right Panel: LINE LIFF Member QR (45% Width · Dieter Rams Minimalist Structure) */}
-                    <div className="w-[45%] h-full p-6 flex flex-col justify-between bg-[oklch(18%_0.012_28)]">
+                    <div className="w-[45%] h-full p-6 flex flex-col justify-between bg-[var(--color-ink)]">
                         
                         {/* Member Registration Minimal Enclosure */}
                         <div className="flex-1 flex flex-col items-center justify-center">
-                            <div className="w-full max-w-[320px] bg-[oklch(22%_0.012_28)] border border-[oklch(85%_0.012_28)]/25 rounded-2xl p-6 flex flex-col items-center shadow-xl">
+                            <div className="w-full max-w-[320px] bg-[var(--color-ink)] border border-[var(--color-rule)]/25 rounded-2xl p-6 flex flex-col items-center shadow-xl">
                                 
-                                <span className="font-mono text-[9px] font-bold tracking-[0.25em] text-[oklch(52%_0.16_28)] uppercase mb-4">
+                                <span className="font-mono text-[9px] font-bold tracking-[0.25em] text-[var(--brand-plum)] uppercase mb-4">
                                     MEMBER REGISTRATION
                                 </span>
 
                                 {/* Clean QR Code with High Contrast Paper Enclosure */}
-                                <div className="bg-white p-4 rounded-2xl border-2 border-[oklch(85%_0.012_28)] shadow-lg flex flex-col items-center">
+                                <div className="bg-white p-4 rounded-2xl border-2 border-[var(--color-rule)] shadow-lg flex flex-col items-center">
                                     <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={156} level="M" />
-                                    <span className="font-mono text-[8px] font-black text-[oklch(18%_0.012_28)] tracking-[0.2em] uppercase mt-2">
+                                    <span className="font-mono text-[8px] font-black text-[var(--color-ink)] tracking-[0.2em] uppercase mt-2">
                                         SCAN VIA LINE
                                     </span>
                                 </div>
 
                                 <div className="text-center mt-4 space-y-1">
-                                    <h4 className="text-base font-bold text-[oklch(97%_0.008_28)] tracking-tight">
+                                    <h4 className="text-base font-bold text-[var(--color-paper)] tracking-tight">
                                         สแกนสมัครสมาชิก
                                     </h4>
-                                    <p className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                    <p className="font-mono text-[10px] text-[var(--color-neutral)] uppercase tracking-wider">
                                         LINE LIFF MEMBER PASS
                                     </p>
                                 </div>
@@ -691,21 +691,21 @@ export default function POSCustomerDisplay() {
                         </div>
 
                         {/* Venue Coordinates & Operating Hours */}
-                        <div className="border-t border-[oklch(85%_0.012_28)]/20 pt-3 flex items-center justify-between text-[9.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                        <div className="border-t border-[var(--color-rule)]/20 pt-3 flex items-center justify-between text-[9.5px] font-mono text-[var(--color-neutral)] uppercase tracking-wider">
                             <div className="flex items-center gap-3">
-                                <span>WI-FI : <strong className="text-[oklch(97%_0.008_28)]">IN THE HAUS 5G</strong></span>
+                                <span>WI-FI : <strong className="text-[var(--color-paper)]">IN THE HAUS 5G</strong></span>
                                 <span>·</span>
-                                <span>HOURS : <strong className="text-[oklch(97%_0.008_28)]">{getStoreHours().open.replace(':', '.')} — {getStoreHours().close.replace(':', '.')}</strong></span>
+                                <span>HOURS : <strong className="text-[var(--color-paper)]">{getStoreHours().open.replace(':', '.')} — {getStoreHours().close.replace(':', '.')}</strong></span>
                             </div>
-                            <span className="text-[oklch(52%_0.16_28)] font-bold">HAUS TABLE OS</span>
+                            <span className="text-[var(--brand-plum)] font-bold">HAUS TABLE OS</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Bottom Structural Footer Bar */}
-                <footer className="h-7 border-t border-[oklch(85%_0.012_28)]/20 px-5 flex items-center justify-between text-[8.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-[0.2em] bg-[oklch(18%_0.012_28)] shrink-0 z-20">
+                <footer className="h-7 border-t border-[var(--color-rule)]/20 px-5 flex items-center justify-between text-[8.5px] font-mono text-[var(--color-neutral)] uppercase tracking-[0.2em] bg-[var(--color-ink)] shrink-0 z-20">
                     <span>CUSTOMER FACING PRESENTATION</span>
-                    <span className="text-[oklch(97%_0.008_28)] font-bold">IN THE HAUS จริตจัดรสชัดเจน · นครพนม</span>
+                    <span className="text-[var(--color-paper)] font-bold">IN THE HAUS จริตจัดรสชัดเจน · นครพนม</span>
                     <span>TOUCHLESS VERIFICATION</span>
                 </footer>
             </div>
@@ -716,16 +716,16 @@ export default function POSCustomerDisplay() {
     // RENDER 1.5: ORDER CONFIRMED MODE (New Mode · Rams Clean Ticket Confirmation)
     // -------------------------------------------------------------
     const renderOrderConfirmedMode = () => (
-        <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
+        <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
             <motion.div
                 initial={{ scale: 0.94, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', damping: 18 }}
-                className="w-full max-w-lg bg-[oklch(22%_0.012_28)] border-2 border-[oklch(52%_0.16_28)] rounded-2xl p-6 shadow-2xl space-y-4"
+                className="w-full max-w-lg bg-[var(--color-ink)] border-2 border-[var(--brand-plum)] rounded-2xl p-6 shadow-2xl space-y-4"
             >
-                <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)]/20 pb-3">
+                <div className="flex items-center justify-between border-b border-[var(--color-rule)]/20 pb-3">
                     <VenueLogo className="h-7 max-w-[120px] object-contain brightness-110" />
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-2.5 py-1 rounded">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] bg-[var(--brand-plum)] text-[var(--color-paper)] px-2.5 py-1 rounded">
                         ORDER RECEIVED
                     </span>
                 </div>
@@ -734,34 +734,34 @@ export default function POSCustomerDisplay() {
                     <span className="font-mono text-[10px] uppercase tracking-widest text-[oklch(45%_0.08_140)] font-bold block">
                         KITCHEN & BAR DISPATCH
                     </span>
-                    <h2 className="text-2xl font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)]">
+                    <h2 className="text-2xl font-bold uppercase tracking-tight text-[var(--color-paper)]">
                         บันทึกออเดอร์ส่งเข้าครัวแล้ว
                     </h2>
-                    <p className="text-xs text-[oklch(55%_0.010_28)] font-sans">
+                    <p className="text-xs text-[var(--color-neutral)] font-sans">
                         เชฟและบาริสต้ากำลังจัดเตรียมเมนูอย่างพิถีพิถัน
                     </p>
                 </div>
 
-                <div className="bg-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]/20 rounded-xl p-3.5 flex items-center justify-around font-mono">
+                <div className="bg-[var(--color-ink)] border border-[var(--color-rule)]/20 rounded-xl p-3.5 flex items-center justify-around font-mono">
                     <div className="text-center">
-                        <span className="text-[8.5px] uppercase tracking-widest text-[oklch(55%_0.010_28)] block">TABLE / ORDER</span>
-                        <span className="text-base font-bold text-[oklch(97%_0.008_28)]">
+                        <span className="text-[8.5px] uppercase tracking-widest text-[var(--color-neutral)] block">TABLE / ORDER</span>
+                        <span className="text-base font-bold text-[var(--color-paper)]">
                             {orderData.tableName || 'COUNTER'}
                         </span>
                     </div>
-                    <div className="h-7 w-px bg-[oklch(85%_0.012_28)]/20" />
+                    <div className="h-7 w-px bg-[var(--color-rule)]/20" />
                     <div className="text-center">
-                        <span className="text-[8.5px] uppercase tracking-widest text-[oklch(55%_0.010_28)] block">TOTAL ITEMS</span>
-                        <span className="text-base font-bold text-[oklch(52%_0.16_28)]">
+                        <span className="text-[8.5px] uppercase tracking-widest text-[var(--color-neutral)] block">TOTAL ITEMS</span>
+                        <span className="text-base font-bold text-[var(--brand-plum)]">
                             {orderData.itemCount || orderData.items?.length || 1} รายการ
                         </span>
                     </div>
                     {orderData.totalAmount > 0 && (
                         <>
-                            <div className="h-7 w-px bg-[oklch(85%_0.012_28)]/20" />
+                            <div className="h-7 w-px bg-[var(--color-rule)]/20" />
                             <div className="text-center">
-                                <span className="text-[8.5px] uppercase tracking-widest text-[oklch(55%_0.010_28)] block">SUBTOTAL</span>
-                                <span className="text-base font-bold text-[oklch(97%_0.008_28)]">
+                                <span className="text-[8.5px] uppercase tracking-widest text-[var(--color-neutral)] block">SUBTOTAL</span>
+                                <span className="text-base font-bold text-[var(--color-paper)]">
                                     ฿{orderData.totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
@@ -771,15 +771,15 @@ export default function POSCustomerDisplay() {
 
                 {/* 5-second progress countdown bar */}
                 <div className="space-y-1">
-                    <div className="w-full bg-[oklch(18%_0.012_28)] h-1 rounded-full overflow-hidden">
+                    <div className="w-full bg-[var(--color-ink)] h-1 rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: '100%' }}
                             animate={{ width: '0%' }}
                             transition={{ duration: 5, ease: 'linear' }}
-                            className="h-full bg-[oklch(52%_0.16_28)]"
+                            className="h-full bg-[var(--brand-plum)]"
                         />
                     </div>
-                    <span className="text-[8px] font-mono text-[oklch(55%_0.010_28)] tracking-widest uppercase">
+                    <span className="text-[8px] font-mono text-[var(--color-neutral)] tracking-widest uppercase">
                         RETURNING TO STANDBY IN 5 SECONDS...
                     </span>
                 </div>
@@ -791,15 +791,15 @@ export default function POSCustomerDisplay() {
     // RENDER 2: CART REVIEW MODE (10.1" 1024x600 Live Order Verification)
     // -------------------------------------------------------------
     const renderCartMode = () => (
-        <div className="w-full h-full bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] flex font-sans overflow-hidden select-none">
+        <div className="w-full h-full bg-[var(--color-paper)] text-[var(--color-ink)] flex font-sans overflow-hidden select-none">
             
             {/* Left Pane: Customer Greeting & Active Promo Showcase */}
-            <div className="w-5/12 h-full bg-[oklch(94%_0.010_28)] border-r border-[oklch(85%_0.012_28)] p-4 flex flex-col justify-between">
+            <div className="w-5/12 h-full bg-[var(--color-paper-2)] border-r border-[var(--color-rule)] p-4 flex flex-col justify-between">
                 <div className="space-y-3">
                     <div className="flex items-center gap-2.5">
                         <VenueLogo className="h-8 max-w-[120px] object-contain" />
-                        <div className="h-4 w-px bg-[oklch(85%_0.012_28)]" />
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] truncate">
+                        <div className="h-4 w-px bg-[var(--color-rule)]" />
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] truncate">
                             {orderData.tableName ? `TABLE : ${orderData.tableName}` : 'DIRECT CHECKOUT'}
                         </span>
                     </div>
@@ -813,21 +813,21 @@ export default function POSCustomerDisplay() {
                         const tier = mp.current_tier || mp.tier || 'HAUS COMMON';
 
                         return (
-                            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2 shadow-2xs">
+                            <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-2 shadow-2xs">
                                 {/* Header: Member Name & Tier */}
-                                <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)]/60 pb-1.5">
+                                <div className="flex items-center justify-between border-b border-[var(--color-rule)]/60 pb-1.5">
                                     <div className="flex items-center gap-1.5 min-w-0">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-plum)] shrink-0 animate-pulse" />
                                         <div className="min-w-0">
-                                            <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                                            <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-[var(--brand-plum)] block">
                                                 IN THE HAUS MEMBER
                                             </span>
-                                            <h2 className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate leading-[1.6] uppercase">
+                                            <h2 className="text-sm font-bold text-[var(--color-ink)] truncate leading-[1.6] uppercase">
                                                 {mp.display_name || mp.name || orderData.customer}
                                             </h2>
                                         </div>
                                     </div>
-                                    <span className="text-[8px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded uppercase shrink-0">
+                                    <span className="text-[8px] font-mono font-bold bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded uppercase shrink-0">
                                         {tier}
                                     </span>
                                 </div>
@@ -835,23 +835,23 @@ export default function POSCustomerDisplay() {
                                 {/* Points & Stamp Card Metrics */}
                                 <div className="grid grid-cols-2 gap-1.5 font-mono">
                                     {/* Points Box */}
-                                    <div className="bg-[oklch(94%_0.010_28)]/80 border border-[oklch(85%_0.012_28)] rounded-lg p-1.5 flex flex-col justify-between">
-                                        <span className="text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase flex items-center gap-1">
+                                    <div className="bg-[var(--color-paper-2)]/80 border border-[var(--color-rule)] rounded-lg p-1.5 flex flex-col justify-between">
+                                        <span className="text-[8px] font-bold text-[var(--color-neutral)] uppercase flex items-center gap-1">
                                             แต้ม XHAUS
                                         </span>
                                         <div className="mt-0.5">
-                                            <span className="text-xs font-black text-[oklch(52%_0.16_28)]">
+                                            <span className="text-xs font-black text-[var(--brand-plum)]">
                                                 {Math.floor(coins).toLocaleString()} pts
                                             </span>
-                                            <span className="text-[8px] text-[oklch(55%_0.010_28)] block">
+                                            <span className="text-[8px] text-[var(--color-neutral)] block">
                                                 ≈ ส่วนลด ฿{Math.floor(coins).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Cup Stamps Box */}
-                                    <div className="bg-[oklch(94%_0.010_28)]/80 border border-[oklch(85%_0.012_28)] rounded-lg p-1.5 flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <div className="bg-[var(--color-paper-2)]/80 border border-[var(--color-rule)] rounded-lg p-1.5 flex flex-col justify-between">
+                                        <div className="flex items-center justify-between text-[8px] font-bold text-[var(--color-neutral)] uppercase">
                                             <span>แก้วสะสม</span>
                                             <span>{stamps}/10</span>
                                         </div>
@@ -861,13 +861,13 @@ export default function POSCustomerDisplay() {
                                                     key={i}
                                                     className={`flex-1 h-1.5 rounded-full transition-all ${
                                                         i < stamps 
-                                                            ? 'bg-[oklch(52%_0.16_28)]' 
-                                                            : 'bg-[oklch(85%_0.012_28)]'
+                                                            ? 'bg-[var(--brand-plum)]' 
+                                                            : 'bg-[var(--color-rule)]'
                                                     }`}
                                                 />
                                             ))}
                                         </div>
-                                        <span className="text-[7.5px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                        <span className="text-[7.5px] text-[var(--color-neutral)] mt-0.5">
                                             {stamps >= 10 ? 'ครบ 10 แก้วแล้ว!' : `อีก ${10 - stamps} แก้ว รับฟรี 1 แก้ว`}
                                         </span>
                                     </div>
@@ -875,7 +875,7 @@ export default function POSCustomerDisplay() {
 
                                 {/* Free Drink Alert Badge */}
                                 {freeDrinks > 0 && (
-                                    <div className="bg-[oklch(45%_0.08_140)]/15 border border-[oklch(45%_0.08_140)]/30 rounded-lg p-1.5 flex items-center justify-between text-[9px] font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                    <div className="bg-[oklch(45%_0.08_140)]/15 border border-[oklch(45%_0.08_140)]/30 rounded-lg p-1.5 flex items-center justify-between text-[9px] font-mono font-bold text-[var(--color-ink)]">
                                         <span>สิทธิ์เครื่องดื่มฟรี: {freeDrinks} แก้ว</span>
                                         <span className="text-[8px] bg-[oklch(45%_0.08_140)] text-white px-1.5 py-0.2 rounded uppercase">
                                             พร้อมใช้
@@ -885,23 +885,23 @@ export default function POSCustomerDisplay() {
                             </div>
                         );
                     })() : orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer) ? (
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-0.5 shadow-2xs">
-                            <span className="text-[8px] font-mono font-bold uppercase tracking-widest text-[oklch(55%_0.010_28)]">
+                        <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-0.5 shadow-2xs">
+                            <span className="text-[8px] font-mono font-bold uppercase tracking-widest text-[var(--color-neutral)]">
                                 CUSTOMER
                             </span>
-                            <h2 className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate">
+                            <h2 className="text-sm font-bold text-[var(--color-ink)] truncate">
                                 {orderData.customer}
                             </h2>
-                            <p className="text-[10px] text-[oklch(55%_0.010_28)] font-sans pt-0.5">
+                            <p className="text-[10px] text-[var(--color-neutral)] font-sans pt-0.5">
                                 สั่งอาหารกับแคชเชียร์ / สามารถแจ้งเบอร์เพื่อสะสมแต้มสมาชิก XHAUS ได้
                             </p>
                         </div>
                     ) : (
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-0.5 shadow-2xs">
-                            <h3 className="text-sm font-bold text-[oklch(18%_0.012_28)]">
+                        <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-0.5 shadow-2xs">
+                            <h3 className="text-sm font-bold text-[var(--color-ink)]">
                                 สั่งอาหารกับแคชเชียร์
                             </h3>
-                            <p className="text-[10px] text-[oklch(55%_0.010_28)] font-sans leading-relaxed">
+                            <p className="text-[10px] text-[var(--color-neutral)] font-sans leading-relaxed">
                                 ตรวจสอบรายการอาหารทางด้านขวา และแจ้งสะสมแต้มสมาชิกได้ทันที
                             </p>
                         </div>
@@ -909,10 +909,10 @@ export default function POSCustomerDisplay() {
                 </div>
 
                 {/* Minimalist Summary Status */}
-                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-1.5 shadow-xs">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-1.5 shadow-xs">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-neutral)]">
                         <span>TOTAL ITEMS</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">
+                        <span className="font-bold text-[var(--color-ink)]">
                             {orderData.items?.reduce((sum, i) => sum + i.quantity, 0) || 0} รายการ
                         </span>
                     </div>
@@ -924,11 +924,11 @@ export default function POSCustomerDisplay() {
                             </span>
                         </div>
                     )}
-                    <div className="border-t border-[oklch(85%_0.012_28)] pt-1.5 flex justify-between items-end">
-                        <span className="text-xs font-sans font-bold uppercase text-[oklch(18%_0.012_28)]">
+                    <div className="border-t border-[var(--color-rule)] pt-1.5 flex justify-between items-end">
+                        <span className="text-xs font-sans font-bold uppercase text-[var(--color-ink)]">
                             ยอดรวมสุทธิ
                         </span>
-                        <span className="text-2xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                        <span className="text-2xl font-mono font-black text-[var(--brand-plum)]">
                             ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </span>
                     </div>
@@ -936,11 +936,11 @@ export default function POSCustomerDisplay() {
             </div>
 
             {/* Right Pane: Live Itemized Order List */}
-            <div className="w-7/12 h-full flex flex-col justify-between p-4 bg-[oklch(97%_0.008_28)] overflow-hidden">
-                <div className="pb-2 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between shrink-0">
+            <div className="w-7/12 h-full flex flex-col justify-between p-4 bg-[var(--color-paper)] overflow-hidden">
+                <div className="pb-2 border-b border-[var(--color-rule)] flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                        <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] animate-pulse" />
+                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                             YOUR ORDER SUMMARY
                         </h2>
                     </div>
@@ -956,19 +956,19 @@ export default function POSCustomerDisplay() {
                                     key={item.id || idx}
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="bg-white border border-[oklch(85%_0.012_28)] rounded-lg p-2.5 flex items-center justify-between shadow-2xs"
+                                    className="bg-white border border-[var(--color-rule)] rounded-lg p-2.5 flex items-center justify-between shadow-2xs"
                                 >
                                     <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                                        <span className="w-6 h-6 rounded bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] font-mono font-bold flex items-center justify-center text-xs shrink-0">
+                                        <span className="w-6 h-6 rounded bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] font-mono font-bold flex items-center justify-center text-xs shrink-0">
                                             {item.quantity}x
                                         </span>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)] uppercase leading-[1.6] truncate">
+                                                <h3 className="font-bold text-xs text-[var(--color-ink)] uppercase leading-[1.6] truncate">
                                                     {item.name}
                                                 </h3>
                                                 {item.destination && (
-                                                    <span className="text-[8px] font-mono uppercase px-1 py-0.2 rounded bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] shrink-0 border border-[oklch(85%_0.012_28)]">
+                                                    <span className="text-[8px] font-mono uppercase px-1 py-0.2 rounded bg-[var(--color-paper-2)] text-[var(--color-neutral)] shrink-0 border border-[var(--color-rule)]">
                                                         {item.destination === 'bar' ? 'BAR' : 'KITCHEN'}
                                                     </span>
                                                 )}
@@ -976,27 +976,27 @@ export default function POSCustomerDisplay() {
                                             {item.selected_options && item.selected_options.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {item.selected_options.map((opt, i) => (
-                                                        <span key={i} className="text-[9px] font-mono font-bold bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] px-1.5 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
+                                                        <span key={i} className="text-[9px] font-mono font-bold bg-[var(--color-paper-2)] text-[var(--color-neutral)] px-1.5 py-0.5 rounded border border-[var(--color-rule)]">
                                                             {typeof opt === 'object' ? (opt.name + (opt.price ? ` +฿${opt.price}` : '')) : opt}
                                                         </span>
                                                     ))}
                                                 </div>
                                             )}
                                             {item.item_note && (
-                                                <p className="text-[9px] font-sans text-[oklch(52%_0.16_28)] mt-0.5">
+                                                <p className="text-[9px] font-sans text-[var(--brand-plum)] mt-0.5">
                                                     โน้ต: {item.item_note}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] shrink-0">
+                                    <div className="text-xs font-mono font-bold text-[var(--color-ink)] shrink-0">
                                         ฿{(item.price * item.quantity).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                     </div>
                                 </motion.div>
                             ))
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] font-mono text-[11px] uppercase tracking-widest gap-2 py-8">
+                            <div className="h-full flex flex-col items-center justify-center text-[var(--color-neutral)] font-mono text-[11px] uppercase tracking-widest gap-2 py-8">
                                 <span>กำลังเลือกรายการอาหาร...</span>
                             </div>
                         )}
@@ -1004,8 +1004,8 @@ export default function POSCustomerDisplay() {
                 </div>
 
                 {/* Footer Totals */}
-                <div className="pt-2 border-t border-[oklch(85%_0.012_28)] space-y-0.5 shrink-0">
-                    <div className="flex justify-between text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                <div className="pt-2 border-t border-[var(--color-rule)] space-y-0.5 shrink-0">
+                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
                         <span>SUBTOTAL</span>
                         <span>฿{(orderData.subtotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                     </div>
@@ -1016,7 +1016,7 @@ export default function POSCustomerDisplay() {
                         </div>
                     )}
                     {orderData.tax > 0 && (
-                        <div className="flex justify-between text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                        <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
                             <span>VAT (7%)</span>
                             <span>฿{orderData.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                         </div>
@@ -1030,13 +1030,13 @@ export default function POSCustomerDisplay() {
     // RENDER 3: CHECKOUT & PROMPTPAY QR MODE (10.1" 1024x600 Optimized)
     // -------------------------------------------------------------
     const renderCheckoutMode = () => (
-        <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex font-sans overflow-hidden select-none">
+        <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex font-sans overflow-hidden select-none">
             
             {/* Left Column: Order Bill Recap */}
-            <div className="w-1/2 h-full bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] p-4 flex flex-col justify-between overflow-hidden">
+            <div className="w-1/2 h-full bg-[var(--color-paper)] text-[var(--color-ink)] border-r border-[var(--color-rule)] p-4 flex flex-col justify-between overflow-hidden">
                 <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex items-center justify-between mb-1.5 shrink-0">
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                             CHECKOUT PAYMENT
                         </span>
                         <VenueLogo className="h-5 max-w-[90px] object-contain" />
@@ -1052,18 +1052,18 @@ export default function POSCustomerDisplay() {
                         const tier = mp.current_tier || mp.tier || 'MEMBER';
 
                         return (
-                            <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/20 p-2 rounded-lg flex items-center justify-between text-[10px] font-mono mb-2 shrink-0">
+                            <div className="bg-[var(--brand-plum)]/10 border border-[var(--brand-plum)]/20 p-2 rounded-lg flex items-center justify-between text-[10px] font-mono mb-2 shrink-0">
                                 <div className="min-w-0 mr-2">
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] truncate block">
+                                    <span className="font-bold text-[var(--color-ink)] truncate block">
                                         สมาชิก: {mp.display_name || mp.name || orderData.customer}
                                     </span>
-                                    <span className="text-[8.5px] text-[oklch(55%_0.010_28)] flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[8.5px] text-[var(--color-neutral)] flex items-center gap-1.5 mt-0.5">
                                         <span>{Math.floor(coins).toLocaleString()} pts</span>
                                         <span>·</span>
                                         <span>{stamps}/10 แก้ว</span>
                                     </span>
                                 </div>
-                                <span className="text-[8px] font-bold bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
+                                <span className="text-[8px] font-bold bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
                                     {tier}
                                 </span>
                             </div>
@@ -1072,9 +1072,9 @@ export default function POSCustomerDisplay() {
 
                     <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar space-y-1 pr-1">
                         {orderData.items?.map((item, idx) => (
-                            <div key={item.id || idx} className="flex justify-between items-center p-2 bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)]">
+                            <div key={item.id || idx} className="flex justify-between items-center p-2 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)]">
                                 <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                                    <span className="font-mono font-bold text-[10px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded shrink-0">
+                                    <span className="font-mono font-bold text-[10px] bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded shrink-0">
                                         {item.quantity}x
                                     </span>
                                     <span className="font-bold text-[11px] uppercase truncate">{item.name}</span>
@@ -1088,28 +1088,28 @@ export default function POSCustomerDisplay() {
                 </div>
 
                 {/* Amount Due Box */}
-                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xl space-y-1 shrink-0 mt-2">
-                    <div className="flex justify-between text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-xl space-y-1 shrink-0 mt-2">
+                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
                         <span>PAYMENT METHOD</span>
-                        <span className="font-bold text-[oklch(52%_0.16_28)] uppercase">{orderData.paymentMethod === 'cash' ? 'เงินสด (Cash)' : 'PromptPay QR'}</span>
+                        <span className="font-bold text-[var(--brand-plum)] uppercase">{orderData.paymentMethod === 'cash' ? 'เงินสด (Cash)' : 'PromptPay QR'}</span>
                     </div>
                     
                     {orderData.paymentMethod === 'cash' && orderData.cashReceived > 0 && (
                         <>
-                            <div className="flex justify-between text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                            <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
                                 <span>CASH RECEIVED</span>
                                 <span>฿{orderData.cashReceived.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-[10px] font-mono font-bold text-emerald-600 border-t border-[oklch(85%_0.012_28)] pt-1">
+                            <div className="flex justify-between text-[10px] font-mono font-bold text-emerald-600 border-t border-[var(--color-rule)] pt-1">
                                 <span>CHANGE DUE (เงินทอน)</span>
                                 <span>฿{(orderData.changeDue || 0).toLocaleString()}</span>
                             </div>
                         </>
                     )}
 
-                    <div className="flex justify-between items-end border-t border-[oklch(85%_0.012_28)] pt-1.5">
-                        <span className="text-xs font-sans font-bold uppercase text-[oklch(18%_0.012_28)]">ยอดเงินที่ต้องชำระ</span>
-                        <span className="text-2xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                    <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-1.5">
+                        <span className="text-xs font-sans font-bold uppercase text-[var(--color-ink)]">ยอดเงินที่ต้องชำระ</span>
+                        <span className="text-2xl font-mono font-black text-[var(--brand-plum)]">
                             ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </span>
                     </div>
@@ -1117,21 +1117,21 @@ export default function POSCustomerDisplay() {
             </div>
 
             {/* Right Column: PromptPay QR / Cash Status */}
-            <div className="w-1/2 h-full flex flex-col items-center justify-center p-4 bg-[oklch(18%_0.012_28)] text-center">
+            <div className="w-1/2 h-full flex flex-col items-center justify-center p-4 bg-[var(--color-ink)] text-center">
                 {orderData.paymentMethod === 'cash' ? (
-                    <div className="bg-white text-[oklch(18%_0.012_28)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl border border-white/20">
+                    <div className="bg-white text-[var(--color-ink)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl border border-white/20">
                         <VenueLogo className="h-7 max-w-[120px] object-contain mb-3" />
-                        <div className="w-full bg-[oklch(18%_0.012_28)] text-white py-1.5 font-bold text-[11px] font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
+                        <div className="w-full bg-[var(--color-ink)] text-white py-1.5 font-bold text-[11px] font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
                             <span>CASH PAYMENT / ชำระเงินสด</span>
                         </div>
                         <div className="w-full space-y-2.5 font-mono text-center">
-                            <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-xl border border-[oklch(85%_0.012_28)]">
-                                <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase block font-bold mb-0.5">ยอดรวมชำระ</span>
-                                <span className="text-2xl font-black text-[oklch(52%_0.16_28)]">฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                            <div className="bg-[var(--color-paper-2)] p-3 rounded-xl border border-[var(--color-rule)]">
+                                <span className="text-[9px] text-[var(--color-neutral)] uppercase block font-bold mb-0.5">ยอดรวมชำระ</span>
+                                <span className="text-2xl font-black text-[var(--brand-plum)]">฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                             </div>
                             {orderData.cashReceived > 0 && (
                                 <div className="space-y-1.5 pt-0.5">
-                                    <div className="flex justify-between text-[11px] font-bold text-[oklch(18%_0.012_28)] px-1">
+                                    <div className="flex justify-between text-[11px] font-bold text-[var(--color-ink)] px-1">
                                         <span>รับเงินสดมา:</span>
                                         <span>฿{orderData.cashReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -1144,14 +1144,14 @@ export default function POSCustomerDisplay() {
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-white text-[oklch(18%_0.012_28)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
+                    <div className="bg-white text-[var(--color-ink)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
                         <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
                         {/* PromptPay Header */}
                         <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
                             <span>PROMPTPAY QR PAYMENT</span>
                         </div>
 
-                        <div className="p-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-1.5">
+                        <div className="p-1.5 bg-white border-2 border-[var(--color-rule)] rounded-xl shadow-inner mb-1.5">
                             {qrPayload ? (
                                 <QRCodeSVG value={qrPayload} size={140} level="M" />
                             ) : paymentQrUrl || orderData.paymentQrUrl ? (
@@ -1164,29 +1164,29 @@ export default function POSCustomerDisplay() {
                         </div>
 
                         {/* PromptPay Account Name & Phone/Tax ID */}
-                        <div className="w-full text-center space-y-0.5 border-t border-[oklch(85%_0.012_28)]/60 pt-1.5 mb-1.5">
+                        <div className="w-full text-center space-y-0.5 border-t border-[var(--color-rule)]/60 pt-1.5 mb-1.5">
                             {storePromptpayName && (
-                                <div className="text-[10px] font-bold text-[oklch(18%_0.012_28)] truncate px-1">
+                                <div className="text-[10px] font-bold text-[var(--color-ink)] truncate px-1">
                                     ชื่อบัญชี: {storePromptpayName}
                                 </div>
                             )}
-                            <div className="text-[9px] font-mono font-bold text-[oklch(42%_0.010_28)] tracking-wide">
+                            <div className="text-[9px] font-mono font-bold text-[var(--color-muted)] tracking-wide">
                                 พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId)}
                             </div>
                         </div>
 
                         <div className="space-y-0.5 text-center">
-                            <span className="text-[7.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest block">
+                            <span className="text-[7.5px] font-mono text-[var(--color-neutral)] uppercase tracking-widest block">
                                 SCAN WITH MOBILE BANKING APP
                             </span>
-                            <p className="text-xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                            <p className="text-xl font-mono font-black text-[var(--brand-plum)]">
                                 ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
                     </div>
                 )}
 
-                <div className="mt-3 flex items-center gap-2 text-[oklch(55%_0.010_28)] text-[10px] font-mono uppercase tracking-wider">
+                <div className="mt-3 flex items-center gap-2 text-[var(--color-neutral)] text-[10px] font-mono uppercase tracking-wider">
                     <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'กรุณาแสดงสลิปการโอนเงินต่อพนักงาน'}</span>
                 </div>
             </div>
@@ -1197,16 +1197,16 @@ export default function POSCustomerDisplay() {
     // RENDER 3.5: SPLIT CHECKOUT MODE (10.1" 1024x600 Split Bill Presentation)
     // -------------------------------------------------------------
     const renderSplitCheckoutMode = () => (
-        <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex font-sans overflow-hidden select-none">
+        <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex font-sans overflow-hidden select-none">
             {/* Left Column: Split Summary & Items/Shares */}
-            <div className="w-1/2 h-full bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] p-4 flex flex-col justify-between overflow-hidden">
+            <div className="w-1/2 h-full bg-[var(--color-paper)] text-[var(--color-ink)] border-r border-[var(--color-rule)] p-4 flex flex-col justify-between overflow-hidden">
                 <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex items-center justify-between mb-1.5 shrink-0">
                         <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded">
                                 SPLIT PAYMENT
                             </span>
-                            <span className="text-[10px] font-mono font-bold uppercase text-[oklch(55%_0.010_28)]">
+                            <span className="text-[10px] font-mono font-bold uppercase text-[var(--color-neutral)]">
                                 {orderData.tableName ? `โต๊ะ : ${orderData.tableName}` : 'WALK-IN'}
                             </span>
                         </div>
@@ -1218,11 +1218,11 @@ export default function POSCustomerDisplay() {
                     </h2>
 
                     {orderData.memberProfile && (
-                        <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/20 p-2 rounded-lg flex items-center justify-between text-[11px] font-mono mb-2 shrink-0">
-                            <span className="font-bold text-[oklch(18%_0.012_28)] truncate mr-2">
+                        <div className="bg-[var(--brand-plum)]/10 border border-[var(--brand-plum)]/20 p-2 rounded-lg flex items-center justify-between text-[11px] font-mono mb-2 shrink-0">
+                            <span className="font-bold text-[var(--color-ink)] truncate mr-2">
                                 สมาชิก: {orderData.memberProfile.display_name || orderData.memberProfile.name}
                             </span>
-                            <span className="text-[8px] font-bold bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
+                            <span className="text-[8px] font-bold bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
                                 {orderData.memberProfile.current_tier || orderData.memberProfile.tier || 'MEMBER'}
                             </span>
                         </div>
@@ -1232,9 +1232,9 @@ export default function POSCustomerDisplay() {
                     {orderData.splitMode === 'ITEMS' && orderData.selectedItems && orderData.selectedItems.length > 0 ? (
                         <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar space-y-1 pr-1">
                             {orderData.selectedItems.map((item, idx) => (
-                                <div key={item.id || idx} className="flex justify-between items-center p-2 bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)]">
+                                <div key={item.id || idx} className="flex justify-between items-center p-2 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)]">
                                     <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                                        <span className="font-mono font-bold text-[10px] bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded shrink-0">
+                                        <span className="font-mono font-bold text-[10px] bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded shrink-0">
                                             {item.selectedQty || item.quantity}x
                                         </span>
                                         <span className="font-bold text-[11px] uppercase truncate">{item.name}</span>
@@ -1246,23 +1246,23 @@ export default function POSCustomerDisplay() {
                             ))}
                         </div>
                     ) : orderData.splitMode === 'EQUAL' && orderData.equalSplitInfo ? (
-                        <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-1 text-center my-2 shrink-0">
-                            <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] uppercase font-bold">
+                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl p-3 space-y-1 text-center my-2 shrink-0">
+                            <span className="text-[10px] font-mono text-[var(--color-neutral)] uppercase font-bold">
                                 หารเท่ากัน {orderData.equalSplitInfo.totalPeople} ท่าน
                             </span>
-                            <h3 className="text-base font-bold text-[oklch(18%_0.012_28)]">
+                            <h3 className="text-base font-bold text-[var(--color-ink)]">
                                 ท่านที่ {orderData.equalSplitInfo.currentPerson} จาก {orderData.equalSplitInfo.totalPeople} ท่าน
                             </h3>
-                            <p className="text-xs font-mono text-[oklch(52%_0.16_28)] font-bold">
+                            <p className="text-xs font-mono text-[var(--brand-plum)] font-bold">
                                 ยอดชำระส่วนนี้: ฿{(orderData.splitTotal || orderData.equalSplitInfo.amount || 0).toLocaleString()}
                             </p>
                         </div>
                     ) : (
-                        <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-1 text-center my-2 shrink-0">
-                            <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] uppercase font-bold">
+                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl p-3 space-y-1 text-center my-2 shrink-0">
+                            <span className="text-[10px] font-mono text-[var(--color-neutral)] uppercase font-bold">
                                 ชำระบางส่วนตามยอดเงินที่ระบุ
                             </span>
-                            <p className="text-xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                            <p className="text-xl font-mono font-black text-[var(--brand-plum)]">
                                 ฿{(orderData.splitTotal || 0).toLocaleString()}
                             </p>
                         </div>
@@ -1270,22 +1270,22 @@ export default function POSCustomerDisplay() {
                 </div>
 
                 {/* Split Totals Breakdown */}
-                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xl space-y-1 shrink-0 mt-2">
-                    <div className="flex justify-between text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-xl space-y-1 shrink-0 mt-2">
+                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
                         <span>ยอดบิลรวมทั้งโต๊ะ (TABLE TOTAL)</span>
                         <span className="font-bold">฿{(orderData.orderTotal || 0).toLocaleString()}</span>
                     </div>
 
-                    <div className="flex justify-between text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
                         <span>ยอดคงเหลือของโต๊ะ (REMAINING)</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">฿{(orderData.remainingBalance || 0).toLocaleString()}</span>
+                        <span className="font-bold text-[var(--color-ink)]">฿{(orderData.remainingBalance || 0).toLocaleString()}</span>
                     </div>
 
-                    <div className="flex justify-between items-end border-t border-[oklch(85%_0.012_28)] pt-1.5">
-                        <span className="text-xs font-sans font-bold uppercase text-[oklch(18%_0.012_28)]">
+                    <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-1.5">
+                        <span className="text-xs font-sans font-bold uppercase text-[var(--color-ink)]">
                             ยอดชำระรอบนี้ (THIS PORTION)
                         </span>
-                        <span className="text-2xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                        <span className="text-2xl font-mono font-black text-[var(--brand-plum)]">
                             ฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </span>
                     </div>
@@ -1293,21 +1293,21 @@ export default function POSCustomerDisplay() {
             </div>
 
             {/* Right Column: PromptPay QR / Cash Status */}
-            <div className="w-1/2 h-full flex flex-col items-center justify-center p-4 bg-[oklch(18%_0.012_28)] text-center">
+            <div className="w-1/2 h-full flex flex-col items-center justify-center p-4 bg-[var(--color-ink)] text-center">
                 {orderData.paymentMethod === 'cash' ? (
-                    <div className="bg-white text-[oklch(18%_0.012_28)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl border border-white/20">
+                    <div className="bg-white text-[var(--color-ink)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl border border-white/20">
                         <VenueLogo className="h-7 max-w-[120px] object-contain mb-3" />
-                        <div className="w-full bg-[oklch(18%_0.012_28)] text-white py-1.5 font-bold text-[11px] font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
+                        <div className="w-full bg-[var(--color-ink)] text-white py-1.5 font-bold text-[11px] font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
                             <span>CASH PAYMENT / ชำระเงินสด</span>
                         </div>
                         <div className="w-full space-y-2.5 font-mono text-center">
-                            <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-xl border border-[oklch(85%_0.012_28)]">
-                                <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase block font-bold mb-0.5">ยอดชำระรอบนี้</span>
-                                <span className="text-2xl font-black text-[oklch(52%_0.16_28)]">฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                            <div className="bg-[var(--color-paper-2)] p-3 rounded-xl border border-[var(--color-rule)]">
+                                <span className="text-[9px] text-[var(--color-neutral)] uppercase block font-bold mb-0.5">ยอดชำระรอบนี้</span>
+                                <span className="text-2xl font-black text-[var(--brand-plum)]">฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                             </div>
                             {orderData.cashReceived > 0 && (
                                 <div className="space-y-1.5 pt-0.5">
-                                    <div className="flex justify-between text-[11px] font-bold text-[oklch(18%_0.012_28)] px-1">
+                                    <div className="flex justify-between text-[11px] font-bold text-[var(--color-ink)] px-1">
                                         <span>รับเงินสดมา:</span>
                                         <span>฿{orderData.cashReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -1320,14 +1320,14 @@ export default function POSCustomerDisplay() {
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-white text-[oklch(18%_0.012_28)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
+                    <div className="bg-white text-[var(--color-ink)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
                         <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
                         {/* PromptPay Header */}
                         <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
                             <span>SPLIT PROMPTPAY QR</span>
                         </div>
 
-                        <div className="p-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-1.5">
+                        <div className="p-1.5 bg-white border-2 border-[var(--color-rule)] rounded-xl shadow-inner mb-1.5">
                             {qrPayload ? (
                                 <QRCodeSVG value={qrPayload} size={140} level="M" />
                             ) : (
@@ -1338,29 +1338,29 @@ export default function POSCustomerDisplay() {
                         </div>
 
                         {/* PromptPay Account Name & Phone/Tax ID */}
-                        <div className="w-full text-center space-y-0.5 border-t border-[oklch(85%_0.012_28)]/60 pt-1.5 mb-1.5">
+                        <div className="w-full text-center space-y-0.5 border-t border-[var(--color-rule)]/60 pt-1.5 mb-1.5">
                             {storePromptpayName && (
-                                <div className="text-[10px] font-bold text-[oklch(18%_0.012_28)] truncate px-1">
+                                <div className="text-[10px] font-bold text-[var(--color-ink)] truncate px-1">
                                     ชื่อบัญชี: {storePromptpayName}
                                 </div>
                             )}
-                            <div className="text-[9px] font-mono font-bold text-[oklch(42%_0.010_28)] tracking-wide">
+                            <div className="text-[9px] font-mono font-bold text-[var(--color-muted)] tracking-wide">
                                 พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId)}
                             </div>
                         </div>
 
                         <div className="space-y-0.5 text-center">
-                            <span className="text-[7.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest block">
+                            <span className="text-[7.5px] font-mono text-[var(--color-neutral)] uppercase tracking-widest block">
                                 SCAN TO PAY THIS PORTION
                             </span>
-                            <p className="text-xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                            <p className="text-xl font-mono font-black text-[var(--brand-plum)]">
                                 ฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
                     </div>
                 )}
 
-                <div className="mt-3 flex items-center gap-2 text-[oklch(55%_0.010_28)] text-[10px] font-mono uppercase tracking-wider">
+                <div className="mt-3 flex items-center gap-2 text-[var(--color-neutral)] text-[10px] font-mono uppercase tracking-wider">
                     <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'สแกน QR เพื่อชำระยอดเฉพาะส่วนนี้'}</span>
                 </div>
             </div>
@@ -1371,7 +1371,7 @@ export default function POSCustomerDisplay() {
     // RENDER 3.6: SPLIT SUCCESS MODE (Non-Touch Display Optimized)
     // -------------------------------------------------------------
     const renderSplitSuccessMode = () => (
-        <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
+        <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -1423,7 +1423,7 @@ export default function POSCustomerDisplay() {
     // RENDER 4: PAYMENT SUCCESS (Thank You & XHAUS Points Earned)
     // -------------------------------------------------------------
     const renderSuccessMode = () => (
-        <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
+        <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -1544,10 +1544,10 @@ const StandbyClock = React.memo(function StandbyClock() {
 
     return (
         <div className="flex flex-col text-right font-mono">
-            <span className="text-xs font-black tracking-widest text-[oklch(97%_0.008_28)]">
+            <span className="text-xs font-black tracking-widest text-[var(--color-paper)]">
                 {timeStr}
             </span>
-            <span className="text-[8px] text-[oklch(55%_0.010_28)] tracking-wider">
+            <span className="text-[8px] text-[var(--color-neutral)] tracking-wider">
                 {dateStr}
             </span>
         </div>

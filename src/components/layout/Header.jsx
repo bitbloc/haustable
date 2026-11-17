@@ -73,7 +73,7 @@ export default function Header({ session }) {
                                             alt={displayName}
                                         />
                                     ) : (
-                                        <div className="w-8 h-8 rounded-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white select-none">
+                                        <div className="w-8 h-8 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center font-bold text-xs shadow-sm border-2 border-white select-none">
                                             {initial}
                                         </div>
                                     )}

@@ -271,7 +271,7 @@ export default function StepTableSelection() {
                 className={`transition-all duration-200 flex flex-col items-center justify-center shadow-sm select-none
                 ${table.shape === 'circle' ? 'rounded-full' : 'rounded-md'}
                 ${isBooked || isLockedByOthers ? 'opacity-85 cursor-not-allowed contrast-100' : 'hover:scale-[1.03] active:scale-95 cursor-pointer'}
-                ${isSelected ? 'z-20 ring-2 ring-[oklch(52%_0.16_28)] scale-[1.03]' : ''}
+                ${isSelected ? 'z-20 ring-2 ring-[var(--brand-plum)] scale-[1.03]' : ''}
                 ${isLockedByOthers ? 'animate-pulse' : ''}
                 `}
             >
@@ -309,31 +309,31 @@ export default function StepTableSelection() {
     const renderFloorplanCanvas = (inFullscreen = false) => {
         const fitScale = inFullscreen ? fullFitScale : cardFitScale
         return (
-        <div className="relative w-full h-full flex flex-col overflow-hidden bg-[oklch(94%_0.010_28)]">
+        <div className="relative w-full h-full flex flex-col overflow-hidden bg-[var(--color-paper-2)]">
             {fitScale && (
             <TransformWrapper key={fitScale} initialScale={fitScale} minScale={0.2} maxScale={4} centerOnInit={true} limitToBounds={false}>
                 {({ zoomIn, zoomOut, resetTransform }) => (
                     <>
                         {/* Zoom Controls Panel */}
-                        <div className={`absolute ${inFullscreen ? 'bottom-8 right-6' : 'bottom-20 right-4'} z-30 flex flex-col gap-1.5 pointer-events-auto bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-lg p-1 rounded-lg`}>
+                        <div className={`absolute ${inFullscreen ? 'bottom-8 right-6' : 'bottom-20 right-4'} z-30 flex flex-col gap-1.5 pointer-events-auto bg-[var(--color-paper)] border border-[var(--color-rule)] shadow-lg p-1 rounded-lg`}>
                             <button 
                                 onClick={() => zoomIn()} 
                                 title="Zoom In"
-                                className="p-2 hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] active:scale-95 transition-all rounded"
+                                className="p-2 hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] active:scale-95 transition-all rounded"
                             >
                                 <ZoomIn size={18} />
                             </button>
                             <button 
                                 onClick={() => zoomOut()} 
                                 title="Zoom Out"
-                                className="p-2 hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] active:scale-95 transition-all rounded"
+                                className="p-2 hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] active:scale-95 transition-all rounded"
                             >
                                 <ZoomOut size={18} />
                             </button>
                             <button 
                                 onClick={() => resetTransform()} 
                                 title="Reset View"
-                                className="p-2 hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] active:scale-95 transition-all rounded border-t border-[oklch(85%_0.012_28)]"
+                                className="p-2 hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] active:scale-95 transition-all rounded border-t border-[var(--color-rule)]"
                             >
                                 <RotateCcw size={16} />
                             </button>
@@ -345,7 +345,7 @@ export default function StepTableSelection() {
                             contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                             <div
-                                className="relative w-[1000px] shrink-0 aspect-video bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-sm origin-center"
+                                className="relative w-[1000px] shrink-0 aspect-video bg-[var(--color-paper)] border border-[var(--color-rule)] shadow-sm origin-center"
                                 style={{
                                     backgroundImage: safeCssUrl(settings.floorplanUrl),
                                     backgroundSize: '100% 100%',
@@ -369,11 +369,11 @@ export default function StepTableSelection() {
                         animate={{ y: 0, opacity: 1 }} 
                         exit={{ y: 60, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                        className={`absolute ${inFullscreen ? 'bottom-6 left-6 right-6 sm:left-auto sm:right-6 sm:w-96' : 'bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80'} bg-[oklch(97%_0.008_28)] p-4 border border-[oklch(85%_0.012_28)] shadow-2xl z-40 rounded-xl`}
+                        className={`absolute ${inFullscreen ? 'bottom-6 left-6 right-6 sm:left-auto sm:right-6 sm:w-96' : 'bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80'} bg-[var(--color-paper)] p-4 border border-[var(--color-rule)] shadow-2xl z-40 rounded-xl`}
                     >
                         <div className="flex gap-3.5">
                             <div
-                                className="w-18 h-18 rounded-lg bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] overflow-hidden cursor-zoom-in shrink-0 relative group"
+                                className="w-18 h-18 rounded-lg bg-[var(--color-paper-2)] border border-[var(--color-rule)] overflow-hidden cursor-zoom-in shrink-0 relative group"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     if (selectedTable.image_url) setPreviewImage(selectedTable.image_url);
@@ -387,7 +387,7 @@ export default function StepTableSelection() {
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[oklch(55%_0.010_28)]">
+                                    <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)]">
                                         <ImageIcon size={20} />
                                     </div>
                                 )}
@@ -396,23 +396,23 @@ export default function StepTableSelection() {
                             <div className="flex-1 min-w-0 flex flex-col justify-between">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-bold text-[15px] text-[oklch(18%_0.012_28)] truncate pr-2">
+                                        <h3 className="font-bold text-[15px] text-[var(--color-ink)] truncate pr-2">
                                             {selectedTable.table_name}
                                         </h3>
-                                        <p className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                                        <p className="font-mono text-[11px] text-[var(--color-neutral)]">
                                             {selectedTable.capacity} {t('seats')} ({selectedTable.zone || 'Indoor'})
                                         </p>
                                     </div>
                                     <button 
                                         onClick={() => selectTable(null)} 
-                                        className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1"
+                                        className="text-[var(--color-neutral)] hover:text-[var(--color-ink)] p-1"
                                     >
                                         <X size={16} />
                                     </button>
                                 </div>
                                 <button 
                                     onClick={nextStep} 
-                                    className="w-full mt-2 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] py-2 px-3 rounded-lg font-mono text-[11px] font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
+                                    className="w-full mt-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] py-2 px-3 rounded-lg font-mono text-[11px] font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
                                 >
                                     <span>[ {t('select')} // CONFIRM TABLE ➔ ]</span>
                                 </button>
@@ -429,34 +429,34 @@ export default function StepTableSelection() {
         <div className="h-full flex flex-col relative">
             {/* Top Controls Overlay */}
             <div className="mb-3 flex justify-between items-start gap-3 select-none">
-                <div className="bg-[oklch(97%_0.008_28)] p-3 sm:p-4 border border-[oklch(85%_0.012_28)] shadow-sm rounded-xl flex-1 min-w-0">
+                <div className="bg-[var(--color-paper)] p-3 sm:p-4 border border-[var(--color-rule)] shadow-sm rounded-xl flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] leading-tight">
+                        <h2 className="text-base sm:text-lg font-bold text-[var(--color-ink)] leading-tight">
                             {t('selectTable')}
                         </h2>
-                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase rounded">
+                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] uppercase rounded">
                             FLOORPLAN
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-xs text-[oklch(42%_0.010_28)] font-mono font-bold whitespace-nowrap overflow-x-auto pb-0.5">
-                        <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{date}</span>
-                        <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{time}</span>
-                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-xs text-[var(--color-muted)] font-mono font-bold whitespace-nowrap overflow-x-auto pb-0.5">
+                        <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{date}</span>
+                        <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{time}</span>
+                        <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
                     </div>
 
                     {/* Status Legend */}
-                    <div className="flex items-center gap-4 sm:gap-6 mt-3 pt-2.5 border-t border-[oklch(85%_0.012_28)]">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
-                            <span className="w-2.5 h-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm" />
+                    <div className="flex items-center gap-4 sm:gap-6 mt-3 pt-2.5 border-t border-[var(--color-rule)]">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-neutral)]">
+                            <span className="w-2.5 h-2.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm" />
                             <span>{t('available')}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
-                            <span className="w-2.5 h-2.5 bg-[oklch(18%_0.012_28)] rounded-sm" />
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-neutral)]">
+                            <span className="w-2.5 h-2.5 bg-[var(--color-ink)] rounded-sm" />
                             <span>{t('selected')}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
-                            <span className="w-2.5 h-2.5 bg-[oklch(45%_0.18_28)] rounded-sm" />
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-neutral)]">
+                            <span className="w-2.5 h-2.5 bg-[var(--brand-plum)] rounded-sm" />
                             <span>{t('unavailable')}</span>
                         </div>
                     </div>
@@ -466,7 +466,7 @@ export default function StepTableSelection() {
                 <button 
                     onClick={toggleExpanded} 
                     title="Fullscreen Floorplan"
-                    className="p-3 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-sm rounded-xl transition-all cursor-pointer flex-shrink-0 flex flex-col items-center gap-1 font-mono text-[9px] font-bold"
+                    className="p-3 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] shadow-sm rounded-xl transition-all cursor-pointer flex-shrink-0 flex flex-col items-center gap-1 font-mono text-[9px] font-bold"
                 >
                     <Maximize2 size={18} />
                     <span>FULL</span>
@@ -474,33 +474,33 @@ export default function StepTableSelection() {
             </div>
 
             {/* Standard In-card Floorplan View */}
-            <div ref={cardViewportRef} className="flex-1 min-h-[420px] overflow-hidden relative rounded-xl border border-[oklch(85%_0.012_28)] shadow-inner">
+            <div ref={cardViewportRef} className="flex-1 min-h-[420px] overflow-hidden relative rounded-xl border border-[var(--color-rule)] shadow-inner">
                 {renderFloorplanCanvas(false)}
             </div>
 
             {/* FULLSCREEN PORTAL MODAL (Escapes CSS transform containers cleanly) */}
             {isExpanded && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[9999] bg-[oklch(18%_0.012_28)]/60 backdrop-blur-sm flex flex-col overflow-hidden animate-fadeIn">
+                <div className="fixed inset-0 z-[9999] bg-[var(--color-ink)]/60 backdrop-blur-sm flex flex-col overflow-hidden animate-fadeIn">
                     {/* Fullscreen Top Header Bar */}
-                    <div className="w-full bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] px-4 py-3 flex items-center justify-between shadow-md select-none z-50">
+                    <div className="w-full bg-[var(--color-paper)] border-b border-[var(--color-rule)] px-4 py-3 flex items-center justify-between shadow-md select-none z-50">
                         <div className="flex items-center gap-3">
-                            <h2 className="font-bold text-base text-[oklch(18%_0.012_28)]">
+                            <h2 className="font-bold text-base text-[var(--color-ink)]">
                                 {t('selectTable')}
                             </h2>
-                            <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[oklch(42%_0.010_28)]">
-                                <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{date}</span>
-                                <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{time}</span>
-                                <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
+                            <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[var(--color-muted)]">
+                                <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{date}</span>
+                                <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{time}</span>
+                                <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <span className="hidden md:inline font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="hidden md:inline font-mono text-[10px] text-[var(--color-neutral)]">
                                 [ กด ESC หรือปุ่ม CLOSE เพื่อย่อกลับ ]
                             </span>
                             <button
                                 onClick={toggleExpanded}
-                                className="px-3.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:opacity-90 font-mono text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow cursor-pointer"
+                                className="px-3.5 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] hover:opacity-90 font-mono text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow cursor-pointer"
                             >
                                 <Minimize2 size={14} />
                                 <span>CLOSE [ ✕ ]</span>
@@ -519,11 +519,11 @@ export default function StepTableSelection() {
             {/* Tooltip Popup */}
             {availabilityTooltip && (
                 <div
-                    className="fixed z-[10000] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs px-3 py-1.5 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
+                    className="fixed z-[10000] bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs px-3 py-1.5 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
                     style={{ left: availabilityTooltip.x, top: availabilityTooltip.y }}
                 >
                     {availabilityTooltip.text}
-                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-[oklch(18%_0.012_28)] rotate-45"></div>
+                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-[var(--color-ink)] rotate-45"></div>
                 </div>
             )}
 

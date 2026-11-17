@@ -358,8 +358,8 @@ export default function HausmadeCatalogManager() {
                     onClick={() => setStatusFilter('ALL')}
                     className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'ALL'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                     }`}
                 >
                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
@@ -372,8 +372,8 @@ export default function HausmadeCatalogManager() {
                     onClick={() => setStatusFilter('IN_STOCK')}
                     className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'IN_STOCK'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                     }`}
                 >
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(45%_0.08_140)]">
@@ -386,22 +386,22 @@ export default function HausmadeCatalogManager() {
                     onClick={() => setStatusFilter('PRE_ORDER')}
                     className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'PRE_ORDER'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                     }`}
                 >
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(52%_0.16_28)]">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--brand-plum)]">
                         [ เปิดจอง // PRE-ORDER ]
                     </span>
-                    <span className="text-2xl font-black mt-1 text-[oklch(52%_0.16_28)] tabular-nums">{stats.preOrder}</span>
+                    <span className="text-2xl font-black mt-1 text-[var(--brand-plum)] tabular-nums">{stats.preOrder}</span>
                 </div>
 
                 <div
                     onClick={() => setStatusFilter('HERO')}
                     className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'HERO'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                     }`}
                 >
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(28%_0.10_65)]">
@@ -414,31 +414,31 @@ export default function HausmadeCatalogManager() {
                     onClick={() => setStatusFilter('LOW_STOCK')}
                     className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'LOW_STOCK'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                     }`}
                 >
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(52%_0.16_28)]">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--brand-plum)]">
                         [ สต็อกต่ำ // LOW ]
                     </span>
-                    <span className="text-2xl font-black mt-1 text-[oklch(52%_0.16_28)] tabular-nums">{stats.lowStock}</span>
+                    <span className="text-2xl font-black mt-1 text-[var(--brand-plum)] tabular-nums">{stats.lowStock}</span>
                 </div>
             </div>
 
             {/* SEARCH & ACTION TOOLBAR */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs">
                 <div className="flex-1 relative">
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="ค้นหาชื่อสินค้า, รายละเอียด, เสื้อยืด, กาแฟ..."
-                        className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs focus:outline-none focus:border-[oklch(52%_0.16_28)] rounded-xs"
+                        className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-xs focus:outline-none focus:border-[var(--brand-plum)] rounded-xs"
                     />
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[oklch(55%_0.010_28)] cursor-pointer"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--color-neutral)] cursor-pointer"
                         >
                             ✕
                         </button>
@@ -450,7 +450,7 @@ export default function HausmadeCatalogManager() {
                         setEditingProduct(null)
                         setIsEditorOpen(true)
                     }}
-                    className="px-5 py-2.5 bg-[oklch(52%_0.16_28)] text-white font-bold text-xs uppercase tracking-wider hover:bg-[oklch(45%_0.16_28)] transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap rounded-xs"
+                    className="px-5 py-2.5 bg-[var(--brand-plum)] text-white font-bold text-xs uppercase tracking-wider hover:bg-[var(--brand-plum)] transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap rounded-xs"
                 >
                     <span>[ + เพิ่มสินค้าใหม่ // ADD PRODUCT ]</span>
                 </button>
@@ -458,12 +458,12 @@ export default function HausmadeCatalogManager() {
 
             {/* PRODUCTS LIST GRID */}
             {loading ? (
-                <div className="p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] flex flex-col items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-[oklch(52%_0.16_28)] border-t-transparent rounded-full animate-spin" />
+                <div className="p-12 text-center font-mono text-xs text-[var(--color-neutral)] flex flex-col items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-[var(--brand-plum)] border-t-transparent rounded-full animate-spin" />
                     <span className="uppercase tracking-wider">LOADING HAUSMADE CATALOG...</span>
                 </div>
             ) : filteredProducts.length === 0 ? (
-                <div className="p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] border-2 border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.006_28)] rounded-xs">
+                <div className="p-12 text-center font-mono text-xs text-[var(--color-neutral)] border-2 border-dashed border-[var(--color-rule)] bg-[var(--color-paper)] rounded-xs">
                     [ ไม่พบสินค้าที่ตรงตามเงื่อนไข ]
                 </div>
             ) : (
@@ -480,15 +480,15 @@ export default function HausmadeCatalogManager() {
                         return (
                             <div
                                 key={product.id}
-                                className={`bg-[oklch(99%_0.005_28)] border transition-all flex flex-col justify-between relative group rounded-xs ${
+                                className={`bg-[var(--color-paper)] border transition-all flex flex-col justify-between relative group rounded-xs ${
                                     isHidden
-                                        ? 'border-[oklch(88%_0.010_28)] opacity-60 bg-[oklch(96%_0.008_28)]'
-                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] shadow-2xs'
+                                        ? 'border-[var(--color-paper-3)] opacity-60 bg-[var(--color-paper)]'
+                                        : 'border-[var(--color-rule)] hover:border-[var(--brand-plum)] shadow-2xs'
                                 }`}
                             >
                                 {/* Top Image & Badges */}
                                 <div>
-                                    <div className="h-48 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] relative overflow-hidden flex items-center justify-center">
+                                    <div className="h-48 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] relative overflow-hidden flex items-center justify-center">
                                         {productImages.length > 0 ? (
                                             <img
                                                 src={productImages[0]}
@@ -496,7 +496,7 @@ export default function HausmadeCatalogManager() {
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         ) : (
-                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                            <span className="font-mono text-[10px] text-[var(--color-neutral)] uppercase tracking-wider">
                                                 [ NO IMAGE // ยังไม่มีรูป ]
                                             </span>
                                         )}
@@ -508,13 +508,13 @@ export default function HausmadeCatalogManager() {
                                                     [ PRE-ORDER ]
                                                 </span>
                                             ) : (
-                                                <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
+                                                <span className="px-2 py-0.5 bg-[var(--color-ink)] text-white font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
                                                     [ IN-STOCK ]
                                                 </span>
                                             )}
 
                                             {isPinnedHero && (
-                                                <span className="px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
+                                                <span className="px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[var(--color-ink)] font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
                                                     [ HERO PINNED ]
                                                 </span>
                                             )}
@@ -526,7 +526,7 @@ export default function HausmadeCatalogManager() {
                                                 className={`px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-2xs cursor-pointer rounded-xs ${
                                                     product.is_available !== false
                                                         ? 'bg-[oklch(45%_0.08_140)] text-white'
-                                                        : 'bg-[oklch(52%_0.16_28)] text-white'
+                                                        : 'bg-[var(--brand-plum)] text-white'
                                                 }`}
                                             >
                                                 {product.is_available !== false ? 'เปิดขาย' : 'ซ่อนอยู่'}
@@ -535,7 +535,7 @@ export default function HausmadeCatalogManager() {
 
                                         {/* Multi-Photo Count Badge */}
                                         {hasMultipleImages && (
-                                            <div className="absolute bottom-2 right-2 bg-[oklch(18%_0.012_28)]/90 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-2xs backdrop-blur-xs flex items-center gap-1 rounded-xs">
+                                            <div className="absolute bottom-2 right-2 bg-[var(--color-ink)]/90 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-2xs backdrop-blur-xs flex items-center gap-1 rounded-xs">
                                                 <span className="tabular-nums">[ PHOTOS ] {productImages.length}</span>
                                             </div>
                                         )}
@@ -545,20 +545,20 @@ export default function HausmadeCatalogManager() {
                                     <div className="p-4 flex flex-col gap-2">
                                         <div className="flex justify-between items-start gap-2">
                                             <div>
-                                                <span className="font-mono text-[9px] text-[oklch(52%_0.16_28)] uppercase font-bold block">
+                                                <span className="font-mono text-[9px] text-[var(--brand-plum)] uppercase font-bold block">
                                                     // {product.sub_category || product.category || 'HAUSMADE'}
                                                 </span>
-                                                <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] line-clamp-1">
+                                                <h3 className="font-bold text-sm text-[var(--color-ink)] line-clamp-1">
                                                     {product.name}
                                                 </h3>
                                             </div>
-                                            <span className="font-mono font-black text-sm text-[oklch(18%_0.012_28)] whitespace-nowrap tabular-nums">
+                                            <span className="font-mono font-black text-sm text-[var(--color-ink)] whitespace-nowrap tabular-nums">
                                                 ฿{product.price}.-
                                             </span>
                                         </div>
 
                                         {product.description && (
-                                            <p className="font-sans text-[11px] text-[oklch(42%_0.010_28)] line-clamp-2 leading-relaxed">
+                                            <p className="font-sans text-[11px] text-[var(--color-muted)] line-clamp-2 leading-relaxed">
                                                 {product.description}
                                             </p>
                                         )}
@@ -572,9 +572,9 @@ export default function HausmadeCatalogManager() {
 
                                         {/* Variants Summary */}
                                         {totalVariants > 0 && (
-                                            <div className="mt-1 font-mono text-[10px] text-[oklch(55%_0.010_28)] flex items-center justify-between border-t border-[oklch(85%_0.012_28)]/60 pt-2">
+                                            <div className="mt-1 font-mono text-[10px] text-[var(--color-neutral)] flex items-center justify-between border-t border-[var(--color-rule)]/60 pt-2">
                                                 <span className="tabular-nums">มี {totalVariants} ตัวเลือกไซส์/แบบ</span>
-                                                <span className="text-[oklch(52%_0.16_28)] font-bold">
+                                                <span className="text-[var(--brand-plum)] font-bold">
                                                     {optionGroups[0]?.option_choices?.map(c => c.name.split(' ')[0]).join(', ')}
                                                 </span>
                                             </div>
@@ -583,7 +583,7 @@ export default function HausmadeCatalogManager() {
                                 </div>
 
                                 {/* Bottom Action Bar */}
-                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-[10px] gap-1 flex-wrap rounded-b-xs">
+                                <div className="p-3 bg-[var(--color-paper-2)] border-t border-[var(--color-rule)] flex items-center justify-between font-mono text-[10px] gap-1 flex-wrap rounded-b-xs">
                                     <div className="flex items-center gap-1">
                                         <button
                                             type="button"
@@ -591,8 +591,8 @@ export default function HausmadeCatalogManager() {
                                             title="สลับโหมด Pre-Order"
                                             className={`px-2 py-1 border transition-colors rounded-xs cursor-pointer whitespace-nowrap ${
                                                 isPo
-                                                    ? 'border-[oklch(45%_0.08_140)] text-[oklch(35%_0.08_140)] bg-[oklch(99%_0.005_28)]'
-                                                    : 'border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                                    ? 'border-[oklch(45%_0.08_140)] text-[oklch(35%_0.08_140)] bg-[var(--color-paper)]'
+                                                    : 'border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                             }`}
                                         >
                                             {isPo ? '[ PRE-ORDER ]' : '[ IN-STOCK ]'}
@@ -605,7 +605,7 @@ export default function HausmadeCatalogManager() {
                                             className={`px-2 py-1 border transition-colors rounded-xs cursor-pointer whitespace-nowrap ${
                                                 isPinnedHero
                                                     ? 'border-[oklch(75%_0.18_65)] text-[oklch(28%_0.10_65)] bg-[oklch(96%_0.03_65)] font-bold'
-                                                    : 'border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                                    : 'border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                             }`}
                                         >
                                             {isPinnedHero ? '[ HERO: ON ]' : '[ HERO: OFF ]'}
@@ -617,7 +617,7 @@ export default function HausmadeCatalogManager() {
                                             type="button"
                                             onClick={() => handleDuplicate(product)}
                                             title="คัดลอกสินค้านี้"
-                                            className="px-2 py-1 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(99%_0.005_28)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
+                                            className="px-2 py-1 border border-[var(--color-rule)] text-[var(--color-muted)] hover:bg-[var(--color-paper)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
                                         >
                                             [ คัดลอก ]
                                         </button>
@@ -628,7 +628,7 @@ export default function HausmadeCatalogManager() {
                                                 setEditingProduct(product)
                                                 setIsEditorOpen(true)
                                             }}
-                                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-white font-bold hover:bg-[oklch(28%_0.012_28)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
+                                            className="px-3 py-1 bg-[var(--color-ink)] text-white font-bold hover:bg-[oklch(28%_0.012_348.33)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
                                         >
                                             [ แก้ไข ]
                                         </button>
@@ -637,7 +637,7 @@ export default function HausmadeCatalogManager() {
                                             type="button"
                                             onClick={() => handleDelete(product)}
                                             title="ลบสินค้านี้"
-                                            className="p-1 text-[oklch(52%_0.16_28)] hover:text-[oklch(40%_0.16_28)] cursor-pointer"
+                                            className="p-1 text-[var(--brand-plum)] hover:text-[var(--brand-plum)] cursor-pointer"
                                         >
                                             ✕
                                         </button>

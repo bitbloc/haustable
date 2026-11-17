@@ -247,17 +247,17 @@ export default function PromoVoucherManager() {
     return (
         <div className="space-y-6 tabular-nums">
             {/* Header Actions Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm">
                 <div className="flex flex-wrap items-center gap-2">
                     {/* Status Filter Tabs */}
-                    <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] text-xs">
+                    <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-sm border border-[var(--color-rule)] text-xs">
                         <button
                             type="button"
                             onClick={() => setStatusFilter('all')}
                             className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 statusFilter === 'all'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             ทั้งหมด ({codes.length})
@@ -267,8 +267,8 @@ export default function PromoVoucherManager() {
                             onClick={() => setStatusFilter('active')}
                             className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 statusFilter === 'active'
-                                    ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] '
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] '
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             ใช้งานอยู่ ({activeCount})
@@ -278,8 +278,8 @@ export default function PromoVoucherManager() {
                             onClick={() => setStatusFilter('expired')}
                             className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 statusFilter === 'expired'
-                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] '
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] '
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             หมดอายุ/ครบสิทธิ์ ({expiredCount})
@@ -288,13 +288,13 @@ export default function PromoVoucherManager() {
 
                     {/* Search */}
                     <div className="relative w-full sm:w-48">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] w-3.5 h-3.5" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] w-3.5 h-3.5" />
                         <input
                             type="text"
                             placeholder="ค้นรหัสโค้ด..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
                 </div>
@@ -302,7 +302,7 @@ export default function PromoVoucherManager() {
                 <button
                     type="button"
                     onClick={() => handleOpenModal()}
-                    className="bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-sm text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer "
+                    className="bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-2 rounded-sm text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer "
                 >
                     <Plus size={14} />
                     <span>สร้างโค้ดส่วนลดใหม่</span>
@@ -311,13 +311,13 @@ export default function PromoVoucherManager() {
 
             {/* Vouchers Grid */}
             {loading ? (
-                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">กำลังโหลดข้อมูลโปรโมชั่น...</p>
+                <div className="text-center py-16 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[var(--color-rule)] border-b-[var(--color-ink)] mb-2" />
+                    <p className="text-[13px] text-[var(--color-neutral)]">กำลังโหลดข้อมูลโปรโมชั่น...</p>
                 </div>
             ) : filteredCodes.length === 0 ? (
-                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm">
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">ไม่พบโค้ดโปรโมชั่นตามเงื่อนไข</p>
+                <div className="text-center py-16 bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-sm">
+                    <p className="text-[13px] text-[var(--color-neutral)]">ไม่พบโค้ดโปรโมชั่นตามเงื่อนไข</p>
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -332,23 +332,23 @@ export default function PromoVoucherManager() {
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={code.id}
-                                className={`bg-[oklch(99%_0.004_28)] rounded-sm border p-4 flex flex-col justify-between transition-all ${
+                                className={`bg-[var(--color-paper)] rounded-sm border p-4 flex flex-col justify-between transition-all ${
                                     !isValid
-                                        ? 'border-[oklch(85%_0.012_28)] opacity-60 bg-[oklch(98%_0.006_28)]'
-                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] '
+                                        ? 'border-[var(--color-rule)] opacity-60 bg-[var(--color-paper)]'
+                                        : 'border-[var(--color-rule)] hover:border-[var(--brand-plum)] '
                                 }`}
                             >
                                 <div>
                                     {/* Code & Status Row */}
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1 rounded-sm text-sm font-bold tracking-wider text-[oklch(18%_0.012_28)]">
+                                            <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2.5 py-1 rounded-sm text-sm font-bold tracking-wider text-[var(--color-ink)]">
                                                 {code.code}
                                             </span>
                                             <button
                                                 type="button"
                                                 onClick={() => handleCopyCode(code.code, code.id)}
-                                                className="p-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                                                className="p-1 hover:bg-[var(--color-paper-3)] rounded-sm text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                                                 title="คัดลอกโค้ด"
                                             >
                                                 {copiedId === code.id ? <Check size={13} className="text-[oklch(45%_0.08_140)]" /> : <Copy size={13} />}
@@ -357,9 +357,9 @@ export default function PromoVoucherManager() {
 
                                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-xs border ${
                                             !code.is_active
-                                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                ? 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)]'
                                                 : isExpired
-                                                    ? 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                                    ? 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]'
                                                     : isDepleted
                                                         ? 'bg-amber-50 text-amber-800 border-amber-300'
                                                         : 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
@@ -369,48 +369,48 @@ export default function PromoVoucherManager() {
                                     </div>
 
                                     {/* Discount Value */}
-                                    <div className="text-xl font-bold text-[oklch(18%_0.012_28)] mb-3 flex items-baseline gap-1">
+                                    <div className="text-xl font-bold text-[var(--color-ink)] mb-3 flex items-baseline gap-1">
                                         <span>{code.discount_type === 'percent' ? `${code.discount_value}%` : `฿${code.discount_value}`}</span>
-                                        <span className="text-xs text-[oklch(52%_0.16_28)] font-bold">DISCOUNT</span>
+                                        <span className="text-xs text-[var(--brand-plum)] font-bold">DISCOUNT</span>
                                     </div>
 
                                     {/* Meta Details */}
-                                    <div className="space-y-1.5 text-xs text-[oklch(42%_0.010_28)]">
+                                    <div className="space-y-1.5 text-xs text-[var(--color-muted)]">
                                         <div className="flex items-center gap-1.5">
-                                            <Calendar size={12} className="text-[oklch(55%_0.010_28)]" />
+                                            <Calendar size={12} className="text-[var(--color-neutral)]" />
                                             <span>{format(new Date(code.start_date), 'dd/MM/yy')} - {format(new Date(code.end_date), 'dd/MM/yy')}</span>
                                         </div>
 
                                         <div className="flex items-center gap-1.5">
-                                            <DollarSign size={12} className="text-[oklch(55%_0.010_28)]" />
+                                            <DollarSign size={12} className="text-[var(--color-neutral)]" />
                                             <span>ยอดขั้นต่ำ: {code.min_spend > 0 ? `฿${code.min_spend}` : 'ไม่มีขั้นต่ำ'}</span>
                                         </div>
 
                                         <div className="flex items-center gap-1.5">
-                                            <Tag size={12} className="text-[oklch(55%_0.010_28)]" />
+                                            <Tag size={12} className="text-[var(--color-neutral)]" />
                                             <span className="capitalize">ใช้กับ: {code.applicable_to === 'both' ? 'ทุกบริการ (โต๊ะ & สั่งกลับ)' : code.applicable_to}</span>
                                         </div>
 
-                                        <div className="flex items-center gap-1.5 text-xs text-[oklch(55%_0.010_28)] pt-1">
+                                        <div className="flex items-center gap-1.5 text-xs text-[var(--color-neutral)] pt-1">
                                             <AlertCircle size={12} />
-                                            <span>ใช้แล้ว: <strong className="text-[oklch(18%_0.012_28)]">{code.used_count || 0}</strong> {code.usage_limit ? `/ ${code.usage_limit} สิทธิ์` : '(ไม่จำกัด)'}</span>
+                                            <span>ใช้แล้ว: <strong className="text-[var(--color-ink)]">{code.used_count || 0}</strong> {code.usage_limit ? `/ ${code.usage_limit} สิทธิ์` : '(ไม่จำกัด)'}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Actions Bar */}
-                                <div className="flex items-center gap-2 border-t border-[oklch(85%_0.012_28)] pt-3 mt-4 text-xs">
+                                <div className="flex items-center gap-2 border-t border-[var(--color-rule)] pt-3 mt-4 text-xs">
                                     <button
                                         type="button"
                                         onClick={() => handleOpenModal(code)}
-                                        className="flex-1 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-sm font-bold text-[oklch(18%_0.012_28)] flex items-center justify-center gap-1 transition-colors cursor-pointer border border-[oklch(85%_0.012_28)]"
+                                        className="flex-1 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-sm font-bold text-[var(--color-ink)] flex items-center justify-center gap-1 transition-colors cursor-pointer border border-[var(--color-rule)]"
                                     >
                                         <Edit2 size={12} /> แก้ไข
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => handleDelete(code)}
-                                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] rounded-sm transition-colors cursor-pointer border border-transparent hover:border-[oklch(85%_0.012_28)]"
+                                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--brand-plum)] hover:bg-[var(--color-paper-2)] rounded-sm transition-colors cursor-pointer border border-transparent hover:border-[var(--color-rule)]"
                                         title="ลบโค้ด"
                                     >
                                         <Trash2 size={14} />
@@ -430,23 +430,23 @@ export default function PromoVoucherManager() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[oklch(99%_0.004_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden tabular-nums max-h-[90vh] flex flex-col"
+                            className="bg-[var(--color-paper)] w-full max-w-lg rounded-sm border border-[var(--color-rule)] shadow-2xl overflow-hidden tabular-nums max-h-[90vh] flex flex-col"
                         >
-                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex justify-between items-center">
+                            <div className="p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)] flex justify-between items-center">
                                 <div>
-                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">PROMO VOUCHER ENGINE</span>
-                                    <h2 className="text-base font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="text-xs font-bold text-[var(--brand-plum)]">PROMO VOUCHER ENGINE</span>
+                                    <h2 className="text-base font-bold text-[var(--color-ink)]">
                                         {editingCode ? 'แก้ไขโค้ดโปรโมชั่น' : 'สร้างโค้ดโปรโมชั่นใหม่'}
                                     </h2>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm cursor-pointer">
                                     <X size={18} />
                                 </button>
                             </div>
 
                             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         Promo Code (รหัสโค้ด ตัวพิมพ์ใหญ่) *
                                     </label>
                                     <input
@@ -455,26 +455,26 @@ export default function PromoVoucherManager() {
                                         placeholder="เช่น HAUS10 / SPECIAL50"
                                         value={formData.code}
                                         onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-3 text-lg font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-3 text-lg font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             ประเภทส่วนลด (Type) *
                                         </label>
                                         <select
                                             value={formData.discount_type}
                                             onChange={e => setFormData({ ...formData, discount_type: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer font-bold"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] cursor-pointer font-bold"
                                         >
                                             <option value="percent">เปอร์เซ็นต์ (%)</option>
                                             <option value="fixed">บาท (฿ Fixed Amount)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             มูลค่าส่วนลด (Value) *
                                         </label>
                                         <input
@@ -484,14 +484,14 @@ export default function PromoVoucherManager() {
                                             placeholder={formData.discount_type === 'percent' ? '10' : '50'}
                                             value={formData.discount_value}
                                             onChange={e => setFormData({ ...formData, discount_value: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] font-bold"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] font-bold"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             วันเริ่มใช้งาน (Start Date) *
                                         </label>
                                         <input
@@ -499,11 +499,11 @@ export default function PromoVoucherManager() {
                                             required
                                             value={formData.start_date}
                                             onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             วันหมดอายุ (End Date) *
                                         </label>
                                         <input
@@ -511,14 +511,14 @@ export default function PromoVoucherManager() {
                                             required
                                             value={formData.end_date}
                                             onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             ยอดสั่งซื้อขั้นต่ำ (Min Spend ฿)
                                         </label>
                                         <input
@@ -527,11 +527,11 @@ export default function PromoVoucherManager() {
                                             placeholder="0"
                                             value={formData.min_spend}
                                             onChange={e => setFormData({ ...formData, min_spend: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             จำกัดจำนวนสิทธิ์ (Usage Limit)
                                         </label>
                                         <input
@@ -540,13 +540,13 @@ export default function PromoVoucherManager() {
                                             placeholder="เว้นว่างถ้าไม่จำกัด"
                                             value={formData.usage_limit}
                                             onChange={e => setFormData({ ...formData, usage_limit: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         ใช้ได้กับบริการ (Applicable To)
                                     </label>
                                     <div className="grid grid-cols-3 gap-2">
@@ -561,8 +561,8 @@ export default function PromoVoucherManager() {
                                                 onClick={() => setFormData({ ...formData, applicable_to: opt.id })}
                                                 className={`py-2 text-xs font-bold rounded-sm border transition-colors ${
                                                     formData.applicable_to === opt.id
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                        : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)]'
                                                 }`}
                                             >
                                                 {opt.label}
@@ -577,23 +577,23 @@ export default function PromoVoucherManager() {
                                             type="checkbox"
                                             checked={formData.is_active}
                                             onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
-                                            className="w-4 h-4 accent-[oklch(18%_0.012_28)] rounded-xs"
+                                            className="w-4 h-4 accent-[var(--color-ink)] rounded-xs"
                                         />
                                         <span>เปิดใช้งานโค้ดนี้ทันที (Active Status)</span>
                                     </label>
                                 </div>
 
-                                <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex justify-end gap-2">
+                                <div className="pt-3 border-t border-[var(--color-rule)] flex justify-end gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setIsModalOpen(false)}
-                                        className="px-4 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                        className="px-4 py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] font-bold rounded-sm border border-[var(--color-rule)] text-xs cursor-pointer"
                                     >
                                         ยกเลิก
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm text-xs cursor-pointer "
+                                        className="px-5 py-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] font-bold rounded-sm text-xs cursor-pointer "
                                     >
                                         {editingCode ? 'บันทึกการแก้ไข' : 'สร้างโค้ดโปรโมชั่น'}
                                     </button>

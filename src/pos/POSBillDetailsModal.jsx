@@ -190,15 +190,15 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
 
                     {/* Table Transfer High-Contrast Banner Strip */}
                     {transfer.isMergedSource && (
-                        <div className="bg-[oklch(96%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] rounded-xl p-3.5 text-xs font-mono font-bold flex flex-col gap-1.5 shadow-xs">
+                        <div className="bg-[var(--color-paper)] border-2 border-[var(--brand-plum)] text-[var(--brand-plum)] rounded-xl p-3.5 text-xs font-mono font-bold flex flex-col gap-1.5 shadow-xs">
                             <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white text-[9px] rounded-xs font-black uppercase tracking-wider">
+                                <span className="px-2 py-0.5 bg-[var(--brand-plum)] text-white text-[9px] rounded-xs font-black uppercase tracking-wider">
                                     MERGED TABLE
                                 </span>
                                 <span>โอนรายการทั้งหมดไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> แล้ว</span>
                             </div>
                             {transfer.originalTotal > 0 && (
-                                <div className="text-[11px] text-[oklch(45%_0.10_28)] pl-1">
+                                <div className="text-[11px] text-[var(--brand-plum)] pl-1">
                                     ยอดเงินเดิมก่อนรวมบิล: ฿{transfer.originalTotal.toLocaleString()}
                                 </div>
                             )}
@@ -221,7 +221,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                             <span className="text-xs font-bold text-[var(--color-accent)] bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1.5 flex-wrap">
                                 <span>{isPickup ? 'รับกลับบ้าน (PICKUP)' : `โต๊ะ ${tableName}`}</span>
                                 {transfer.isMergedSource && (
-                                    <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[10px] rounded-xs font-mono font-bold">
+                                    <span className="px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] text-[10px] rounded-xs font-mono font-bold">
                                         โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                     </span>
                                 )}
@@ -253,7 +253,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                             ) : (
                                 <div className="flex justify-between items-center text-[11px] text-[#1A1A1A] font-bold border-t border-[#D1D1CD] pt-1.5">
                                     <span>วันเวลาที่จองโต๊ะ (Reserved For):</span>
-                                    <span className="bg-[oklch(92%_0.012_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
+                                    <span className="bg-[var(--color-paper-2)] px-2 py-0.5 rounded border border-[var(--color-rule)]">
                                         {bookingTimeStr} น.
                                     </span>
                                 </div>
@@ -540,7 +540,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                         <button 
                             type="button"
                             onClick={() => setShowTaxModal(true)}
-                            className="flex-1 cursor-pointer bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md"
+                            className="flex-1 cursor-pointer bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md"
                         >
                             <Receipt size={15} />
                             <span>ออกใบเสร็จ / ใบกำกับภาษี</span>

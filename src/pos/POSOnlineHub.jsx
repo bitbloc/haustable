@@ -522,19 +522,19 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`bg-[oklch(97%_0.008_28)] border rounded-xl p-4 flex flex-col gap-3 shadow-2xs transition-colors ${
+                className={`bg-[var(--color-paper)] border rounded-xl p-4 flex flex-col gap-3 shadow-2xs transition-colors ${
                     isLineman 
                         ? 'border-[oklch(45%_0.08_140)]/40 hover:border-[oklch(45%_0.08_140)]' 
                         : isHausmade
-                            ? 'border-[oklch(52%_0.16_28)]/40 hover:border-[oklch(52%_0.16_28)]'
-                            : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                            ? 'border-[var(--brand-plum)]/40 hover:border-[var(--brand-plum)]'
+                            : 'border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                 }`}
             >
                 {/* Header: Short ID, Channel, Status & Clean Complete Date/Time Strip */}
-                <div className="flex flex-col gap-2 border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                <div className="flex flex-col gap-2 border-b border-[var(--color-rule)] pb-2.5">
                     <div className="flex justify-between items-center gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
+                            <span className="font-mono text-xs font-bold text-[var(--color-ink)] bg-[var(--color-paper-2)] px-2 py-0.5 rounded border border-[var(--color-rule)]">
                                 #{shortId}
                             </span>
 
@@ -543,7 +543,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     LINE MAN
                                 </span>
                             ) : isHausmade ? (
-                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/40">
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--brand-plum)]/15 text-[var(--brand-plum)] border border-[var(--brand-plum)]/40">
                                     {isHausmadeShipping ? 'HAUSMADE SHIP' : 'HAUSMADE PICKUP'}
                                 </span>
                             ) : (
@@ -568,35 +568,35 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             <span className={`font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                                 isPaid 
                                     ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
-                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                    : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)]'
                             }`}>
                                 {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : (isPayAtStore ? 'PAY AT STORE' : 'UNPAID')}
                             </span>
 
                             {awaitingCallConfirm && (
-                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded">
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded">
                                     รอโทรยืนยัน
                                 </span>
                             )}
 
                             {holdExpired ? (
-                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded">
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded">
                                     เลยเวลา {holdMinutes} นาที · ปล่อยโต๊ะแล้ว
                                 </span>
                             ) : holdMinutes !== null && order.booking_type === 'dine_in' && (isPending || order.status === 'confirmed') && (
-                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded">
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)] px-1.5 py-0.5 rounded">
                                     เก็บโต๊ะ {holdMinutes} นาที
                                 </span>
                             )}
 
                             {isCustomerArrived && (
-                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded animate-pulse">
+                                <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded animate-pulse">
                                     ARRIVED · มาถึงร้านแล้ว
                                 </span>
                             )}
                         </div>
 
-                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] shrink-0">
+                        <span className="font-mono text-[10px] text-[var(--color-neutral)] shrink-0">
                             สั่งเมื่อ: {orderCreatedDt.compactText}
                         </span>
                     </div>
@@ -608,8 +608,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             : isLineman
                                 ? 'bg-emerald-50/80 border-emerald-200 text-[oklch(45%_0.08_140)]'
                                 : apptDt.isFutureDay
-                                    ? 'bg-[oklch(52%_0.16_28)]/10 border-[oklch(52%_0.16_28)]/30 text-[oklch(52%_0.16_28)]'
-                                    : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--brand-plum)]/10 border-[var(--brand-plum)]/30 text-[var(--brand-plum)]'
+                                    : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
                     }`}>
                         <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
                             {isPickup ? 'วัน-เวลานัดรับ' : isLineman ? 'วัน-เวลารับอาหาร' : 'วัน-เวลาจองโต๊ะ'}
@@ -622,18 +622,18 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                 {/* Customer & Rider Details */}
                 <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-sm font-bold text-[oklch(18%_0.012_28)] truncate">
-                        <User size={13} className="text-[oklch(55%_0.010_28)] shrink-0" />
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-[var(--color-ink)] truncate">
+                        <User size={13} className="text-[var(--color-neutral)] shrink-0" />
                         <span className="truncate">{name}</span>
                     </div>
                     {phone && (
-                        <div className="flex items-center gap-1.5 text-xs font-mono text-[oklch(55%_0.010_28)]">
+                        <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--color-neutral)]">
                             <Phone size={11} className="shrink-0" />
                             <span>{phone}</span>
                         </div>
                     )}
                     {order.staff_remark && (order.staff_remark.includes('Rider:') || order.staff_remark.includes('ไรเดอร์')) && (
-                        <div className="text-[11px] font-mono text-[oklch(45%_0.08_140)] font-bold bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] truncate">
+                        <div className="text-[11px] font-mono text-[oklch(45%_0.08_140)] font-bold bg-[var(--color-paper-2)] px-2 py-0.5 rounded border border-[var(--color-rule)] truncate">
                             🛵 {order.staff_remark.replace(/\[LINEMAN:[^\]]+\]\s*/i, '')}
                         </div>
                     )}
@@ -641,27 +641,27 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                 {/* Order Items Preview */}
                 {items.length > 0 ? (
-                    <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] text-xs font-sans space-y-1.5">
-                        <div className="font-mono text-[9px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                    <div className="bg-[var(--color-paper-2)] p-2.5 rounded-lg border border-[var(--color-rule)] text-xs font-sans space-y-1.5">
+                        <div className="font-mono text-[9px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                             ITEMS ({items.reduce((s, i) => s + (i.quantity || 1), 0)} TOTAL):
                         </div>
                         <ul className="space-y-1.5">
                             {items.slice(0, 4).map((item, idx) => {
                                 const optsList = normalizeSelectedOptions(item.selected_options);
                                 return (
-                                    <li key={item.id || idx} className="text-[oklch(18%_0.012_28)]">
+                                    <li key={item.id || idx} className="text-[var(--color-ink)]">
                                         <div className="flex justify-between items-center">
                                             <span className="truncate pr-2 font-medium">
                                                 <strong className="font-mono font-bold mr-1">{item.quantity}x</strong> 
                                                 {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
                                             </span>
-                                            <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] shrink-0">
+                                            <span className="font-mono text-[10px] text-[var(--color-muted)] shrink-0">
                                                 ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}
                                             </span>
                                         </div>
                                         {/* Options & Modifiers */}
                                         {optsList.length > 0 && (
-                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono pl-4">
+                                            <div className="text-[10px] text-[var(--color-neutral)] font-mono pl-4">
                                                 {optsList.map((opt, oIdx) => (
                                                     <span key={oIdx} className="inline-block mr-1.5">
                                                         • {typeof opt === 'object' ? (opt.name || opt.choice || JSON.stringify(opt)) : opt}
@@ -674,29 +674,29 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             })}
                         </ul>
                         {items.length > 4 && (
-                            <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)] text-right pt-0.5 font-bold">
+                            <div className="text-[9px] font-mono text-[var(--color-neutral)] text-right pt-0.5 font-bold">
                                 + อีก {items.length - 4} รายการ...
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="text-center py-2 text-[10px] font-mono text-[oklch(55%_0.010_28)] italic bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)]">
+                    <div className="text-center py-2 text-[10px] font-mono text-[var(--color-neutral)] italic bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)]">
                         ไม่มีรายการอาหาร (จองโต๊ะเปล่า)
                     </div>
                 )}
 
                 {order.customer_note && (
-                    <div className="bg-[oklch(94%_0.010_28)] p-2 rounded-lg text-xs text-[oklch(18%_0.012_28)] font-medium border-l-2 border-[oklch(52%_0.16_28)]">
+                    <div className="bg-[var(--color-paper-2)] p-2 rounded-lg text-xs text-[var(--color-ink)] font-medium border-l-2 border-[var(--brand-plum)]">
                         "{order.customer_note}"
                     </div>
                 )}
 
                 {/* Amount Totals */}
-                <div className="flex items-center justify-between pt-1 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
-                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider font-bold">
+                <div className="flex items-center justify-between pt-1 border-t border-[var(--color-rule)] font-mono text-xs">
+                    <span className="text-[10px] text-[var(--color-neutral)] uppercase tracking-wider font-bold">
                         {isLineman ? 'PLATFORM TOTAL' : 'TOTAL DUE'}
                     </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                    <span className="font-bold text-[var(--color-ink)]">
                         ฿{(order.total_amount || 0).toLocaleString()}
                     </span>
                 </div>
@@ -706,7 +706,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     <button
                         type="button"
                         onClick={() => onOpenSlipModal && onOpenSlipModal(order, 'kitchen')}
-                        className="py-1.5 px-2 rounded-md bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
+                        className="py-1.5 px-2 rounded-md bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
                         title="พิมพ์ใบสั่งครัว"
                     >
                         <Printer size={10} />
@@ -716,7 +716,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     <button
                         type="button"
                         onClick={() => onOpenSlipModal && onOpenSlipModal(order, order.status === 'completed' ? 'receipt' : 'billing')}
-                        className="py-1.5 px-2 rounded-md bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
+                        className="py-1.5 px-2 rounded-md bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
                         title="พิมพ์ใบแจ้งยอด / ใบเสร็จ"
                     >
                         <FileText size={10} />
@@ -726,7 +726,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     <button
                         type="button"
                         onClick={() => onSelectOrder && onSelectOrder(order)}
-                        className="py-1.5 px-2 rounded-md bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
+                        className="py-1.5 px-2 rounded-md bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
                         title="เปิดแก้ไขและคิดเงินใน POS"
                     >
                         <ExternalLink size={10} />
@@ -735,7 +735,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 </div>
 
                 {/* Main Action Bar */}
-                <div className="pt-2 border-t border-[oklch(85%_0.012_28)] flex gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider">
+                <div className="pt-2 border-t border-[var(--color-rule)] flex gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider">
                     {/* If has slip to verify */}
                     {order.payment_slip_url && (
                         <button
@@ -747,7 +747,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     onOpenSlipModal(order, 'billing');
                                 }
                             }}
-                            className="flex-1 py-2 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-2 rounded-lg bg-[var(--color-ink)] text-[var(--color-paper)] hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <ImageIcon size={12} />
                             <span>VIEW SLIP</span>
@@ -776,7 +776,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     onOpenSlipModal(order, 'kitchen');
                                 }
                             }}
-                            className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-2 rounded-lg bg-[var(--brand-plum)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <Check size={12} />
                             <span>ACCEPT & COOK</span>
@@ -809,7 +809,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     {!isLineman && order.booking_type === 'dine_in' && awaitingCallConfirm && phone && (
                         <a
                             href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-                            className="py-2 px-3 rounded-lg border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="py-2 px-3 rounded-lg border border-[var(--color-ink)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <Phone size={12} />
                             <span>CALL</span>
@@ -825,7 +825,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     updateBookingStatus(order.id, 'no_show');
                                 }
                             }}
-                            className="flex-1 py-2 rounded-lg border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.010_28)] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-2 rounded-lg border border-[var(--brand-plum)] text-[var(--brand-plum)] hover:bg-[var(--color-paper-2)] transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <X size={12} />
                             <span>NO-SHOW</span>
@@ -840,7 +840,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 if (awaitingCallConfirm && !window.confirm(`โทรคุยกับ "${name}" ยืนยันการจองโต๊ะ ${tableName || ''} แล้ว?`)) return;
                                 updateBookingStatus(order.id, 'confirmed');
                             }}
-                            className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-2 rounded-lg bg-[var(--brand-plum)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <Check size={12} />
                             <span>{awaitingCallConfirm ? 'ยืนยันทางโทรศัพท์แล้ว' : 'CONFIRM DINE-IN'}</span>
@@ -867,7 +867,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 }
                                 toast.success(`เช็คอินลูกค้าโต๊ะ ${order.tables_layout?.table_name || ''} เรียบร้อย`);
                             }}
-                            className="flex-1 py-2 rounded-lg bg-[oklch(18%_0.012_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                            className="flex-1 py-2 rounded-lg bg-[var(--color-ink)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                         >
                             <CheckCircle2 size={12} />
                             <span className="whitespace-nowrap">เช็คอิน · SEAT</span>
@@ -880,7 +880,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             {phone && (
                                 <a
                                     href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-                                    className="py-2 px-3 rounded-lg border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                    className="py-2 px-3 rounded-lg border border-[var(--color-ink)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] transition-all flex items-center justify-center gap-1 cursor-pointer"
                                 >
                                     <Phone size={12} />
                                     <span>CALL</span>
@@ -897,7 +897,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                         }
                                     }
                                 }}
-                                className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                className="flex-1 py-2 rounded-lg bg-[var(--brand-plum)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
                                 <Printer size={12} />
                                 <span>โทรยืนยันแล้ว + สั่งพิมพ์ใบครัวทันที</span>
@@ -915,7 +915,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     onOpenSlipModal({ ...order, status: 'preparing' }, 'kitchen');
                                 }
                             }}
-                            className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="flex-1 py-2 rounded-lg bg-[var(--brand-plum)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <Check size={12} />
                             <span>COOK & PRINT</span>
@@ -937,7 +937,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 <button
                                     type="button"
                                     onClick={() => onSelectOrder && onSelectOrder(order)}
-                                    className="py-2 px-3 rounded-lg bg-[oklch(18%_0.012_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                    className="py-2 px-3 rounded-lg bg-[var(--color-ink)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                                 >
                                     <CreditCard size={12} />
                                     <span>CHECKOUT POS</span>
@@ -961,7 +961,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             <button
                                 type="button"
                                 onClick={() => onSelectOrder && onSelectOrder(order)}
-                                className="flex-1 py-2 rounded-lg bg-[oklch(18%_0.012_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                className="flex-1 py-2 rounded-lg bg-[var(--color-ink)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
                                 <CreditCard size={12} />
                                 <span>CHECKOUT POS</span>
@@ -1025,33 +1025,33 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     };
 
     return (
-        <div className="h-full flex flex-col bg-[oklch(94%_0.010_28)] overflow-hidden select-none font-sans text-[oklch(18%_0.012_28)]">
+        <div className="h-full flex flex-col bg-[var(--color-paper-2)] overflow-hidden select-none font-sans text-[var(--color-ink)]">
             {/* Header & Sub-Bar */}
-            <div className="p-4 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] flex flex-col gap-3 shrink-0 shadow-2xs">
+            <div className="p-4 bg-[var(--color-paper)] border-b border-[var(--color-rule)] flex flex-col gap-3 shrink-0 shadow-2xs">
                 <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
                     <div>
-                        <h1 className="text-base font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                        <h1 className="text-base font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                             ONLINE ORDERS HUB / ศูนย์จัดการออเดอร์ออนไลน์
                         </h1>
-                        <p className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
+                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-0.5">
                             จัดการสลิปโอนเงิน การจองโต๊ะล่วงหน้า และออเดอร์รับกลับบ้าน
                         </p>
                     </div>
 
                     {/* Status Tabs */}
                     <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
-                        <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-lg border border-[oklch(85%_0.012_28)]">
+                        <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-lg border border-[var(--color-rule)]">
                             <button
                                 type="button"
                                 onClick={() => setHubTab('active')}
                                 className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                                     hubTab === 'active' 
-                                        ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' 
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-white text-[var(--color-ink)] shadow-2xs' 
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                             >
                                 <span>ACTIVE</span>
-                                <span className="bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] px-1.5 py-0.2 rounded text-[9px]">
+                                <span className="bg-[var(--brand-plum)]/15 text-[var(--brand-plum)] px-1.5 py-0.2 rounded text-[9px]">
                                     {activeOrders.length}
                                 </span>
                             </button>
@@ -1061,8 +1061,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 onClick={() => setHubTab('completed')}
                                 className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                                     hubTab === 'completed' 
-                                        ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' 
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-white text-[var(--color-ink)] shadow-2xs' 
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                             >
                                 <span>COMPLETED</span>
@@ -1076,8 +1076,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 onClick={() => setHubTab('cancelled')}
                                 className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                                     hubTab === 'cancelled' 
-                                        ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' 
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-white text-[var(--color-ink)] shadow-2xs' 
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                             >
                                 <span>CANCELLED</span>
@@ -1093,7 +1093,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         <button
                             type="button"
                             onClick={fetchOnlineData}
-                            className="p-2 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                            className="p-2 bg-white border border-[var(--color-rule)] rounded-lg text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                             title="รีเฟรชออเดอร์ออนไลน์"
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -1104,60 +1104,60 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 {/* Search & Quick Filter Chips */}
                 <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-between pt-1">
                     <div className="relative w-full sm:w-72">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" size={14} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={14} />
                         <input
                             type="search"
                             placeholder="ค้นหา Short ID (#A2EB), ชื่อ, โทร..."
-                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg py-1.5 pl-8 pr-3 text-xs text-[oklch(18%_0.012_28)] placeholder-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-colors font-mono"
+                            className="w-full bg-white border border-[var(--color-rule)] rounded-lg py-1.5 pl-8 pr-3 text-xs text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] transition-colors font-mono"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-lg border border-[oklch(85%_0.012_28)] font-mono text-[9px] font-bold uppercase tracking-wider overflow-x-auto w-full sm:w-auto">
+                    <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-lg border border-[var(--color-rule)] font-mono text-[9px] font-bold uppercase tracking-wider overflow-x-auto w-full sm:w-auto">
                         <button
                             type="button"
                             onClick={() => setChannelFilter('all')}
-                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'all' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'all' ? 'bg-white text-[var(--color-ink)] shadow-2xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             ALL TYPES
                         </button>
                         <button
                             type="button"
                             onClick={() => setChannelFilter('lineman')}
-                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'lineman' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'lineman' ? 'bg-white text-[var(--color-ink)] shadow-2xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             LINE MAN
                         </button>
                         <button
                             type="button"
                             onClick={() => setChannelFilter('slips')}
-                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'slips' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'slips' ? 'bg-white text-[var(--color-ink)] shadow-2xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             SLIPS ONLY
                         </button>
                         <button
                             type="button"
                             onClick={() => setChannelFilter('bookings')}
-                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'bookings' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'bookings' ? 'bg-white text-[var(--color-ink)] shadow-2xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             DINE-IN
                         </button>
                         <button
                             type="button"
                             onClick={() => setChannelFilter('pickups')}
-                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'pickups' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'pickups' ? 'bg-white text-[var(--color-ink)] shadow-2xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             PICK-UP
                         </button>
                         <button
                             type="button"
                             onClick={() => setChannelFilter('hausmade')}
-                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${channelFilter === 'hausmade' ? 'bg-[oklch(52%_0.16_28)] text-white shadow-2xs font-bold' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)]'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${channelFilter === 'hausmade' ? 'bg-[var(--brand-plum)] text-white shadow-2xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--brand-plum)]'}`}
                         >
                             <span>HAUSMADE</span>
                             {hausmadeOrders.length > 0 && (
-                                <span className={`px-1 py-0.2 text-[9px] rounded font-mono ${channelFilter === 'hausmade' ? 'bg-white text-[oklch(52%_0.16_28)]' : 'bg-[oklch(52%_0.16_28)] text-white'}`}>
+                                <span className={`px-1 py-0.2 text-[9px] rounded font-mono ${channelFilter === 'hausmade' ? 'bg-white text-[var(--brand-plum)]' : 'bg-[var(--brand-plum)] text-white'}`}>
                                     {hausmadeOrders.length}
                                 </span>
                             )}
@@ -1170,10 +1170,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             {hubTab === 'active' && (
                 <div className="flex-1 p-4 overflow-x-auto flex gap-4 snap-x scrollbar-none">
                     {/* Column 1: Slips to Verify */}
-                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(85%_0.012_28)] p-3.5 shadow-2xs">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[var(--color-paper)] rounded-xl border border-[var(--color-rule)] p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-rule)]">
                             <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                     VERIFY SLIPS / ตรวจสลิป
                                 </span>
                             </div>
@@ -1184,7 +1184,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
                             {slipsToVerify.length === 0 ? (
-                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-12">
                                     ไม่มีสลิปค้างตรวจสอบ
                                 </div>
                             ) : (
@@ -1196,10 +1196,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     </div>
 
                     {/* Column 2: LINE MAN Orders */}
-                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(85%_0.012_28)] p-3.5 shadow-2xs">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[var(--color-paper)] rounded-xl border border-[var(--color-rule)] p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-rule)]">
                             <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                     LINE MAN / เดลิเวอรี
                                 </span>
                             </div>
@@ -1210,7 +1210,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
                             {linemanOrders.length === 0 ? (
-                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-12">
                                     ไม่มีออเดอร์ LINE MAN ค้างอยู่
                                 </div>
                             ) : (
@@ -1222,10 +1222,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     </div>
 
                     {/* Column 3: Pick-up Orders */}
-                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(85%_0.012_28)] p-3.5 shadow-2xs">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[var(--color-paper)] rounded-xl border border-[var(--color-rule)] p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-rule)]">
                             <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                     ONLINE PICKUPS / รับกลับบ้าน
                                 </span>
                             </div>
@@ -1236,7 +1236,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
                             {onlinePickups.length === 0 ? (
-                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-12">
                                     ไม่มีออเดอร์รับกลับบ้านที่กำลังดำเนินการ
                                 </div>
                             ) : (
@@ -1248,21 +1248,21 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     </div>
 
                     {/* Column 4: Dine-in Reservations */}
-                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(85%_0.012_28)] p-3.5 shadow-2xs">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[var(--color-paper)] rounded-xl border border-[var(--color-rule)] p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-rule)]">
                             <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                     DINE-IN BOOKINGS / จองโต๊ะ
                                 </span>
                             </div>
-                            <span className="bg-[oklch(18%_0.012_28)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                            <span className="bg-[var(--color-ink)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
                                 {newBookings.length}
                             </span>
                         </div>
 
                         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
                             {newBookings.length === 0 ? (
-                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-12">
                                     ไม่มีรายการจองโต๊ะค้างอยู่
                                 </div>
                             ) : (
@@ -1274,21 +1274,21 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     </div>
 
                     {/* Column 5: HAUSMADE Orders */}
-                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(52%_0.16_28)]/40 p-3.5 shadow-2xs">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[var(--color-paper)] rounded-xl border border-[var(--brand-plum)]/40 p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-rule)]">
                             <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                     HAUSMADE / สินค้า & พัสดุ
                                 </span>
                             </div>
-                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                            <span className="bg-[var(--brand-plum)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
                                 {hausmadeOrders.length}
                             </span>
                         </div>
 
                         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
                             {hausmadeOrders.length === 0 ? (
-                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-12">
                                     ไม่มีออเดอร์ HAUSMADE ค้างอยู่
                                 </div>
                             ) : (
@@ -1305,7 +1305,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             {hubTab === 'completed' && (
                 <div className="flex-1 p-4 overflow-y-auto">
                     {completedOrders.length === 0 ? (
-                        <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-16">
+                        <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-16">
                             ไม่มีออเดอร์ออนไลน์ที่สำเร็จแล้วในวันนี้
                         </div>
                     ) : (
@@ -1320,7 +1320,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             {hubTab === 'cancelled' && (
                 <div className="flex-1 p-4 overflow-y-auto">
                     {cancelledOrders.length === 0 ? (
-                        <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-16">
+                        <div className="text-center text-[var(--color-neutral)] text-xs font-mono py-16">
                             ไม่มีออเดอร์ออนไลน์ที่ยกเลิกในวันนี้
                         </div>
                     ) : (
@@ -1348,9 +1348,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 initial={{ scale: 0.95, y: 10 }}
                                 animate={{ scale: 1, y: 0 }}
                                 exit={{ scale: 0.95, y: 10 }}
-                                className="bg-[oklch(97%_0.008_28)] rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border-2 border-[oklch(52%_0.16_28)] font-sans"
+                                className="bg-[var(--color-paper)] rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border-2 border-[var(--brand-plum)] font-sans"
                             >
-                                <div className={`${isOrderLineman(persistentAlert) ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(52%_0.16_28)]'} p-5 text-center text-white flex flex-col items-center`}>
+                                <div className={`${isOrderLineman(persistentAlert) ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[var(--error-red)]'} p-5 text-center text-white flex flex-col items-center`}>
                                     <span className="font-mono text-[10px] font-bold uppercase tracking-widest bg-black/20 px-2 py-0.5 rounded mb-1">
                                         {isOrderLineman(persistentAlert) ? 'LINE MAN DELIVERY' : 'INCOMING NOTIFICATION'}
                                     </span>
@@ -1364,10 +1364,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 
                                 <div className="p-5 flex flex-col items-center text-center gap-3 font-sans">
                                     <div>
-                                        <p className="text-[oklch(18%_0.012_28)] font-bold text-base">
+                                        <p className="text-[var(--color-ink)] font-bold text-base">
                                             {persistentAlert.profiles?.display_name || persistentAlert.pickup_contact_name || persistentAlert.customer_name || 'Online Customer'}
                                         </p>
-                                        <p className="text-[oklch(55%_0.010_28)] font-mono text-xs mt-0.5">
+                                        <p className="text-[var(--color-neutral)] font-mono text-xs mt-0.5">
                                             {isOrderLineman(persistentAlert) 
                                                 ? `[LINE MAN PREPAID · ฿${(persistentAlert.total_amount || 0).toLocaleString()}]` 
                                                 : (isPickupAlert ? '[PICK-UP ORDER · รับกลับบ้าน]' : `[DINE-IN · ${persistentAlert.pax || 2} ท่าน${persistentAlert.tables_layout?.table_name ? ` · โต๊ะ ${persistentAlert.tables_layout.table_name}` : ''}]`)}
@@ -1376,16 +1376,16 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     </div>
 
                                     {/* Complete Date & Time Block */}
-                                    <div className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3 font-mono text-xs flex flex-col gap-1.5 text-left">
+                                    <div className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl p-3 font-mono text-xs flex flex-col gap-1.5 text-left">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-bold uppercase text-[oklch(55%_0.010_28)]">
+                                            <span className="text-[10px] font-bold uppercase text-[var(--color-neutral)]">
                                                 {isPickupAlert ? 'วัน-เวลานัดรับ:' : 'วัน-เวลานัดหมาย:'}
                                             </span>
-                                            <span className="font-black text-[oklch(18%_0.012_28)]">
+                                            <span className="font-black text-[var(--color-ink)]">
                                                 {alertApptDt.shortText}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center border-t border-[oklch(85%_0.012_28)] pt-1 text-[11px] text-[oklch(55%_0.010_28)]">
+                                        <div className="flex justify-between items-center border-t border-[var(--color-rule)] pt-1 text-[11px] text-[var(--color-neutral)]">
                                             <span>ทำรายการเมื่อ:</span>
                                             <span className="font-bold">{alertCreatedDt.compactText}</span>
                                         </div>
@@ -1393,7 +1393,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     
                                     <button 
                                         onClick={handleAcknowledge}
-                                        className="mt-1 w-full py-3 rounded-xl bg-[oklch(18%_0.012_28)] text-white font-mono font-bold text-xs uppercase tracking-wider hover:bg-black active:scale-98 shadow-sm cursor-pointer transition-all"
+                                        className="mt-1 w-full py-3 rounded-xl bg-[var(--color-ink)] text-white font-mono font-bold text-xs uppercase tracking-wider hover:bg-black active:scale-98 shadow-sm cursor-pointer transition-all"
                                     >
                                         ACKNOWLEDGE & VIEW
                                     </button>

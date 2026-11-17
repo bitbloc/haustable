@@ -959,38 +959,38 @@ export default function HausmadeKeychainPlayground({
     }
 
     return (
-        <div className="w-full flex flex-col bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-sans antialiased overflow-hidden select-none">
+        <div className="w-full flex flex-col bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] font-sans antialiased overflow-hidden select-none">
             {/* 1. Header Bar (Dieter Rams Neo-Brutalist Grid) */}
-            <div className="flex flex-wrap items-center justify-between border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] px-4 py-2.5 font-mono text-xs gap-3">
+            <div className="flex flex-wrap items-center justify-between border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] px-4 py-2.5 font-mono text-xs gap-3">
                 <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 bg-[oklch(52%_0.16_28)]" />
-                    <span className="font-bold tracking-wider uppercase text-[oklch(18%_0.012_28)]">
+                    <span className="w-2.5 h-2.5 bg-[var(--brand-plum)]" />
+                    <span className="font-bold tracking-wider uppercase text-[var(--color-ink)]">
                         HAUSMADE // 3D KEYCHAIN ATELIER
                     </span>
-                    <span className="text-[oklch(55%_0.010_28)] hidden sm:inline">
+                    <span className="text-[var(--color-neutral)] hidden sm:inline">
                         · SYSTEM 04/05
                     </span>
                 </div>
 
                 {/* Live Telemetry Status Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] font-bold text-[11px]">
+                    <span className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper)] font-bold text-[11px]">
                         CORD: ⌀{holeDiameter}mm
                     </span>
-                    <span className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[11px]">
+                    <span className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[11px]">
                         {metrics.lengthMm}×{metrics.heightMm}×{thickness}mm
                     </span>
-                    <span className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[11px]">
+                    <span className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[11px]">
                         ~{metrics.weightEst}g
                     </span>
-                    <span className="px-2 py-0.5 border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] font-bold text-[11px] tabular-nums">
+                    <span className="px-2 py-0.5 border border-[var(--brand-plum)] bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] font-bold text-[11px] tabular-nums">
                         ฿{priceCalculation.total}.-
                     </span>
                     {onClose && (
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-2.5 py-0.5 border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors cursor-pointer font-bold"
+                            className="px-2.5 py-0.5 border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] transition-colors cursor-pointer font-bold"
                         >
                             [ X ]
                         </button>
@@ -999,8 +999,8 @@ export default function HausmadeKeychainPlayground({
             </div>
 
             {/* 2. Quick Presets Bar (1-Click Inspiration) */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-[oklch(99%_0.005_28)] border-b border-[oklch(85%_0.012_28)] overflow-x-auto scrollbar-none font-mono text-[11px]">
-                <span className="text-[oklch(55%_0.010_28)] font-bold whitespace-nowrap uppercase">
+            <div className="flex items-center gap-2 px-4 py-2 bg-[var(--color-paper)] border-b border-[var(--color-rule)] overflow-x-auto scrollbar-none font-mono text-[11px]">
+                <span className="text-[var(--color-neutral)] font-bold whitespace-nowrap uppercase">
                     PRESETS:
                 </span>
                 {STYLE_PRESETS.map(preset => (
@@ -1008,7 +1008,7 @@ export default function HausmadeKeychainPlayground({
                         key={preset.id}
                         type="button"
                         onClick={() => applyPreset(preset)}
-                        className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] whitespace-nowrap font-bold text-[10px] uppercase transition-all cursor-pointer shadow-2xs"
+                        className="px-2.5 py-1 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:border-[var(--color-ink)] text-[var(--color-ink)] whitespace-nowrap font-bold text-[10px] uppercase transition-all cursor-pointer shadow-2xs"
                         title={preset.desc}
                     >
                         {preset.name}
@@ -1019,20 +1019,20 @@ export default function HausmadeKeychainPlayground({
             {/* 3. Main Studio Grid (2-Column Layout: Canvas on Left, Controls on Right) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
                 {/* LEFT: Canvas Stage (8 Cols) */}
-                <div className="lg:col-span-8 flex flex-col relative border-b lg:border-b-0 lg:border-r border-[oklch(85%_0.012_28)] bg-[#F8F5F0]">
+                <div className="lg:col-span-8 flex flex-col relative border-b lg:border-b-0 lg:border-r border-[var(--color-rule)] bg-[#F8F5F0]">
                     {/* Canvas Toolbar with 2D / 3D Switcher */}
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]/90 font-mono text-[11px] gap-2 flex-wrap z-10">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-rule)] bg-[var(--color-paper)]/90 font-mono text-[11px] gap-2 flex-wrap z-10">
                         {/* 2D Blueprint vs 3D Isometric Switcher */}
                         <div className="flex items-center gap-1.5">
-                            <span className="text-[oklch(55%_0.010_28)] font-bold">VIEW:</span>
-                            <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5">
+                            <span className="text-[var(--color-neutral)] font-bold">VIEW:</span>
+                            <div className="flex border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-0.5">
                                 <button
                                     type="button"
                                     onClick={() => setViewMode('3d')}
                                     className={`px-2 py-0.5 text-[10px] font-bold transition-all ${
                                         viewMode === '3d'
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
-                                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-2xs'
+                                            : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                                     }`}
                                 >
                                     [ 3D ISOMETRIC ]
@@ -1042,8 +1042,8 @@ export default function HausmadeKeychainPlayground({
                                     onClick={() => setViewMode('2d')}
                                     className={`px-2 py-0.5 text-[10px] font-bold transition-all ${
                                         viewMode === '2d'
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs'
-                                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-2xs'
+                                            : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                                     }`}
                                 >
                                     [ 2D BLUEPRINT ]
@@ -1053,21 +1053,21 @@ export default function HausmadeKeychainPlayground({
 
                         {/* Toggles & Grid Resolution */}
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[oklch(55%_0.010_28)]">GRID:</span>
+                            <span className="text-[var(--color-neutral)]">GRID:</span>
                             <button
                                 type="button"
                                 onClick={() => setShowGrid(!showGrid)}
                                 className={`px-2 py-0.5 border text-[10px] font-bold transition-all ${
                                     showGrid
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                        : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)]'
                                 }`}
                             >
                                 {showGrid ? '[ ON ]' : '[ OFF ]'}
                             </button>
 
                             {showGrid && (
-                                <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                                <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper-2)]">
                                     {[1, 5, 10].map(s => (
                                         <button
                                             key={s}
@@ -1075,8 +1075,8 @@ export default function HausmadeKeychainPlayground({
                                             onClick={() => setGridStep(s)}
                                             className={`px-1.5 py-0.5 text-[10px] font-bold ${
                                                 gridStep === s
-                                                    ? 'bg-[oklch(52%_0.16_28)] text-white'
-                                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                                    ? 'bg-[var(--brand-plum)] text-white'
+                                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                                             }`}
                                         >
                                             {s}mm
@@ -1085,22 +1085,22 @@ export default function HausmadeKeychainPlayground({
                                 </div>
                             )}
 
-                            <label className="flex items-center gap-1 cursor-pointer text-[10px] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                            <label className="flex items-center gap-1 cursor-pointer text-[10px] text-[var(--color-muted)] hover:text-[var(--color-ink)]">
                                 <input
                                     type="checkbox"
                                     checked={showCordPreview}
                                     onChange={(e) => setShowCordPreview(e.target.checked)}
-                                    className="accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                    className="accent-[var(--brand-plum)] cursor-pointer"
                                 />
                                 <span>PARACORD</span>
                             </label>
 
-                            <label className="flex items-center gap-1 cursor-pointer text-[10px] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                            <label className="flex items-center gap-1 cursor-pointer text-[10px] text-[var(--color-muted)] hover:text-[var(--color-ink)]">
                                 <input
                                     type="checkbox"
                                     checked={showLayerTexture}
                                     onChange={(e) => setShowLayerTexture(e.target.checked)}
-                                    className="accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                    className="accent-[var(--brand-plum)] cursor-pointer"
                                 />
                                 <span>3D LAYERS</span>
                             </label>
@@ -1111,7 +1111,7 @@ export default function HausmadeKeychainPlayground({
                             <button
                                 type="button"
                                 onClick={() => setZoom(z => Math.max(0.6, z - 0.1))}
-                                className="w-5 h-5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold leading-none flex items-center justify-center hover:bg-[oklch(18%_0.012_28)] hover:text-white"
+                                className="w-5 h-5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] font-bold leading-none flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-white"
                             >
                                 -
                             </button>
@@ -1121,7 +1121,7 @@ export default function HausmadeKeychainPlayground({
                             <button
                                 type="button"
                                 onClick={() => setZoom(z => Math.min(1.8, z + 0.1))}
-                                className="w-5 h-5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold leading-none flex items-center justify-center hover:bg-[oklch(18%_0.012_28)] hover:text-white"
+                                className="w-5 h-5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] font-bold leading-none flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-white"
                             >
                                 +
                             </button>
@@ -1156,17 +1156,17 @@ export default function HausmadeKeychainPlayground({
                                 onClick={handleCanvasClick}
                                 className="w-full h-full block cursor-crosshair"
                             />
-                            <div className="absolute bottom-2 left-3 font-mono text-[9px] text-[oklch(55%_0.010_28)] pointer-events-none">
+                            <div className="absolute bottom-2 left-3 font-mono text-[9px] text-[var(--color-neutral)] pointer-events-none">
                                 💡 คลิกที่ตัวอักษรบน Canvas เพื่อเลือกปรับ Nudge ได้ทันที
                             </div>
                         </div>
                     )}
 
                     {/* Bottom Quick-Action Status Bar */}
-                    <div className="border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] px-4 py-2 flex items-center justify-between font-mono text-[11px] gap-2 flex-wrap">
+                    <div className="border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] px-4 py-2 flex items-center justify-between font-mono text-[11px] gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
-                            <span className="text-[oklch(42%_0.010_28)]">
+                            <span className="text-[var(--color-muted)]">
                                 READY TO PRINT · 3D PRINT DURATION ~{metrics.printTimeEst} MIN · RIGIDITY: {thickness}mm
                             </span>
                         </div>
@@ -1176,7 +1176,7 @@ export default function HausmadeKeychainPlayground({
                             type="button"
                             disabled={isExporting}
                             onClick={handleExportPNG}
-                            className="px-3 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] font-bold text-[oklch(18%_0.012_28)] transition-all cursor-pointer shadow-2xs"
+                            className="px-3 py-1 bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] font-bold text-[var(--color-ink)] transition-all cursor-pointer shadow-2xs"
                         >
                             {isExporting ? '[ RENDERING SPEC CARD... ]' : '[ EXPORT AESTHETIC PNG // บันทึกการ์ดสเปก ]'}
                         </button>
@@ -1184,9 +1184,9 @@ export default function HausmadeKeychainPlayground({
                 </div>
 
                 {/* RIGHT: Studio Controls (4 Cols) */}
-                <div className="lg:col-span-4 flex flex-col bg-[oklch(97%_0.008_28)]">
+                <div className="lg:col-span-4 flex flex-col bg-[var(--color-paper)]">
                     {/* Tab Navigation (Tabular Cells) */}
-                    <div className="grid grid-cols-6 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-mono text-[9px] sm:text-[10px]">
+                    <div className="grid grid-cols-6 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] font-mono text-[9px] sm:text-[10px]">
                         {[
                             { id: 'presets', label: 'PRESET' },
                             { id: 'text', label: '1. TEXT' },
@@ -1199,10 +1199,10 @@ export default function HausmadeKeychainPlayground({
                                 key={t.id}
                                 type="button"
                                 onClick={() => setActiveTab(t.id)}
-                                className={`py-2.5 font-bold uppercase transition-colors border-r last:border-r-0 border-[oklch(85%_0.012_28)] ${
+                                className={`py-2.5 font-bold uppercase transition-colors border-r last:border-r-0 border-[var(--color-rule)] ${
                                     activeTab === t.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                        : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(92%_0.010_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                        : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
                                 }`}
                             >
                                 {t.label}
@@ -1215,7 +1215,7 @@ export default function HausmadeKeychainPlayground({
                         {/* TAB 0: SMART PRESETS */}
                         {activeTab === 'presets' && (
                             <div className="flex flex-col gap-3">
-                                <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                     [ CURATED ATELIER PRESETS // สไตล์สำเร็จรูป ]
                                 </span>
                                 <div className="flex flex-col gap-2">
@@ -1224,13 +1224,13 @@ export default function HausmadeKeychainPlayground({
                                             key={preset.id}
                                             type="button"
                                             onClick={() => applyPreset(preset)}
-                                            className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] hover:bg-[oklch(94%_0.010_28)] text-left flex flex-col gap-1 transition-all cursor-pointer shadow-2xs"
+                                            className="p-3 border border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-left flex flex-col gap-1 transition-all cursor-pointer shadow-2xs"
                                         >
-                                            <div className="flex justify-between items-center font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                            <div className="flex justify-between items-center font-mono text-xs font-bold text-[var(--color-ink)]">
                                                 <span>{preset.name}</span>
-                                                <span className="text-[oklch(52%_0.16_28)]">⌀{preset.holeDiameter}mm</span>
+                                                <span className="text-[var(--brand-plum)]">⌀{preset.holeDiameter}mm</span>
                                             </div>
-                                            <p className="text-[11px] text-[oklch(42%_0.010_28)] font-sans">
+                                            <p className="text-[11px] text-[var(--color-muted)] font-sans">
                                                 {preset.desc}
                                             </p>
                                         </button>
@@ -1244,8 +1244,8 @@ export default function HausmadeKeychainPlayground({
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-1.5">
                                     <div className="flex justify-between items-center font-mono text-[10px] font-bold">
-                                        <span className="text-[oklch(55%_0.010_28)] uppercase">[ KEYCHAIN TEXT // ข้อความบนพวงกุญแจ ]</span>
-                                        <span className={text.length >= (pricing.maxChars || 10) ? 'text-[oklch(52%_0.16_28)] font-bold' : 'text-[oklch(55%_0.010_28)]'}>
+                                        <span className="text-[var(--color-neutral)] uppercase">[ KEYCHAIN TEXT // ข้อความบนพวงกุญแจ ]</span>
+                                        <span className={text.length >= (pricing.maxChars || 10) ? 'text-[var(--brand-plum)] font-bold' : 'text-[var(--color-neutral)]'}>
                                             {text.length}/{pricing.maxChars || 10} ตัว
                                         </span>
                                     </div>
@@ -1255,13 +1255,13 @@ export default function HausmadeKeychainPlayground({
                                         value={text}
                                         onChange={(e) => setText(e.target.value)}
                                         placeholder="พิมพ์ชื่อของคุณ (เช่น haus, Joy)"
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] text-base font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        className="w-full px-3 py-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-base font-bold focus:outline-none focus:border-[var(--brand-plum)]"
                                     />
-                                    <div className="flex flex-col gap-1 font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                    <div className="flex flex-col gap-1 font-mono text-[10px] text-[var(--color-neutral)]">
                                         <span>* ราคาตั้งต้นรวม {pricing.baseCharLimit} ตัวแรก (ตัวอักษรส่วนเกิน +฿{pricing.extraCharPrice}/ตัว)</span>
                                     </div>
                                     {text.length >= (pricing.maxChars || 10) && (
-                                        <div className="p-2 border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] text-[10px] font-mono font-bold flex items-center justify-between">
+                                        <div className="p-2 border border-[var(--brand-plum)] bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] text-[10px] font-mono font-bold flex items-center justify-between">
                                             <span>[ SAFE BOUNDARY REACHED ]</span>
                                             <span>ครบขีดจำกัด {pricing.maxChars || 10} ตัวสูงสุดเพื่อความแข็งแรง</span>
                                         </div>
@@ -1269,10 +1269,10 @@ export default function HausmadeKeychainPlayground({
                                 </div>
 
                                 {/* Reverse Sub-text Engraving */}
-                                <div className="flex flex-col gap-1.5 border-t border-[oklch(85%_0.012_28)] pt-3">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase flex justify-between">
+                                <div className="flex flex-col gap-1.5 border-t border-[var(--color-rule)] pt-3">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase flex justify-between">
                                         <span>[ REVERSE ENGRAVING // สลักข้อความเสริม/เบอร์โทร ]</span>
-                                        <span className="text-[oklch(55%_0.010_28)] font-normal">OPTIONAL</span>
+                                        <span className="text-[var(--color-neutral)] font-normal">OPTIONAL</span>
                                     </label>
                                     <input
                                         type="text"
@@ -1280,14 +1280,14 @@ export default function HausmadeKeychainPlayground({
                                         value={reverseText}
                                         onChange={(e) => setReverseText(e.target.value)}
                                         placeholder="เช่น TEL: 098-XXX-XXXX หรือ EST. 2026"
-                                        className="w-full px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] text-xs font-mono focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        className="w-full px-3 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-xs font-mono focus:outline-none focus:border-[var(--brand-plum)]"
                                     />
                                 </div>
 
                                 {/* Font Size Slider */}
-                                <div className="flex flex-col gap-1.5 border-t border-[oklch(85%_0.012_28)] pt-3">
+                                <div className="flex flex-col gap-1.5 border-t border-[var(--color-rule)] pt-3">
                                     <div className="flex justify-between font-mono text-[10px] font-bold">
-                                        <span className="text-[oklch(55%_0.010_28)] uppercase">[ FONT SIZE SCALE ]</span>
+                                        <span className="text-[var(--color-neutral)] uppercase">[ FONT SIZE SCALE ]</span>
                                         <span>{fontSize} pt</span>
                                     </div>
                                     <input
@@ -1296,13 +1296,13 @@ export default function HausmadeKeychainPlayground({
                                         max={64}
                                         value={fontSize}
                                         onChange={(e) => setFontSize(Number(e.target.value))}
-                                        className="accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                        className="accent-[var(--brand-plum)] cursor-pointer"
                                     />
                                 </div>
 
                                 {/* Curated Calligraphy Font Picker */}
                                 <div className="flex flex-col gap-2">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         [ CURATED CALLIGRAPHY // เลือกฟอนต์ลายมือ ]
                                     </label>
                                     <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-1">
@@ -1317,8 +1317,8 @@ export default function HausmadeKeychainPlayground({
                                                 }}
                                                 className={`p-2 border text-left flex items-center justify-between transition-all ${
                                                     selectedFont?.id === f.id && !customFontFamily
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                        : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                                 }`}
                                             >
                                                 <div className="flex flex-col">
@@ -1330,7 +1330,7 @@ export default function HausmadeKeychainPlayground({
                                                     </span>
                                                 </div>
                                                 {selectedFont?.id === f.id && !customFontFamily && (
-                                                    <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)]">
+                                                    <span className="font-mono text-[10px] font-bold text-[var(--brand-plum)]">
                                                         [ ACTIVE ]
                                                     </span>
                                                 )}
@@ -1340,16 +1340,16 @@ export default function HausmadeKeychainPlayground({
                                 </div>
 
                                 {/* Custom Font File Uploader */}
-                                <div className="border-t border-[oklch(85%_0.012_28)] pt-3 flex flex-col gap-2">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase flex items-center justify-between">
+                                <div className="border-t border-[var(--color-rule)] pt-3 flex flex-col gap-2">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase flex items-center justify-between">
                                         <span>[ UPLOAD FONT // ใส่ฟอนต์ของคุณเอง ]</span>
-                                        <span className="text-[oklch(52%_0.16_28)] font-normal">.ttf / .otf / .woff</span>
+                                        <span className="text-[var(--brand-plum)] font-normal">.ttf / .otf / .woff</span>
                                     </label>
                                     <input
                                         type="file"
                                         accept=".ttf,.otf,.woff,.woff2"
                                         onChange={handleFontUpload}
-                                        className="font-mono text-xs file:mr-2 file:py-1 file:px-2.5 file:border file:border-[oklch(85%_0.012_28)] file:bg-[oklch(94%_0.010_28)] file:font-mono file:text-[10px] file:font-bold file:uppercase hover:file:bg-[oklch(18%_0.012_28)] hover:file:text-white cursor-pointer"
+                                        className="font-mono text-xs file:mr-2 file:py-1 file:px-2.5 file:border file:border-[var(--color-rule)] file:bg-[var(--color-paper-2)] file:font-mono file:text-[10px] file:font-bold file:uppercase hover:file:bg-[var(--color-ink)] hover:file:text-white cursor-pointer"
                                     />
                                     {customFontName && (
                                         <div className="p-2 bg-[oklch(45%_0.08_140)]/15 border border-[oklch(45%_0.08_140)] font-mono text-[10px] text-[oklch(35%_0.08_140)] font-bold flex justify-between items-center">
@@ -1375,13 +1375,13 @@ export default function HausmadeKeychainPlayground({
                         {activeTab === 'charms' && (
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center justify-between font-mono text-[10px] font-bold uppercase">
-                                    <span className="text-[oklch(55%_0.010_28)]">[ BRAND 3D CHARMS // ชาร์มแบรนด์ ]</span>
-                                    <span className="text-[oklch(52%_0.16_28)]">
+                                    <span className="text-[var(--color-neutral)]">[ BRAND 3D CHARMS // ชาร์มแบรนด์ ]</span>
+                                    <span className="text-[var(--brand-plum)]">
                                         {selectedCharms.length}/{pricing.maxElements ?? 2} ชิ้น
                                     </span>
                                 </div>
 
-                                <p className="text-[11px] text-[oklch(42%_0.010_28)] leading-relaxed">
+                                <p className="text-[11px] text-[var(--color-muted)] leading-relaxed">
                                     เลือกติดชาร์มโมเดล 3D เอกลักษณ์ของแบรนด์ HAUS หรือดีไซน์พิเศษจากคลังแบรนด์ (จำกัดสูงสุด {pricing.maxElements ?? 2} ชิ้น เพื่อความแข็งแรงของข้อต่อ 3D Print)
                                 </p>
 
@@ -1395,15 +1395,15 @@ export default function HausmadeKeychainPlayground({
                                                 onClick={() => toggleCharm(charm)}
                                                 className={`p-3 border text-left flex items-center justify-between transition-all cursor-pointer ${
                                                     isSelected
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-2xs'
-                                                        : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] shadow-2xs'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <span className={`w-8 h-8 flex items-center justify-center text-lg font-serif border ${
                                                         isSelected
-                                                            ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                                            : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                            ? 'bg-[var(--brand-plum)] text-white border-[var(--brand-plum)]'
+                                                            : 'bg-[var(--color-paper-2)] border-[var(--color-rule)]'
                                                     }`}>
                                                         {charm.symbol || '✿'}
                                                     </span>
@@ -1411,7 +1411,7 @@ export default function HausmadeKeychainPlayground({
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="font-bold text-xs">{charm.name}</span>
                                                             {charm.is_default && (
-                                                                <span className="text-[9px] px-1 py-0.2 bg-[oklch(52%_0.16_28)] text-white uppercase font-mono">
+                                                                <span className="text-[9px] px-1 py-0.2 bg-[var(--brand-plum)] text-white uppercase font-mono">
                                                                     SIGNATURE
                                                                 </span>
                                                             )}
@@ -1426,7 +1426,7 @@ export default function HausmadeKeychainPlayground({
                                                     {isSelected ? (
                                                         <span className="text-[oklch(88%_0.18_95)]">[ เลือกแล้ว ]</span>
                                                     ) : (
-                                                        <span className="text-[oklch(55%_0.010_28)]">+ ฿{charm.price || pricing.elementPrice || 20}</span>
+                                                        <span className="text-[var(--color-neutral)]">+ ฿{charm.price || pricing.elementPrice || 20}</span>
                                                     )}
                                                 </div>
                                             </button>
@@ -1435,7 +1435,7 @@ export default function HausmadeKeychainPlayground({
                                 </div>
 
                                 {selectedCharms.length >= (pricing.maxElements ?? 2) && (
-                                    <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-[10px] text-[oklch(55%_0.010_28)] flex items-center justify-between">
+                                    <div className="p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-[10px] text-[var(--color-neutral)] flex items-center justify-between">
                                         <span>[ MAX CHARMS REACHED ]</span>
                                         <span>ครบโควตา {pricing.maxElements ?? 2} ชิ้น</span>
                                     </div>
@@ -1448,7 +1448,7 @@ export default function HausmadeKeychainPlayground({
                             <div className="flex flex-col gap-4">
                                 {/* Hardware Attachment Type */}
                                 <div className="flex flex-col gap-2">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         [ HARDWARE ATTACHMENT // อุปกรณ์คล้อง ]
                                     </label>
                                     <div className="grid grid-cols-3 gap-2 font-mono text-xs">
@@ -1463,8 +1463,8 @@ export default function HausmadeKeychainPlayground({
                                                 onClick={() => setHardwareType(h.id)}
                                                 className={`p-2 border text-center font-bold flex flex-col gap-0.5 cursor-pointer transition-all ${
                                                     hardwareType === h.id
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                        : 'bg-[oklch(99%_0.005_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                                 }`}
                                             >
                                                 <span>{h.label}</span>
@@ -1476,8 +1476,8 @@ export default function HausmadeKeychainPlayground({
 
                                 {/* Metal Finish Options (if ring selected) */}
                                 {hardwareType === 'ring' && (
-                                    <div className="flex flex-col gap-1.5 border-t border-[oklch(85%_0.012_28)] pt-3">
-                                        <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <div className="flex flex-col gap-1.5 border-t border-[var(--color-rule)] pt-3">
+                                        <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                             [ RING FINISH // สีห่วงโลหะ ]
                                         </label>
                                         <div className="grid grid-cols-3 gap-2 font-mono text-xs">
@@ -1492,8 +1492,8 @@ export default function HausmadeKeychainPlayground({
                                                     onClick={() => setHardwareFinish(f.id)}
                                                     className={`p-2 border flex items-center justify-center gap-1.5 font-bold cursor-pointer ${
                                                         hardwareFinish === f.id
-                                                            ? 'border-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)]'
-                                                            : 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)]'
+                                                            ? 'border-[var(--color-ink)] bg-[var(--color-paper-2)]'
+                                                            : 'border-[var(--color-rule)] bg-[var(--color-paper)]'
                                                     }`}
                                                 >
                                                     <span className="w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: f.hex }} />
@@ -1506,8 +1506,8 @@ export default function HausmadeKeychainPlayground({
 
                                 {/* Paracord Colorway Picker (if cord selected) */}
                                 {hardwareType === 'cord' && (
-                                    <div className="flex flex-col gap-2 border-t border-[oklch(85%_0.012_28)] pt-3">
-                                        <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <div className="flex flex-col gap-2 border-t border-[var(--color-rule)] pt-3">
+                                        <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                             [ PARACORD COLOR // สีเชือกร้อยพวงกุญแจ ]
                                         </label>
                                         <div className="grid grid-cols-1 gap-1.5">
@@ -1518,8 +1518,8 @@ export default function HausmadeKeychainPlayground({
                                                     onClick={() => setCordColor(c)}
                                                     className={`p-2 border text-left flex items-center justify-between transition-all cursor-pointer ${
                                                         cordColor.id === c.id
-                                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                            : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                            : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-2">
@@ -1527,7 +1527,7 @@ export default function HausmadeKeychainPlayground({
                                                         <span className="font-bold text-xs">{c.name}</span>
                                                     </div>
                                                     {cordColor.id === c.id && (
-                                                        <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)]">
+                                                        <span className="font-mono text-[10px] font-bold text-[var(--brand-plum)]">
                                                             [ ACTIVE ]
                                                         </span>
                                                     )}
@@ -1538,8 +1538,8 @@ export default function HausmadeKeychainPlayground({
                                 )}
 
                                 {/* Eyelet Cord Hole Size (4mm vs 5mm) */}
-                                <div className="flex flex-col gap-2 border-t border-[oklch(85%_0.012_28)] pt-3">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                <div className="flex flex-col gap-2 border-t border-[var(--color-rule)] pt-3">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         [ CORD HOLE GAUGE // ขนาดรูร้อยเชือก ]
                                     </label>
                                     <div className="grid grid-cols-2 gap-2">
@@ -1548,11 +1548,11 @@ export default function HausmadeKeychainPlayground({
                                             onClick={() => setHoleDiameter(4.0)}
                                             className={`p-3 border font-mono text-left transition-all cursor-pointer ${
                                                 holeDiameter === 4.0
-                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                    : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                    : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                             }`}
                                         >
-                                            <div className="font-bold text-sm text-[oklch(52%_0.16_28)]">⌀ 4.0 MM</div>
+                                            <div className="font-bold text-sm text-[var(--brand-plum)]">⌀ 4.0 MM</div>
                                             <div className="text-[10px] opacity-80 mt-1">Paracord 550 / ห่วงโลหะ / มาตรฐาน</div>
                                         </button>
                                         <button
@@ -1560,19 +1560,19 @@ export default function HausmadeKeychainPlayground({
                                             onClick={() => setHoleDiameter(5.0)}
                                             className={`p-3 border font-mono text-left transition-all cursor-pointer ${
                                                 holeDiameter === 5.0
-                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                    : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                    : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                             }`}
                                         >
-                                            <div className="font-bold text-sm text-[oklch(52%_0.16_28)]">⌀ 5.0 MM</div>
+                                            <div className="font-bold text-sm text-[var(--brand-plum)]">⌀ 5.0 MM</div>
                                             <div className="text-[10px] opacity-80 mt-1">เชือกหนา / Macrame / คล้องสายกระเป๋า</div>
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Base Structure Style */}
-                                <div className="flex flex-col gap-2 border-t border-[oklch(85%_0.012_28)] pt-3">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                <div className="flex flex-col gap-2 border-t border-[var(--color-rule)] pt-3">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         [ 3D PRINT BASE STYLE // ทรงแผ่นรองฐาน ]
                                     </label>
                                     <div className="grid grid-cols-2 gap-2 font-mono text-xs">
@@ -1588,8 +1588,8 @@ export default function HausmadeKeychainPlayground({
                                                 onClick={() => setBaseStyle(st.id)}
                                                 className={`p-2.5 border text-left transition-all cursor-pointer ${
                                                     baseStyle === st.id
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                        : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                                 }`}
                                             >
                                                 <div className="font-bold text-[11px]">{st.title}</div>
@@ -1600,8 +1600,8 @@ export default function HausmadeKeychainPlayground({
                                 </div>
 
                                 {/* Thickness Gauge */}
-                                <div className="flex flex-col gap-2 border-t border-[oklch(85%_0.012_28)] pt-3">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                <div className="flex flex-col gap-2 border-t border-[var(--color-rule)] pt-3">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         [ RIGIDITY & THICKNESS // ความหนาชิ้นงาน ]
                                     </label>
                                     <div className="grid grid-cols-3 gap-2 font-mono text-xs">
@@ -1616,8 +1616,8 @@ export default function HausmadeKeychainPlayground({
                                                 onClick={() => setThickness(t.val)}
                                                 className={`p-2 border text-center font-bold flex flex-col gap-0.5 cursor-pointer ${
                                                     thickness === t.val
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                        : 'bg-[oklch(99%_0.005_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)]'
                                                 }`}
                                             >
                                                 <span>{t.title}</span>
@@ -1632,14 +1632,14 @@ export default function HausmadeKeychainPlayground({
                         {/* TAB 3: KERNING & PER-LETTER NUDGE */}
                         {activeTab === 'kerning' && (
                             <div className="flex flex-col gap-4">
-                                <div className="p-3 bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)] font-mono text-[11px] text-[oklch(52%_0.16_28)]">
+                                <div className="p-3 bg-[var(--brand-plum)]/10 border border-[var(--brand-plum)] font-mono text-[11px] text-[var(--brand-plum)]">
                                     <strong>KERNING CALIBRATION:</strong> ปรับแต่งระยะห่างตัวอักษรเพื่อให้เส้นตวัดเชื่อมต่อกัน (Weld) สมบูรณ์แบบสำหรับการพิมพ์ 3D ไม่ให้ตัวอักษรหลุดออกจากกัน
                                 </div>
 
                                 {/* Global Kerning Slider */}
                                 <div className="flex flex-col gap-1.5">
                                     <div className="flex justify-between font-mono text-[10px] font-bold">
-                                        <span className="text-[oklch(55%_0.010_28)] uppercase">[ GLOBAL KERNING / TRACKING ]</span>
+                                        <span className="text-[var(--color-neutral)] uppercase">[ GLOBAL KERNING / TRACKING ]</span>
                                         <span className="tabular-nums">{globalKerning >= 0 ? `+${globalKerning}` : globalKerning} px</span>
                                     </div>
                                     <input
@@ -1648,13 +1648,13 @@ export default function HausmadeKeychainPlayground({
                                         max={24}
                                         value={globalKerning}
                                         onChange={(e) => setGlobalKerning(Number(e.target.value))}
-                                        className="accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                        className="accent-[var(--brand-plum)] cursor-pointer"
                                     />
                                 </div>
 
                                 {/* Per-Character Fine Nudge */}
                                 <div className="flex flex-col gap-2">
-                                    <div className="flex justify-between items-center font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <div className="flex justify-between items-center font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         <span>[ PER-LETTER FINE NUDGE // ขยับตัวอักษรเดี่ยว ]</span>
                                         <button
                                             type="button"
@@ -1662,7 +1662,7 @@ export default function HausmadeKeychainPlayground({
                                                 setCharOffsets({})
                                                 setSelectedCharIndex(null)
                                             }}
-                                            className="text-[oklch(52%_0.16_28)] hover:underline"
+                                            className="text-[var(--brand-plum)] hover:underline"
                                         >
                                             [ รีเซ็ต ]
                                         </button>
@@ -1678,20 +1678,20 @@ export default function HausmadeKeychainPlayground({
                                                     onClick={() => setSelectedCharIndex(idx)}
                                                     className={`flex items-center justify-between p-1.5 border font-mono text-xs transition-colors cursor-pointer ${
                                                         isSelected
-                                                            ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10'
-                                                            : 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                            ? 'border-[var(--brand-plum)] bg-[var(--brand-plum)]/10'
+                                                            : 'border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)]'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[oklch(55%_0.010_28)] text-[10px]">#{idx + 1}</span>
+                                                        <span className="text-[var(--color-neutral)] text-[10px]">#{idx + 1}</span>
                                                         <span className={`font-bold text-sm px-2 py-0.5 border ${
                                                             isSelected
-                                                                ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                                                : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                                ? 'bg-[var(--brand-plum)] text-white border-[var(--brand-plum)]'
+                                                                : 'bg-[var(--color-paper-2)] border-[var(--color-rule)]'
                                                         }`}>
                                                             {ch}
                                                         </span>
-                                                        <span className="text-[10px] tabular-nums text-[oklch(55%_0.010_28)]">
+                                                        <span className="text-[10px] tabular-nums text-[var(--color-neutral)]">
                                                             ({offset >= 0 ? `+${offset}` : offset}px)
                                                         </span>
                                                     </div>
@@ -1703,7 +1703,7 @@ export default function HausmadeKeychainPlayground({
                                                                 e.stopPropagation()
                                                                 handleCharNudge(idx, -1)
                                                             }}
-                                                            className="w-6 h-6 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white font-bold flex items-center justify-center cursor-pointer"
+                                                            className="w-6 h-6 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-ink)] hover:text-white font-bold flex items-center justify-center cursor-pointer"
                                                         >
                                                             -
                                                         </button>
@@ -1713,7 +1713,7 @@ export default function HausmadeKeychainPlayground({
                                                                 e.stopPropagation()
                                                                 handleCharNudge(idx, 1)
                                                             }}
-                                                            className="w-6 h-6 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white font-bold flex items-center justify-center cursor-pointer"
+                                                            className="w-6 h-6 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-ink)] hover:text-white font-bold flex items-center justify-center cursor-pointer"
                                                         >
                                                             +
                                                         </button>
@@ -1730,7 +1730,7 @@ export default function HausmadeKeychainPlayground({
                         {activeTab === 'filament' && (
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-2">
-                                    <label className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    <label className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                         [ BASE FILAMENT // สีแผ่นฐาน BIO-PLA+ ]
                                     </label>
                                     <div className="grid grid-cols-1 gap-1.5">
@@ -1741,8 +1741,8 @@ export default function HausmadeKeychainPlayground({
                                                 onClick={() => setBaseColor(col)}
                                                 className={`p-2.5 border text-left flex items-center justify-between transition-all ${
                                                     baseColor.id === col.id
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                        : 'bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                        : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-2.5">
@@ -1756,7 +1756,7 @@ export default function HausmadeKeychainPlayground({
                                                     </div>
                                                 </div>
                                                 {baseColor.id === col.id && (
-                                                    <span className="font-mono text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                    <span className="font-mono text-[10px] text-[var(--brand-plum)] font-bold">
                                                         [ ACTIVE ]
                                                     </span>
                                                 )}
@@ -1766,19 +1766,19 @@ export default function HausmadeKeychainPlayground({
                                 </div>
 
                                 {/* Dual-Tone Accent Toggle */}
-                                <div className="border-t border-[oklch(85%_0.012_28)] pt-3 flex flex-col gap-2">
-                                    <label className="flex items-center justify-between font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase cursor-pointer">
+                                <div className="border-t border-[var(--color-rule)] pt-3 flex flex-col gap-2">
+                                    <label className="flex items-center justify-between font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase cursor-pointer">
                                         <span>[ DUAL-TONE PRINTING // แยกสีตัวหนังสือ ]</span>
                                         <input
                                             type="checkbox"
                                             checked={isDualTone}
                                             onChange={(e) => setIsDualTone(e.target.checked)}
-                                            className="accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                            className="accent-[var(--brand-plum)] cursor-pointer"
                                         />
                                     </label>
 
                                     {isDualTone && (
-                                        <div className="grid grid-cols-5 gap-1.5 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
+                                        <div className="grid grid-cols-5 gap-1.5 p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
                                             {FILAMENT_COLORS.map(col => (
                                                 <button
                                                     key={col.id}
@@ -1787,7 +1787,7 @@ export default function HausmadeKeychainPlayground({
                                                     onClick={() => setLetterColor(col)}
                                                     className={`h-8 border flex items-center justify-center ${
                                                         letterColor.id === col.id
-                                                            ? 'ring-2 ring-[oklch(18%_0.012_28)]'
+                                                            ? 'ring-2 ring-[var(--color-ink)]'
                                                             : ''
                                                     }`}
                                                     style={{ backgroundColor: col.hex }}
@@ -1801,46 +1801,46 @@ export default function HausmadeKeychainPlayground({
                     </div>
 
                     {/* Footer Order & Admin Actions */}
-                    <div className="border-t border-[oklch(85%_0.012_28)] p-4 bg-[oklch(94%_0.010_28)] flex flex-col gap-2.5">
+                    <div className="border-t border-[var(--color-rule)] p-4 bg-[var(--color-paper-2)] flex flex-col gap-2.5">
                         {/* Live Transparent Price Breakdown Bar */}
-                        <div className="flex flex-col gap-1 p-2.5 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] font-mono text-[10px]">
-                            <div className="flex justify-between items-center text-[oklch(42%_0.010_28)]">
+                        <div className="flex flex-col gap-1 p-2.5 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-[10px]">
+                            <div className="flex justify-between items-center text-[var(--color-muted)]">
                                 <span>ราคาตั้งต้น (รวม {priceCalculation.limit} ตัว):</span>
-                                <span className="font-bold text-[oklch(18%_0.012_28)]">฿{priceCalculation.base}</span>
+                                <span className="font-bold text-[var(--color-ink)]">฿{priceCalculation.base}</span>
                             </div>
                             {priceCalculation.extraCharCount > 0 && (
-                                <div className="flex justify-between items-center text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between items-center text-[var(--color-muted)]">
                                     <span>ตัวอักษรเกิน ({priceCalculation.extraCharCount} × ฿{pricing.extraCharPrice ?? 15}):</span>
-                                    <span className="font-bold text-[oklch(52%_0.16_28)]">+฿{priceCalculation.extraCharTotal}</span>
+                                    <span className="font-bold text-[var(--brand-plum)]">+฿{priceCalculation.extraCharTotal}</span>
                                 </div>
                             )}
                             {selectedCharms.length > 0 && (
-                                <div className="flex justify-between items-center text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between items-center text-[var(--color-muted)]">
                                     <span>ชาร์มแบรนด์ ({selectedCharms.map(c => c.symbol || '✿').join(' ')}):</span>
-                                    <span className="font-bold text-[oklch(52%_0.16_28)]">+฿{priceCalculation.charmsTotal}</span>
+                                    <span className="font-bold text-[var(--brand-plum)]">+฿{priceCalculation.charmsTotal}</span>
                                 </div>
                             )}
                             {isDualTone && (
-                                <div className="flex justify-between items-center text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between items-center text-[var(--color-muted)]">
                                     <span>พิมพ์สองสี (Dual-Tone):</span>
-                                    <span className="font-bold text-[oklch(52%_0.16_28)]">+฿{priceCalculation.dualToneTotal}</span>
+                                    <span className="font-bold text-[var(--brand-plum)]">+฿{priceCalculation.dualToneTotal}</span>
                                 </div>
                             )}
                             {priceCalculation.reverseEngraveTotal > 0 && (
-                                <div className="flex justify-between items-center text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between items-center text-[var(--color-muted)]">
                                     <span>สลักหลัง (Reverse Text):</span>
-                                    <span className="font-bold text-[oklch(52%_0.16_28)]">+฿{priceCalculation.reverseEngraveTotal}</span>
+                                    <span className="font-bold text-[var(--brand-plum)]">+฿{priceCalculation.reverseEngraveTotal}</span>
                                 </div>
                             )}
                             {priceCalculation.heavyDutyTotal > 0 && (
-                                <div className="flex justify-between items-center text-[oklch(42%_0.010_28)]">
+                                <div className="flex justify-between items-center text-[var(--color-muted)]">
                                     <span>ความหนา 5.0mm (Heavy-Duty):</span>
-                                    <span className="font-bold text-[oklch(52%_0.16_28)]">+฿{priceCalculation.heavyDutyTotal}</span>
+                                    <span className="font-bold text-[var(--brand-plum)]">+฿{priceCalculation.heavyDutyTotal}</span>
                                 </div>
                             )}
-                            <div className="flex justify-between items-center border-t border-[oklch(85%_0.012_28)] pt-1.5 mt-0.5 font-bold">
-                                <span className="text-xs uppercase text-[oklch(18%_0.012_28)]">ยอดรวมชิ้นงาน:</span>
-                                <span className="text-sm text-[oklch(52%_0.16_28)] tabular-nums">฿{priceCalculation.total}.-</span>
+                            <div className="flex justify-between items-center border-t border-[var(--color-rule)] pt-1.5 mt-0.5 font-bold">
+                                <span className="text-xs uppercase text-[var(--color-ink)]">ยอดรวมชิ้นงาน:</span>
+                                <span className="text-sm text-[var(--brand-plum)] tabular-nums">฿{priceCalculation.total}.-</span>
                             </div>
                         </div>
 
@@ -1848,15 +1848,15 @@ export default function HausmadeKeychainPlayground({
                         <button
                             type="button"
                             onClick={handleOrderKeychain}
-                            className="w-full py-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase tracking-wider hover:bg-[oklch(52%_0.16_28)] transition-colors cursor-pointer border border-[oklch(18%_0.012_28)] text-center shadow-xs"
+                            className="w-full py-3 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase tracking-wider hover:bg-[var(--brand-plum)] transition-colors cursor-pointer border border-[var(--color-ink)] text-center shadow-xs"
                         >
                             [ สั่งทำพวงกุญแจ ฿{priceCalculation.total} // ADD TO CART ]
                         </button>
 
                         {/* ADMIN-ONLY 3D EXPORT TOOLS (.STL / .STEP) */}
                         {isAdmin && (
-                            <div className="p-2.5 bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)] flex flex-col gap-1.5 font-mono">
-                                <div className="flex items-center justify-between text-[10px] text-[oklch(52%_0.16_28)] font-bold uppercase">
+                            <div className="p-2.5 bg-[var(--brand-plum)]/10 border border-[var(--brand-plum)] flex flex-col gap-1.5 font-mono">
+                                <div className="flex items-center justify-between text-[10px] text-[var(--brand-plum)] font-bold uppercase">
                                     <span>[ ADMIN 3D PRINT EXPORTER ]</span>
                                     <span>BAMBU / PRUSA</span>
                                 </div>
@@ -1864,14 +1864,14 @@ export default function HausmadeKeychainPlayground({
                                     <button
                                         type="button"
                                         onClick={handleExportSTL}
-                                        className="py-1.5 bg-[oklch(99%_0.005_28)] border border-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white font-bold text-[10px] uppercase transition-colors text-center cursor-pointer"
+                                        className="py-1.5 bg-[var(--color-paper)] border border-[var(--brand-plum)] hover:bg-[var(--brand-plum)] hover:text-white font-bold text-[10px] uppercase transition-colors text-center cursor-pointer"
                                     >
                                         [ EXPORT .STL ]
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleExportSTEP}
-                                        className="py-1.5 bg-[oklch(99%_0.005_28)] border border-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white font-bold text-[10px] uppercase transition-colors text-center cursor-pointer"
+                                        className="py-1.5 bg-[var(--color-paper)] border border-[var(--brand-plum)] hover:bg-[var(--brand-plum)] hover:text-white font-bold text-[10px] uppercase transition-colors text-center cursor-pointer"
                                     >
                                         [ EXPORT .STEP ]
                                     </button>

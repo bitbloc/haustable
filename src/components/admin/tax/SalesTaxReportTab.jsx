@@ -499,7 +499,7 @@ export default function SalesTaxReportTab({
             );
         }
         return (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] tabular-nums text-[11px] font-medium">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--color-paper-2)] text-[var(--color-muted)] tabular-nums text-[11px] font-medium">
                 {method ? String(method).toUpperCase() : 'ทั่วไป'}
             </span>
         );
@@ -528,20 +528,20 @@ export default function SalesTaxReportTab({
             )}
 
             {/* TOP CONTROL BAR: Granular Date Filter + Data Source Switcher + Sub-Filters & Actions */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-col gap-4 ">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-col gap-4 ">
                 
                 {/* ROW 1: Time Range Filters (Day, Month, All + Date Pickers) */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[oklch(90%_0.008_28)] pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-paper-3)] pb-3">
                     
                     {/* Time Filter Mode Pill Group */}
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-xl border border-[oklch(90%_0.008_28)] text-xs tabular-nums">
+                        <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-xl border border-[var(--color-paper-3)] text-xs tabular-nums">
                             <button
                                 onClick={() => {
                                     setTimeFilterMode('day');
                                     setSelectedDate(getTodayDate());
                                 }}
-                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'day' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'day' ? 'bg-[#1A1A1A] text-[var(--color-paper)] font-bold ' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <Clock size={12} />
                                 <span>รายวัน</span>
@@ -549,7 +549,7 @@ export default function SalesTaxReportTab({
 
                             <button
                                 onClick={() => setTimeFilterMode('month')}
-                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'month' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'month' ? 'bg-[#1A1A1A] text-[var(--color-paper)] font-bold ' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <Calendar size={12} />
                                 <span>รายเดือน</span>
@@ -557,7 +557,7 @@ export default function SalesTaxReportTab({
 
                             <button
                                 onClick={() => setTimeFilterMode('all')}
-                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'all' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'all' ? 'bg-[#1A1A1A] text-[var(--color-paper)] font-bold ' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <span>ทุกช่วง</span>
                             </button>
@@ -566,24 +566,24 @@ export default function SalesTaxReportTab({
                         {/* Granular Input depending on mode */}
                         {timeFilterMode === 'day' && (
                             <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] rounded-xl px-2.5 py-1 bg-[oklch(99%_0.004_28)]">
-                                    <Calendar size={14} className="text-[oklch(50%_0.010_28)]" />
+                                <div className="flex items-center gap-1.5 border border-[var(--color-rule)] rounded-xl px-2.5 py-1 bg-[var(--color-paper)]">
+                                    <Calendar size={14} className="text-[var(--color-neutral)]" />
                                     <input
                                         type="date"
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)] focus:outline-none bg-transparent cursor-pointer"
+                                        className="text-xs tabular-nums font-bold text-[var(--color-ink)] focus:outline-none bg-transparent cursor-pointer"
                                     />
                                 </div>
                                 <button
                                     onClick={() => setSelectedDate(getTodayDate())}
-                                    className={`px-2.5 py-1 rounded-lg text-xs tabular-nums font-bold border transition-colors cursor-pointer ${selectedDate === getTodayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-zinc-900' : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(90%_0.008_28)]'}`}
+                                    className={`px-2.5 py-1 rounded-lg text-xs tabular-nums font-bold border transition-colors cursor-pointer ${selectedDate === getTodayDate() ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-zinc-900' : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] border-[var(--color-paper-3)]'}`}
                                 >
                                     วันนี้
                                 </button>
                                 <button
                                     onClick={() => setSelectedDate(getYesterdayDate())}
-                                    className={`px-2.5 py-1 rounded-lg text-xs tabular-nums font-bold border transition-colors cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-zinc-900' : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(90%_0.008_28)]'}`}
+                                    className={`px-2.5 py-1 rounded-lg text-xs tabular-nums font-bold border transition-colors cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-zinc-900' : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] border-[var(--color-paper-3)]'}`}
                                 >
                                     เมื่อวาน
                                 </button>
@@ -592,18 +592,18 @@ export default function SalesTaxReportTab({
 
                         {timeFilterMode === 'month' && (
                             <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] rounded-xl px-2.5 py-1 bg-[oklch(99%_0.004_28)]">
-                                    <Calendar size={14} className="text-[oklch(50%_0.010_28)]" />
+                                <div className="flex items-center gap-1.5 border border-[var(--color-rule)] rounded-xl px-2.5 py-1 bg-[var(--color-paper)]">
+                                    <Calendar size={14} className="text-[var(--color-neutral)]" />
                                     <input
                                         type="month"
                                         value={selectedMonth}
                                         onChange={(e) => setSelectedMonth(e.target.value)}
-                                        className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)] focus:outline-none bg-transparent cursor-pointer"
+                                        className="text-xs tabular-nums font-bold text-[var(--color-ink)] focus:outline-none bg-transparent cursor-pointer"
                                     />
                                 </div>
                                 <button
                                     onClick={() => setSelectedMonth(getCurrentMonth())}
-                                    className={`px-2.5 py-1 rounded-lg text-xs tabular-nums font-bold border transition-colors cursor-pointer ${selectedMonth === getCurrentMonth() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-zinc-900' : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(90%_0.008_28)]'}`}
+                                    className={`px-2.5 py-1 rounded-lg text-xs tabular-nums font-bold border transition-colors cursor-pointer ${selectedMonth === getCurrentMonth() ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-zinc-900' : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] border-[var(--color-paper-3)]'}`}
                                 >
                                     เดือนนี้
                                 </button>
@@ -612,8 +612,8 @@ export default function SalesTaxReportTab({
                     </div>
 
                     {/* Active Period Tag */}
-                    <div className="text-xs tabular-nums text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] px-3 py-1 rounded-xl border border-[oklch(90%_0.008_28)]">
-                        {activePeriodLabel} • ยอดขายรวม: <strong className="text-[oklch(18%_0.012_28)] font-bold">฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                    <div className="text-xs tabular-nums text-[var(--color-muted)] bg-[var(--color-paper-2)] px-3 py-1 rounded-xl border border-[var(--color-paper-3)]">
+                        {activePeriodLabel} • ยอดขายรวม: <strong className="text-[var(--color-ink)] font-bold">฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                     </div>
                 </div>
 
@@ -623,24 +623,24 @@ export default function SalesTaxReportTab({
                     {/* Left: Source Tabs & Detailed Filters */}
                     <div className="flex flex-wrap items-center gap-2.5">
                         {/* Data Source Selector */}
-                        <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-xl border border-[oklch(90%_0.008_28)] text-xs tabular-nums">
+                        <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-xl border border-[var(--color-paper-3)] text-xs tabular-nums">
                             <button
                                 onClick={() => setDataSourceMode('pos_bills')}
-                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'pos_bills' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'pos_bills' ? 'bg-[#1A1A1A] text-[var(--color-paper)] font-bold ' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <Receipt size={13} />
                                 <span>บิลขาย POS ({compiledPosBills.length})</span>
                             </button>
                             <button
                                 onClick={() => setDataSourceMode('all')}
-                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'all' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'all' ? 'bg-[#1A1A1A] text-[var(--color-paper)] font-bold ' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <Layers size={13} />
                                 <span>รวมทุกบิลขาย</span>
                             </button>
                             <button
                                 onClick={() => setDataSourceMode('invoices')}
-                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'invoices' ? 'bg-[#1A1A1A] text-[oklch(97%_0.008_28)] font-bold ' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'invoices' ? 'bg-[#1A1A1A] text-[var(--color-paper)] font-bold ' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <FileText size={13} />
                                 <span>เอกสารภาษี ({invoices.filter(i => {
@@ -657,7 +657,7 @@ export default function SalesTaxReportTab({
                             value={paymentFilter}
                             onChange={(e) => setPaymentFilter(e.target.value)}
                             aria-label="กรองตามวิธีชำระเงิน"
-                            className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl text-xs tabular-nums font-medium focus:border-zinc-900 focus:outline-none cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl text-xs tabular-nums font-medium focus:border-zinc-900 focus:outline-none cursor-pointer"
                         >
                             <option value="all">ทุกช่องทางชำระเงิน</option>
                             <option value="cash">เฉพาะ เงินสด</option>
@@ -670,7 +670,7 @@ export default function SalesTaxReportTab({
                             value={channelFilter}
                             onChange={(e) => setChannelFilter(e.target.value)}
                             aria-label="กรองตามช่องทาง"
-                            className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xl text-xs tabular-nums font-medium focus:border-zinc-900 focus:outline-none cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl text-xs tabular-nums font-medium focus:border-zinc-900 focus:outline-none cursor-pointer"
                         >
                             <option value="all">ทุกรูปแบบ</option>
                             <option value="dine_in">ทานที่ร้าน</option>
@@ -679,13 +679,13 @@ export default function SalesTaxReportTab({
 
                         {/* Search */}
                         <div className="relative">
-                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(50%_0.010_28)]" />
+                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" />
                             <input
                                 type="text"
                                 placeholder="ค้นหาเลขบิล / ลูกค้า / โต๊ะ / เมนู..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-8 pr-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-xl text-xs tabular-nums w-44 sm:w-56 focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
+                                className="pl-8 pr-3 py-1.5 border border-[var(--color-rule)] rounded-xl text-xs tabular-nums w-44 sm:w-56 focus:border-zinc-900 focus:outline-none bg-[var(--color-paper)]"
                             />
                         </div>
                     </div>
@@ -694,7 +694,7 @@ export default function SalesTaxReportTab({
                     <div className="flex items-center gap-2 self-end lg:self-auto">
                         <button
                             onClick={handleExportCsv}
-                            className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] rounded-xl tabular-nums font-bold text-xs flex items-center gap-1.5 border border-[oklch(85%_0.012_28)] transition-colors cursor-pointer "
+                            className="px-3.5 py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] rounded-xl tabular-nums font-bold text-xs flex items-center gap-1.5 border border-[var(--color-rule)] transition-colors cursor-pointer "
                         >
                             <FileSpreadsheet size={15} className="text-emerald-700" />
                             <span>ส่งออก CSV</span>
@@ -702,7 +702,7 @@ export default function SalesTaxReportTab({
 
                         <button
                             onClick={() => setShowPrintModal(true)}
-                            className="px-4 py-2 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-xl tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                            className="px-4 py-2 bg-[#1A1A1A] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-xl tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
                         >
                             <Printer size={15} className="text-emerald-400" />
                             <span>พิมพ์รายงาน / โหลด PDF</span>
@@ -714,80 +714,80 @@ export default function SalesTaxReportTab({
             {/* Metric KPI Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Card 1: Gross Sales */}
-                <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-4 ">
-                    <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
+                <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-4 ">
+                    <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block">
                         ยอดขายรวมทั้งสิ้น
                     </span>
-                    <div className="tabular-nums font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
+                    <div className="tabular-nums font-black text-xl text-[var(--color-ink)] mt-1">
                         ฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
+                    <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 block">
                         {activePeriodLabel} ({periodStats.recordCount} รายการ)
                     </span>
                 </div>
 
                 {/* Card 2: Taxable Base */}
-                <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-4 ">
-                    <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
+                <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-4 ">
+                    <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block">
                         มูลค่าฐานภาษี
                     </span>
-                    <div className="tabular-nums font-black text-xl text-[oklch(18%_0.012_28)] mt-1">
+                    <div className="tabular-nums font-black text-xl text-[var(--color-ink)] mt-1">
                         ฿{periodStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
-                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
+                    <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 block">
                         {isVatRegistered ? 'ยอดขายก่อนคิด VAT 7%' : 'ยอดขายสุทธิ (ยังไม่เข้าระบบ VAT)'}
                     </span>
                 </div>
 
                 {/* Card 3: Output VAT 7% */}
-                <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-4 ">
-                    <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
+                <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-4 ">
+                    <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block">
                         ภาษีขายที่ต้องนำส่ง (Output VAT 7%)
                     </span>
-                    <div className={`tabular-nums font-black text-xl mt-1 ${isVatRegistered ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(50%_0.010_28)]'}`}>
+                    <div className={`tabular-nums font-black text-xl mt-1 ${isVatRegistered ? 'text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'}`}>
                         {isVatRegistered ? `฿${periodStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00'}
                     </div>
-                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">
+                    <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 block">
                         {isVatRegistered ? 'สำหรับยื่นแบบ ภ.พ.30' : 'ยังไม่จด VAT ไม่ต้องนำส่งภาษีขาย'}
                     </span>
                 </div>
 
                 {/* Card 4: Report Classification */}
-                <div className="bg-[#1A1A1A] text-[oklch(97%_0.008_28)] rounded-2xl p-4 flex flex-col justify-between">
+                <div className="bg-[#1A1A1A] text-[var(--color-paper)] rounded-2xl p-4 flex flex-col justify-between">
                     <div>
-                        <span className="tabular-nums text-xs font-bold text-[oklch(50%_0.010_28)] block">
+                        <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block">
                             แบบแสดงรายการบัญชี
                         </span>
                         <div className="font-bold text-sm text-emerald-400 mt-1">
                             {isVatRegistered ? 'แบบ ภ.พ.30 (รายงานภาษีขาย)' : 'สมุดรายรับรายบิล'}
                         </div>
                     </div>
-                    <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] tabular-nums">
                         โหมด: {dataSourceMode === 'invoices' ? 'เอกสารภาษี' : (dataSourceMode === 'pos_bills' ? 'บิลขายจริงจาก POS' : 'รวมทุกบิลขาย')}
                     </span>
                 </div>
             </div>
 
             {/* Official Tabular Sales Tax & Real POS Bill Ledger */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl overflow-hidden ">
-                <div className="px-5 py-4 border-b border-[oklch(90%_0.008_28)] flex flex-wrap justify-between items-center bg-zinc-50/70 gap-2">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl overflow-hidden ">
+                <div className="px-5 py-4 border-b border-[var(--color-paper-3)] flex flex-wrap justify-between items-center bg-zinc-50/70 gap-2">
                     <div>
-                        <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                        <h3 className="font-bold text-sm text-[var(--color-ink)] tabular-nums">
                             {isVatRegistered ? 'รายงานภาษีขาย (Sales Tax Report ภ.พ.30)' : 'สมุดรายงานยอดขายและรายรับรายบิล'}
                         </h3>
-                        <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                        <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                             {activePeriodLabel} • จำนวน {filteredRecords.length} รายการ (คลิกที่แถวเพื่อดูรายละเอียดบิล / ออกใบกำกับภาษี)
                         </p>
                     </div>
-                    <div className="text-xs tabular-nums text-[oklch(42%_0.010_28)] bg-[oklch(99%_0.004_28)] border border-[oklch(90%_0.008_28)] px-3 py-1 rounded-lg">
-                        รวมทั้งสิ้น: <strong className="text-[oklch(18%_0.012_28)]">฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                    <div className="text-xs tabular-nums text-[var(--color-muted)] bg-[var(--color-paper)] border border-[var(--color-paper-3)] px-3 py-1 rounded-lg">
+                        รวมทั้งสิ้น: <strong className="text-[var(--color-ink)]">฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
-                            <tr className="bg-zinc-100/90 border-b border-[oklch(85%_0.012_28)] tabular-nums text-xs text-[oklch(42%_0.010_28)]">
+                            <tr className="bg-zinc-100/90 border-b border-[var(--color-rule)] tabular-nums text-xs text-[var(--color-muted)]">
                                 <th className="p-3 w-10 text-center">ลำดับ</th>
                                 <th className="p-3 w-28">วันที่ / เวลา</th>
                                 <th className="p-3 w-36">เลขที่บิล / เอกสาร</th>
@@ -800,7 +800,7 @@ export default function SalesTaxReportTab({
                                 <th className="p-3 text-center w-28">การจัดการ</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                        <tbody className="divide-y divide-[var(--color-paper-3)]">
                             {filteredRecords.map((item, idx) => {
                                 const isCancelled = item.status === 'cancelled';
                                 const rawDate = item.issued_at || item.created_at || item.booking_time;
@@ -821,7 +821,7 @@ export default function SalesTaxReportTab({
                                 return (
                                     <tr 
                                         key={item.id || idx}
-                                        className={`hover:bg-zinc-50/80 transition-colors cursor-pointer ${isCancelled ? 'bg-red-50/40 text-[oklch(50%_0.010_28)]' : ''}`}
+                                        className={`hover:bg-zinc-50/80 transition-colors cursor-pointer ${isCancelled ? 'bg-red-50/40 text-[var(--color-neutral)]' : ''}`}
                                         onClick={() => {
                                             if (item.source_type === 'tax_invoice' && onOpenInvoice) {
                                                 onOpenInvoice(item);
@@ -830,12 +830,12 @@ export default function SalesTaxReportTab({
                                             }
                                         }}
                                     >
-                                        <td className="p-3 text-center tabular-nums text-[oklch(50%_0.010_28)]">{idx + 1}</td>
+                                        <td className="p-3 text-center tabular-nums text-[var(--color-neutral)]">{idx + 1}</td>
                                         <td className="p-3 tabular-nums">
                                             <div>{dateStr}</div>
-                                            {timeStr && <div className="text-xs text-[oklch(50%_0.010_28)]">{timeStr}</div>}
+                                            {timeStr && <div className="text-xs text-[var(--color-neutral)]">{timeStr}</div>}
                                         </td>
-                                        <td className="p-3 tabular-nums font-bold text-[oklch(18%_0.012_28)]">
+                                        <td className="p-3 tabular-nums font-bold text-[var(--color-ink)]">
                                             <div className="flex items-center gap-1.5">
                                                 <span>{docNo}</span>
                                                 {item.has_tax_invoice && item.tax_invoice_record && (
@@ -855,8 +855,8 @@ export default function SalesTaxReportTab({
                                         </td>
                                         <td className="p-3 tabular-nums text-[13px]">
                                             {item.table_name ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold border border-[oklch(90%_0.008_28)]">
-                                                    <UtensilsCrossed size={11} className="text-[oklch(50%_0.010_28)]" /> โต๊ะ {item.table_name}
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold border border-[var(--color-paper-3)]">
+                                                    <UtensilsCrossed size={11} className="text-[var(--color-neutral)]" /> โต๊ะ {item.table_name}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-bold border border-amber-200">
@@ -865,9 +865,9 @@ export default function SalesTaxReportTab({
                                             )}
                                         </td>
                                         <td className="p-3">
-                                            <div className="font-semibold text-[oklch(18%_0.012_28)]">{item.customer_name || 'ลูกค้าทั่วไป'}</div>
+                                            <div className="font-semibold text-[var(--color-ink)]">{item.customer_name || 'ลูกค้าทั่วไป'}</div>
                                             {item.items_summary && (
-                                                <div className="text-xs text-[oklch(50%_0.010_28)] tabular-nums truncate max-w-xs mt-0.5" title={item.items_summary}>
+                                                <div className="text-xs text-[var(--color-neutral)] tabular-nums truncate max-w-xs mt-0.5" title={item.items_summary}>
                                                     {item.items_summary}
                                                 </div>
                                             )}
@@ -879,11 +879,11 @@ export default function SalesTaxReportTab({
                                             {preVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         {isVatRegistered && (
-                                            <td className="p-3 text-right tabular-nums font-semibold text-[oklch(52%_0.16_28)]">
+                                            <td className="p-3 text-right tabular-nums font-semibold text-[var(--brand-plum)]">
                                                 {vat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
                                         )}
-                                        <td className="p-3 text-right tabular-nums font-bold text-[oklch(18%_0.012_28)]">
+                                        <td className="p-3 text-right tabular-nums font-bold text-[var(--color-ink)]">
                                             {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -893,7 +893,7 @@ export default function SalesTaxReportTab({
                                                         <button
                                                             type="button"
                                                             onClick={() => setSelectedBillForDetail(item.raw_booking)}
-                                                            className="p-1 rounded hover:bg-[oklch(90%_0.008_28)] text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
+                                                            className="p-1 rounded hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] transition-colors cursor-pointer"
                                                             title="ดูรายละเอียดบิล"
                                                         >
                                                             <Eye size={14} />
@@ -924,7 +924,7 @@ export default function SalesTaxReportTab({
                                                         <button
                                                             type="button"
                                                             onClick={() => setBillToDelete(item)}
-                                                            className="p-1 rounded hover:bg-red-100 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer ml-0.5"
+                                                            className="p-1 rounded hover:bg-red-100 text-[var(--color-neutral)] hover:text-red-600 transition-colors cursor-pointer ml-0.5"
                                                             title="ยกเลิกบิลนี้ (ไม่นับเป็นยอดขาย)"
                                                         >
                                                             <Trash2 size={14} />
@@ -938,7 +938,7 @@ export default function SalesTaxReportTab({
                                                         <button
                                                             type="button"
                                                             onClick={() => setBillToDelete(item)}
-                                                            className="p-1 rounded hover:bg-red-100 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer"
+                                                            className="p-1 rounded hover:bg-red-100 text-[var(--color-neutral)] hover:text-red-600 transition-colors cursor-pointer"
                                                             title="ยกเลิกเอกสารนี้"
                                                         >
                                                             <Trash2 size={14} />
@@ -953,7 +953,7 @@ export default function SalesTaxReportTab({
 
                             {filteredRecords.length === 0 && (
                                 <tr>
-                                    <td colSpan={isVatRegistered ? 10 : 9} className="p-12 text-center text-[oklch(50%_0.010_28)] tabular-nums">
+                                    <td colSpan={isVatRegistered ? 10 : 9} className="p-12 text-center text-[var(--color-neutral)] tabular-nums">
                                         ไม่พบรายการบิลขายจากการขายหน้าร้าน POS หรือใบกำกับภาษีในช่วงเวลาที่เลือก
                                     </td>
                                 </tr>
@@ -961,7 +961,7 @@ export default function SalesTaxReportTab({
                         </tbody>
                         {filteredRecords.length > 0 && (
                             <tfoot>
-                                <tr className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] tabular-nums font-bold text-xs">
+                                <tr className="bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums font-bold text-xs">
                                     <td colSpan={6} className="p-3 text-right">
                                         รวมทั้งสิ้น:
                                     </td>
@@ -976,7 +976,7 @@ export default function SalesTaxReportTab({
                                     <td className="p-3 text-right text-emerald-400 font-black">
                                         ฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
-                                    <td className="p-3 text-center text-[13px] text-[oklch(50%_0.010_28)]">
+                                    <td className="p-3 text-center text-[13px] text-[var(--color-neutral)]">
                                         {periodStats.recordCount} รายการ
                                     </td>
                                 </tr>
@@ -1038,37 +1038,37 @@ export default function SalesTaxReportTab({
             {/* Delete Bill & Auto-Resequence Confirmation Modal */}
             {billToDelete && (
                 <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 tabular-nums">
-                    <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-                        <div className="flex items-center gap-3 border-b border-[oklch(90%_0.008_28)] pb-3">
+                    <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+                        <div className="flex items-center gap-3 border-b border-[var(--color-paper-3)] pb-3">
                             <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
                                 <Trash2 size={20} />
                             </div>
                             <div>
-                                <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] ">
+                                <h3 className="font-bold text-sm text-[var(--color-ink)] ">
                                     ยืนยันการยกเลิกบิลขาย
                                 </h3>
-                                <p className="text-[13px] text-[oklch(50%_0.010_28)]">
+                                <p className="text-[13px] text-[var(--color-neutral)]">
                                     บิลจะถูกยกเลิกและไม่นับเป็นยอดขาย
                                 </p>
                             </div>
                         </div>
 
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(90%_0.008_28)] rounded-xl p-3.5 space-y-2 text-xs">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] rounded-xl p-3.5 space-y-2 text-xs">
                             <div className="flex justify-between">
-                                <span className="text-[oklch(50%_0.010_28)]">เลขที่บิล:</span>
-                                <span className="font-bold text-[oklch(18%_0.012_28)]">{billToDelete.bill_number || billToDelete.invoice_number}</span>
+                                <span className="text-[var(--color-neutral)]">เลขที่บิล:</span>
+                                <span className="font-bold text-[var(--color-ink)]">{billToDelete.bill_number || billToDelete.invoice_number}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(50%_0.010_28)]">ยอดเงินรวม:</span>
+                                <span className="text-[var(--color-neutral)]">ยอดเงินรวม:</span>
                                 <span className="font-bold text-emerald-700">฿{Number(billToDelete.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(50%_0.010_28)]">ลูกค้า / โต๊ะ:</span>
-                                <span className="font-bold text-[oklch(18%_0.012_28)]">{billToDelete.customer_name} {billToDelete.table_name ? `(โต๊ะ ${billToDelete.table_name})` : ''}</span>
+                                <span className="text-[var(--color-neutral)]">ลูกค้า / โต๊ะ:</span>
+                                <span className="font-bold text-[var(--color-ink)]">{billToDelete.customer_name} {billToDelete.table_name ? `(โต๊ะ ${billToDelete.table_name})` : ''}</span>
                             </div>
                         </div>
 
-                        <div className="text-xs text-[oklch(42%_0.010_28)] bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed flex items-start gap-2">
+                        <div className="text-xs text-[var(--color-muted)] bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed flex items-start gap-2">
                             <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
                             <div>
                                 <strong>หมายเหตุ:</strong> บิลจะเปลี่ยนสถานะเป็นยกเลิก (ไม่ได้ลบออกจากระบบ) และเลขบิลของเดือนนั้นจะรันต่อเนื่องใหม่
@@ -1080,7 +1080,7 @@ export default function SalesTaxReportTab({
                                 type="button"
                                 disabled={deleting}
                                 onClick={() => setBillToDelete(null)}
-                                className="py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                                className="py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-xl font-bold text-xs transition-colors cursor-pointer"
                             >
                                 ยกเลิก
                             </button>
@@ -1088,7 +1088,7 @@ export default function SalesTaxReportTab({
                                 type="button"
                                 disabled={deleting}
                                 onClick={handleExecuteDeleteBill}
-                                className="py-2.5 bg-red-600 hover:bg-red-700 text-[oklch(97%_0.008_28)] rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 "
+                                className="py-2.5 bg-red-600 hover:bg-red-700 text-[var(--color-paper)] rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 "
                             >
                                 {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                                 <span>{deleting ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิกบิล'}</span>

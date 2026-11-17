@@ -23,34 +23,34 @@ export default function HausmadeDocumentPrinter({
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-900/85 backdrop-blur-md items-center justify-start p-4 overflow-y-auto">
             {/* Top Toolbar (Non-printable Tabular Brutalist Cell Grid) */}
-            <div className="w-full max-w-4xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-6 py-3 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 gap-3 sticky top-4 z-10 shadow-xl print:hidden rounded-xs">
+            <div className="w-full max-w-4xl bg-[var(--color-ink)] text-[var(--color-paper)] px-6 py-3 border border-[var(--color-rule)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 gap-3 sticky top-4 z-10 shadow-xl print:hidden rounded-xs">
                 <div className="flex items-center gap-3 flex-wrap">
-                    <span className="font-bold text-[oklch(52%_0.16_28)]">
+                    <span className="font-bold text-[var(--brand-plum)]">
                         [ DOCUMENT STUDIO // <span className="tabular-nums">{orderList.length}</span> ORDERS ]
                     </span>
-                    <div className="inline-flex items-stretch border border-[oklch(85%_0.012_28)]/40 rounded-xs overflow-hidden divide-x divide-[oklch(85%_0.012_28)]/40 bg-[oklch(24%_0.012_28)]">
+                    <div className="inline-flex items-stretch border border-[var(--color-rule)]/40 rounded-xs overflow-hidden divide-x divide-[var(--color-rule)]/40 bg-[var(--color-ink)]">
                         <button
                             onClick={() => setSelectedDocType('a4_stickers')}
-                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'a4_stickers' ? 'bg-[oklch(52%_0.16_28)] text-white' : 'text-[oklch(70%_0.010_28)] hover:text-white'}`}
+                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'a4_stickers' ? 'bg-[var(--brand-plum)] text-white' : 'text-[oklch(70%_0.01_348.33)] hover:text-white'}`}
                         >
                             A4 สติกเกอร์ (4 ใบ/หน้า)
                         </button>
                         <button
                             onClick={() => setSelectedDocType('thermal_100x150')}
-                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'thermal_100x150' ? 'bg-[oklch(52%_0.16_28)] text-white' : 'text-[oklch(70%_0.010_28)] hover:text-white'}`}
+                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'thermal_100x150' ? 'bg-[var(--brand-plum)] text-white' : 'text-[oklch(70%_0.01_348.33)] hover:text-white'}`}
                             title="สติกเกอร์ความร้อนขนาด 100x150 มม. (4x6 นิ้ว) สำหรับเครื่องพิมพ์ Flash/Kerry/Xprinter"
                         >
                             ฉลากความร้อน 100x150 mm
                         </button>
                         <button
                             onClick={() => setSelectedDocType('label')}
-                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'label' ? 'bg-[oklch(52%_0.16_28)] text-white' : 'text-[oklch(70%_0.010_28)] hover:text-white'}`}
+                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'label' ? 'bg-[var(--brand-plum)] text-white' : 'text-[oklch(70%_0.01_348.33)] hover:text-white'}`}
                         >
                             ใบจ่าหน้าเดี่ยว + รายการแพ็ค
                         </button>
                         <button
                             onClick={() => setSelectedDocType('receipt')}
-                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'receipt' ? 'bg-[oklch(52%_0.16_28)] text-white' : 'text-[oklch(70%_0.010_28)] hover:text-white'}`}
+                            className={`px-3 py-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${selectedDocType === 'receipt' ? 'bg-[var(--brand-plum)] text-white' : 'text-[oklch(70%_0.01_348.33)] hover:text-white'}`}
                         >
                             ใบเสร็จรับเงิน
                         </button>
@@ -60,13 +60,13 @@ export default function HausmadeDocumentPrinter({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handlePrint}
-                        className="px-4 py-1.5 bg-[oklch(52%_0.16_28)] text-white font-bold uppercase hover:opacity-90 transition-opacity rounded-xs cursor-pointer shadow-2xs whitespace-nowrap"
+                        className="px-4 py-1.5 bg-[var(--brand-plum)] text-white font-bold uppercase hover:opacity-90 transition-opacity rounded-xs cursor-pointer shadow-2xs whitespace-nowrap"
                     >
                         [ สั่งพิมพ์ / PRINT ]
                     </button>
                     <button
                         onClick={onClose}
-                        className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] text-white uppercase hover:bg-white/10 transition-colors rounded-xs cursor-pointer whitespace-nowrap"
+                        className="px-3 py-1.5 border border-[var(--color-rule)] text-white uppercase hover:bg-white/10 transition-colors rounded-xs cursor-pointer whitespace-nowrap"
                     >
                         [ ปิด / CLOSE ]
                     </button>
@@ -117,7 +117,7 @@ export default function HausmadeDocumentPrinter({
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="font-bold text-[11px] block text-[oklch(52%_0.16_28)]">
+                                            <span className="font-bold text-[11px] block text-[var(--brand-plum)]">
                                                 {ord.tracking_token || String(ord.id).slice(-6).toUpperCase()}
                                             </span>
                                             <span className="text-[9px] text-zinc-500">
@@ -380,7 +380,7 @@ export default function HausmadeDocumentPrinter({
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="font-bold text-xs uppercase block text-[oklch(52%_0.16_28)]">
+                                            <span className="font-bold text-xs uppercase block text-[var(--brand-plum)]">
                                                 {ord.tracking_token || String(ord.id).slice(-8).toUpperCase()}
                                             </span>
                                             <span className="text-[8px] text-zinc-500">

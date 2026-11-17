@@ -521,17 +521,17 @@ export default function AdminMembers() {
     return (
         <div className="space-y-6">
             {/* Header Controls Bar */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm">
                 <div className="flex flex-wrap items-center gap-2">
                     {/* Role Filter Tabs */}
-                    <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] tabular-nums text-xs">
+                    <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-sm border border-[var(--color-rule)] tabular-nums text-xs">
                         <button
                             type="button"
                             onClick={() => setRoleTab('all')}
                             className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 roleTab === 'all'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             ทั้งหมด ({members.length})
@@ -541,8 +541,8 @@ export default function AdminMembers() {
                             onClick={() => setRoleTab('staff')}
                             className={`px-3 py-1.5 rounded-sm font-bold transition-all flex items-center gap-1.5 ${
                                 roleTab === 'staff'
-                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] '
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] '
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             <Shield size={12} />
@@ -553,8 +553,8 @@ export default function AdminMembers() {
                             onClick={() => setRoleTab('customer')}
                             className={`px-3 py-1.5 rounded-sm font-bold transition-all ${
                                 roleTab === 'customer'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] '
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             ลูกค้าสมาชิก ({customerCount})
@@ -562,21 +562,21 @@ export default function AdminMembers() {
                     </div>
 
                     {/* Quick Stats Pill */}
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm tabular-nums text-xs text-[oklch(42%_0.010_28)]">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm tabular-nums text-xs text-[var(--color-muted)]">
                         <span>xHAUS ในระบบ:</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">{totalXhaus.toLocaleString()} 🪙</span>
+                        <span className="font-bold text-[var(--color-ink)]">{totalXhaus.toLocaleString()} 🪙</span>
                     </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                     {/* Sort Selector */}
-                    <div className="flex items-center gap-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1.5 rounded-sm tabular-nums text-xs text-[oklch(42%_0.010_28)]">
-                        <ArrowUpDown size={13} className="text-[oklch(55%_0.010_28)]" />
-                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)]">เรียง:</span>
+                    <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-sm tabular-nums text-xs text-[var(--color-muted)]">
+                        <ArrowUpDown size={13} className="text-[var(--color-neutral)]" />
+                        <span className="text-xs font-bold text-[var(--color-neutral)]">เรียง:</span>
                         <select 
                             value={sortBy} 
                             onChange={e => setSortBy(e.target.value)}
-                            className="bg-transparent font-bold text-[oklch(18%_0.012_28)] outline-none cursor-pointer"
+                            className="bg-transparent font-bold text-[var(--color-ink)] outline-none cursor-pointer"
                         >
                             <option value="newest">สมัครล่าสุด</option>
                             <option value="name">ชื่อ (A-Z / ก-ฮ)</option>
@@ -588,13 +588,13 @@ export default function AdminMembers() {
 
                     {/* Search Input */}
                     <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] w-3.5 h-3.5" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] w-3.5 h-3.5" />
                         <input
                             type="text"
                             placeholder="ค้นชื่อ, เบอร์, LINE ID..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] tabular-nums placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-all"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[var(--color-ink)] tabular-nums placeholder:text-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] transition-all"
                         />
                     </div>
                 </div>
@@ -602,13 +602,13 @@ export default function AdminMembers() {
 
             {/* Members List Table / Cards */}
             {loading ? (
-                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
-                    <p className="tabular-nums text-[13px] text-[oklch(55%_0.010_28)]">กำลังโหลดข้อมูลสมาชิกและพนักงาน...</p>
+                <div className="text-center py-16 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[var(--color-rule)] border-b-[var(--color-ink)] mb-2" />
+                    <p className="tabular-nums text-[13px] text-[var(--color-neutral)]">กำลังโหลดข้อมูลสมาชิกและพนักงาน...</p>
                 </div>
             ) : filteredAndSortedMembers.length === 0 ? (
-                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm">
-                    <p className="tabular-nums text-[13px] text-[oklch(55%_0.010_28)]">ไม่พบข้อมูลสมาชิกตามเงื่อนไขที่ระบุ</p>
+                <div className="text-center py-16 bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-sm">
+                    <p className="tabular-nums text-[13px] text-[var(--color-neutral)]">ไม่พบข้อมูลสมาชิกตามเงื่อนไขที่ระบุ</p>
                 </div>
             ) : (
                 <div className="grid gap-3">
@@ -627,14 +627,14 @@ export default function AdminMembers() {
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={member.id}
-                                className={`bg-[oklch(99%_0.004_28)] border rounded-sm p-4 transition-all flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 ${
+                                className={`bg-[var(--color-paper)] border rounded-sm p-4 transition-all flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 ${
                                     isMaster 
-                                        ? 'border-[oklch(52%_0.16_28)] bg-[oklch(99%_0.004_28)]' 
+                                        ? 'border-[var(--brand-plum)] bg-[var(--color-paper)]' 
                                         : isCustom
                                             ? 'border-amber-400 bg-amber-50/20'
                                             : isStaff
                                                 ? 'border-[oklch(45%_0.08_140)] '
-                                                : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
+                                                : 'border-[var(--color-rule)] hover:border-[var(--color-neutral)]'
                                 }`}
                             >
                                 {/* Left Section: Avatar & Info */}
@@ -642,12 +642,12 @@ export default function AdminMembers() {
                                     {/* Role Avatar */}
                                     <div className={`w-11 h-11 rounded-sm flex items-center justify-center shrink-0 border tabular-nums font-bold text-xs ${
                                         isMaster
-                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
+                                            ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)]'
                                             : isCustom
-                                                ? 'bg-amber-600 text-[oklch(97%_0.008_28)] border-amber-600'
+                                                ? 'bg-amber-600 text-[var(--color-paper)] border-amber-600'
                                                 : isStaff
-                                                    ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] border-[oklch(45%_0.08_140)]'
-                                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                    ? 'bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] border-[oklch(45%_0.08_140)]'
+                                                    : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)]'
                                     }`}>
                                         {isMaster ? <Shield size={18} /> : <User size={18} />}
                                     </div>
@@ -655,37 +655,37 @@ export default function AdminMembers() {
                                     {/* User Details */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <h3 className="tabular-nums text-sm font-bold text-[oklch(18%_0.012_28)] truncate">
+                                            <h3 className="tabular-nums text-sm font-bold text-[var(--color-ink)] truncate">
                                                 {member.display_name || 'Unnamed Member'}
                                             </h3>
                                             {member.nickname && (
-                                                <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
+                                                <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)] rounded-xs">
                                                     ({member.nickname})
                                                 </span>
                                             )}
                                             <span className={`capitalize text-[11px] font-semibold px-1.5 py-0.2 rounded-xs border ${
                                                 isMaster
-                                                    ? 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                                    ? 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]'
                                                     : isCustom
                                                         ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
                                                         : isStaff
                                                             ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
-                                                            : 'bg-[oklch(96%_0.005_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                            : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)]'
                                             }`}>
                                                 {isCustom ? `Custom (${(member.admin_permissions || []).length}/${ADMIN_MODULES.length})` : (member.role || 'customer')}
                                             </span>
                                             {member.current_tier && (
-                                                <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.2 bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 rounded-xs ">
+                                                <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.2 bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] border border-[var(--brand-plum)]/30 rounded-xs ">
                                                     {member.current_tier}
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Secondary Meta Tags */}
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 tabular-nums text-xs text-[oklch(55%_0.010_28)] mt-1">
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 tabular-nums text-xs text-[var(--color-neutral)] mt-1">
                                             {member.phone_number && (
-                                                <span className="flex items-center gap-1 text-[oklch(18%_0.012_28)] font-medium">
-                                                    <Phone size={11} className="text-[oklch(55%_0.010_28)]" />
+                                                <span className="flex items-center gap-1 text-[var(--color-ink)] font-medium">
+                                                    <Phone size={11} className="text-[var(--color-neutral)]" />
                                                     {member.phone_number}
                                                 </span>
                                             )}
@@ -704,23 +704,23 @@ export default function AdminMembers() {
 
                                         {/* PIN Code Quick Bar (for Staff / Admin / Quick POS auth) */}
                                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                                            <div className="flex items-center gap-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-xs tabular-nums text-xs">
-                                                <Key size={12} className="text-[oklch(52%_0.16_28)]" />
-                                                <span className="text-xs text-[oklch(55%_0.010_28)]">PIN POS:</span>
-                                                <span className="font-bold tracking-wider text-[oklch(18%_0.012_28)]">
+                                            <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] px-2 py-0.5 rounded-xs tabular-nums text-xs">
+                                                <Key size={12} className="text-[var(--brand-plum)]" />
+                                                <span className="text-xs text-[var(--color-neutral)]">PIN POS:</span>
+                                                <span className="font-bold tracking-wider text-[var(--color-ink)]">
                                                     {!canManagePins
-                                                        ? <span className="text-[oklch(55%_0.010_28)] italic font-normal text-xs">เฉพาะแอดมิน</span>
+                                                        ? <span className="text-[var(--color-neutral)] italic font-normal text-xs">เฉพาะแอดมิน</span>
                                                         : justSetPin
                                                             ? justSetPin
                                                             : hasPin
                                                                 ? '••••'
-                                                                : <span className="text-[oklch(55%_0.010_28)] italic font-normal text-xs">ยังไม่ตั้ง</span>}
+                                                                : <span className="text-[var(--color-neutral)] italic font-normal text-xs">ยังไม่ตั้ง</span>}
                                                 </span>
                                                 {justSetPin && (
                                                     <button
                                                         type="button"
                                                         onClick={() => setJustSetPins(prev => { const next = { ...prev }; delete next[member.id]; return next })}
-                                                        className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-0.5 cursor-pointer ml-0.5"
+                                                        className="text-[var(--color-neutral)] hover:text-[var(--color-ink)] p-0.5 cursor-pointer ml-0.5"
                                                         title="ซ่อน PIN (จะดูซ้ำไม่ได้)"
                                                     >
                                                         <EyeOff size={11} />
@@ -732,7 +732,7 @@ export default function AdminMembers() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleResetPin(member)}
-                                                    className="text-[11px] tabular-nums font-bold text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-xs transition-colors flex items-center gap-1 cursor-pointer"
+                                                    className="text-[11px] tabular-nums font-bold text-[var(--brand-plum)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded-xs transition-colors flex items-center gap-1 cursor-pointer"
                                                     title="สุ่มรีเซ็ตรหัส PIN 4 หลักใหม่"
                                                 >
                                                     <RefreshCw size={9} /> สุ่ม PIN ใหม่
@@ -743,17 +743,17 @@ export default function AdminMembers() {
                                 </div>
 
                                 {/* Middle Section: Stats, Stamps & Points */}
-                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-between md:justify-end">
+                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t md:border-t-0 md:border-l border-[var(--color-rule)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-between md:justify-end">
                                     <div className="text-center tabular-nums">
-                                        <p className="text-base font-bold text-[oklch(18%_0.012_28)]">{member.total_bookings || 0}</p>
-                                        <p className="text-[13px] text-[oklch(55%_0.010_28)]">Bookings</p>
+                                        <p className="text-base font-bold text-[var(--color-ink)]">{member.total_bookings || 0}</p>
+                                        <p className="text-[13px] text-[var(--color-neutral)]">Bookings</p>
                                     </div>
 
                                     {/* Drink Stamps (10 Free 1) */}
                                     <div className="text-center tabular-nums">
                                         <div className="flex items-center justify-center gap-1">
-                                            <p className="text-base font-bold text-[oklch(18%_0.012_28)]">
-                                                ☕ {member.drink_stamp_count || 0}<span className="text-xs text-[oklch(55%_0.010_28)] font-normal">/10</span>
+                                            <p className="text-base font-bold text-[var(--color-ink)]">
+                                                ☕ {member.drink_stamp_count || 0}<span className="text-xs text-[var(--color-neutral)] font-normal">/10</span>
                                             </p>
                                             <button
                                                 type="button"
@@ -762,14 +762,14 @@ export default function AdminMembers() {
                                                     setStampCountInput(member.drink_stamp_count || 0)
                                                     setFreeQuotaInput(member.free_drink_quota || 0)
                                                 }}
-                                                className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors cursor-pointer"
+                                                className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs transition-colors cursor-pointer"
                                                 title="ปรับจำนวนแก้วสะสม / สิทธิ์เครื่องดื่มฟรี"
                                             >
                                                 <Edit2 size={11} />
                                             </button>
                                         </div>
                                         <div className="flex items-center justify-center gap-1 mt-0.5">
-                                            <p className="text-[13px] text-[oklch(55%_0.010_28)]">Stamps</p>
+                                            <p className="text-[13px] text-[var(--color-neutral)]">Stamps</p>
                                             {(member.free_drink_quota || 0) > 0 && (
                                                 <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1 py-0.2 rounded-xs">
                                                     🎁 ฟรี {member.free_drink_quota}
@@ -781,7 +781,7 @@ export default function AdminMembers() {
                                     {/* xHAUS Points */}
                                     <div className="text-center tabular-nums">
                                         <div className="flex items-center justify-center gap-1">
-                                            <p className="text-base font-bold text-[oklch(52%_0.16_28)]">
+                                            <p className="text-base font-bold text-[var(--brand-plum)]">
                                                 {Number(member.xhaus_balance || 0).toLocaleString()}
                                             </p>
                                             <button
@@ -792,22 +792,22 @@ export default function AdminMembers() {
                                                     setAdjustReason('')
                                                     setAdjustType('add')
                                                 }}
-                                                className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors cursor-pointer"
+                                                className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs transition-colors cursor-pointer"
                                                 title="ปรับเพิ่ม/ลดเหรียญ xhaus"
                                             >
                                                 <Coins size={13} />
                                             </button>
                                         </div>
-                                        <p className="text-[13px] text-[oklch(55%_0.010_28)]">xHAUS Points</p>
+                                        <p className="text-[13px] text-[var(--color-neutral)]">xHAUS Points</p>
                                     </div>
                                 </div>
 
                                 {/* Right Section: Action Controls */}
-                                <div className="flex flex-wrap items-center gap-2 border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-end tabular-nums text-xs">
+                                <div className="flex flex-wrap items-center gap-2 border-t md:border-t-0 md:border-l border-[var(--color-rule)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-end tabular-nums text-xs">
                                     <button
                                         type="button"
                                         onClick={() => openEditModal(member)}
-                                        className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] font-bold rounded-sm border border-[var(--color-rule)] flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
                                         <Edit2 size={12} />
                                         <span>แก้ไข</span>
@@ -816,7 +816,7 @@ export default function AdminMembers() {
                                     <button
                                         type="button"
                                         onClick={() => handleViewHistory(member)}
-                                        className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        className="px-2.5 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold rounded-sm border border-[var(--color-rule)] flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
                                         <Clock size={12} />
                                         <span>ประวัติบิล</span>
@@ -827,8 +827,8 @@ export default function AdminMembers() {
                                         onClick={() => handleToggleRole(member)}
                                         className={`px-2.5 py-1.5 font-bold rounded-sm border transition-colors cursor-pointer ${
                                             isAdmin
-                                                ? 'bg-[oklch(99%_0.004_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)]'
-                                                : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                ? 'bg-[var(--color-paper)] text-[var(--brand-plum)] border-[var(--brand-plum)] hover:bg-[var(--color-paper-2)]'
+                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                                         }`}
                                         title={isAdmin ? "ปลดสิทธิ์ Admin" : "ตั้งเป็น Admin"}
                                     >
@@ -838,7 +838,7 @@ export default function AdminMembers() {
                                     <button
                                         type="button"
                                         onClick={() => handleDeleteUser(member)}
-                                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] rounded-sm border border-transparent hover:border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                        className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--brand-plum)] hover:bg-[var(--color-paper-2)] rounded-sm border border-transparent hover:border-[var(--color-rule)] transition-colors cursor-pointer"
                                         title="ลบผู้ใช้งาน"
                                     >
                                         <Trash2 size={13} />
@@ -858,16 +858,16 @@ export default function AdminMembers() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[oklch(97%_0.008_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-xl overflow-hidden tabular-nums"
+                            className="bg-[var(--color-paper)] w-full max-w-lg rounded-sm border border-[var(--color-rule)] shadow-xl overflow-hidden tabular-nums"
                         >
-                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] flex justify-between items-center">
+                            <div className="p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)] flex justify-between items-center">
                                 <div>
-                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">MEMBER PROFILE CRM</span>
-                                    <h2 className="text-base font-bold text-[oklch(18%_0.012_28)]">แก้ไขข้อมูลสมาชิก & พนักงาน</h2>
+                                    <span className="text-xs font-bold text-[var(--brand-plum)]">MEMBER PROFILE CRM</span>
+                                    <h2 className="text-base font-bold text-[var(--color-ink)]">แก้ไขข้อมูลสมาชิก & พนักงาน</h2>
                                 </div>
                                 <button 
                                     onClick={() => setEditingMember(null)} 
-                                    className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                                    className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-muted)] hover:text-[var(--color-ink)] cursor-pointer"
                                 >
                                     <X size={18} />
                                 </button>
@@ -876,7 +876,7 @@ export default function AdminMembers() {
                             <form onSubmit={handleSaveMember} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="col-span-2">
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             Display Name (ชื่อแสดงผล) *
                                         </label>
                                         <input
@@ -884,25 +884,25 @@ export default function AdminMembers() {
                                             required
                                             value={editForm.display_name}
                                             onChange={e => setEditForm({ ...editForm, display_name: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             Nickname (ชื่อเล่น)
                                         </label>
                                         <input
                                             type="text"
                                             value={editForm.nickname}
                                             onChange={e => setEditForm({ ...editForm, nickname: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="col-span-2">
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             Phone Number (เบอร์โทรศัพท์)
                                         </label>
                                         <input
@@ -910,17 +910,17 @@ export default function AdminMembers() {
                                             placeholder="0812345678"
                                             value={editForm.phone_number}
                                             onChange={e => setEditForm({ ...editForm, phone_number: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                        <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                             Gender (เพศ)
                                         </label>
                                         <select
                                             value={editForm.gender}
                                             onChange={e => setEditForm({ ...editForm, gender: e.target.value })}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         >
                                             <option value="">ไม่ระบุ</option>
                                             <option value="Male">ชาย</option>
@@ -931,14 +931,14 @@ export default function AdminMembers() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         Birthday (วันเกิด / เดือนเกิด สำหรับโปรโมชั่นวันเกิด)
                                     </label>
                                     <div className="grid grid-cols-3 gap-2">
                                         <select
                                             value={editForm.birth_day}
                                             onChange={e => setEditForm({ ...editForm, birth_day: e.target.value })}
-                                            className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         >
                                             <option value="">วัน</option>
                                             {[...Array(31)].map((_, i) => (
@@ -948,7 +948,7 @@ export default function AdminMembers() {
                                         <select
                                             value={editForm.birth_month}
                                             onChange={e => setEditForm({ ...editForm, birth_month: e.target.value })}
-                                            className="col-span-2 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="col-span-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         >
                                             <option value="">เดือน</option>
                                             {THAI_MONTHS.map((m, i) => (
@@ -959,14 +959,14 @@ export default function AdminMembers() {
                                 </div>
 
                                 {/* Role & Backoffice Permissions Matrix */}
-                                <div className="bg-[oklch(96%_0.015_28)] border border-[oklch(85%_0.02_28)] p-3.5 rounded-sm space-y-3">
+                                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3.5 rounded-sm space-y-3">
                                     <div>
-                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
+                                        <label className="text-xs font-bold text-[var(--color-ink)] flex items-center justify-between">
                                             <span className="flex items-center gap-1.5">
-                                                <Shield size={13} className="text-[oklch(52%_0.16_28)]" />
+                                                <Shield size={13} className="text-[var(--brand-plum)]" />
                                                 <span>USER ROLE & BACKOFFICE PERMISSIONS (บทบาทและสิทธิ์ระบบ)</span>
                                             </span>
-                                            <span className="text-xs tabular-nums text-[oklch(52%_0.16_28)] font-bold">
+                                            <span className="text-xs tabular-nums text-[var(--brand-plum)] font-bold">
                                                 {editForm.role}
                                             </span>
                                         </label>
@@ -991,7 +991,7 @@ export default function AdminMembers() {
                                                     })
                                                 }
                                             }}
-                                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] mt-1"
+                                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2 text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] mt-1"
                                         >
                                             <option value="customer">CUSTOMER / สมาชิกทั่วไป (ไม่มีสิทธิ์หลังบ้าน)</option>
                                             <option value="staff">STAFF / พนักงานบริการ (เข้าได้เฉพาะ Floor, Bookings)</option>
@@ -1006,9 +1006,9 @@ export default function AdminMembers() {
 
                                     {/* Module Permissions Checkbox Grid */}
                                     {editForm.role !== 'customer' && (
-                                        <div className="pt-2 border-t border-[oklch(88%_0.015_28)] space-y-2">
+                                        <div className="pt-2 border-t border-[var(--color-paper-3)] space-y-2">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold text-[oklch(42%_0.010_28)] ">
+                                                <span className="text-xs font-bold text-[var(--color-muted)] ">
                                                     สิทธิ์การเข้าถึง {ADMIN_MODULES.length} หมวดหมู่หลังบ้าน (Custom Permissions):
                                                 </span>
                                                 {(editForm.role === 'owner' || editForm.role === 'admin') && (
@@ -1031,9 +1031,9 @@ export default function AdminMembers() {
                                                     return (
                                                         <label 
                                                             key={mod.key} 
-                                                            className={`flex items-center gap-2 p-2 bg-[oklch(99%_0.004_28)] rounded-xs border tabular-nums text-xs select-none transition-colors ${
-                                                                isChecked ? 'border-[oklch(52%_0.16_28)] font-bold text-[oklch(18%_0.012_28)]' : 'border-[oklch(88%_0.010_28)] text-[oklch(55%_0.010_28)]'
-                                                            } ${isOwnerOrAdmin ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-[oklch(52%_0.16_28)]'}`}
+                                                            className={`flex items-center gap-2 p-2 bg-[var(--color-paper)] rounded-xs border tabular-nums text-xs select-none transition-colors ${
+                                                                isChecked ? 'border-[var(--brand-plum)] font-bold text-[var(--color-ink)]' : 'border-[var(--color-paper-3)] text-[var(--color-neutral)]'
+                                                            } ${isOwnerOrAdmin ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--brand-plum)]'}`}
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1054,7 +1054,7 @@ export default function AdminMembers() {
                                                                         admin_permissions: next 
                                                                     })
                                                                 }}
-                                                                className="accent-[oklch(52%_0.16_28)]"
+                                                                className="accent-[var(--brand-plum)]"
                                                             />
                                                             <span>{mod.label}</span>
                                                         </label>
@@ -1066,9 +1066,9 @@ export default function AdminMembers() {
                                 </div>
 
                                 {canManagePins && (
-                                <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">
+                                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3 rounded-sm space-y-2">
                                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                                        <label className="text-xs font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
+                                        <label className="text-xs font-bold text-[var(--brand-plum)] flex items-center gap-1.5">
                                             <Key size={12} className="shrink-0" />
                                             <span>POS Staff PIN Code (รหัส PIN พนักงาน 4-6 หลัก)</span>
                                         </label>
@@ -1077,7 +1077,7 @@ export default function AdminMembers() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setEditForm({ ...editForm, pin: '', clearPin: !editForm.clearPin })}
-                                                    className="text-xs text-[oklch(42%_0.010_28)] hover:underline font-bold cursor-pointer"
+                                                    className="text-xs text-[var(--color-muted)] hover:underline font-bold cursor-pointer"
                                                 >
                                                     {editForm.clearPin ? 'ยกเลิกการลบ' : 'ลบ PIN'}
                                                 </button>
@@ -1088,7 +1088,7 @@ export default function AdminMembers() {
                                                     const newPin = Math.floor(1000 + Math.random() * 9000).toString()
                                                     setEditForm({ ...editForm, pin: newPin, clearPin: false })
                                                 }}
-                                                className="text-xs text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                                                className="text-xs text-[var(--brand-plum)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
                                             >
                                                 <RefreshCw size={10} /> สุ่ม PIN 4 หลัก
                                             </button>
@@ -1104,21 +1104,21 @@ export default function AdminMembers() {
                                         disabled={editForm.clearPin}
                                         value={editForm.pin || ''}
                                         onChange={e => setEditForm({ ...editForm, pin: e.target.value.replace(/\D/g, ''), clearPin: false })}
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-base font-bold tracking-widest text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] placeholder:font-normal placeholder:tracking-normal placeholder:text-[13px] disabled:opacity-60"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-base font-bold tracking-widest text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] placeholder:font-normal placeholder:tracking-normal placeholder:text-[13px] disabled:opacity-60"
                                     />
-                                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">ใช้สำหรับปลดล็อกหน้าจอ POS และเปิด/ปิดกะพนักงาน รหัสที่บันทึกแล้วจะดูย้อนหลังไม่ได้ กรุณาจดไว้ก่อนกดบันทึก</p>
+                                    <p className="text-[13px] text-[var(--color-neutral)]">ใช้สำหรับปลดล็อกหน้าจอ POS และเปิด/ปิดกะพนักงาน รหัสที่บันทึกแล้วจะดูย้อนหลังไม่ได้ กรุณาจดไว้ก่อนกดบันทึก</p>
                                 </div>
                                 )}
 
                                 {/* Drink Stamps & Quota */}
-                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">
-                                    <label className="text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
-                                        <Coffee size={12} className="text-[oklch(52%_0.16_28)]" />
+                                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3 rounded-sm space-y-2">
+                                    <label className="text-xs font-bold text-[var(--color-ink)] flex items-center gap-1.5">
+                                        <Coffee size={12} className="text-[var(--brand-plum)]" />
                                         <span>Drink Stamps & Free Drink Quota (สะสมแก้ว 10 แถม 1)</span>
                                     </label>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                            <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                                 แก้วสะสมปัจจุบัน (0-9 แก้ว)
                                             </label>
                                             <input
@@ -1127,11 +1127,11 @@ export default function AdminMembers() {
                                                 max="9"
                                                 value={editForm.drink_stamp_count}
                                                 onChange={e => setEditForm({ ...editForm, drink_stamp_count: e.target.value })}
-                                                className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2 text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                            <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                                 สิทธิ์เครื่องดื่มฟรี (แก้ว)
                                             </label>
                                             <input
@@ -1139,14 +1139,14 @@ export default function AdminMembers() {
                                                 min="0"
                                                 value={editForm.free_drink_quota}
                                                 onChange={e => setEditForm({ ...editForm, free_drink_quota: e.target.value })}
-                                                className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs tabular-nums font-bold text-emerald-800 outline-none focus:border-[oklch(18%_0.012_28)]"
+                                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2 text-xs tabular-nums font-bold text-emerald-800 outline-none focus:border-[var(--color-ink)]"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         LINE User ID
                                     </label>
                                     <input
@@ -1154,12 +1154,12 @@ export default function AdminMembers() {
                                         placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                                         value={editForm.line_user_id}
                                         onChange={e => setEditForm({ ...editForm, line_user_id: e.target.value })}
-                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         Admin Notes (หมายเหตุภายในสำหรับแอดมิน)
                                     </label>
                                     <textarea
@@ -1167,21 +1167,21 @@ export default function AdminMembers() {
                                         placeholder="เช่น ลูกค้า VIP ชอบนั่งโซนริมหน้าต่าง..."
                                         value={editForm.admin_notes}
                                         onChange={e => setEditForm({ ...editForm, admin_notes: e.target.value })}
-                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] resize-none"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] resize-none"
                                     />
                                 </div>
 
-                                <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex justify-end gap-2">
+                                <div className="pt-3 border-t border-[var(--color-rule)] flex justify-end gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setEditingMember(null)}
-                                        className="px-4 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                        className="px-4 py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] font-bold rounded-sm border border-[var(--color-rule)] text-xs cursor-pointer"
                                     >
                                         ยกเลิก
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm text-xs cursor-pointer "
+                                        className="px-5 py-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] font-bold rounded-sm text-xs cursor-pointer "
                                     >
                                         บันทึกการเปลี่ยนแปลง
                                     </button>
@@ -1200,24 +1200,24 @@ export default function AdminMembers() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[oklch(99%_0.004_28)] w-full max-w-sm rounded-sm border border-[oklch(85%_0.012_28)] shadow-xl overflow-hidden tabular-nums"
+                            className="bg-[var(--color-paper)] w-full max-w-sm rounded-sm border border-[var(--color-rule)] shadow-xl overflow-hidden tabular-nums"
                         >
-                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(97%_0.008_28)]">
+                            <div className="p-4 border-b border-[var(--color-rule)] flex justify-between items-center bg-[var(--color-paper)]">
                                 <div>
-                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">xHAUS LOYALTY POINTS</span>
-                                    <h3 className="text-sm font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="text-xs font-bold text-[var(--brand-plum)]">xHAUS LOYALTY POINTS</span>
+                                    <h3 className="text-sm font-bold text-[var(--color-ink)]">
                                         ปรับแต้ม: {adjustingMember.display_name || 'สมาชิก'}
                                     </h3>
                                 </div>
-                                <button onClick={() => setAdjustingMember(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                <button onClick={() => setAdjustingMember(null)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm cursor-pointer">
                                     <X size={16} />
                                 </button>
                             </div>
 
                             <form onSubmit={handleAdjustCoins} className="p-5 space-y-4">
-                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm text-center">
-                                    <span className="text-xs text-[oklch(55%_0.010_28)]">ยอดแต้มสะสมปัจจุบัน</span>
-                                    <p className="text-2xl font-bold text-[oklch(52%_0.16_28)]">
+                                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3 rounded-sm text-center">
+                                    <span className="text-xs text-[var(--color-neutral)]">ยอดแต้มสะสมปัจจุบัน</span>
+                                    <p className="text-2xl font-bold text-[var(--brand-plum)]">
                                         {Number(adjustingMember.xhaus_balance || 0).toLocaleString()} <span className="text-xs">xhaus</span>
                                     </p>
                                 </div>
@@ -1228,8 +1228,8 @@ export default function AdminMembers() {
                                         onClick={() => setAdjustType('add')}
                                         className={`flex-1 py-2 font-bold text-xs rounded-sm border transition-colors flex items-center justify-center gap-1.5 ${
                                             adjustType === 'add'
-                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                                : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)]'
                                         }`}
                                     >
                                         <Plus size={13} /> เพิ่มแต้ม
@@ -1239,8 +1239,8 @@ export default function AdminMembers() {
                                         onClick={() => setAdjustType('deduct')}
                                         className={`flex-1 py-2 font-bold text-xs rounded-sm border transition-colors flex items-center justify-center gap-1.5 ${
                                             adjustType === 'deduct'
-                                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
-                                                : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)]'
+                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)]'
                                         }`}
                                     >
                                         <Minus size={13} /> หักแต้ม
@@ -1248,7 +1248,7 @@ export default function AdminMembers() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         จำนวนเหรียญที่ต้องการ {adjustType === 'add' ? 'เพิ่ม' : 'หัก'}
                                     </label>
                                     <input
@@ -1258,12 +1258,12 @@ export default function AdminMembers() {
                                         placeholder="เช่น 50"
                                         value={adjustAmount}
                                         onChange={e => setAdjustAmount(e.target.value)}
-                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-base font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2.5 text-base font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         เหตุผลการปรับแต้ม (สำหรับประวัติภายใน)
                                     </label>
                                     <input
@@ -1271,22 +1271,22 @@ export default function AdminMembers() {
                                         placeholder="เช่น ชดเชยออเดอร์ล่าช้า / รางวัลพิเศษ..."
                                         value={adjustReason}
                                         onChange={e => setAdjustReason(e.target.value)}
-                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                     />
                                 </div>
 
-                                <div className="pt-2 flex justify-end gap-2 border-t border-[oklch(85%_0.012_28)]">
+                                <div className="pt-2 flex justify-end gap-2 border-t border-[var(--color-rule)]">
                                     <button
                                         type="button"
                                         onClick={() => setAdjustingMember(null)}
-                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                        className="px-3 py-1.5 bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold rounded-sm border border-[var(--color-rule)] text-xs cursor-pointer"
                                     >
                                         ยกเลิก
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isAdjusting}
-                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm text-xs cursor-pointer disabled:opacity-50"
+                                        className="px-4 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-bold rounded-sm text-xs cursor-pointer disabled:opacity-50"
                                     >
                                         {isAdjusting ? 'กำลังบันทึก...' : 'ยืนยันการปรับแต้ม'}
                                     </button>
@@ -1305,30 +1305,30 @@ export default function AdminMembers() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[oklch(99%_0.004_28)] w-full max-w-sm rounded-sm border border-[oklch(85%_0.012_28)] shadow-xl overflow-hidden tabular-nums"
+                            className="bg-[var(--color-paper)] w-full max-w-sm rounded-sm border border-[var(--color-rule)] shadow-xl overflow-hidden tabular-nums"
                         >
-                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(97%_0.008_28)]">
+                            <div className="p-4 border-b border-[var(--color-rule)] flex justify-between items-center bg-[var(--color-paper)]">
                                 <div>
-                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">DRINK STAMP CARD (10 FREE 1)</span>
-                                    <h3 className="text-sm font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="text-xs font-bold text-[var(--brand-plum)]">DRINK STAMP CARD (10 FREE 1)</span>
+                                    <h3 className="text-sm font-bold text-[var(--color-ink)]">
                                         ปรับสแตมป์: {adjustingStampMember.display_name || 'สมาชิก'}
                                     </h3>
                                 </div>
-                                <button onClick={() => setAdjustingStampMember(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                <button onClick={() => setAdjustingStampMember(null)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm cursor-pointer">
                                     <X size={16} />
                                 </button>
                             </div>
 
                             <form onSubmit={handleAdjustStamps} className="p-5 space-y-4">
-                                <div className="grid grid-cols-2 gap-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm text-center">
+                                <div className="grid grid-cols-2 gap-2 bg-[var(--color-paper)] border border-[var(--color-rule)] p-3 rounded-sm text-center">
                                     <div>
-                                        <span className="text-xs text-[oklch(55%_0.010_28)]">สแตมป์ปัจจุบัน</span>
-                                        <p className="text-xl font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="text-xs text-[var(--color-neutral)]">สแตมป์ปัจจุบัน</span>
+                                        <p className="text-xl font-bold text-[var(--color-ink)]">
                                             ☕ {adjustingStampMember.drink_stamp_count || 0}/10
                                         </p>
                                     </div>
                                     <div>
-                                        <span className="text-xs text-[oklch(55%_0.010_28)]">สิทธิ์เครื่องดื่มฟรี</span>
+                                        <span className="text-xs text-[var(--color-neutral)]">สิทธิ์เครื่องดื่มฟรี</span>
                                         <p className="text-xl font-bold text-emerald-700">
                                             🎁 {adjustingStampMember.free_drink_quota || 0} แก้ว
                                         </p>
@@ -1336,14 +1336,14 @@ export default function AdminMembers() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         จำนวนแก้วสะสมใหม่ (0 - 9 แก้ว)
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setStampCountInput(prev => Math.max(0, parseInt(prev || 0) - 1))}
-                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-[oklch(90%_0.008_28)] cursor-pointer"
+                                            className="px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-sm rounded-sm hover:bg-[var(--color-paper-3)] cursor-pointer"
                                         >
                                             -1
                                         </button>
@@ -1354,12 +1354,12 @@ export default function AdminMembers() {
                                             required
                                             value={stampCountInput}
                                             onChange={e => setStampCountInput(Math.min(9, Math.max(0, parseInt(e.target.value || 0))))}
-                                            className="w-full text-center bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-base font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full text-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2 text-base font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setStampCountInput(prev => Math.min(9, parseInt(prev || 0) + 1))}
-                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-[oklch(90%_0.008_28)] cursor-pointer"
+                                            className="px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-sm rounded-sm hover:bg-[var(--color-paper-3)] cursor-pointer"
                                         >
                                             +1
                                         </button>
@@ -1367,14 +1367,14 @@ export default function AdminMembers() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                                    <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                         สิทธิ์เครื่องดื่มฟรีใหม่ (แก้ว)
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setFreeQuotaInput(prev => Math.max(0, parseInt(prev || 0) - 1))}
-                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-[oklch(90%_0.008_28)] cursor-pointer"
+                                            className="px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-sm rounded-sm hover:bg-[var(--color-paper-3)] cursor-pointer"
                                         >
                                             -1
                                         </button>
@@ -1384,30 +1384,30 @@ export default function AdminMembers() {
                                             required
                                             value={freeQuotaInput}
                                             onChange={e => setFreeQuotaInput(Math.max(0, parseInt(e.target.value || 0)))}
-                                            className="w-full text-center bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-base font-bold text-emerald-800 outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            className="w-full text-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-2 text-base font-bold text-emerald-800 outline-none focus:border-[var(--color-ink)]"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setFreeQuotaInput(prev => parseInt(prev || 0) + 1)}
-                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-[oklch(90%_0.008_28)] cursor-pointer"
+                                            className="px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-sm rounded-sm hover:bg-[var(--color-paper-3)] cursor-pointer"
                                         >
                                             +1
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="pt-2 flex justify-end gap-2 border-t border-[oklch(85%_0.012_28)]">
+                                <div className="pt-2 flex justify-end gap-2 border-t border-[var(--color-rule)]">
                                     <button
                                         type="button"
                                         onClick={() => setAdjustingStampMember(null)}
-                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                        className="px-3 py-1.5 bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold rounded-sm border border-[var(--color-rule)] text-xs cursor-pointer"
                                     >
                                         ยกเลิก
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isAdjustingStamps}
-                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-sm text-xs cursor-pointer disabled:opacity-50"
+                                        className="px-4 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-bold rounded-sm text-xs cursor-pointer disabled:opacity-50"
                                     >
                                         {isAdjustingStamps ? 'กำลังบันทึก...' : 'บันทึกสแตมป์'}
                                     </button>
@@ -1426,34 +1426,34 @@ export default function AdminMembers() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="bg-[oklch(99%_0.004_28)] w-full max-w-2xl max-h-[85vh] rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col overflow-hidden tabular-nums"
+                            className="bg-[var(--color-paper)] w-full max-w-2xl max-h-[85vh] rounded-sm border border-[var(--color-rule)] shadow-2xl flex flex-col overflow-hidden tabular-nums"
                         >
                             {/* History Header */}
-                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-start bg-[oklch(97%_0.008_28)]">
+                            <div className="p-4 border-b border-[var(--color-rule)] flex justify-between items-start bg-[var(--color-paper)]">
                                 <div>
-                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">CUSTOMER SERVICE HISTORY</span>
-                                    <h2 className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                    <span className="text-xs font-bold text-[var(--brand-plum)]">CUSTOMER SERVICE HISTORY</span>
+                                    <h2 className="text-base font-bold text-[var(--color-ink)] mt-0.5">
                                         {selectedMember.display_name} {selectedMember.nickname && `(${selectedMember.nickname})`}
                                     </h2>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[oklch(55%_0.010_28)] mt-1">
-                                        <span>เบอร์: <strong className="text-[oklch(18%_0.012_28)]">{selectedMember.phone_number || '-'}</strong></span>
-                                        <span>xHAUS: <strong className="text-[oklch(52%_0.16_28)]">{Number(selectedMember.xhaus_balance || 0).toLocaleString()} 🪙</strong></span>
-                                        <span>ประวัติทั้งหมด: <strong className="text-[oklch(18%_0.012_28)]">{memberHistory.length} รายการ</strong></span>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-neutral)] mt-1">
+                                        <span>เบอร์: <strong className="text-[var(--color-ink)]">{selectedMember.phone_number || '-'}</strong></span>
+                                        <span>xHAUS: <strong className="text-[var(--brand-plum)]">{Number(selectedMember.xhaus_balance || 0).toLocaleString()} 🪙</strong></span>
+                                        <span>ประวัติทั้งหมด: <strong className="text-[var(--color-ink)]">{memberHistory.length} รายการ</strong></span>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedMember(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                <button onClick={() => setSelectedMember(null)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm cursor-pointer">
                                     <X size={18} />
                                 </button>
                             </div>
 
                             {/* History List */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[oklch(98%_0.006_28)]">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[var(--color-paper)]">
                                 {historyLoading ? (
-                                    <div className="text-center py-16 text-xs text-[oklch(55%_0.010_28)]  ">
+                                    <div className="text-center py-16 text-xs text-[var(--color-neutral)]  ">
                                         กำลังโหลดประวัติการใช้บริการ...
                                     </div>
                                 ) : memberHistory.length === 0 ? (
-                                    <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)]  ">
+                                    <div className="text-center py-16 bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-sm text-xs text-[var(--color-neutral)]  ">
                                         ไม่พบประวัติการสั่งซื้อหรือการจอง
                                     </div>
                                 ) : (
@@ -1468,22 +1468,22 @@ export default function AdminMembers() {
                                         return (
                                             <div 
                                                 key={booking.id} 
-                                                className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 "
+                                                className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 "
                                             >
                                                 <div className="space-y-1">
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <span className={`text-[11px] font-bold px-1.5 py-0.2 rounded-xs border ${
                                                             isCompleted
                                                                 ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
-                                                                : 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                                                : 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]'
                                                         }`}>
                                                             {booking.status}
                                                         </span>
-                                                        <span className="text-xs text-[oklch(55%_0.010_28)]">
+                                                        <span className="text-xs text-[var(--color-neutral)]">
                                                             {booking.created_at ? format(new Date(booking.created_at), 'dd MMM yyyy, HH:mm') : '-'}
                                                         </span>
                                                         {booking.booking_type && (
-                                                            <span className="text-[11px] text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-1 rounded-xs">
+                                                            <span className="text-[11px] text-[var(--color-neutral)] bg-[var(--color-paper-2)] px-1 rounded-xs">
                                                                 {booking.booking_type}
                                                             </span>
                                                         )}
@@ -1493,7 +1493,7 @@ export default function AdminMembers() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className="text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                                    <div className="text-xs font-bold text-[var(--color-ink)]">
                                                         {rawItems && rawItems.length > 0
                                                             ? rawItems.map(i => {
                                                                 const name = i.name || i.item_name || i.custom_name || i.menu_items?.name || (typeof i === 'string' ? i : 'รายการสินค้า')
@@ -1525,7 +1525,7 @@ export default function AdminMembers() {
                                                 </div>
 
                                                 <div className="text-right sm:self-center shrink-0">
-                                                    <span className="text-sm font-bold text-[oklch(18%_0.012_28)]">
+                                                    <span className="text-sm font-bold text-[var(--color-ink)]">
                                                         ฿{Number(booking.total_amount || 0).toLocaleString()}
                                                     </span>
                                                 </div>

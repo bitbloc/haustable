@@ -243,18 +243,18 @@ button, a, select, input, textarea, [role="button"] {
   height: 4px;
 }
 .financial-nav-scrollbar::-webkit-scrollbar-track {
-  background: oklch(94% 0.010 28);
+  background: var(--color-paper-2);
 }
 .financial-nav-scrollbar::-webkit-scrollbar-thumb {
-  background: oklch(80% 0.012 28);
+  background: oklch(80% 0.012 348.33);
   border-radius: 0px;
 }
 .financial-nav-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: oklch(52% 0.16 28);
+  background: var(--brand-plum);
 }
 .financial-nav-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: oklch(80% 0.012 28) oklch(94% 0.010 28);
+  scrollbar-color: oklch(80% 0.012 348.33) var(--color-paper-2);
 }
 
 @keyframes fade-in {
@@ -502,15 +502,15 @@ input[type="range"]::-moz-range-thumb {
 /* Built-in toasts (toast.success / error / info): ink surface, paper text */
 [data-sonner-toast][data-styled='true'] {
   padding: 12px 16px !important;
-  background: oklch(18% 0.012 28) !important;
-  color: oklch(97% 0.008 28) !important;
+  background: var(--color-ink) !important;
+  color: var(--color-paper) !important;
 }
 [data-sonner-toast][data-styled='true'] [data-title] {
-  color: oklch(97% 0.008 28) !important;
+  color: var(--color-paper) !important;
   line-height: 1.6 !important;
 }
 [data-sonner-toast][data-styled='true'] [data-description] {
-  color: oklch(85% 0.012 28) !important;
+  color: var(--color-rule) !important;
 }
 /* Type is carried by one small marker bar, not by a border or an icon */
 [data-sonner-toast][data-styled='true'] [data-icon] {
@@ -523,15 +523,15 @@ input[type="range"]::-moz-range-thumb {
   width: 3px;
   margin-right: 12px;
   border-radius: 2px;
-  background: oklch(55% 0.010 28);
+  background: var(--color-neutral);
 }
 [data-sonner-toast][data-styled='true'][data-type='success']::before { background: oklch(62% 0.11 140); }
 [data-sonner-toast][data-styled='true'][data-type='error']::before,
-[data-sonner-toast][data-styled='true'][data-type='warning']::before { background: oklch(62% 0.17 28); }
+[data-sonner-toast][data-styled='true'][data-type='warning']::before { background: var(--error-red); }
 [data-sonner-toast][data-styled='true'] [data-close-button] {
-  background: oklch(28% 0.012 28) !important;
+  background: oklch(28% 0.012 348.33) !important;
   border: 0 !important;
-  color: oklch(85% 0.012 28) !important;
+  color: var(--color-rule) !important;
   box-shadow: none !important;
 }
 
@@ -595,11 +595,11 @@ input[type="range"]::-moz-range-thumb {
   background: transparent;
 }
 .cfd-scrollbar::-webkit-scrollbar-thumb {
-  background: oklch(85% 0.012 28);
+  background: var(--color-rule);
   border-radius: 4px;
 }
 .cfd-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: oklch(55% 0.010 28);
+  background: var(--color-neutral);
 }
 
 /* Modern Pixel Display Typography (Dieter Rams x Retro-Modern Neo-Brutalist) */
@@ -629,15 +629,15 @@ input[type="range"]::-moz-range-thumb {
 /* Dedicated Strip Beacon: Static solid left border without main-thread box-shadow repaints */
 @keyframes rams-strip-beacon {
   0%, 100% {
-    border-left-color: oklch(52% 0.16 28);
+    border-left-color: var(--brand-plum);
   }
   50% {
-    border-left-color: oklch(62% 0.22 28);
+    border-left-color: oklch(62% 0.1 348.33);
   }
 }
 
 .animate-rams-strip-pulse {
-  border-left-color: oklch(52% 0.16 28);
+  border-left-color: var(--brand-plum);
 }
 
 /* Dieter Rams Organic Heartbeat Pulse (Pure transform + opacity on GPU compositor) */

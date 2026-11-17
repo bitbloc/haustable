@@ -159,16 +159,16 @@ function App() {
             fontWeight: 500,
           },
           classNames: {
-            toast: 'bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-xs',
-            title: 'font-bold text-sm text-[oklch(18%_0.012_28)]',
-            description: 'text-xs text-[oklch(42%_0.010_28)]',
-            actionButton: 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs px-3 py-1 rounded-lg',
-            cancelButton: 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-mono text-xs px-3 py-1 rounded-lg',
-            closeButton: 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]',
-            success: 'border-[oklch(45%_0.08_140)]/40 text-[oklch(18%_0.012_28)]',
-            error: 'border-[oklch(52%_0.16_28)]/40 text-[oklch(18%_0.012_28)]',
-            info: 'border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]',
-            warning: 'border-[oklch(52%_0.16_28)]/40 text-[oklch(18%_0.012_28)]',
+            toast: 'bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] shadow-xs',
+            title: 'font-bold text-sm text-[var(--color-ink)]',
+            description: 'text-xs text-[var(--color-muted)]',
+            actionButton: 'bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs px-3 py-1 rounded-lg',
+            cancelButton: 'bg-[var(--color-paper-2)] text-[var(--color-muted)] font-mono text-xs px-3 py-1 rounded-lg',
+            closeButton: 'bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)]',
+            success: 'border-[oklch(45%_0.08_140)]/40 text-[var(--color-ink)]',
+            error: 'border-[var(--error-red)]/40 text-[var(--color-ink)]',
+            info: 'border-[var(--color-rule)] text-[var(--color-ink)]',
+            warning: 'border-[var(--error-red)]/40 text-[var(--color-ink)]',
           }
         }}
       />

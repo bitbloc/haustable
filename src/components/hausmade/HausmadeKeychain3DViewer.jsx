@@ -745,24 +745,24 @@ export default function HausmadeKeychain3DViewer({
     }
 
     return (
-        <div className="relative w-full h-[460px] sm:h-[520px] lg:h-[600px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] overflow-hidden flex flex-col select-none group">
+        <div className="relative w-full h-[460px] sm:h-[520px] lg:h-[600px] bg-[var(--color-paper)] border border-[var(--color-rule)] overflow-hidden flex flex-col select-none group">
             {/* 3D WebGL Canvas Viewport */}
             <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
             {/* Loading Indicator */}
             {isFontLoading && (
-                <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[oklch(18%_0.012_28)]/80 text-[oklch(97%_0.008_28)] font-mono text-[10px] tracking-widest uppercase flex items-center gap-2 backdrop-blur-xs">
-                    <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-ping" />
+                <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-[var(--color-ink)]/80 text-[var(--color-paper)] font-mono text-[10px] tracking-widest uppercase flex items-center gap-2 backdrop-blur-xs">
+                    <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] animate-ping" />
                     GENERATING 3D VECTORS...
                 </div>
             )}
 
             {/* Top Right: Status Telemetry Badges (Dieter Rams Style) */}
             <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 font-mono text-[10px] uppercase">
-                <span className="px-2.5 py-1 bg-[oklch(97%_0.008_28)]/90 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] backdrop-blur-xs hidden sm:inline">
+                <span className="px-2.5 py-1 bg-[var(--color-paper)]/90 border border-[var(--color-rule)] text-[var(--color-muted)] backdrop-blur-xs hidden sm:inline">
                     PBR WEBGL · 60 FPS
                 </span>
-                <span className="px-2.5 py-1 bg-[oklch(97%_0.008_28)]/90 border border-[oklch(85%_0.012_28)] text-[oklch(52%_0.16_28)] font-bold backdrop-blur-xs">
+                <span className="px-2.5 py-1 bg-[var(--color-paper)]/90 border border-[var(--color-rule)] text-[var(--brand-plum)] font-bold backdrop-blur-xs">
                     ⌀ {holeDiameter}.0mm EYELET
                 </span>
             </div>
@@ -770,14 +770,14 @@ export default function HausmadeKeychain3DViewer({
             {/* Bottom Bar: Floating Minimalist Rams HUD Controls */}
             <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none font-mono text-xs">
                 {/* Left Controls: Turntable, Reset View, Wireframe */}
-                <div className="flex items-center gap-1.5 pointer-events-auto bg-[oklch(97%_0.008_28)]/90 p-1 border border-[oklch(85%_0.012_28)] backdrop-blur-sm shadow-xs">
+                <div className="flex items-center gap-1.5 pointer-events-auto bg-[var(--color-paper)]/90 p-1 border border-[var(--color-rule)] backdrop-blur-sm shadow-xs">
                     <button
                         type="button"
                         onClick={() => setIsAutoRotate(prev => !prev)}
                         className={`px-2.5 py-1 text-[11px] font-bold uppercase transition-colors cursor-pointer ${
                             isAutoRotate
-                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
-                                : 'hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)]'
+                                ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]'
+                                : 'hover:bg-[var(--color-paper-2)] text-[var(--color-ink)]'
                         }`}
                         title="หมุนโมเดล 360° อัตโนมัติ"
                     >
@@ -787,7 +787,7 @@ export default function HausmadeKeychain3DViewer({
                     <button
                         type="button"
                         onClick={handleResetCamera}
-                        className="px-2.5 py-1 text-[11px] font-bold uppercase hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                        className="px-2.5 py-1 text-[11px] font-bold uppercase hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] transition-colors cursor-pointer"
                         title="รีเซ็ตมุมมองกล้อง"
                     >
                         [ ⊡ FIT ]
@@ -798,8 +798,8 @@ export default function HausmadeKeychain3DViewer({
                         onClick={() => setIsWireframe(prev => !prev)}
                         className={`px-2 py-1 text-[11px] font-bold uppercase transition-colors cursor-pointer ${
                             isWireframe
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                : 'hover:bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)]'
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                : 'hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)]'
                         }`}
                         title="แสดงโครงสร้างสามเหลี่ยมโพลีกอน"
                     >
@@ -808,7 +808,7 @@ export default function HausmadeKeychain3DViewer({
                 </div>
 
                 {/* Right Controls: Studio Lighting Preset & Snapshot PNG */}
-                <div className="flex items-center gap-1.5 pointer-events-auto bg-[oklch(97%_0.008_28)]/90 p-1 border border-[oklch(85%_0.012_28)] backdrop-blur-sm shadow-xs">
+                <div className="flex items-center gap-1.5 pointer-events-auto bg-[var(--color-paper)]/90 p-1 border border-[var(--color-rule)] backdrop-blur-sm shadow-xs">
                     <div className="flex items-center text-[10px] uppercase">
                         {['atelier', 'neutral', 'darkroom'].map(mode => (
                             <button
@@ -817,8 +817,8 @@ export default function HausmadeKeychain3DViewer({
                                 onClick={() => setLightingMode(mode)}
                                 className={`px-2 py-1 font-bold cursor-pointer transition-colors ${
                                     lightingMode === mode
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                             >
                                 {mode === 'atelier' ? 'ATELIER' : mode === 'neutral' ? 'STUDIO' : 'DARK'}
@@ -826,12 +826,12 @@ export default function HausmadeKeychain3DViewer({
                         ))}
                     </div>
 
-                    <div className="w-[1px] h-4 bg-[oklch(85%_0.012_28)] mx-0.5" />
+                    <div className="w-[1px] h-4 bg-[var(--color-rule)] mx-0.5" />
 
                     <button
                         type="button"
                         onClick={handleSnapshot}
-                        className="px-2.5 py-1 text-[11px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] transition-colors cursor-pointer flex items-center gap-1"
+                        className="px-2.5 py-1 text-[11px] font-bold uppercase bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--brand-plum)] transition-colors cursor-pointer flex items-center gap-1"
                         title="ถ่ายภาพโมเดล 3D แบบ High-Res PNG"
                     >
                         <span>📷 SNAP</span>

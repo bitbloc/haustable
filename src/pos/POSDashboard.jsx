@@ -1796,21 +1796,21 @@ export default function POSDashboard() {
         // Flat ink block: no border, no shadow. The dot carries the alert type
         // (terracotta = needs staff now, olive = new order / info, neutral = cancelled).
         const dotColor = dot === 'terracotta'
-            ? 'bg-[oklch(62%_0.17_28)]'
+            ? 'bg-[var(--error-red)]'
             : dot === 'neutral'
-                ? 'bg-[oklch(55%_0.010_28)]'
+                ? 'bg-[var(--color-neutral)]'
                 : 'bg-[oklch(62%_0.11_140)]';
 
         return (
             <div
-                className="w-[var(--width)] max-w-[calc(100vw-32px)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-[10px] px-4 py-3 flex flex-col gap-1.5 font-sans select-none cursor-pointer transition-transform duration-150 active:scale-[0.98] touch-manipulation"
+                className="w-[var(--width)] max-w-[calc(100vw-32px)] bg-[var(--color-ink)] text-[var(--color-paper)] rounded-[10px] px-4 py-3 flex flex-col gap-1.5 font-sans select-none cursor-pointer transition-transform duration-150 active:scale-[0.98] touch-manipulation"
                 onClick={() => {
                     toast.dismiss(t);
                     if (onClick) onClick();
                 }}
             >
                 <div className="flex justify-between items-center gap-3">
-                    <span className="text-[10px] leading-[1.6] font-mono font-bold uppercase tracking-widest text-[oklch(85%_0.012_28)]">
+                    <span className="text-[10px] leading-[1.6] font-mono font-bold uppercase tracking-widest text-[var(--color-rule)]">
                         {badge}
                     </span>
                     <span className={`w-2 h-2 rounded-full ${dotColor} shrink-0`} />
@@ -1819,7 +1819,7 @@ export default function POSDashboard() {
                     {title}
                 </div>
                 {subtitle && (
-                    <div className="text-[11px] font-mono text-[oklch(85%_0.012_28)] leading-[1.6]">
+                    <div className="text-[11px] font-mono text-[var(--color-rule)] leading-[1.6]">
                         {subtitle}
                     </div>
                 )}
@@ -5443,7 +5443,7 @@ export default function POSDashboard() {
     return (
         <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none pos-container">
             {IS_POS_READONLY_PREVIEW && (
-                <div className="shrink-0 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[11px] font-bold uppercase tracking-wider text-center py-1">
+                <div className="shrink-0 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[11px] font-bold uppercase tracking-wider text-center py-1">
                     Read-only preview · ไม่บันทึกอะไรลงฐานข้อมูล
                 </div>
             )}
@@ -5601,7 +5601,7 @@ export default function POSDashboard() {
                             </button>
                             <button
                                 onClick={confirmNewWalkInPickup}
-                                className="flex-1 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-colors shadow-md"
+                                className="flex-1 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-colors shadow-md"
                             >
                                 Create Order
                             </button>
@@ -5727,7 +5727,7 @@ export default function POSDashboard() {
                                 return (
                                     <div className={`w-full rounded-sm p-3.5 text-xs text-[var(--color-ink)] flex flex-col gap-2.5 border ${
                                         isShortTurn 
-                                            ? 'bg-[oklch(52%_0.16_28_/_0.06)] border-[var(--color-accent)]' 
+                                            ? 'bg-[oklch(25.18%_0.1001_348.33_/_0.06)] border-[var(--color-accent)]' 
                                             : 'bg-[var(--color-paper-2)] border-[var(--color-rule)]'
                                     }`}>
                                         <div className="flex items-center justify-between pb-1.5 border-b border-[var(--color-rule)]">
@@ -5868,9 +5868,9 @@ export default function POSDashboard() {
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-thai-modern */}
             {onlineReservationModalData && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 select-none font-sans animate-in fade-in zoom-in-95 duration-150">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[var(--color-ink)]">
                         {/* Header */}
-                        <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-amber-500/10">
+                        <div className="p-4 border-b border-[var(--color-rule)] flex items-center justify-between bg-amber-500/10">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-10 h-10 rounded-sm bg-amber-500 text-black flex items-center justify-center font-mono font-black text-base shadow-xs">
                                     {onlineReservationModalData.table.table_name}
@@ -5881,7 +5881,7 @@ export default function POSDashboard() {
                                             คิวจองโต๊ะออนไลน์ (ONLINE RESERVATION)
                                         </h3>
                                         {isHoldExpired(onlineReservationModalData.reservation) ? (
-                                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs leading-none uppercase">
+                                            <span className="bg-[var(--brand-plum)] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs leading-none uppercase">
                                                 HOLD EXPIRED · เลยเวลาจอง {getBookingHoldMinutes(onlineReservationModalData.reservation) || 30}น.
                                             </span>
                                         ) : (
@@ -5890,14 +5890,14 @@ export default function POSDashboard() {
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                    <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">
                                         ความจุโต๊ะ: {onlineReservationModalData.table.capacity || 2} ที่นั่ง
                                     </p>
                                 </div>
                             </div>
                             <button 
                                 onClick={() => setOnlineReservationModalData(null)} 
-                                className="p-1.5 hover:bg-[oklch(94%_0.010_28)] rounded-sm text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                                className="p-1.5 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                             >
                                 <X size={18} />
                             </button>
@@ -5905,9 +5905,9 @@ export default function POSDashboard() {
 
                         {/* Reservation Details */}
                         <div className="p-5 flex flex-col gap-3">
-                            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-3.5 flex flex-col gap-2 shadow-xs font-mono">
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
-                                    <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">วัน-เวลานัดหมาย</span>
+                            <div className="bg-white border border-[var(--color-rule)] rounded-sm p-3.5 flex flex-col gap-2 shadow-xs font-mono">
+                                <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
+                                    <span className="text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">วัน-เวลานัดหมาย</span>
                                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                         <span className="text-xs font-black text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-xs">
                                             {formatPosDateTime(onlineReservationModalData.reservation.booking_time).shortText}
@@ -5918,27 +5918,27 @@ export default function POSDashboard() {
                                     </div>
                                 </div>
                                 {onlineReservationModalData.reservation.created_at && (
-                                    <div className="flex justify-between items-center text-[11px] text-[oklch(55%_0.010_28)] border-b border-[oklch(85%_0.012_28)]/50 pb-1.5">
+                                    <div className="flex justify-between items-center text-[11px] text-[var(--color-neutral)] border-b border-[var(--color-rule)]/50 pb-1.5">
                                         <span className="font-sans">ทำรายการจองเมื่อ:</span>
                                         <span className="font-bold">{formatPosDateTime(onlineReservationModalData.reservation.created_at).compactText}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)] font-sans">ชื่อผู้จอง:</span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="text-[var(--color-neutral)] font-sans">ชื่อผู้จอง:</span>
+                                    <span className="font-bold text-[var(--color-ink)]">
                                         {onlineReservationModalData.reservation.pickup_contact_name || onlineReservationModalData.reservation.customer_name || onlineReservationModalData.reservation.profiles?.display_name || 'ลูกค้าออนไลน์'}
                                     </span>
                                 </div>
                                 {(onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number) && (
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="text-[oklch(55%_0.010_28)] font-sans">เบอร์โทร:</span>
+                                        <span className="text-[var(--color-neutral)] font-sans">เบอร์โทร:</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                            <span className="font-bold text-[var(--color-ink)]">
                                                 {onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number}
                                             </span>
                                             <a
                                                 href={`tel:${String(onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number || '').replace(/[^\d+]/g, '')}`}
-                                                className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[10px] font-mono font-bold rounded-xs uppercase"
+                                                className="px-2 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[10px] font-mono font-bold rounded-xs uppercase"
                                             >
                                                 CALL
                                             </a>
@@ -5946,19 +5946,19 @@ export default function POSDashboard() {
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)] font-sans">จำนวนแขก:</span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="text-[var(--color-neutral)] font-sans">จำนวนแขก:</span>
+                                    <span className="font-bold text-[var(--color-ink)]">
                                         {onlineReservationModalData.reservation.pax || onlineReservationModalData.table.capacity || 2} คน
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)] font-sans">สถานะการจอง:</span>
+                                    <span className="text-[var(--color-neutral)] font-sans">สถานะการจอง:</span>
                                     {onlineReservationModalData.reservation.payment_slip_url ? (
                                         <span className="text-emerald-700 font-bold">
                                             [DEPOSIT PAID] ฿{(onlineReservationModalData.reservation.total_amount || 0).toLocaleString()}
                                         </span>
                                     ) : isCallConfirmOrder(onlineReservationModalData.reservation) ? (
-                                        <span className="text-[oklch(52%_0.16_28)] font-bold">
+                                        <span className="text-[var(--brand-plum)] font-bold">
                                             {onlineReservationModalData.reservation.status === 'pending'
                                                 ? `จองฟรี · รอโทรยืนยัน (เก็บโต๊ะ ${getBookingHoldMinutes(onlineReservationModalData.reservation) || 30} นาที)`
                                                 : `โทรยืนยันแล้ว · เก็บโต๊ะ ${getBookingHoldMinutes(onlineReservationModalData.reservation) || 30} นาที`}
@@ -5970,29 +5970,29 @@ export default function POSDashboard() {
                                     )}
                                 </div>
                                 {onlineReservationModalData.reservation.customer_note && (
-                                    <div className="mt-1 pt-1.5 border-t border-[oklch(85%_0.012_28)] text-xs text-[oklch(52%_0.16_28)] italic font-sans">
+                                    <div className="mt-1 pt-1.5 border-t border-[var(--color-rule)] text-xs text-[var(--brand-plum)] italic font-sans">
                                         "{onlineReservationModalData.reservation.customer_note}"
                                     </div>
                                 )}
                                 {onlineReservationModalData.reservation.order_items && onlineReservationModalData.reservation.order_items.length > 0 && (
-                                    <div className="mt-1 pt-2 border-t border-[oklch(85%_0.012_28)] text-xs">
-                                        <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                    <div className="mt-1 pt-2 border-t border-[var(--color-rule)] text-xs">
+                                        <span className="text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                                             สั่งอาหารล่วงหน้า ({onlineReservationModalData.reservation.order_items.length} รายการ):
                                         </span>
-                                        <p className="font-sans text-[11px] text-[oklch(18%_0.012_28)] mt-0.5 truncate">
+                                        <p className="font-sans text-[11px] text-[var(--color-ink)] mt-0.5 truncate">
                                             {onlineReservationModalData.reservation.order_items.map(i => `${i.quantity || 1}x ${i.menu_items?.name || i.name || 'อาหาร'}`).join(', ')}
                                         </p>
                                     </div>
                                 )}
                             </div>
 
-                            <p className="text-[11px] text-[oklch(55%_0.010_28)] text-center font-mono">
+                            <p className="text-[11px] text-[var(--color-neutral)] text-center font-mono">
                                 ลูกค้ามาถึงร้านแล้ว หรือต้องการเปิดให้ Walk-in นั่งชั่วคราว?
                             </p>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2">
+                        <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-col gap-2">
                             {/* Call Confirm Action when still pending */}
                             {onlineReservationModalData.reservation.status === 'pending' && isCallConfirmOrder(onlineReservationModalData.reservation) && (
                                 <button
@@ -6015,7 +6015,7 @@ export default function POSDashboard() {
                                             triggerDebouncedRefresh();
                                         }
                                     }}
-                                    className="w-full bg-[oklch(52%_0.16_28)] hover:opacity-90 text-white py-2.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                                    className="w-full bg-[var(--brand-plum)] hover:opacity-90 text-white py-2.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                                 >
                                     ยืนยันทางโทรศัพท์แล้ว (CONFIRM BY PHONE)
                                 </button>
@@ -6026,7 +6026,7 @@ export default function POSDashboard() {
                                 type="button"
                                 disabled={isSeatingReservation}
                                 onClick={() => handleSeatOnlineReservation(onlineReservationModalData.table, onlineReservationModalData.reservation)}
-                                className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed text-[oklch(97%_0.008_28)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                                className="w-full bg-[var(--color-ink)] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed text-[var(--color-paper)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                             >
                                 {isSeatingReservation ? (
                                     <span className="flex items-center gap-2">
@@ -6049,7 +6049,7 @@ export default function POSDashboard() {
                                         setOpenTablePaxInput(String(tbl.capacity || 2));
                                         setOpenTableModalData({ table: tbl, upcomingReservation: res, reservationDiffMins: diff });
                                     }}
-                                    className="flex-1 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98 text-center"
+                                    className="flex-1 bg-white border border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98 text-center"
                                 >
                                     เปิด Walk-in ชั่วคราว
                                 </button>
@@ -6073,14 +6073,14 @@ export default function POSDashboard() {
                                             triggerDebouncedRefresh();
                                         }
                                     }}
-                                    className="px-3 bg-white border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.010_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
+                                    className="px-3 bg-white border border-[var(--brand-plum)] text-[var(--brand-plum)] hover:bg-[var(--color-paper-2)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
                                 >
                                     NO-SHOW
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setOnlineReservationModalData(null)}
-                                    className="px-4 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
+                                    className="px-4 bg-white border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
                                 >
                                     ปิด
                                 </button>
@@ -6094,32 +6094,32 @@ export default function POSDashboard() {
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-zero-icons */}
             {showPendingModal && pendingBookingsList.length > 0 && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-lg shadow-sm overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-2xl w-full max-w-lg shadow-sm overflow-hidden flex flex-col max-h-[85vh] text-[var(--color-ink)]">
                         {/* Rams Matte Dark Ink Header (No Icons) */}
-                        <div className="bg-[oklch(18%_0.012_28)] px-5 py-4 text-[oklch(97%_0.008_28)] flex justify-between items-center shrink-0 border-b border-[oklch(85%_0.012_28)]">
+                        <div className="bg-[var(--color-ink)] px-5 py-4 text-[var(--color-paper)] flex justify-between items-center shrink-0 border-b border-[var(--color-rule)]">
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-sm tracking-tight text-[oklch(97%_0.008_28)] uppercase">
+                                    <h3 className="font-bold text-sm tracking-tight text-[var(--color-paper)] uppercase">
                                         คิวจอง & ออเดอร์ออนไลน์รอยืนยัน
                                     </h3>
-                                    <span className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 rounded-md text-xs font-mono font-bold">
+                                    <span className="bg-[var(--brand-plum)] text-white px-2 py-0.5 rounded-md text-xs font-mono font-bold">
                                         {pendingBookingsList.length}
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5 tracking-tight">
+                                <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5 tracking-tight">
                                     กล่องตรวจสอบส่วนตัว (แยกเดี่ยว ไม่กระทบผังโต๊ะหน้าร้าน)
                                 </p>
                             </div>
                             <button
                                 onClick={() => setShowPendingModal(false)}
-                                className="px-2.5 py-1 text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] hover:text-[oklch(97%_0.008_28)] hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                                className="px-2.5 py-1 text-[11px] font-mono font-bold text-[var(--color-neutral)] hover:text-[var(--color-paper)] hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                             >
                                 [ ปิด ]
                             </button>
                         </div>
 
                         {/* Scrollable Pending Cards List */}
-                        <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[oklch(94%_0.010_28)] scrollbar-none">
+                        <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[var(--color-paper-2)] scrollbar-none">
                             {pendingBookingsList.map((item, idx) => {
                                 const isPickup = item.booking_type === 'pickup';
                                 const isEasySlipVerified = Boolean(item.slip_verified || (item.staff_remark && item.staff_remark.includes('EasySlip')));
@@ -6134,20 +6134,20 @@ export default function POSDashboard() {
                                 const createdDt = item.created_at ? formatPosDateTime(item.created_at) : null;
 
                                 return (
-                                    <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                                    <div key={item.id || idx} className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
                                         {/* Card Top Details (Clean, Complete Date & Time, Zero Icons) */}
-                                        <div className="flex flex-col gap-2.5 border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                                        <div className="flex flex-col gap-2.5 border-b border-[var(--color-rule)] pb-2.5">
                                             {/* Row 1: Type + Queue ID on left, Order Created Timestamp on right */}
                                             <div className="flex items-center justify-between gap-2 font-mono flex-wrap">
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block ${
                                                         isPickup 
                                                             ? 'bg-blue-100 text-blue-900 border-blue-200' 
-                                                            : 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/20'
+                                                            : 'bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] border-[var(--brand-plum)]/20'
                                                     }`}>
                                                         {isPickup ? 'PICKUP · สั่งรับกลับ' : 'DINE-IN · จองโต๊ะ'}
                                                     </span>
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-paper-2)] px-2 py-0.5 rounded border border-[var(--color-rule)] inline-block">
                                                         #{getShortBookingId(item)}
                                                     </span>
                                                     {isVerified && (
@@ -6157,7 +6157,7 @@ export default function POSDashboard() {
                                                     )}
                                                 </div>
                                                 {createdDt && createdDt.valid && (
-                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-medium">
+                                                    <span className="text-[10px] text-[var(--color-neutral)] font-medium">
                                                         สั่งเมื่อ: {createdDt.compactText}
                                                     </span>
                                                 )}
@@ -6166,23 +6166,23 @@ export default function POSDashboard() {
                                             {/* Row 2: Dedicated Appointment Date & Time Strip (Simple & Scannable) */}
                                             <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border font-mono ${
                                                 apptDt.isFutureDay
-                                                    ? 'bg-[oklch(52%_0.16_28)]/10 border-[oklch(52%_0.16_28)]/30 text-[oklch(18%_0.012_28)]'
-                                                    : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                                    ? 'bg-[var(--brand-plum)]/10 border-[var(--brand-plum)]/30 text-[var(--color-ink)]'
+                                                    : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
                                             }`}>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)]">
                                                         {isPickup ? 'วัน-เวลานัดรับอาหาร (PICKUP)' : 'วัน-เวลานัดจองโต๊ะ (BOOKING)'}
                                                     </span>
-                                                    <span className={`text-sm font-black mt-0.5 ${apptDt.isFutureDay ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
+                                                    <span className={`text-sm font-black mt-0.5 ${apptDt.isFutureDay ? 'text-[var(--brand-plum)]' : 'text-[var(--color-ink)]'}`}>
                                                         {apptDt.fullText}
                                                     </span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-xs font-bold text-[oklch(18%_0.012_28)] block">
+                                                    <span className="text-xs font-bold text-[var(--color-ink)] block">
                                                         {isPickup ? 'รับกลับบ้าน' : `${item.pax || 1} ท่าน`}
                                                     </span>
                                                     {isPayAtStore && (
-                                                        <span className="text-[9px] font-bold text-[oklch(52%_0.16_28)] block mt-0.5">
+                                                        <span className="text-[9px] font-bold text-[var(--brand-plum)] block mt-0.5">
                                                             {isPickup ? 'รอโทรยืนยัน · จ่ายที่ร้าน' : `รอโทรยืนยัน · เก็บโต๊ะ ${holdMinutes || 30}น.`}
                                                         </span>
                                                     )}
@@ -6192,17 +6192,17 @@ export default function POSDashboard() {
                                             {/* Row 3: Customer Name & Phone Call Action */}
                                             <div className="flex items-center justify-between gap-2 pt-0.5">
                                                 <div>
-                                                    <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] leading-tight">
+                                                    <h4 className="font-bold text-sm text-[var(--color-ink)] leading-tight">
                                                         {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || (isPickup ? 'ลูกค้าสั่ง Pickup' : 'ลูกค้าออนไลน์')}
                                                     </h4>
-                                                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                                    <p className="text-xs text-[var(--color-neutral)] font-mono mt-0.5">
                                                         โทร: {guestPhone || 'ไม่ระบุเบอร์โทร'}
                                                     </p>
                                                 </div>
                                                 {guestPhone && (
                                                     <a
                                                         href={`tel:${guestPhone.replace(/[^\d+]/g, '')}`}
-                                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[10px] font-mono font-bold rounded-lg uppercase tracking-wider shrink-0"
+                                                        className="px-3 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[10px] font-mono font-bold rounded-lg uppercase tracking-wider shrink-0"
                                                     >
                                                         [ CALL โทรออก ]
                                                     </a>
@@ -6212,11 +6212,11 @@ export default function POSDashboard() {
 
                                         {/* Pre-ordered Food Items (No Icons) */}
                                         {item.order_items && item.order_items.length > 0 && (
-                                            <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] space-y-1">
-                                                <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1">
+                                            <div className="bg-[var(--color-paper-2)] p-2.5 rounded-lg border border-[var(--color-rule)] space-y-1">
+                                                <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1">
                                                     รายการอาหาร ({item.order_items.length} รายการ)
                                                 </p>
-                                                <div className="space-y-0.5 text-xs text-[oklch(18%_0.012_28)]">
+                                                <div className="space-y-0.5 text-xs text-[var(--color-ink)]">
                                                     {item.order_items.map((oi, i) => (
                                                         <div key={i} className="flex justify-between font-mono text-[11px]">
                                                             <span>{oi.quantity}x {oi.custom_name || oi.menu_items?.name || oi.name || 'รายการอาหาร'}</span>
@@ -6229,9 +6229,9 @@ export default function POSDashboard() {
 
                                         {/* Table Preset Information (Only for Dine-in) */}
                                         {!isPickup && item.tables_layout && (
-                                            <div className="text-[10px] font-mono text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 rounded-lg border border-[oklch(85%_0.012_28)] flex justify-between items-center">
-                                                <span>โต๊ะระบุล่วงหน้า: <strong className="text-[oklch(18%_0.012_28)]">{item.tables_layout.table_name}</strong></span>
-                                                <span className="text-[oklch(52%_0.16_28)] font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
+                                            <div className="text-[10px] font-mono text-[var(--color-neutral)] bg-[var(--color-paper-2)] px-2.5 py-1.5 rounded-lg border border-[var(--color-rule)] flex justify-between items-center">
+                                                <span>โต๊ะระบุล่วงหน้า: <strong className="text-[var(--color-ink)]">{item.tables_layout.table_name}</strong></span>
+                                                <span className="text-[var(--brand-plum)] font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
                                             </div>
                                         )}
 
@@ -6240,15 +6240,15 @@ export default function POSDashboard() {
                                             <div className={`p-3 rounded-xl border font-mono text-xs flex flex-col gap-2 ${
                                                 isVerified 
                                                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950' 
-                                                    : (hasSlip ? 'bg-amber-500/10 border-amber-500/30 text-amber-950' : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]')
+                                                    : (hasSlip ? 'bg-amber-500/10 border-amber-500/30 text-amber-950' : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]')
                                             }`}>
                                                 <div className="flex justify-between items-center flex-wrap gap-1">
                                                     <div className="flex items-center gap-2 font-bold">
                                                         {item.deposit_amount > 0 && <span>มัดจำ: ฿{item.deposit_amount.toLocaleString()}</span>}
                                                         {item.total_amount > 0 ? (
-                                                            <span className="text-[oklch(42%_0.010_28)]">ยอดรวม: ฿{item.total_amount.toLocaleString()}</span>
+                                                            <span className="text-[var(--color-muted)]">ยอดรวม: ฿{item.total_amount.toLocaleString()}</span>
                                                         ) : (
-                                                            <span className="text-[oklch(42%_0.010_28)]">จองโต๊ะอย่างเดียว (ไม่มีค่ามัดจำ)</span>
+                                                            <span className="text-[var(--color-muted)]">จองโต๊ะอย่างเดียว (ไม่มีค่ามัดจำ)</span>
                                                         )}
                                                     </div>
 
@@ -6267,11 +6267,11 @@ export default function POSDashboard() {
                                                                 รอตรวจสลิปโอนเงิน
                                                             </span>
                                                         ) : isPayAtStore ? (
-                                                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                            <span className="bg-[var(--brand-plum)] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
                                                                 {isPickup ? 'PAY AT STORE · ชำระที่ร้าน' : `FREE BOOKING · เก็บโต๊ะ ${holdMinutes || 30} นาที`}
                                                             </span>
                                                         ) : (
-                                                            <span className="bg-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                            <span className="bg-[var(--color-rule)] text-[var(--color-muted)] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
                                                                 ยังไม่มีสลิป
                                                             </span>
                                                         )}
@@ -6281,7 +6281,7 @@ export default function POSDashboard() {
                                                 {/* Slip Actions & Details */}
                                                 {hasSlip && (
                                                     <div className="flex justify-between items-center border-t border-black/10 pt-2 text-[10px]">
-                                                        <span className="text-[oklch(42%_0.010_28)] truncate pr-2">
+                                                        <span className="text-[var(--color-muted)] truncate pr-2">
                                                             {item.slip_trans_ref ? `Ref: ${item.slip_trans_ref}` : (item.slip_provider ? `Provider: ${item.slip_provider}` : 'หลักฐานการโอนเงินแนบมาแล้ว')}
                                                         </span>
                                                         <div className="flex items-center gap-1.5 shrink-0">
@@ -6290,7 +6290,7 @@ export default function POSDashboard() {
                                                                 onClick={() => {
                                                                     setViewSlipImageUrl(item.payment_slip_url);
                                                                 }}
-                                                                className="bg-[oklch(18%_0.012_28)] hover:bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded transition-all cursor-pointer shadow-2xs uppercase font-mono"
+                                                                className="bg-[var(--color-ink)] hover:bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded transition-all cursor-pointer shadow-2xs uppercase font-mono"
                                                             >
                                                                 ตรวจสลิป (VIEW)
                                                             </button>
@@ -6337,7 +6337,7 @@ export default function POSDashboard() {
                                         )}
 
                                         {/* Card Bottom Actions (No Icons) */}
-                                        <div className="flex items-center gap-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
+                                        <div className="flex items-center gap-2 pt-1 border-t border-[var(--color-rule)]">
                                             <button
                                                 type="button"
                                                 onClick={async () => {
@@ -6413,7 +6413,7 @@ export default function POSDashboard() {
                                                         }
                                                     }
                                                 }}
-                                                className="flex-2 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center font-mono uppercase tracking-wider"
+                                                className="flex-2 py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(30%_0.012_348.33)] text-[var(--color-paper)] border border-[var(--color-ink)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center font-mono uppercase tracking-wider"
                                             >
                                                 {isPickup
                                                     ? (isPayAtStore ? 'โทรยืนยันแล้ว + สั่งพิมพ์ใบครัวทันที' : 'อนุมัติออเดอร์ (Pickup)')
@@ -6426,10 +6426,10 @@ export default function POSDashboard() {
                         </div>
 
                         {/* Modal Footer (No Icons) */}
-                        <div className="p-3 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)] flex justify-end">
+                        <div className="p-3 bg-[var(--color-paper)] border-t border-[var(--color-rule)] flex justify-end">
                             <button
                                 onClick={() => setShowPendingModal(false)}
-                                className="px-4 py-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xl text-xs font-mono font-bold text-[oklch(55%_0.010_28)] cursor-pointer active:scale-95 transition-all"
+                                className="px-4 py-2 bg-white border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] rounded-xl text-xs font-mono font-bold text-[var(--color-neutral)] cursor-pointer active:scale-95 transition-all"
                             >
                                 ปิดหน้าต่างเตือน (Close Overlay)
                             </button>
@@ -6508,16 +6508,16 @@ export default function POSDashboard() {
                                             <div className="flex flex-col items-start gap-0.5 text-left">
                                                 <div className="flex items-center gap-1.5">
                                                     <span>โต๊ะ {t.table_name}</span>
-                                                    {shortId ? <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">({shortId})</span> : null}
+                                                    {shortId ? <span className="text-[10px] font-mono text-[var(--color-neutral)]">({shortId})</span> : null}
                                                 </div>
                                                 {memberName ? (
-                                                    <span className="text-[10px] font-normal text-[oklch(42%_0.010_28)]">
+                                                    <span className="text-[10px] font-normal text-[var(--color-muted)]">
                                                         ลูกค้า: {memberName}
                                                     </span>
                                                 ) : null}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-mono text-xs text-[oklch(18%_0.012_28)]">
+                                                <span className="font-mono text-xs text-[var(--color-ink)]">
                                                     ฿{targetAmt.toLocaleString()}
                                                 </span>
                                                 <span className="text-[8px] font-mono text-amber-700 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
@@ -6817,8 +6817,8 @@ export default function POSDashboard() {
 
                             {/* Open Tables Intelligent Guard & Mode Selection (Option 2) */}
                             {openTablesInShift.length > 0 ? (
-                                <div className="border border-[oklch(80%_0.04_28)] bg-[oklch(96%_0.012_28)] rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
-                                    <div className="flex items-start justify-between gap-2 border-b border-[oklch(85%_0.015_28)] pb-2.5">
+                                <div className="border border-[oklch(80%_0.04_348.33)] bg-[var(--color-paper)] rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
+                                    <div className="flex items-start justify-between gap-2 border-b border-[var(--color-rule)] pb-2.5">
                                         <div>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
@@ -6903,7 +6903,7 @@ export default function POSDashboard() {
                                                     <span className={`font-bold ${closeShiftMode === 'end_of_day' ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
                                                         เลิกงาน / ปิดร้านสิ้นวัน
                                                     </span>
-                                                    <span className="text-[8px] font-mono font-bold uppercase bg-[oklch(90%_0.02_28)] text-[var(--color-ink)] px-1.5 py-0.5 rounded">
+                                                    <span className="text-[8px] font-mono font-bold uppercase bg-[var(--color-paper-3)] text-[var(--color-ink)] px-1.5 py-0.5 rounded">
                                                         ปิดรอบร้าน
                                                     </span>
                                                 </div>

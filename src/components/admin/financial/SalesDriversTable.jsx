@@ -16,15 +16,15 @@ export default function SalesDriversTable({
     const topItems = (items || []).slice(0, 6)
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
             
             {/* Header */}
-            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between tabular-nums text-xs">
+            <div className="p-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
                         DRIVERS
                     </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
+                    <span className="font-bold text-[var(--color-ink)]  ">
                         SALES DRIVERS // เมนูขับเคลื่อนยอดขาย
                     </span>
                 </div>
@@ -32,7 +32,7 @@ export default function SalesDriversTable({
                     <button
                         type="button"
                         onClick={onViewAllMenu}
-                        className="text-xs underline hover:text-[oklch(18%_0.012_28)] text-[oklch(42%_0.010_28)] cursor-pointer"
+                        className="text-xs underline hover:text-[var(--color-ink)] text-[var(--color-muted)] cursor-pointer"
                     >
                         ดูทั้งหมด ({items?.length || 0}) →
                     </button>
@@ -40,7 +40,7 @@ export default function SalesDriversTable({
             </div>
 
             {/* Table Header Strip */}
-            <div className="grid grid-cols-12 px-4 py-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] tabular-nums text-xs text-[oklch(42%_0.010_28)] ">
+            <div className="grid grid-cols-12 px-4 py-2 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] tabular-nums text-xs text-[var(--color-muted)] ">
                 <div className="col-span-1">#</div>
                 <div className="col-span-5">รายการเมนู</div>
                 <div className="col-span-2 text-right">จำนวน</div>
@@ -49,9 +49,9 @@ export default function SalesDriversTable({
             </div>
 
             {/* Rows */}
-            <div className="divide-y divide-[oklch(85%_0.012_28)] tabular-nums text-xs">
+            <div className="divide-y divide-[var(--color-rule)] tabular-nums text-xs">
                 {topItems.length === 0 ? (
-                    <div className="p-6 text-center text-[oklch(55%_0.010_28)]">
+                    <div className="p-6 text-center text-[var(--color-neutral)]">
                         ยังไม่มีข้อมูลออเดอร์ในรอบนี้
                     </div>
                 ) : (
@@ -65,24 +65,24 @@ export default function SalesDriversTable({
                         return (
                             <div 
                                 key={item.id || idx}
-                                className="grid grid-cols-12 px-4 py-2.5 items-center hover:bg-[oklch(94%_0.010_28)] transition-colors"
+                                className="grid grid-cols-12 px-4 py-2.5 items-center hover:bg-[var(--color-paper-2)] transition-colors"
                             >
-                                <div className="col-span-1 text-[oklch(55%_0.010_28)] font-bold">
+                                <div className="col-span-1 text-[var(--color-neutral)] font-bold">
                                     {String(idx + 1).padStart(2, '0')}
                                 </div>
-                                <div className="col-span-5 truncate pr-2 font-sans font-medium text-[oklch(18%_0.012_28)]">
+                                <div className="col-span-5 truncate pr-2 font-sans font-medium text-[var(--color-ink)]">
                                     {item.name || item.custom_name || 'เมนูทั่วไป'}
                                 </div>
-                                <div className="col-span-2 text-right text-[oklch(42%_0.010_28)] tabular-nums">
-                                    {units} <span className="text-xs text-[oklch(55%_0.010_28)]">จาน</span>
+                                <div className="col-span-2 text-right text-[var(--color-muted)] tabular-nums">
+                                    {units} <span className="text-xs text-[var(--color-neutral)]">จาน</span>
                                 </div>
                                 <div className="col-span-2 text-right tabular-nums">
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">฿{revenue.toLocaleString()}</span>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] block">{sharePct}%</span>
+                                    <span className="font-bold text-[var(--color-ink)]">฿{revenue.toLocaleString()}</span>
+                                    <span className="text-xs text-[var(--color-neutral)] block">{sharePct}%</span>
                                 </div>
                                 <div className="col-span-2 text-right tabular-nums">
                                     <span className="font-bold text-[oklch(45%_0.08_140)]">~{marginPct}%</span>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] block">{attachRate}% บิล</span>
+                                    <span className="text-xs text-[var(--color-neutral)] block">{attachRate}% บิล</span>
                                 </div>
                             </div>
                         )

@@ -405,7 +405,7 @@ export default function TrackingPage() {
                                 <button 
                                     onClick={handleNotifyArrival}
                                     disabled={notifyingArrival}
-                                    className="w-full bg-[var(--color-accent)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono font-bold py-3.5 px-4 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer shadow-xs"
+                                    className="w-full bg-[var(--color-accent)] hover:bg-[var(--brand-plum)] text-white font-mono font-bold py-3.5 px-4 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer shadow-xs"
                                 >
                                     {notifyingArrival ? (
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>

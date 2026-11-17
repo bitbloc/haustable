@@ -48,22 +48,22 @@ export default function HausmadeKeychainPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] flex flex-col antialiased">
+        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col antialiased">
             {/* 1. Atelier Top Brutalist Navigation */}
-            <nav className="sticky top-0 z-30 bg-[oklch(97%_0.008_28)]/95 backdrop-blur-md border-b border-[oklch(85%_0.012_28)] px-4 sm:px-8 py-3 flex items-center justify-between">
+            <nav className="sticky top-0 z-30 bg-[var(--color-paper)]/95 backdrop-blur-md border-b border-[var(--color-rule)] px-4 sm:px-8 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
                         to="/hausmade"
-                        className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors px-2.5 py-1 border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)]"
+                        className="font-mono text-xs font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors px-2.5 py-1 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)]"
                     >
                         [ ← HAUSMADE // หน้าร้าน ]
                     </Link>
-                    <span className="font-mono text-xs text-[oklch(85%_0.012_28)] hidden sm:inline">/</span>
-                    <span className="font-mono text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider hidden sm:inline">
+                    <span className="font-mono text-xs text-[var(--color-rule)] hidden sm:inline">/</span>
+                    <span className="font-mono text-[11px] font-bold text-[var(--color-neutral)] uppercase tracking-wider hidden sm:inline">
                         3D PRINT NAME KEYCHAIN ATELIER
                     </span>
                     {isAdmin && (
-                        <span className="px-2 py-0.5 bg-[oklch(52%_0.16_28)]/15 border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-mono text-[10px] font-bold uppercase">
+                        <span className="px-2 py-0.5 bg-[var(--brand-plum)]/15 border border-[var(--brand-plum)] text-[var(--brand-plum)] font-mono text-[10px] font-bold uppercase">
                             [ STAFF MODE: STL/STEP UNLOCKED ]
                         </span>
                     )}
@@ -73,7 +73,7 @@ export default function HausmadeKeychainPage() {
                 <button
                     type="button"
                     onClick={() => setIsCartOpen(true)}
-                    className="relative px-3.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] transition-colors font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2.5 border border-[oklch(18%_0.012_28)] shadow-xs cursor-pointer"
+                    className="relative px-3.5 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--brand-plum)] transition-colors font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2.5 border border-[var(--color-ink)] shadow-xs cursor-pointer"
                 >
                     <span>[ CART ({cartItemCount}) ]</span>
                     {cartItemCount > 0 && (
@@ -85,22 +85,22 @@ export default function HausmadeKeychainPage() {
             </nav>
 
             {/* 2. Atelier Sub-Header Banner */}
-            <div className="w-full bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] px-4 sm:px-8 py-4">
+            <div className="w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 sm:px-8 py-4">
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3 font-mono">
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] uppercase">
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-ink)] uppercase">
                             CUSTOM NAME KEYCHAIN // พวงกุญแจชื่อ 3D PRINT
                         </h1>
-                        <p className="text-xs text-[oklch(55%_0.010_28)] mt-0.5">
+                        <p className="text-xs text-[var(--color-neutral)] mt-0.5">
                             ออกแบบชื่อตัวเอง · ปรับขนาดหูร้อยเชือก 4 mm / 5 mm · สั่งผลิตจริงด้วยระบบ 3D Printing สเปกวิศวกรรม
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-[oklch(42%_0.010_28)]">
-                        <span className="px-2 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-bold text-[oklch(52%_0.16_28)]">
+                    <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+                        <span className="px-2 py-1 bg-[var(--color-paper)] border border-[var(--color-rule)] font-bold text-[var(--brand-plum)]">
                             STARTING: ฿180.- / ชิ้น
                         </span>
-                        <span className="px-2 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)]">
+                        <span className="px-2 py-1 bg-[var(--color-paper)] border border-[var(--color-rule)]">
                             MATERIAL: BIO-PLA+
                         </span>
                     </div>
@@ -115,34 +115,34 @@ export default function HausmadeKeychainPage() {
                 />
 
                 {/* Technical Specifications Guide (Dieter Rams Tabular layout) */}
-                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] p-6 flex flex-col gap-4 font-mono text-xs">
-                    <div className="border-b border-[oklch(85%_0.012_28)] pb-2 flex justify-between items-center">
-                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-6 flex flex-col gap-4 font-mono text-xs">
+                    <div className="border-b border-[var(--color-rule)] pb-2 flex justify-between items-center">
+                        <span className="font-bold text-[var(--color-ink)] uppercase tracking-wider">
                             [ 3D PRINT SPECIFICATIONS // สเปกการผลิตเชิงวิศวกรรม ]
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)] text-[10px]">
+                        <span className="text-[var(--color-neutral)] text-[10px]">
                             MANUFACTURED IN NAKHON PHANOM
                         </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col gap-1.5">
-                            <span className="font-bold text-[oklch(52%_0.16_28)]">01 · CORD EYELET (หูร้อยเชือก)</span>
-                            <p className="text-[oklch(42%_0.010_28)] leading-relaxed text-[11px]">
+                            <span className="font-bold text-[var(--brand-plum)]">01 · CORD EYELET (หูร้อยเชือก)</span>
+                            <p className="text-[var(--color-muted)] leading-relaxed text-[11px]">
                                 รูในเจาะตรงสเกล <strong>4.0 mm</strong> หรือ <strong>5.0 mm</strong> ผนังหนา 2.6 mm ไม่ฉีกขาดเมื่อดึงกระชาก เหมาะสำหรับ Paracord, เชือกถัก, หรือห่วงโลหะ
                             </p>
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <span className="font-bold text-[oklch(52%_0.16_28)]">02 · KERNING & WELD (ความแข็งแรง)</span>
-                            <p className="text-[oklch(42%_0.010_28)] leading-relaxed text-[11px]">
+                            <span className="font-bold text-[var(--brand-plum)]">02 · KERNING & WELD (ความแข็งแรง)</span>
+                            <p className="text-[var(--color-muted)] leading-relaxed text-[11px]">
                                 ปรับระยะ Kerning ให้ตัวอักษรเชื่อมซ้อนกันอย่างแน่นหนา พร้อมคานฐาน Underline Rail รองรับสระภาษาไทยและจุดลอย
                             </p>
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <span className="font-bold text-[oklch(52%_0.16_28)]">03 · PRODUCTION (รอบการผลิต)</span>
-                            <p className="text-[oklch(42%_0.010_28)] leading-relaxed text-[11px]">
+                            <span className="font-bold text-[var(--brand-plum)]">03 · PRODUCTION (รอบการผลิต)</span>
+                            <p className="text-[var(--color-muted)] leading-relaxed text-[11px]">
                                 พิมพ์ด้วยความละเอียด Layer Height 0.20 mm เส้นใย Bio-based PLA+ เกรดพรีเมียม จัดส่งพัสดุหรือรับหน้าร้านใน 1-2 วันทำการ
                             </p>
                         </div>

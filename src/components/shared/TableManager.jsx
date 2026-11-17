@@ -454,18 +454,18 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[460px] bg-[oklch(97%_0.008_28)] font-mono text-xs text-[oklch(55%_0.010_28)] gap-3">
-                <div className="w-6 h-6 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
+            <div className="flex flex-col items-center justify-center min-h-[460px] bg-[var(--color-paper)] font-mono text-xs text-[var(--color-neutral)] gap-3">
+                <div className="w-6 h-6 rounded-full border-2 border-[var(--color-rule)] border-t-[var(--color-ink)] animate-spin" />
                 <span>SYNCHRONIZING LIVE FLOOR & TABLE MATRIX...</span>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-full bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] select-none font-sans">
+        <div className="flex flex-col h-full bg-[var(--color-paper)] text-[var(--color-ink)] select-none font-sans">
             
             {/* Top Toolbar */}
-            <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between z-10 shrink-0">
+            <div className="p-3 sm:p-4 bg-[var(--color-paper)] border-b border-[var(--color-rule)] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between z-10 shrink-0">
                 
                 {/* Search & Status Filters */}
                 <div className="flex flex-wrap items-center gap-2.5 flex-1">
@@ -475,19 +475,19 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             placeholder="SEARCH TABLE, GUEST, PHONE..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-3 py-2 text-xs font-mono rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] placeholder-[oklch(55%_0.010_28)]"
+                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-3 py-2 text-xs font-mono rounded-sm outline-none focus:border-[var(--brand-plum)] text-[var(--color-ink)] placeholder-[var(--color-neutral)]"
                         />
                     </div>
 
                     {/* Filter Pills */}
-                    <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-[10px] font-bold uppercase tracking-wider overflow-x-auto">
+                    <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-sm border border-[var(--color-rule)] font-mono text-[10px] font-bold uppercase tracking-wider overflow-x-auto">
                         <button
                             type="button"
                             onClick={() => setStatusFilter('all')}
                             className={`px-3 py-1.5 rounded-sm transition-all cursor-pointer ${
                                 statusFilter === 'all'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[var(--color-ink)] text-white shadow-xs'
+                                    : 'text-[var(--color-muted)] hover:text-black'
                             }`}
                         >
                             ALL ({tables.length})
@@ -498,7 +498,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             className={`px-3 py-1.5 rounded-sm transition-all cursor-pointer ${
                                 statusFilter === 'free'
                                     ? 'bg-[oklch(45%_0.08_140)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    : 'text-[var(--color-muted)] hover:text-black'
                             }`}
                         >
                             VACANT ({tables.filter(t => getTableState(t.id).status === 'free').length})
@@ -508,8 +508,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             onClick={() => setStatusFilter('occupied')}
                             className={`px-3 py-1.5 rounded-sm transition-all cursor-pointer ${
                                 statusFilter === 'occupied'
-                                    ? 'bg-[oklch(52%_0.16_28)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[var(--brand-plum)] text-white shadow-xs'
+                                    : 'text-[var(--color-muted)] hover:text-black'
                             }`}
                         >
                             OCCUPIED ({tables.filter(t => ['occupied', 'blocked'].includes(getTableState(t.id).status)).length})
@@ -520,7 +520,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             className={`px-3 py-1.5 rounded-sm transition-all cursor-pointer ${
                                 statusFilter === 'calling'
                                     ? 'bg-[oklch(60%_0.15_60)] text-black shadow-xs animate-pulse'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    : 'text-[var(--color-muted)] hover:text-black'
                             }`}
                         >
                             CALLING ({tables.filter(t => getTableState(t.id).hasCallStaff || getTableState(t.id).hasCallBill).length})
@@ -531,14 +531,14 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                 {/* View Mode Toggle */}
                 <div className="flex items-center gap-2 self-end md:self-auto">
                     {!isStaffView && (
-                    <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-[10px] font-bold uppercase tracking-wider">
+                    <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-sm border border-[var(--color-rule)] font-mono text-[10px] font-bold uppercase tracking-wider">
                         <button
                             type="button"
                             onClick={() => setViewMode('floorplan')}
                             className={`px-3 py-1.5 rounded-sm transition-all cursor-pointer ${
                                 viewMode === 'floorplan'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[var(--color-ink)] text-white shadow-xs'
+                                    : 'text-[var(--color-muted)] hover:text-black'
                             }`}
                         >
                             2D FLOOR MAP
@@ -548,8 +548,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             onClick={() => setViewMode('matrix')}
                             className={`px-3 py-1.5 rounded-sm transition-all cursor-pointer ${
                                 viewMode === 'matrix'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-xs'
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                                    ? 'bg-[var(--color-ink)] text-white shadow-xs'
+                                    : 'text-[var(--color-muted)] hover:text-black'
                             }`}
                         >
                             REGISTRY LIST
@@ -561,7 +561,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                         type="button"
                         onClick={fetchData}
                         title="Reload floor data"
-                        className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-[10px] font-bold uppercase rounded-sm cursor-pointer"
+                        className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] font-mono text-[10px] font-bold uppercase rounded-sm cursor-pointer"
                     >
                         SYNC
                     </button>
@@ -572,7 +572,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             setManualBookingTableId('');
                             setIsManualBookingOpen(true);
                         }}
-                        className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:opacity-90 border border-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-bold uppercase rounded-sm cursor-pointer"
+                        className="px-3 py-1.5 bg-[var(--brand-plum)] hover:opacity-90 border border-[var(--brand-plum)] text-white font-mono text-[10px] font-bold uppercase rounded-sm cursor-pointer"
                     >
                         + MANUAL BOOKING
                     </button>
@@ -583,22 +583,22 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
             <div className="flex-1 relative overflow-hidden flex flex-col min-h-[500px]">
                 {viewMode === 'floorplan' ? (
                     // --- 2D Interactive Floorplan View ---
-                    <div className="flex-1 w-full h-full relative bg-[oklch(94%_0.010_28)]">
+                    <div className="flex-1 w-full h-full relative bg-[var(--color-paper-2)]">
                         
                         {/* Legend Overlay */}
-                        <div className="absolute top-4 left-4 z-20 bg-[oklch(98%_0.006_28)]/95 border border-[oklch(85%_0.012_28)] p-3 rounded-sm shadow-xs backdrop-blur-xs font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
-                            <div className="flex items-center gap-3 text-[oklch(18%_0.012_28)]">
+                        <div className="absolute top-4 left-4 z-20 bg-[var(--color-paper)]/95 border border-[var(--color-rule)] p-3 rounded-sm shadow-xs backdrop-blur-xs font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
+                            <div className="flex items-center gap-3 text-[var(--color-ink)]">
                                 <span className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] border border-black/10" /> VACANT
                                 </span>
                                 <span className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] border border-black/10" /> OCCUPIED
+                                    <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] border border-black/10" /> OCCUPIED
                                 </span>
                                 <span className="flex items-center gap-1.5">
                                     <span className="w-2 h-2 rounded-full bg-[oklch(60%_0.15_60)] border border-black/10" /> RESERVED
                                 </span>
                             </div>
-                            <div className="border-t border-[oklch(85%_0.012_28)] pt-1.5 mt-1.5 text-[8px] text-[oklch(55%_0.010_28)]">
+                            <div className="border-t border-[var(--color-rule)] pt-1.5 mt-1.5 text-[8px] text-[var(--color-neutral)]">
                                 CLICK EMPTY TABLE TO SEAT • CLICK OCCUPIED TO INSPECT & ORDERS
                             </div>
                         </div>
@@ -613,11 +613,11 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
                                     {/* Zoom Controls */}
-                                    <div className="absolute bottom-4 right-4 z-20 flex gap-1 bg-[oklch(98%_0.006_28)]/95 border border-[oklch(85%_0.012_28)] p-1 rounded-sm shadow-xs">
+                                    <div className="absolute bottom-4 right-4 z-20 flex gap-1 bg-[var(--color-paper)]/95 border border-[var(--color-rule)] p-1 rounded-sm shadow-xs">
                                         <button 
                                             type="button"
                                             onClick={() => zoomIn()} 
-                                            className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] font-mono text-xs font-bold rounded-sm cursor-pointer"
+                                            className="px-2.5 py-1 hover:bg-[var(--color-paper-3)] font-mono text-xs font-bold rounded-sm cursor-pointer"
                                             title="Zoom In"
                                         >
                                             +
@@ -625,7 +625,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         <button 
                                             type="button"
                                             onClick={() => zoomOut()} 
-                                            className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] font-mono text-xs font-bold rounded-sm cursor-pointer"
+                                            className="px-2.5 py-1 hover:bg-[var(--color-paper-3)] font-mono text-xs font-bold rounded-sm cursor-pointer"
                                             title="Zoom Out"
                                         >
                                             -
@@ -633,7 +633,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         <button 
                                             type="button"
                                             onClick={() => resetTransform()} 
-                                            className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] font-mono text-[10px] font-bold rounded-sm cursor-pointer uppercase"
+                                            className="px-2.5 py-1 hover:bg-[var(--color-paper-3)] font-mono text-[10px] font-bold rounded-sm cursor-pointer uppercase"
                                             title="Reset Scale"
                                         >
                                             RESET
@@ -645,7 +645,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         contentClass="w-full h-full flex items-center justify-center"
                                     >
                                         <div
-                                            className="relative border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden bg-[oklch(97%_0.008_28)] shadow-sm"
+                                            className="relative border border-[var(--color-rule)] rounded-sm overflow-hidden bg-[var(--color-paper)] shadow-sm"
                                             style={{
                                                 width: '1000px',
                                                 height: '750px',
@@ -655,7 +655,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                             }}
                                         >
                                             {!floorplanUrl && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] font-mono font-bold uppercase tracking-widest opacity-30 select-none">
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest opacity-30 select-none">
                                                     <span>NO FLOORPLAN SCHEMATIC IMAGE</span>
                                                     <span className="text-[9px] mt-1">UPLOAD IN LAYOUT & QR STUDIO</span>
                                                 </div>
@@ -668,11 +668,11 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                                 const isUpcoming = state.status === 'upcoming';
                                                 const rotation = table.rotation || 0;
 
-                                                let bgClass = 'bg-[oklch(98%_0.006_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(45%_0.08_140)]';
+                                                let bgClass = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[oklch(45%_0.08_140)]';
                                                 let ledColor = 'bg-[oklch(45%_0.08_140)]'; // Green LED
 
                                                 if (isOccupied) {
-                                                    bgClass = 'bg-[oklch(52%_0.16_28)] border-[oklch(45%_0.16_28)] text-white shadow-xs';
+                                                    bgClass = 'bg-[var(--brand-plum)] border-[var(--brand-plum)] text-white shadow-xs';
                                                     ledColor = 'bg-white';
 
                                                     if (state.hasCallStaff) {
@@ -683,7 +683,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                                         ledColor = 'bg-black';
                                                     }
                                                 } else if (isUpcoming) {
-                                                    bgClass = 'bg-[oklch(96%_0.02_60)] border-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]';
+                                                    bgClass = 'bg-[oklch(96%_0.02_60)] border-[oklch(60%_0.15_60)] text-[var(--color-ink)]';
                                                     ledColor = 'bg-[oklch(60%_0.15_60)] animate-pulse';
                                                 }
 
@@ -760,9 +760,9 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                     </div>
                 ) : (
                     // --- High-density Registry List Matrix View ---
-                    <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-[oklch(97%_0.008_28)]">
+                    <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-[var(--color-paper)]">
                         {filteredTables.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 font-mono text-xs text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                            <div className="flex flex-col items-center justify-center py-20 font-mono text-xs text-[var(--color-neutral)] uppercase tracking-wider">
                                 <span>NO TABLES MATCH CURRENT QUERY</span>
                             </div>
                         ) : (
@@ -772,20 +772,20 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                     const isOccupied = state.status === 'occupied' || state.status === 'blocked';
                                     const isUpcoming = state.status === 'upcoming';
 
-                                    let cardBg = 'bg-[oklch(98%_0.006_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(52%_0.16_28)]';
+                                    let cardBg = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--brand-plum)]';
                                     let statusPill = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]';
                                     let statusLabel = 'VACANT';
 
                                     if (isOccupied) {
-                                        cardBg = 'bg-[oklch(96%_0.015_28)] border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] shadow-xs';
-                                        statusPill = 'bg-[oklch(52%_0.16_28)] text-white';
+                                        cardBg = 'bg-[var(--color-paper)] border-[var(--brand-plum)] text-[var(--color-ink)] shadow-xs';
+                                        statusPill = 'bg-[var(--brand-plum)] text-white';
                                         statusLabel = state.type === 'walk_in' ? 'WALK-IN' : 'ONLINE';
                                         if (state.status === 'blocked') {
-                                            statusPill = 'bg-[oklch(35%_0.010_28)] text-white';
+                                            statusPill = 'bg-[oklch(35%_0.01_348.33)] text-white';
                                             statusLabel = 'BLOCKED';
                                         }
                                     } else if (isUpcoming) {
-                                        cardBg = 'bg-[oklch(96%_0.02_60)] border-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]';
+                                        cardBg = 'bg-[oklch(96%_0.02_60)] border-[oklch(60%_0.15_60)] text-[var(--color-ink)]';
                                         statusPill = 'bg-[oklch(60%_0.15_60)] text-black';
                                         statusLabel = 'RESERVED';
                                     }
@@ -809,7 +809,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                                     <span className="font-mono text-base font-bold tracking-tight block">
                                                         {table.table_name}
                                                     </span>
-                                                    <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase">
+                                                    <span className="font-mono text-[9px] text-[var(--color-neutral)] uppercase">
                                                         CAP: {table.capacity}P
                                                     </span>
                                                 </div>
@@ -822,21 +822,21 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                             <div className="my-2 space-y-1 font-mono text-[10px]">
                                                 {isOccupied && state.booking ? (
                                                     <>
-                                                        <div className="font-bold text-[oklch(18%_0.012_28)] truncate">
+                                                        <div className="font-bold text-[var(--color-ink)] truncate">
                                                             {state.booking.pickup_contact_name || state.booking.profiles?.display_name || 'Guest'}
                                                         </div>
-                                                        <div className="flex justify-between text-[9px] text-[oklch(55%_0.010_28)]">
+                                                        <div className="flex justify-between text-[9px] text-[var(--color-neutral)]">
                                                             <span>SEATED: {dwellStr}</span>
                                                             <span>{state.booking.pax || table.capacity} GUESTS</span>
                                                         </div>
                                                         {state.totalBill > 0 && (
-                                                            <div className="text-[10px] font-bold text-[oklch(52%_0.16_28)]">
+                                                            <div className="text-[10px] font-bold text-[var(--brand-plum)]">
                                                                 ฿{state.totalBill.toLocaleString()}
                                                             </div>
                                                         )}
                                                     </>
                                                 ) : isUpcoming && state.booking ? (
-                                                    <div className="text-[9px] text-[oklch(42%_0.010_28)]">
+                                                    <div className="text-[9px] text-[var(--color-muted)]">
                                                         ARRIVAL: {new Date(state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 ) : (
@@ -847,7 +847,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                             </div>
 
                                             {/* Footer Action */}
-                                            <div className="border-t border-[oklch(85%_0.012_28)] pt-1.5 flex items-center justify-between font-mono text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                            <div className="border-t border-[var(--color-rule)] pt-1.5 flex items-center justify-between font-mono text-[8px] font-bold text-[var(--color-neutral)] uppercase">
                                                 {isOccupied ? (
                                                     <span>CLICK TO INSPECT</span>
                                                 ) : (
@@ -876,26 +876,26 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-6 rounded-sm w-full max-w-md shadow-2xl space-y-4 font-sans text-[oklch(18%_0.012_28)]"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-6 rounded-sm w-full max-w-md shadow-2xl space-y-4 font-sans text-[var(--color-ink)]"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Modal Header */}
-                            <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+                            <div className="flex justify-between items-start border-b border-[var(--color-rule)] pb-3">
                                 <div>
-                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                         QUICK WALK-IN SEATING
                                     </span>
-                                    <h3 className="font-mono text-xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-0.5">
+                                    <h3 className="font-mono text-xl font-bold uppercase tracking-tight text-[var(--color-ink)] mt-0.5">
                                         {seatingModalTable.table_name}
                                     </h3>
-                                    <p className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase">
+                                    <p className="font-mono text-[10px] text-[var(--color-neutral)] uppercase">
                                         Capacity: {seatingModalTable.capacity} Seats
                                     </p>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setSeatingModalTable(null)}
-                                    className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black p-1 cursor-pointer"
+                                    className="font-mono text-xs font-bold text-[var(--color-muted)] hover:text-black p-1 cursor-pointer"
                                 >
                                     ✕ CLOSE
                                 </button>
@@ -904,7 +904,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             {/* Seating Form */}
                             <div className="space-y-3 font-mono text-xs">
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
                                         GUEST NAME / PARTY IDENTIFIER
                                     </label>
                                     <input
@@ -912,13 +912,13 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         value={seatingForm.guestName}
                                         onChange={e => setSeatingForm({ ...seatingForm, guestName: e.target.value })}
                                         placeholder="e.g. Walk-in Guest, Khun Somchai"
-                                        className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)]"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-1">
+                                        <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
                                             GUESTS (PAX)
                                         </label>
                                         <div className="flex items-center gap-1">
@@ -929,8 +929,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                                     onClick={() => setSeatingForm({ ...seatingForm, pax: num })}
                                                     className={`flex-1 py-1.5 border rounded-sm font-bold text-xs cursor-pointer ${
                                                         seatingForm.pax === num
-                                                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                                                            : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                                                            : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
                                                     }`}
                                                 >
                                                     {num}
@@ -942,13 +942,13 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                                 max="30"
                                                 value={seatingForm.pax}
                                                 onChange={e => setSeatingForm({ ...seatingForm, pax: parseInt(e.target.value) || 1 })}
-                                                className="w-12 px-2 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-center font-bold"
+                                                className="w-12 px-2 py-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm text-center font-bold"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-1">
+                                        <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
                                             DURATION (HOURS)
                                         </label>
                                         <div className="flex items-center gap-1">
@@ -959,8 +959,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                                     onClick={() => setSeatingForm({ ...seatingForm, durationHours: h })}
                                                     className={`flex-1 py-1.5 border rounded-sm font-bold text-[11px] cursor-pointer ${
                                                         seatingForm.durationHours === h
-                                                            ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                                                            : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                                            ? 'bg-[var(--color-ink)] text-white border-[var(--color-ink)]'
+                                                            : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
                                                     }`}
                                                 >
                                                     {h}h
@@ -971,7 +971,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                 </div>
 
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
                                         NOTES / SPECIAL REQUESTS
                                     </label>
                                     <input
@@ -979,18 +979,18 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         value={seatingForm.note}
                                         onChange={e => setSeatingForm({ ...seatingForm, note: e.target.value })}
                                         placeholder="e.g. Birthday, High chair, Indoor preferred"
-                                        className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)]"
                                     />
                                 </div>
                             </div>
 
                             {/* Actions */}
-                            <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex flex-col gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
+                            <div className="pt-3 border-t border-[var(--color-rule)] flex flex-col gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
                                 {onOpenBill && (
                                     <button
                                         type="button"
                                         onClick={() => onOpenBill(seatingModalTable)}
-                                        className="w-full py-3 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] rounded-sm cursor-pointer font-sans text-sm normal-case tracking-normal"
+                                        className="w-full py-3 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] rounded-sm cursor-pointer font-sans text-sm normal-case tracking-normal"
                                     >
                                         สั่งอาหารโต๊ะนี้
                                     </button>
@@ -999,7 +999,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                     type="button"
                                     disabled={actionLoading}
                                     onClick={handleConfirmSeating}
-                                    className="w-full py-3 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
+                                    className="w-full py-3 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white rounded-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
                                 >
                                     <span>SEAT WALK-IN GUEST NOW</span>
                                 </button>
@@ -1012,7 +1012,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         setManualBookingTableId(selectedTblId);
                                         setIsManualBookingOpen(true);
                                     }}
-                                    className="w-full py-2.5 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-sm font-bold transition-opacity cursor-pointer flex items-center justify-center gap-1"
+                                    className="w-full py-2.5 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] border border-[var(--color-ink)] rounded-sm font-bold transition-opacity cursor-pointer flex items-center justify-center gap-1"
                                 >
                                     <span>+ MANUAL ADVANCE BOOKING (จองล่วงหน้า)</span>
                                 </button>
@@ -1024,7 +1024,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         setSeatingForm(prev => ({ ...prev, isMaintenanceBlock: true, guestName: 'MAINTENANCE' }));
                                         setTimeout(() => handleConfirmSeating(), 50);
                                     }}
-                                    className="w-full py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] rounded-sm transition-colors cursor-pointer"
+                                    className="w-full py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-muted)] rounded-sm transition-colors cursor-pointer"
                                 >
                                     BLOCK TABLE (MAINTENANCE / RESERVED)
                                 </button>
@@ -1045,24 +1045,24 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-6 rounded-sm w-full max-w-lg shadow-2xl space-y-4 font-sans text-[oklch(18%_0.012_28)] max-h-[90vh] overflow-y-auto"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-6 rounded-sm w-full max-w-lg shadow-2xl space-y-4 font-sans text-[var(--color-ink)] max-h-[90vh] overflow-y-auto"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Modal Header */}
-                            <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+                            <div className="flex justify-between items-start border-b border-[var(--color-rule)] pb-3">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-sm">
+                                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brand-plum)] bg-[var(--color-paper-2)] px-2 py-0.5 rounded-sm">
                                             TABLE INSPECTION
                                         </span>
-                                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white rounded-sm">
+                                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 bg-[var(--color-ink)] text-white rounded-sm">
                                             {inspectedTable.state.status.toUpperCase()}
                                         </span>
                                     </div>
-                                    <h3 className="font-mono text-2xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-1">
+                                    <h3 className="font-mono text-2xl font-bold uppercase tracking-tight text-[var(--color-ink)] mt-1">
                                         {inspectedTable.table.table_name}
                                     </h3>
-                                    <p className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase">
+                                    <p className="font-mono text-[10px] text-[var(--color-neutral)] uppercase">
                                         Capacity: {inspectedTable.table.capacity} Seats
                                     </p>
                                 </div>
@@ -1070,7 +1070,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                 <button
                                     type="button"
                                     onClick={() => setInspectedTable(null)}
-                                    className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black p-1 cursor-pointer"
+                                    className="font-mono text-xs font-bold text-[var(--color-muted)] hover:text-black p-1 cursor-pointer"
                                 >
                                     ✕ CLOSE
                                 </button>
@@ -1080,10 +1080,10 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             {(inspectedTable.state.hasCallStaff || inspectedTable.state.hasCallBill) && (
                                 <div className="bg-[oklch(96%_0.03_60)] border border-[oklch(60%_0.15_60)] p-3 rounded-sm flex items-center justify-between gap-3 font-mono text-xs">
                                     <div>
-                                        <span className="font-bold uppercase text-[oklch(18%_0.012_28)]">
+                                        <span className="font-bold uppercase text-[var(--color-ink)]">
                                             {inspectedTable.state.hasCallStaff ? '🔔 GUEST CALLING STAFF' : '💳 GUEST REQUESTING BILL'}
                                         </span>
-                                        <p className="text-[10px] text-[oklch(42%_0.010_28)] mt-0.5">
+                                        <p className="text-[10px] text-[var(--color-muted)] mt-0.5">
                                             Customer tapped call button from digital menu
                                         </p>
                                     </div>
@@ -1091,7 +1091,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleClearServiceCall(inspectedTable.state.booking)}
-                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold text-[10px] uppercase rounded-sm cursor-pointer"
+                                        className="px-3 py-1.5 bg-[var(--color-ink)] text-white font-bold text-[10px] uppercase rounded-sm cursor-pointer"
                                     >
                                         CLEAR ALERT
                                     </button>
@@ -1100,21 +1100,21 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
                             {/* Guest Details */}
                             {inspectedTable.state.booking && (
-                                <div className="bg-[oklch(94%_0.010_28)] p-4 rounded-sm border border-[oklch(88%_0.008_28)] space-y-2 font-mono text-xs">
+                                <div className="bg-[var(--color-paper-2)] p-4 rounded-sm border border-[var(--color-paper-3)] space-y-2 font-mono text-xs">
                                     <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)] uppercase">GUEST NAME</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="text-[var(--color-neutral)] uppercase">GUEST NAME</span>
+                                        <span className="font-bold text-[var(--color-ink)]">
                                             {inspectedTable.state.booking.pickup_contact_name || inspectedTable.state.booking.profiles?.display_name || 'Guest'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)] uppercase">BOOKING TYPE</span>
-                                        <span className="font-bold uppercase text-[oklch(52%_0.16_28)]">
+                                        <span className="text-[var(--color-neutral)] uppercase">BOOKING TYPE</span>
+                                        <span className="font-bold uppercase text-[var(--brand-plum)]">
                                             {inspectedTable.state.booking.booking_type} ({inspectedTable.state.booking.pax || inspectedTable.table.capacity} PAX)
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)] uppercase">SEATED TIME</span>
+                                        <span className="text-[var(--color-neutral)] uppercase">SEATED TIME</span>
                                         <span className="font-bold">
                                             {new Date(inspectedTable.state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                                             {inspectedTable.state.booking.end_time && ` - ${new Date(inspectedTable.state.booking.end_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`}
@@ -1122,17 +1122,17 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                     </div>
                                     {inspectedTable.state.booking.profiles?.phone_number && (
                                         <div className="flex justify-between">
-                                            <span className="text-[oklch(55%_0.010_28)] uppercase">PHONE</span>
+                                            <span className="text-[var(--color-neutral)] uppercase">PHONE</span>
                                             <a 
                                                 href={`tel:${inspectedTable.state.booking.profiles.phone_number}`} 
-                                                className="font-bold text-[oklch(52%_0.16_28)] hover:underline"
+                                                className="font-bold text-[var(--brand-plum)] hover:underline"
                                             >
                                                 {inspectedTable.state.booking.profiles.phone_number}
                                             </a>
                                         </div>
                                     )}
                                     {inspectedTable.state.booking.customer_note && (
-                                        <div className="pt-2 border-t border-[oklch(88%_0.008_28)] text-[11px] text-[oklch(42%_0.010_28)]">
+                                        <div className="pt-2 border-t border-[var(--color-paper-3)] text-[11px] text-[var(--color-muted)]">
                                             Note: "{inspectedTable.state.booking.customer_note}"
                                         </div>
                                     )}
@@ -1142,40 +1142,40 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             {/* Order Items Preview */}
                             {inspectedTable.state.booking?.order_items && inspectedTable.state.booking.order_items.length > 0 ? (
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center font-mono text-xs font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] border-b border-[oklch(85%_0.012_28)] pb-1">
+                                    <div className="flex justify-between items-center font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] border-b border-[var(--color-rule)] pb-1">
                                         <span>ACTIVE ORDER ITEMS ({inspectedTable.state.booking.order_items.length})</span>
                                         <span>STATUS</span>
                                     </div>
                                     <div className="max-h-40 overflow-y-auto space-y-1.5 font-mono text-xs pr-1">
                                         {inspectedTable.state.booking.order_items.map((item, idx) => (
-                                            <div key={item.id || idx} className="flex justify-between items-center bg-[oklch(94%_0.010_28)] p-2 rounded-sm">
+                                            <div key={item.id || idx} className="flex justify-between items-center bg-[var(--color-paper-2)] p-2 rounded-sm">
                                                 <div>
-                                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                    <span className="font-bold text-[var(--color-ink)]">
                                                         {item.quantity}x {item.custom_name || item.name || item.item_name || item.menu_items?.name || 'รายการสินค้า'}
                                                     </span>
-                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] ml-2">
+                                                    <span className="text-[10px] text-[var(--color-neutral)] ml-2">
                                                         ฿{(item.price * item.quantity).toLocaleString()}
                                                     </span>
                                                 </div>
                                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase ${
                                                     item.status === 'served'
                                                         ? 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
-                                                        : 'bg-[oklch(95%_0.02_28)] text-[oklch(52%_0.16_28)] animate-pulse'
+                                                        : 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] animate-pulse'
                                                 }`}>
                                                     {item.status || 'ORDERED'}
                                                 </span>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="flex justify-between items-center bg-[oklch(90%_0.012_28)] p-2.5 rounded-sm font-mono text-xs font-bold">
+                                    <div className="flex justify-between items-center bg-[var(--color-paper-3)] p-2.5 rounded-sm font-mono text-xs font-bold">
                                         <span>TOTAL BILL AMOUNT</span>
-                                        <span className="text-sm text-[oklch(52%_0.16_28)]">
+                                        <span className="text-sm text-[var(--brand-plum)]">
                                             ฿{inspectedTable.state.totalBill.toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="py-4 text-center font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] rounded-sm">
+                                <div className="py-4 text-center font-mono text-xs text-[var(--color-neutral)] bg-[var(--color-paper-2)] rounded-sm">
                                     NO FOOD OR DRINK ORDERS YET
                                 </div>
                             )}
@@ -1184,19 +1184,19 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                 <button
                                     type="button"
                                     onClick={() => onOpenBill(inspectedTable.table)}
-                                    className="w-full py-3 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] rounded-sm cursor-pointer text-sm font-bold"
+                                    className="w-full py-3 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] rounded-sm cursor-pointer text-sm font-bold"
                                 >
                                     บิล / สั่งอาหาร
                                 </button>
                             )}
 
                             {/* Action Buttons */}
-                            <div className="pt-3 border-t border-[oklch(85%_0.012_28)] grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
+                            <div className="pt-3 border-t border-[var(--color-rule)] grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px] font-bold uppercase tracking-wider">
                                 <button
                                     type="button"
                                     disabled={actionLoading}
                                     onClick={() => handleExtendTime(inspectedTable.state.booking, 30)}
-                                    className="py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                    className="py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                 >
                                     +30 MINS
                                 </button>
@@ -1204,7 +1204,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                     type="button"
                                     disabled={actionLoading}
                                     onClick={() => handleExtendTime(inspectedTable.state.booking, 60)}
-                                    className="py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                    className="py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                 >
                                     +60 MINS
                                 </button>
@@ -1212,7 +1212,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                     type="button"
                                     disabled={actionLoading}
                                     onClick={() => setTransferModalData({ fromTable: inspectedTable.table, booking: inspectedTable.state.booking })}
-                                    className="py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                    className="py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                 >
                                     MOVE TABLE
                                 </button>
@@ -1220,7 +1220,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                     type="button"
                                     disabled={actionLoading}
                                     onClick={() => handleReleaseTable(inspectedTable.state.booking.id, inspectedTable.table.table_name)}
-                                    className="py-2.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-sm cursor-pointer"
+                                    className="py-2.5 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white rounded-sm cursor-pointer"
                                 >
                                     RELEASE TABLE
                                 </button>
@@ -1241,28 +1241,28 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-6 rounded-sm w-full max-w-md shadow-2xl space-y-4 font-sans text-[oklch(18%_0.012_28)]"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-6 rounded-sm w-full max-w-md shadow-2xl space-y-4 font-sans text-[var(--color-ink)]"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+                            <div className="flex justify-between items-start border-b border-[var(--color-rule)] pb-3">
                                 <div>
-                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                         TRANSFER SEATING & ORDERS
                                     </span>
-                                    <h3 className="font-mono text-lg font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-0.5">
+                                    <h3 className="font-mono text-lg font-bold uppercase tracking-tight text-[var(--color-ink)] mt-0.5">
                                         Move from {transferModalData.fromTable.table_name}
                                     </h3>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setTransferModalData(null)}
-                                    className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black p-1 cursor-pointer"
+                                    className="font-mono text-xs font-bold text-[var(--color-muted)] hover:text-black p-1 cursor-pointer"
                                 >
                                     ✕ CLOSE
                                 </button>
                             </div>
 
-                            <p className="font-mono text-xs text-[oklch(55%_0.010_28)]">
+                            <p className="font-mono text-xs text-[var(--color-neutral)]">
                                 Select a vacant target table to migrate all active orders, bill total, and guest tracking:
                             </p>
 
@@ -1273,18 +1273,18 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleTransferTable(targetT.id, targetT.table_name)}
-                                        className="p-3 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(92%_0.012_140)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(45%_0.08_140)] rounded-sm text-center font-mono transition-all cursor-pointer"
+                                        className="p-3 bg-[var(--color-paper-2)] hover:bg-[oklch(92%_0.012_140)] border border-[var(--color-rule)] hover:border-[oklch(45%_0.08_140)] rounded-sm text-center font-mono transition-all cursor-pointer"
                                     >
-                                        <span className="font-bold text-sm text-[oklch(18%_0.012_28)] block">
+                                        <span className="font-bold text-sm text-[var(--color-ink)] block">
                                             {targetT.table_name}
                                         </span>
-                                        <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase">
+                                        <span className="text-[9px] text-[var(--color-neutral)] uppercase">
                                             {targetT.capacity}P
                                         </span>
                                     </button>
                                 ))}
                                 {vacantTables.length === 0 && (
-                                    <div className="col-span-3 py-6 text-center font-mono text-xs text-[oklch(55%_0.010_28)]">
+                                    <div className="col-span-3 py-6 text-center font-mono text-xs text-[var(--color-neutral)]">
                                         NO VACANT TABLES AVAILABLE
                                     </div>
                                 )}

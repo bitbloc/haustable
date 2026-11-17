@@ -250,7 +250,7 @@ export default function LandingPageSettingsTab({
                 <div className="flex items-center gap-2">
                     <a
                         href="/admin/marketing?tab=ads_landing"
-                        className="inline-flex items-center gap-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[var(--color-ink)] border border-[var(--color-rule)] px-3.5 py-2 rounded-xl text-xs tabular-nums font-bold transition-colors"
+                        className="inline-flex items-center gap-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] px-3.5 py-2 rounded-xl text-xs tabular-nums font-bold transition-colors"
                     >
                         <span>ดูสถิติโฆษณา (ANALYTICS)</span>
                     </a>
@@ -258,7 +258,7 @@ export default function LandingPageSettingsTab({
                         href="/link"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] px-4 py-2 rounded-xl text-xs tabular-nums font-bold transition-colors "
+                        className="inline-flex items-center gap-1.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-2 rounded-xl text-xs tabular-nums font-bold transition-colors "
                     >
                         <span>เปิดดูหน้า /link</span>
                         <ExternalLink size={13} />
@@ -663,7 +663,7 @@ export default function LandingPageSettingsTab({
                                         )}
                                         {uploading[`link_menu_${slot}`] && (
                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                <div className="w-4 h-4 border-2 border-[oklch(99%_0.004_28)] border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-4 h-4 border-2 border-[var(--color-paper)] border-t-transparent rounded-full animate-spin" />
                                             </div>
                                         )}
                                     </div>
@@ -841,7 +841,7 @@ export default function LandingPageSettingsTab({
                                         )}
                                         {uploading[`link_atm_${slot}`] && (
                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                <div className="w-4 h-4 border-2 border-[oklch(99%_0.004_28)] border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-4 h-4 border-2 border-[var(--color-paper)] border-t-transparent rounded-full animate-spin" />
                                             </div>
                                         )}
                                     </div>

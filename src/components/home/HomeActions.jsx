@@ -58,7 +58,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             cta: 'ซื้อสินค้า',
             statusText: hausmadeStatus.isOpen ? 'ช้อปออนไลน์ จัดส่งทั่วไทย' : 'บริการปิดชั่วคราว',
             isOpen: hausmadeStatus.isOpen,
-            accent: 'oklch(52% 0.16 28)'
+            accent: 'oklch(25.18% 0.1001 348.33)'
         }
     ]
 

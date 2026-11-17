@@ -194,7 +194,7 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
                             }}
                             className="w-full h-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)] focus:outline-none"
                             style={{
-                                accentColor: 'oklch(52% 0.16 28)'
+                                accentColor: 'oklch(25.18% 0.1001 348.33)'
                             }}
                         />
                         <div className="flex justify-between text-[9px] font-mono text-[var(--color-muted)] mt-1">

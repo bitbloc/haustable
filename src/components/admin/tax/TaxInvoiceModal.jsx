@@ -711,7 +711,7 @@ export default function TaxInvoiceModal({
                     <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-3">
                             <div className="flex items-center gap-2">
-                                <Building2 size={16} className="text-[oklch(52%_0.16_28)]" />
+                                <Building2 size={16} className="text-[var(--brand-plum)]" />
                                 <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-800">
                                     ข้อมูลผู้ซื้อ / ผู้รับบริการ
                                 </span>
@@ -782,7 +782,7 @@ export default function TaxInvoiceModal({
                                     name="customerType"
                                     checked={customerType === 'company'}
                                     onChange={() => setCustomerType('company')}
-                                    className="accent-[oklch(52%_0.16_28)]"
+                                    className="accent-[var(--brand-plum)]"
                                 />
                                 <span className="font-bold text-zinc-800">นิติบุคคล (บริษัท / หจก. / องค์กร)</span>
                             </label>
@@ -792,7 +792,7 @@ export default function TaxInvoiceModal({
                                     name="customerType"
                                     checked={customerType === 'individual'}
                                     onChange={() => setCustomerType('individual')}
-                                    className="accent-[oklch(52%_0.16_28)]"
+                                    className="accent-[var(--brand-plum)]"
                                 />
                                 <span className="font-bold text-zinc-800">บุคคลธรรมดา</span>
                             </label>
@@ -916,7 +916,7 @@ export default function TaxInvoiceModal({
                                 type="checkbox"
                                 checked={saveCustomerToDirectory}
                                 onChange={(e) => setSaveCustomerToDirectory(e.target.checked)}
-                                className="accent-[oklch(52%_0.16_28)]"
+                                className="accent-[var(--brand-plum)]"
                             />
                             <span>บันทึกข้อมูลลูกค้านี้ไว้ในสมุดรายชื่อสำหรับออกบิลครั้งถัดไป</span>
                         </label>

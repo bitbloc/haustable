@@ -13,9 +13,9 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     if (!isOpen) return null
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
-                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
-                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
+                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[var(--color-ink)]">{title}</h3>
+                <p className="text-[13px] text-[var(--color-muted)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
                 <div className="flex gap-2 mt-5">
                     <button
                         type="button"
@@ -27,10 +27,10 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[var(--color-paper)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${
                             isDanger
                                 ? 'bg-red-700 hover:bg-red-800'
-                                : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
+                                : 'bg-[var(--color-ink)] hover:bg-[var(--color-ink)]'
                         }`}
                     >
                         {confirmText}
@@ -368,11 +368,11 @@ export default function OptionGroupList() {
     }
 
     return (
-        <div className="text-[oklch(18%_0.012_28)] pb-12 animate-fade-in font-sans">
+        <div className="text-[var(--color-ink)] pb-12 animate-fade-in font-sans">
             {/* Header Toolbar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <p className="text-[13px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">
-                    <span className="text-[oklch(18%_0.012_28)] font-medium tabular-nums">{groups.length} กลุ่มตัวเลือก</span>
+                <p className="text-[13px] leading-5 text-[var(--color-muted)] min-w-0">
+                    <span className="text-[var(--color-ink)] font-medium tabular-nums">{groups.length} กลุ่มตัวเลือก</span>
                     <span> · กำหนดตัวเลือกเสริม (ความหวาน, ประเภทนม, ท็อปปิ้ง, ระดับความสุก) และราคาบวกเพิ่ม</span>
                     
                 </p>
@@ -389,11 +389,11 @@ export default function OptionGroupList() {
             {loading ? (
                 <div className="space-y-3">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="h-20 bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)]" />
+                        <div key={i} className="h-20 bg-[var(--color-paper-2)] rounded-sm border border-[var(--color-rule)]" />
                     ))}
                 </div>
             ) : groups.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] tabular-nums text-xs">
+                <div className="text-center py-16 border border-dashed border-[var(--color-rule)] rounded-sm bg-[var(--color-paper)] text-[var(--color-neutral)] tabular-nums text-xs">
                     ยังไม่มีกลุ่มตัวเลือก คลิก "สร้างกลุ่มตัวเลือก" เพื่อเริ่มต้น
                 </div>
             ) : (
@@ -406,20 +406,20 @@ export default function OptionGroupList() {
                         return (
                             <div 
                                 key={group.id} 
-                                className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden transition-colors duration-150 hover:border-[oklch(52%_0.16_28)]"
+                                className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm overflow-hidden transition-colors duration-150 hover:border-[var(--brand-plum)]"
                             >
                                 <div
-                                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-[oklch(96%_0.006_28)] transition-colors duration-150"
+                                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-[var(--color-paper)] transition-colors duration-150"
                                     onClick={() => setExpandedGroup(isExpanded ? null : group.id)}
                                 >
                                     <div className="flex items-center gap-3.5 min-w-0">
-                                        <div className="w-8 h-8 rounded-xs bg-[oklch(94%_0.010_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] shrink-0">
+                                        <div className="w-8 h-8 rounded-xs bg-[var(--color-paper-2)] flex items-center justify-center text-[var(--color-neutral)] border border-[var(--color-rule)] shrink-0">
                                             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                         </div>
 
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-bold text-base text-[oklch(18%_0.012_28)] truncate">
+                                                <h3 className="font-bold text-base text-[var(--color-ink)] truncate">
                                                     {group.name}
                                                 </h3>
                                                 {group.is_required && (
@@ -427,12 +427,12 @@ export default function OptionGroupList() {
                                                         บังคับเลือก
                                                     </span>
                                                 )}
-                                                <span className="tabular-nums text-[11px] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.2 rounded-xs">
+                                                <span className="tabular-nums text-[11px] bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)] px-1.5 py-0.2 rounded-xs">
                                                     {group.selection_type === 'single' ? 'เลือก 1 อย่าง' : (group.max_selection > 0 ? `เลือกได้สูงสุด ${group.max_selection} อย่าง` : 'เลือกไม่จำกัด')}
                                                 </span>
                                             </div>
 
-                                            <div className="flex items-center gap-3 text-xs text-[oklch(55%_0.010_28)] mt-1 tabular-nums">
+                                            <div className="flex items-center gap-3 text-xs text-[var(--color-neutral)] mt-1 tabular-nums">
                                                 <span>{choicesList.length} ตัวเลือก</span>
                                                 <span>•</span>
                                                 <span>ใช้ใน {linkedCount} เมนู</span>
@@ -444,14 +444,14 @@ export default function OptionGroupList() {
                                     <div className="flex items-center gap-1 self-end sm:self-center shrink-0" onClick={e => e.stopPropagation()}>
                                         <button 
                                             onClick={() => handleEdit(group)} 
-                                            className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                            className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                             title="แก้ไขกลุ่มตัวเลือก"
                                         >
                                             <Edit2 size={14} />
                                         </button>
                                         <button 
                                             onClick={() => handleDelete(group)} 
-                                            className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                            className="p-1.5 text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                             title="ลบกลุ่มตัวเลือก"
                                         >
                                             <Trash2 size={14} />
@@ -467,7 +467,7 @@ export default function OptionGroupList() {
                                             animate={{ height: 'auto', opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
                                             transition={{ duration: 0.15 }}
-                                            className="border-t border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4"
+                                            className="border-t border-[var(--color-rule)] bg-[var(--color-paper)] p-4"
                                         >
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                                                 {choicesList.map(c => {
@@ -478,8 +478,8 @@ export default function OptionGroupList() {
                                                         key={c.id} 
                                                         className={`rounded-xs border text-xs transition-colors duration-150 ${
                                                             c.is_available === false 
-                                                                ? 'bg-[oklch(94%_0.008_28)] border-[oklch(88%_0.010_28)] text-[oklch(55%_0.010_28)] opacity-70' 
-                                                                : 'bg-[oklch(98%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                                                ? 'bg-[var(--color-paper-2)] border-[var(--color-paper-3)] text-[var(--color-neutral)] opacity-70' 
+                                                                : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
                                                         }`}
                                                     >
                                                         <div className="p-2.5 flex justify-between items-center">
@@ -491,10 +491,10 @@ export default function OptionGroupList() {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className=" font-bold text-[oklch(52%_0.16_28)] shrink-0 ml-2 tabular-nums">
+                                                        <span className=" font-bold text-[var(--brand-plum)] shrink-0 ml-2 tabular-nums">
                                                             {c.price_modifier > 0 ? `+฿${c.price_modifier}` : 'ฟรี'}
                                                             {c.sweetener_factor !== null && c.sweetener_factor !== undefined && (
-                                                                <span className="ml-2 font-normal text-xs text-[oklch(42%_0.010_28)]">หวาน ×{Number(c.sweetener_factor)}</span>
+                                                                <span className="ml-2 font-normal text-xs text-[var(--color-muted)]">หวาน ×{Number(c.sweetener_factor)}</span>
                                                             )}
                                                         </span>
                                                         </div>
@@ -502,19 +502,19 @@ export default function OptionGroupList() {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setIngredientTarget({ choice: c, group })}
-                                                                className="w-full border-t border-[oklch(88%_0.010_28)] px-2.5 py-2 flex items-baseline justify-between gap-2 text-left hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                                                className="w-full border-t border-[var(--color-paper-3)] px-2.5 py-2 flex items-baseline justify-between gap-2 text-left hover:bg-[var(--color-paper-2)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                                             >
-                                                                <span className={`min-w-0 truncate leading-normal ${ingSummary ? 'text-[oklch(42%_0.010_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                                                <span className={`min-w-0 truncate leading-normal ${ingSummary ? 'text-[var(--color-muted)]' : 'text-[var(--color-neutral)]'}`}>
                                                                     {ingSummary || 'ไม่ตัดสต๊อกเพิ่ม'}
                                                                 </span>
-                                                                <span className="tabular-nums text-xs text-[oklch(42%_0.010_28)] shrink-0">วัตถุดิบ</span>
+                                                                <span className="tabular-nums text-xs text-[var(--color-muted)] shrink-0">วัตถุดิบ</span>
                                                             </button>
                                                         )}
                                                     </div>
                                                     )
                                                 })}
                                                 {choicesList.length === 0 && (
-                                                    <p className="text-[13px] tabular-nums text-[oklch(55%_0.010_28)] italic col-span-full py-2">
+                                                    <p className="text-[13px] tabular-nums text-[var(--color-neutral)] italic col-span-full py-2">
                                                         ยังไม่มีตัวเลือกย่อยในกลุ่มนี้
                                                     </p>
                                                 )}
@@ -531,37 +531,37 @@ export default function OptionGroupList() {
             {/* Create / Edit Planar Modal */}
             {isModalOpen && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-[oklch(98%_0.004_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] font-sans">
+                    <div className="bg-[var(--color-paper)] w-full max-w-lg rounded-sm border border-[var(--color-rule)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] font-sans">
                         {/* Modal Header */}
-                        <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-[oklch(98%_0.004_28)] z-10">
+                        <div className="p-4 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)] z-10">
                             <div>
-                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[var(--color-ink)]">
                                     {editingGroup ? 'แก้ไขกลุ่มตัวเลือก' : 'สร้างกลุ่มตัวเลือกใหม่'}
                                 </h3>
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
+                                <p className="text-[13px] text-[var(--color-neutral)] tabular-nums mt-0.5">
                                     กำหนดเงื่อนไขการเลือกและรายการตัวเลือกย่อย
                                 </p>
                             </div>
                             <button 
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                             >
                                 <X size={18} />
                             </button>
                         </div>
 
                         {/* Modal Body: Planar Form Sections */}
-                        <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[oklch(98%_0.004_28)]">
+                        <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[var(--color-paper)]">
                             {/* Group Name Input */}
-                            <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1.5">
+                            <div className="pb-4 border-b border-[var(--color-rule)]">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1.5">
                                     ชื่อกลุ่มตัวเลือก (Group Name) *
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150"
                                     placeholder="เช่น ระดับความหวาน, ประเภทนม, เมล็ดกาแฟ, ท็อปปิ้ง"
                                     autoFocus
                                     required
@@ -569,12 +569,12 @@ export default function OptionGroupList() {
                             </div>
 
                             {/* Required Toggle (Planar Row) */}
-                            <label className="flex items-center justify-between bg-[oklch(97%_0.008_28)] p-3 rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                            <label className="flex items-center justify-between bg-[var(--color-paper)] p-3 rounded-xs border border-[var(--color-rule)] cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                 <div className="space-y-0.5">
-                                    <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                    <div className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                                         ลูกค้าจำเป็นต้องเลือก? (Required)
                                     </div>
-                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums">
+                                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                                         หากเปิดไว้ ลูกค้าจะต้องเลือกอย่างน้อย 1 ตัวเลือกก่อนสั่งเมนูนี้ได้
                                     </p>
                                 </div>
@@ -582,56 +582,56 @@ export default function OptionGroupList() {
                                     type="checkbox"
                                     checked={formData.is_required}
                                     onChange={e => setFormData({ ...formData, is_required: e.target.checked })}
-                                    className="w-4 h-4 accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                    className="w-4 h-4 accent-[var(--brand-plum)] cursor-pointer"
                                 />
                             </label>
 
                             {/* Selection Rules (Planar Segmented Picker) */}
-                            <div className="space-y-2 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                                <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block">
+                            <div className="space-y-2 pb-4 border-b border-[var(--color-rule)]">
+                                <label className="text-xs tabular-nums font-bold text-[var(--color-muted)] block">
                                     จำนวนตัวเลือกที่เลือกได้ (Selection Rule)
                                 </label>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     {/* Single */}
                                     <label className={`flex items-center gap-2 p-2.5 rounded-xs border cursor-pointer transition-colors duration-150 ${
-                                        limitMode === '1' ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        limitMode === '1' ? 'bg-[var(--color-paper-2)] border-[var(--brand-plum)] font-bold' : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                     }`}>
-                                        <input type="radio" checked={limitMode === '1'} onChange={() => setLimitMode('1')} className="accent-[oklch(52%_0.16_28)]" />
-                                        <span className="text-xs tabular-nums text-[oklch(18%_0.012_28)]">1 ตัวเลือก</span>
+                                        <input type="radio" checked={limitMode === '1'} onChange={() => setLimitMode('1')} className="accent-[var(--brand-plum)]" />
+                                        <span className="text-xs tabular-nums text-[var(--color-ink)]">1 ตัวเลือก</span>
                                     </label>
 
                                     {/* Multiple Limited */}
                                     <label className={`flex items-center gap-2 p-2.5 rounded-xs border cursor-pointer transition-colors duration-150 ${
-                                        limitMode === 'limit' ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        limitMode === 'limit' ? 'bg-[var(--color-paper-2)] border-[var(--brand-plum)] font-bold' : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                     }`}>
-                                        <input type="radio" checked={limitMode === 'limit'} onChange={() => setLimitMode('limit')} className="accent-[oklch(52%_0.16_28)]" />
-                                        <span className="text-xs tabular-nums text-[oklch(18%_0.012_28)]">หลายตัวเลือก (จำกัด)</span>
+                                        <input type="radio" checked={limitMode === 'limit'} onChange={() => setLimitMode('limit')} className="accent-[var(--brand-plum)]" />
+                                        <span className="text-xs tabular-nums text-[var(--color-ink)]">หลายตัวเลือก (จำกัด)</span>
                                     </label>
 
                                     {/* Unlimited */}
                                     <label className={`flex items-center gap-2 p-2.5 rounded-xs border cursor-pointer transition-colors duration-150 ${
-                                        limitMode === 'unlimited' ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        limitMode === 'unlimited' ? 'bg-[var(--color-paper-2)] border-[var(--brand-plum)] font-bold' : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                     }`}>
-                                        <input type="radio" checked={limitMode === 'unlimited'} onChange={() => setLimitMode('unlimited')} className="accent-[oklch(52%_0.16_28)]" />
-                                        <span className="text-xs tabular-nums text-[oklch(18%_0.012_28)]">ไม่จำกัด</span>
+                                        <input type="radio" checked={limitMode === 'unlimited'} onChange={() => setLimitMode('unlimited')} className="accent-[var(--brand-plum)]" />
+                                        <span className="text-xs tabular-nums text-[var(--color-ink)]">ไม่จำกัด</span>
                                     </label>
                                 </div>
 
                                 {limitMode === 'limit' && (
-                                    <div className="flex items-center gap-3 p-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs mt-2">
-                                        <span className="text-xs tabular-nums text-[oklch(42%_0.010_28)]">เลือกได้สูงสุดไม่เกิน:</span>
+                                    <div className="flex items-center gap-3 p-2.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs mt-2">
+                                        <span className="text-xs tabular-nums text-[var(--color-muted)]">เลือกได้สูงสุดไม่เกิน:</span>
                                         <div className="flex items-center gap-1.5 ml-auto">
                                             <button
                                                 type="button"
                                                 onClick={() => setFormData(p => ({ ...p, max_selection: Math.max(2, (parseInt(p.max_selection, 10) || 2) - 1) }))}
-                                                className="w-9 h-9 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] tabular-nums font-bold text-sm hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                                className="w-9 h-9 bg-[var(--color-paper-2)] border border-[var(--color-rule)] tabular-nums font-bold text-sm hover:bg-[var(--color-paper-3)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                             >-</button>
                                             <span className="w-8 text-center font-bold text-sm tabular-nums">{formData.max_selection || 2}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => setFormData(p => ({ ...p, max_selection: (parseInt(p.max_selection, 10) || 2) + 1 }))}
-                                                className="w-9 h-9 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] tabular-nums font-bold text-sm hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                                className="w-9 h-9 bg-[var(--color-paper-2)] border border-[var(--color-rule)] tabular-nums font-bold text-sm hover:bg-[var(--color-paper-3)] rounded-xs cursor-pointer flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                             >+</button>
                                         </div>
                                     </div>
@@ -642,17 +642,17 @@ export default function OptionGroupList() {
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <label className="text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] block">
+                                        <label className="text-xs tabular-nums font-bold text-[var(--color-muted)] block">
                                             รายการตัวเลือกย่อย (Choices List)
                                         </label>
-                                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums">
+                                        <span className="text-xs text-[var(--color-neutral)] tabular-nums">
                                             ใส่ราคา 0 หากไม่คิดเงินเพิ่ม
                                         </span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={addChoice}
-                                        className="text-xs tabular-nums font-bold text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                        className="text-xs tabular-nums font-bold text-[var(--brand-plum)] hover:underline flex items-center gap-1 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                     >
                                         <Plus size={14} /> เพิ่มตัวเลือก
                                     </button>
@@ -662,7 +662,7 @@ export default function OptionGroupList() {
                                     {choices.map((choice, idx) => (
                                         <div 
                                             key={choice.id || idx} 
-                                            className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 flex items-center gap-2 "
+                                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2 flex items-center gap-2 "
                                         >
                                             {/* Reorder Buttons */}
                                             <div className="flex flex-col gap-0.5">
@@ -670,7 +670,7 @@ export default function OptionGroupList() {
                                                     type="button"
                                                     onClick={() => moveChoice(idx, -1)}
                                                     disabled={idx === 0}
-                                                    className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] disabled:opacity-20 p-1 rounded-xs hover:bg-[oklch(92%_0.010_28)] cursor-pointer"
+                                                    className="text-[var(--color-neutral)] hover:text-[var(--color-ink)] disabled:opacity-20 p-1 rounded-xs hover:bg-[var(--color-paper-2)] cursor-pointer"
                                                     title="เลื่อนขึ้น"
                                                 >
                                                     <ArrowUp size={13} />
@@ -679,7 +679,7 @@ export default function OptionGroupList() {
                                                     type="button"
                                                     onClick={() => moveChoice(idx, 1)}
                                                     disabled={idx === choices.length - 1}
-                                                    className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] disabled:opacity-20 p-1 rounded-xs hover:bg-[oklch(92%_0.010_28)] cursor-pointer"
+                                                    className="text-[var(--color-neutral)] hover:text-[var(--color-ink)] disabled:opacity-20 p-1 rounded-xs hover:bg-[var(--color-paper-2)] cursor-pointer"
                                                     title="เลื่อนลง"
                                                 >
                                                     <ArrowDown size={13} />
@@ -692,7 +692,7 @@ export default function OptionGroupList() {
                                                 value={choice.name}
                                                 onChange={e => updateChoice(idx, 'name', e.target.value)}
                                                 placeholder="ชื่อตัวเลือก (เช่น หวาน 50%, นมข้าวโอ๊ต)"
-                                                className="flex-1 min-w-0 text-sm text-[oklch(18%_0.012_28)] outline-none bg-transparent placeholder-[oklch(55%_0.010_28)] border-b border-transparent focus:border-[oklch(52%_0.16_28)] py-1"
+                                                className="flex-1 min-w-0 text-sm text-[var(--color-ink)] outline-none bg-transparent placeholder-[var(--color-neutral)] border-b border-transparent focus:border-[var(--brand-plum)] py-1"
                                                 onKeyDown={e => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault()
@@ -702,8 +702,8 @@ export default function OptionGroupList() {
                                             />
 
                                             {/* Price Modifier */}
-                                            <div className="flex items-center gap-1 shrink-0 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2 py-1">
-                                                <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)] whitespace-nowrap">+฿</span>
+                                            <div className="flex items-center gap-1 shrink-0 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs px-2 py-1">
+                                                <span className="text-xs tabular-nums text-[var(--color-neutral)] whitespace-nowrap">+฿</span>
                                                 <input
                                                     type="number"
                                                     value={choice.price_modifier}
@@ -716,10 +716,10 @@ export default function OptionGroupList() {
                                             {/* Sweetness multiplier: scales sweetener ingredients in stock (blank = no effect) */}
                                             {showSweetness && (
                                                 <label
-                                                    className="flex items-center gap-1 shrink-0 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2 py-1"
+                                                    className="flex items-center gap-1 shrink-0 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs px-2 py-1"
                                                     title="ตัวคูณสารให้ความหวานในการตัดสต๊อก เช่น ไม่หวาน 0, หวานน้อย 0.5, ปกติ 1, หวานมาก 1.2 · เว้นว่าง = ไม่ปรับ"
                                                 >
-                                                    <span className="text-xs text-[oklch(55%_0.010_28)] whitespace-nowrap">หวาน ×</span>
+                                                    <span className="text-xs text-[var(--color-neutral)] whitespace-nowrap">หวาน ×</span>
                                                     <input
                                                         type="number"
                                                         inputMode="decimal"
@@ -752,7 +752,7 @@ export default function OptionGroupList() {
                                             <button 
                                                 type="button"
                                                 onClick={() => removeChoice(idx)} 
-                                                className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer"
+                                                className="p-1.5 text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer"
                                                 title="ลบตัวเลือกนี้"
                                             >
                                                 <X size={14} />
@@ -764,7 +764,7 @@ export default function OptionGroupList() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-2">
+                        <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex gap-2">
                             <button 
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}

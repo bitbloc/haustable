@@ -25,7 +25,7 @@ export default function CasualDiningInsights({ data }) {
     }
 
     const catList = [
-        { key: 'food', label: 'อาหารจานหลัก', color: 'bg-[oklch(52%_0.16_28)]', data: categoryRatio.food },
+        { key: 'food', label: 'อาหารจานหลัก', color: 'bg-[var(--brand-plum)]', data: categoryRatio.food },
         { key: 'snack', label: 'ของทานเล่น', color: 'bg-[oklch(60%_0.14_45)]', data: categoryRatio.snack },
         { key: 'set', label: 'ชุดเซตสำรับ', color: 'bg-[oklch(50%_0.12_60)]', data: categoryRatio.set },
         { key: 'dessert', label: 'ของหวาน', color: 'bg-[oklch(65%_0.12_15)]', data: categoryRatio.dessert },
@@ -34,26 +34,26 @@ export default function CasualDiningInsights({ data }) {
     ]
 
     return (
-        <div className="space-y-6 text-[oklch(18%_0.012_28)] font-sans">
+        <div className="space-y-6 text-[var(--color-ink)] font-sans">
             
             {/* 1. Header Toolbar */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
+                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--color-paper-2)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
+                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[var(--color-ink)] text-[var(--color-paper)] ">
                                 INSIGHTS // OPERATIONS
                             </span>
-                            <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
+                            <h3 className="font-bold text-base md:text-lg text-[var(--color-ink)] tracking-tight">
                                 สถิติการดำเนินงานร้านอาหาร (Casual Dining Insights)
                             </h3>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)] mt-0.5">
                             วิเคราะห์สัดส่วนหมวดสินค้า พฤติกรรมกลุ่มลูกค้า และรอบการหมุนเวียนโต๊ะ
                         </p>
                     </div>
 
-                    <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                         รอบหมุนเวียน: {casualMetrics.tableTurnsPerDay} TURNS/TABLE
                     </div>
                 </div>
@@ -63,14 +63,14 @@ export default function CasualDiningInsights({ data }) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 {/* Category Revenue Split (6 cols) */}
-                <div className="lg:col-span-6 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                <div className="lg:col-span-6 border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
+                    <div className="p-4 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)]">
                         CATEGORIES // สัดส่วนรายได้ 6 หมวดหมู่
                     </div>
 
                     <div className="p-4 space-y-4">
                         {/* Multi-segment Bar */}
-                        <div className="w-full bg-[oklch(94%_0.010_28)] h-3 overflow-hidden flex border border-[oklch(85%_0.012_28)]">
+                        <div className="w-full bg-[var(--color-paper-2)] h-3 overflow-hidden flex border border-[var(--color-rule)]">
                             {catList.map((cat) => (
                                 <div
                                     key={cat.key}
@@ -84,15 +84,15 @@ export default function CasualDiningInsights({ data }) {
                         {/* Category Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 tabular-nums text-xs">
                             {catList.map((cat) => (
-                                <div key={cat.key} className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
-                                    <div className="flex items-center gap-1.5 font-bold text-[oklch(18%_0.012_28)] font-sans">
+                                <div key={cat.key} className="p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] space-y-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-[var(--color-ink)] font-sans">
                                         <span className={`w-2 h-2 ${cat.color} shrink-0`} />
                                         <span className="truncate">{cat.label}</span>
                                     </div>
-                                    <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                    <div className="font-bold text-sm text-[var(--color-ink)] tabular-nums">
                                         ฿{(cat.data?.revenue || 0).toLocaleString()}
                                     </div>
-                                    <div className="text-xs text-[oklch(42%_0.010_28)]">
+                                    <div className="text-xs text-[var(--color-muted)]">
                                         {cat.data?.percent || 0}%
                                     </div>
                                 </div>
@@ -102,25 +102,25 @@ export default function CasualDiningInsights({ data }) {
                 </div>
 
                 {/* Party Size Dynamics (6 cols) */}
-                <div className="lg:col-span-6 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                    <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                <div className="lg:col-span-6 border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
+                    <div className="p-4 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)]">
                         PARTY SIZE // สถิติตามขนาดกลุ่มลูกค้า
                     </div>
 
-                    <div className="divide-y divide-[oklch(85%_0.012_28)]">
+                    <div className="divide-y divide-[var(--color-rule)]">
                         {partySizeBreakdown.map((ps, idx) => (
-                            <div key={idx} className="p-3.5 bg-[oklch(97%_0.008_28)] flex items-center justify-between tabular-nums text-xs">
+                            <div key={idx} className="p-3.5 bg-[var(--color-paper)] flex items-center justify-between tabular-nums text-xs">
                                 <div>
-                                    <div className="font-bold text-[oklch(18%_0.012_28)] font-sans">{ps.size}</div>
-                                    <div className="text-xs text-[oklch(42%_0.010_28)] mt-0.5">
+                                    <div className="font-bold text-[var(--color-ink)] font-sans">{ps.size}</div>
+                                    <div className="text-xs text-[var(--color-muted)] mt-0.5">
                                         ยอดเฉลี่ย ฿{ps.avgSpend.toLocaleString()} / บิล ({ps.note})
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
+                                    <div className="font-bold text-sm text-[var(--brand-plum)] tabular-nums">
                                         {ps.share}%
                                     </div>
-                                    <div className="text-xs text-[oklch(42%_0.010_28)]">
+                                    <div className="text-xs text-[var(--color-muted)]">
                                         {ps.count} บิล
                                     </div>
                                 </div>

@@ -6,14 +6,14 @@
 /* Tokens live on :root so dialogs portalled to <body> (outside .admin-system) keep them. */
 :root {
   /* Braun ET66 & T3 pocket radio industrial precision tokens */
-  --ram-canvas: oklch(97% 0.008 28);      /* Warm cream/sand surface */
-  --ram-paper: oklch(98% 0.004 28);       /* Ivory white button / panel face */
-  --ram-paper-dark: oklch(18% 0.012 28);  /* Dark cabinet body */
-  --ram-ink: oklch(18% 0.012 28);         /* Near-black charcoal typography */
-  --ram-ink-muted: oklch(50% 0.010 28);   /* Muted gray text / secondary markers */
-  --ram-rule: oklch(85% 0.012 28);        /* Mechanical seams / metal guides */
-  --ram-rule-light: oklch(90% 0.008 28);
-  --ram-accent: oklch(52% 0.16 28);       /* Clay Terracotta */
+  --ram-canvas: var(--color-paper);      /* Warm cream/sand surface */
+  --ram-paper: var(--color-paper);       /* Ivory white button / panel face */
+  --ram-paper-dark: var(--color-ink);  /* Dark cabinet body */
+  --ram-ink: var(--color-ink);         /* Near-black charcoal typography */
+  --ram-ink-muted: var(--color-neutral);   /* Muted gray text / secondary markers */
+  --ram-rule: var(--color-rule);        /* Mechanical seams / metal guides */
+  --ram-rule-light: var(--color-paper-3);
+  --ram-accent: var(--brand-plum);       /* Clay Terracotta */
   --ram-accent-orange: oklch(72% 0.16 50);/* Function toggle orange */
   --ram-alert: oklch(62% 0.22 25);        /* Red indicator lamp */
   --ram-ok: oklch(64% 0.22 140);          /* Green status lamp */
@@ -82,7 +82,7 @@
   font-size: 13px;
   line-height: 20px;
   font-weight: 400;
-  color: oklch(42% 0.010 28);
+  color: var(--color-muted);
   transition: color 120ms ease, background-color 120ms ease;
 }
 
@@ -92,14 +92,14 @@
 
 .admin-nav-item:hover {
   color: var(--ram-ink);
-  background-color: oklch(95% 0.008 28);
+  background-color: var(--color-paper-2);
 }
 
 .admin-nav-item:focus-visible,
 .admin-icon-btn:focus-visible,
 .admin-link-btn:focus-visible,
 .admin-pending:focus-visible {
-  outline: 2px solid oklch(60% 0.15 28);
+  outline: 2px solid var(--brand-plum);
   outline-offset: 2px;
 }
 
@@ -113,18 +113,18 @@
   position: absolute;
   inset: 0;
   border-radius: 8px;
-  background-color: oklch(92.5% 0.010 28);
+  background-color: var(--color-paper-2);
 }
 
 .admin-nav-item.is-locked {
-  color: oklch(55% 0.010 28);
+  color: var(--color-neutral);
   cursor: not-allowed;
   user-select: none;
 }
 
 .admin-nav-item.is-locked:hover {
   background-color: transparent;
-  color: oklch(55% 0.010 28);
+  color: var(--color-neutral);
 }
 
 .admin-nav.is-collapsed .admin-nav-item {
@@ -172,14 +172,14 @@
   height: 32px;
   flex: none;
   border-radius: 8px;
-  color: oklch(42% 0.010 28);
+  color: var(--color-muted);
   cursor: pointer;
   transition: color 120ms ease, background-color 120ms ease;
 }
 
 .admin-icon-btn:hover {
   color: var(--ram-ink);
-  background-color: oklch(93% 0.010 28);
+  background-color: var(--color-paper-2);
 }
 
 .admin-icon-btn:active,
@@ -203,7 +203,7 @@
 }
 
 .admin-link-btn:hover {
-  background-color: oklch(94% 0.010 28);
+  background-color: var(--color-paper-2);
 }
 
 .admin-link-btn.is-primary {
@@ -222,7 +222,7 @@
   font-size: 13px;
   white-space: nowrap;
   color: var(--ram-accent);
-  background-color: oklch(94% 0.03 28);
+  background-color: oklch(94% 0.03 348.33);
 }
 
 .admin-mobile-nav {
@@ -287,12 +287,12 @@
 }
 
 .admin-stat-cell + .admin-stat-cell {
-  box-shadow: -1px 0 0 oklch(90% 0.008 28);
+  box-shadow: -1px 0 0 var(--color-paper-3);
 }
 
 @media (max-width: 1023px) {
   .admin-stat-cell {
-    box-shadow: -1px 0 0 oklch(90% 0.008 28), 0 -1px 0 oklch(90% 0.008 28);
+    box-shadow: -1px 0 0 var(--color-paper-3), 0 -1px 0 var(--color-paper-3);
   }
 }
 
@@ -332,7 +332,7 @@
 }
 
 .admin-btn:hover {
-  background-color: oklch(94% 0.010 28);
+  background-color: var(--color-paper-2);
 }
 
 .admin-btn:active {
@@ -340,12 +340,12 @@
 }
 
 .admin-btn:focus-visible {
-  outline: 2px solid oklch(60% 0.15 28);
+  outline: 2px solid var(--brand-plum);
   outline-offset: 2px;
 }
 
 .admin-btn:disabled {
-  color: oklch(50% 0.010 28);
+  color: var(--color-neutral);
   cursor: default;
 }
 
@@ -356,7 +356,7 @@
 }
 
 .admin-btn.is-primary:hover {
-  background-color: oklch(28% 0.012 28);
+  background-color: oklch(28% 0.012 348.33);
 }
 
 .admin-btn.is-icon {

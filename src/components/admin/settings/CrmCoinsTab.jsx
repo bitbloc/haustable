@@ -281,7 +281,7 @@ export default function CrmCoinsTab({
                                 type="button"
                                 onClick={handleSaveTiers}
                                 disabled={isTiersSaving}
-                                className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer disabled:opacity-50"
+                                className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer disabled:opacity-50"
                             >
                                 <Save size={12} className="inline mr-1" /> {isTiersSaving ? 'กำลังบันทึก...' : 'บันทึกระดับสมาชิก'}
                             </button>
@@ -558,7 +558,7 @@ export default function CrmCoinsTab({
                         <a
                             href={crmQrUrl}
                             download="crm-member-registration-qr.png"
-                            className="w-full bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer "
+                            className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer "
                         >
                             <Download size={13} /> Download QR Code Image
                         </a>

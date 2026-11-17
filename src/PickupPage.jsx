@@ -694,33 +694,33 @@ export default function PickupPage() {
 
                                 {/* Member CRM Privileges Badge */}
                                 {memberProfile && (
-                                    <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(52%_0.16_28)]/30 p-4 rounded-rams space-y-3">
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                                    <div className="bg-[var(--color-paper-2)] border border-[var(--brand-plum)]/30 p-4 rounded-rams space-y-3">
+                                        <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2.5">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 rounded-full bg-[oklch(52%_0.16_28)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                                                <div className="w-7 h-7 rounded-full bg-[var(--brand-plum)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                                                     <Crown size={14} />
                                                 </div>
                                                 <div>
-                                                    <span className="font-bold text-xs text-[oklch(18%_0.012_28)] block">คุณ {memberProfile.display_name}</span>
-                                                    <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">สิทธิประโยชน์สมาชิก CRM</span>
+                                                    <span className="font-bold text-xs text-[var(--color-ink)] block">คุณ {memberProfile.display_name}</span>
+                                                    <span className="text-[9px] font-mono text-[var(--color-neutral)]">สิทธิประโยชน์สมาชิก CRM</span>
                                                 </div>
                                             </div>
-                                            <span className="px-2.5 py-1 bg-[oklch(52%_0.16_28)] text-white text-[9px] font-mono font-bold rounded-rams uppercase tracking-wider">
+                                            <span className="px-2.5 py-1 bg-[var(--brand-plum)] text-white text-[9px] font-mono font-bold rounded-rams uppercase tracking-wider">
                                                 {tierDetails.current_tier} ({tierDetails.multiplier}x)
                                             </span>
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-2 text-center font-mono">
-                                            <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
-                                                <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">xhaus Balance</span>
-                                                <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
+                                            <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
+                                                <span className="text-[8px] text-[var(--color-neutral)] uppercase block">xhaus Balance</span>
+                                                <span className="text-xs font-bold text-[var(--brand-plum)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
                                             </div>
-                                            <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
-                                                <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">Drink Stamps</span>
-                                                <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
+                                            <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
+                                                <span className="text-[8px] text-[var(--color-neutral)] uppercase block">Drink Stamps</span>
+                                                <span className="text-xs font-bold text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
                                             </div>
-                                            <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
-                                                <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">Earn Points</span>
+                                            <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
+                                                <span className="text-[8px] text-[var(--color-neutral)] uppercase block">Earn Points</span>
                                                 <span className="text-xs font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
                                             </div>
                                         </div>

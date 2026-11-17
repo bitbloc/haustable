@@ -529,7 +529,7 @@ export async function exportAestheticPNG(canvasRef, specs) {
     const ctx = card.getContext('2d')
     if (!ctx) return null
 
-    // 1. Background: Warm Paper (oklch(97% 0.008 28) ~ #FBF8F5)
+    // 1. Background: Warm Paper (oklch(96.20% 0.0115 84.58) ~ #FBF8F5)
     ctx.fillStyle = '#FAF7F3'
     ctx.fillRect(0, 0, width, height)
 
