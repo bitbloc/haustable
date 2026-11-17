@@ -7,6 +7,7 @@ import { formatStockDisplay, packCapacity } from '../../utils/stockUtils';
 import { displayUnit, qtyInWords } from '../../utils/stockCount';
 import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import { STOCK_REASONS } from '../../utils/stockLedger';
+import { getUnitType } from '../../utils/unitUtils';
 
 // Why stock leaves outside of sales. Waste and staff meals get their own column
 // in the daily reconciliation; everything else is "other out".
@@ -82,7 +83,11 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
             setUnitOptions(options);
             setSelectedUnit(options[0]);
-            countInPieces.current = options.find(o => o.key === 'usage' && packCapacity(item)?.unit === item.usage_unit) || null;
+            // Only things inside that are counted one by one (bottles of a crate, cups of a pack).
+            // A piece of galangal holding 100 g keeps its "opened one" switch.
+            const inside = packCapacity(item);
+            const piecesInside = !!inside && (getUnitType(inside.unit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(inside.unit));
+            countInPieces.current = piecesInside ? options.find(o => o.key === 'usage') || null : null;
             setAmount('');
             setPartialAmount(0);
             
