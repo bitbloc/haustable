@@ -472,8 +472,16 @@ function fullMenuPayload(data) {
     }
 }
 
-// utm_content that says the ad sold the location ("location", "map", "naga" ...) → location-first banner
-const LOCATION_AD_RE = /loc|map|direct|nav|near|naga|phaya|พญานาค|นำทาง/
+// utm_content that says the ad sold the location → location-first banner.
+// Whole tokens only (split on _ / - / space), from this list: a substring match also caught
+// "local_pickup" ("loc") and similar. "naga_location" matches through "location" (and "naga").
+const LOCATION_AD_TOKENS = new Set([
+    'location', 'loc', 'map', 'maps', 'direction', 'directions', 'nav', 'navigate', 'navigation',
+    'near', 'nearby', 'naga', 'phaya', 'พญานาค', 'นำทาง'
+])
+export function isLocationAd(utmContent) {
+    return String(utmContent || '').trim().toLowerCase().split(/[_\-\s]+/).some(t => LOCATION_AD_TOKENS.has(t))
+}
 
 function generateStandaloneLandingHtml(data, opts = {}) {
     const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
@@ -643,7 +651,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
 
     // Location-first banner is decided here from the ad URL, so it is in the first paint and never pushes the page down.
     // The CDN caches per full URL, so each utm_content gets its own copy.
-    const locationFirst = LOCATION_AD_RE.test(String(opts.utmContent || '').toLowerCase())
+    const locationFirst = isLocationAd(opts.utmContent)
 
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
