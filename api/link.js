@@ -1077,8 +1077,8 @@ function generateStandaloneLandingHtml(data) {
         @keyframes modal-pic-out { to { opacity: 0; transform: scale(0.96); } }
 
         /* Reveal on scroll: added by script only to things below the first screen, so nothing is hidden without JS and the first paint is untouched */
-        .reveal { opacity: 0; transform: translateY(16px); }
-        .reveal.in { opacity: 1; transform: none; transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out); transition-delay: var(--d, 0ms); }
+        .reveal { opacity: 0; transform: translateY(8px); }
+        .reveal.in { opacity: 1; transform: none; transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); transition-delay: var(--d, 0ms); }
         #full-menu-content.opening { animation: menu-open 360ms var(--ease-out); }
         @keyframes menu-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
         /* Closing folds the menu up so what follows slides into place instead of jumping (height is set by toggleFullMenu) */
@@ -1572,10 +1572,11 @@ function generateStandaloneLandingHtml(data) {
                 });
             }, { rootMargin: '0px 0px -8% 0px' });
             const fold = window.innerHeight;
-            document.querySelectorAll('.section-header, .sig-card, #sec-menu > div > .item-row, .gallery-item, .row-link, .facts .fact, .full-menu-btn, .tags-wrap, footer').forEach(function(el) {
+            // One style, few targets: headings and photos only. Rows, facts and the footer just scroll in.
+            document.querySelectorAll('.section-header, .sig-card, .gallery-item').forEach(function(el) {
                 if (el.getBoundingClientRect().top < fold) return;
                 const sibs = Array.prototype.indexOf.call(el.parentNode.children, el);
-                el.style.setProperty('--d', (sibs % 4) * 70 + 'ms');
+                el.style.setProperty('--d', (sibs % 3) * 40 + 'ms');
                 el.classList.add('reveal');
                 io.observe(el);
             });
