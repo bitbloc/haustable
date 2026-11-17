@@ -219,19 +219,19 @@ describe('POS Advance Booking & Walk-in Isolation Test Suite', () => {
         
         // 25 mins future
         const t25 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 17, 25, 0).toISOString();
-        expect(formatReservationCountdown(t25, now)).toBe('อีก 25 นาที');
+        expect(formatReservationCountdown(t25, now).replace(/\u00A0/g, ' ')).toBe('อีก 25 นาที');
 
         // 2 hours future
         const t120 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 19, 0, 0).toISOString();
-        expect(formatReservationCountdown(t120, now)).toBe('อีก 2 ชม.');
+        expect(formatReservationCountdown(t120, now).replace(/\u00A0/g, ' ')).toBe('อีก 2 ชม.');
 
         // 2 hours 15 mins future
         const t135 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 19, 15, 0).toISOString();
-        expect(formatReservationCountdown(t135, now)).toBe('อีก 2ชม.15น.');
+        expect(formatReservationCountdown(t135, now).replace(/\u00A0/g, ' ')).toBe('อีก 2ชม.15น.');
 
         // Overdue by 10 mins
         const tOverdue10 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 50, 0).toISOString();
-        expect(formatReservationCountdown(tOverdue10, now)).toBe('เลย 10น.');
+        expect(formatReservationCountdown(tOverdue10, now).replace(/\u00A0/g, ' ')).toBe('เลย 10น.');
 
         // Verify zero emojis
         const countdownStr = formatReservationCountdown(t135, now);

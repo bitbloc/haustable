@@ -105,6 +105,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     // Modal and CRM Search States
     const [activeModal, setActiveModal] = React.useState(null); // 'crm' | 'discount' | 'checkout' | null
+    const [settlingPayment, setSettlingPayment] = React.useState(false);
     const [crmSearchTerm, setCrmSearchTerm] = React.useState('');
     const [crmMembers, setCrmMembers] = React.useState([]);
     const [crmLoading, setCrmLoading] = React.useState(false);
@@ -1835,7 +1836,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 ) : !isFullyPaid ? (
                                     <button 
                                         type="button"
-                                        onClick={() => onOpenSplitPayment && onOpenSplitPayment(includeTax)}
+                                        onClick={() => onOpenSplitPayment && onOpenSplitPayment(includeTax, netTotalWithTax, pointsEarned)}
                                         className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer touch-manipulation border bg-white hover:bg-[#FDFDFD] border-[#D1D1CD] text-[#1A1A1A]"
                                     >
                                         <Coins size={14} /> Split (Payment)
@@ -2890,7 +2891,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     return (
                                         <button
                                             type="button"
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 const rewardItemsInCart = order.items.filter(item => item.is_reward);
                                                 const cartRewardCost = rewardItemsInCart.reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
                                                 const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : cartRewardCost);
@@ -2903,17 +2904,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     localStorage.setItem('last_cash_change', String(changeDueVal));
                                                 } catch (e) {}
 
-                                                if (changeDueVal > 0) {
-                                                    toast.success(
-                                                        `เงินทอน: ฿${changeDueVal.toLocaleString()} (รับเงินสด ฿${cashRecvNum.toLocaleString()})`,
-                                                        { duration: 6000 }
-                                                    );
-                                                } else {
-                                                    toast.success(`รับเงินสดพอดี ฿${cashRecvNum.toLocaleString()}`, { duration: 4000 });
-                                                }
-
+                                                if (settlingPayment) return;
+                                                setSettlingPayment(true);
+                                                let paid = true;
+                                                try {
                                                 if (onCheckout) {
-                                                    onCheckout(
+                                                    paid = await onCheckout(
                                                         'cash',
                                                         includeTax,
                                                         pointsEarned,
@@ -2928,9 +2924,26 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         changeDueVal
                                                     );
                                                 }
+                                                } finally {
+                                                    setSettlingPayment(false);
+                                                }
+                                                // Only tell staff it is paid (and how much change) once the bill is really closed
+                                                if (paid === false) {
+                                                    toast.error('ปิดบิลไม่สำเร็จ ยังไม่ได้บันทึกการชำระ กรุณาลองใหม่');
+                                                    return;
+                                                }
+                                                if (changeDueVal > 0) {
+                                                    toast.success(
+                                                        `เงินทอน: ฿${changeDueVal.toLocaleString()} (รับเงินสด ฿${cashRecvNum.toLocaleString()})`,
+                                                        { duration: 6000 }
+                                                    );
+                                                } else {
+                                                    toast.success(`รับเงินสดพอดี ฿${cashRecvNum.toLocaleString()}`, { duration: 4000 });
+                                                }
                                                 setActiveModal(null);
                                             }}
-                                            className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                                            disabled={settlingPayment}
+                                            className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                                         >
                                             SETTLE CASH & PRINT · ปิดบิลเงินสด
                                         </button>
@@ -2941,7 +2954,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 {paymentMethod === 'qr' && (
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={async () => {
                                             const rewardItemsInCart = order.items.filter(item => item.is_reward);
                                             const cartRewardCost = rewardItemsInCart.reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
                                             const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : cartRewardCost);
@@ -2949,10 +2962,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             const finalRewardCode = appliedReward?.claim_code || rewardItemsInCart[0]?.claim_code || null;
                                             const finalRewardId = appliedReward?.id || rewardItemsInCart[0]?.reward_id || null;
 
-                                            toast.success('รับชำระเงินผ่าน QR สำเร็จ', { duration: 4000 });
-
+                                            if (settlingPayment) return;
+                                            setSettlingPayment(true);
+                                            let paid = true;
+                                            try {
                                             if (onCheckout) {
-                                                onCheckout(
+                                                paid = await onCheckout(
                                                     'qr',
                                                     includeTax,
                                                     pointsEarned,
@@ -2967,9 +2982,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     0
                                                 );
                                             }
+                                            } finally {
+                                                setSettlingPayment(false);
+                                            }
+                                            if (paid === false) {
+                                                toast.error('ปิดบิลไม่สำเร็จ ยังไม่ได้บันทึกการชำระ กรุณาลองใหม่');
+                                                return;
+                                            }
+                                            toast.success('รับชำระเงินผ่าน QR สำเร็จ', { duration: 4000 });
                                             setActiveModal(null);
                                         }}
-                                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                                        disabled={settlingPayment}
+                                            className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                                     >
                                         CONFIRM QR & SETTLE · ยืนยันชำระ QR
                                     </button>

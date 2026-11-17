@@ -2,9 +2,8 @@ import React, { useState, useEffect, memo } from 'react';
 import { 
     LayoutGrid, 
     UtensilsCrossed, 
-    Users, 
-    Settings, 
-    LogOut, 
+    Users,
+    LogOut,
     ChevronLeft, 
     Clock, 
     BarChart3, 
@@ -167,9 +166,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                 </div>
 
                 <div className="flex flex-col gap-2 w-full px-2 items-center">
-                    <NavIcon icon={LayoutGrid} onClick={() => window.location.href = '/staff'} label="Staff DB" />
-                    <NavIcon icon={Settings} onClick={() => window.location.href = '/admin/settings'} label="Settings" />
-                    
+                    {/* Staff DB and Settings live on the owner's phone (/staff, /admin), not on the POS */}
                     {/* Subtle Side Branding */}
                     <div className="mt-3 [writing-mode:vertical-lr] text-[8px] font-mono font-bold tracking-widest text-[var(--color-neutral)] uppercase select-none opacity-60 text-center">
                         ONHAUS ©

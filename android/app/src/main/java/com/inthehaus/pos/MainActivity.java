@@ -1,9 +1,7 @@
 package com.inthehaus.pos;
 
 import android.app.Presentation;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.hardware.display.DisplayManager;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
@@ -11,7 +9,6 @@ import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Display;
@@ -26,11 +23,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import com.getcapacitor.BridgeActivity;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -39,8 +31,6 @@ public class MainActivity extends BridgeActivity {
     
     private SecondaryDisplayPresentation presentation;
     private DisplayManager.DisplayListener displayListener;
-    private ServerSocket wmaServerSocket;
-    private Thread wmaServerThread;
 
     private SoundPool soundPool;
     private int soundNoti1 = 0;
@@ -222,35 +212,6 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
-        public boolean isNotificationServiceEnabled() {
-            try {
-                String pkgName = getPackageName();
-                final String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-                if (flat != null && !flat.isEmpty()) {
-                    final String[] names = flat.split(":");
-                    for (String name : names) {
-                        final ComponentName cn = ComponentName.unflattenFromString(name);
-                        if (cn != null && cn.getPackageName().equals(pkgName)) {
-                            return true;
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-            return false;
-        }
-
-        @JavascriptInterface
-        public void openNotificationListenerSettings() {
-            try {
-                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (Exception e) {
-                Log.e("MainActivity", "Cannot open notification settings", e);
-            }
-        }
-
-        @JavascriptInterface
         public boolean isSecondaryDisplayConnected() {
             return presentation != null && presentation.isShowing();
         }
@@ -299,10 +260,6 @@ public class MainActivity extends BridgeActivity {
                 }
             });
         }
-    }
-
-    public static void dispatchWmaNotification(final String title, final String text, final String pkg) {
-        // Notification listener ingestion temporarily disabled per user request
     }
 
     @Override
@@ -390,9 +347,6 @@ public class MainActivity extends BridgeActivity {
         } catch (Exception e) {
             Log.e("MainActivity", "Error registering display listener", e);
         }
-
-        // Start native WMA ESC/POS Virtual Printer Bridge Server on Port 9100
-        startWmaBridgeServer();
     }
 
     @Override
@@ -434,89 +388,6 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    private void startWmaBridgeServer() {
-        wmaServerThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    wmaServerSocket = new ServerSocket();
-                    wmaServerSocket.setReuseAddress(true);
-                    wmaServerSocket.bind(new java.net.InetSocketAddress(9100));
-                    Log.i("WmaBridge", "🚀 WMA Virtual Printer Bridge listening on Port 9100");
-                    
-                    while (!Thread.currentThread().isInterrupted() && wmaServerSocket != null && !wmaServerSocket.isClosed()) {
-                        try {
-                            final Socket clientSocket = wmaServerSocket.accept();
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    handleWmaClientSocket(clientSocket);
-                                }
-                            }).start();
-                        } catch (Exception e) {
-                            if (wmaServerSocket != null && !wmaServerSocket.isClosed()) {
-                                Log.w("WmaBridge", "Socket accept warning: " + e.getMessage());
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    Log.e("WmaBridge", "Could not open ServerSocket on Port 9100: " + e.getMessage());
-                }
-            }
-        });
-        wmaServerThread.start();
-    }
-
-    private void handleWmaClientSocket(Socket socket) {
-        try {
-            // Initial timeout: wait up to 5000ms for the client to start sending print data
-            socket.setSoTimeout(5000);
-            InputStream in = socket.getInputStream();
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            byte[] temp = new byte[1024];
-            int read;
-            
-            try {
-                read = in.read(temp);
-                if (read != -1) {
-                    buffer.write(temp, 0, read);
-                    // Once print stream starts, set 1200ms inter-packet timeout to capture all chunks
-                    socket.setSoTimeout(1200);
-                    while ((read = in.read(temp)) != -1) {
-                        buffer.write(temp, 0, read);
-                    }
-                }
-            } catch (SocketTimeoutException ste) {
-                // Stream packet completed
-            }
-
-            final byte[] rawBytes = buffer.toByteArray();
-            Log.i("WmaBridge", "📥 Received WMA print stream payload: " + rawBytes.length + " bytes");
-            
-            if (rawBytes.length > 0) {
-                final String base64Data = Base64.encodeToString(rawBytes, Base64.NO_WRAP);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            WebView webView = getBridge() != null ? getBridge().getWebView() : null;
-                            if (webView != null) {
-                                String js = "if (window.onWmaRawPrintStream) { window.onWmaRawPrintStream('" + base64Data + "'); } else { window.dispatchEvent(new CustomEvent('wma_raw_print_stream', { detail: '" + base64Data + "' })); }";
-                                webView.evaluateJavascript(js, null);
-                            }
-                        } catch (Exception e) {
-                            Log.e("WmaBridge", "Error dispatching raw print stream to WebView: " + e.getMessage());
-                        }
-                    }
-                });
-            }
-            try {
-                socket.close();
-            } catch (Exception ignored) {}
-        } catch (Exception e) {
-            Log.w("WmaBridge", "Client handling error: " + e.getMessage());
-        }
-    }
 
     @Override
     public void onBackPressed() {
@@ -553,14 +424,6 @@ public class MainActivity extends BridgeActivity {
             if (presentation != null) {
                 presentation.dismiss();
                 presentation = null;
-            }
-            if (wmaServerSocket != null) {
-                wmaServerSocket.close();
-                wmaServerSocket = null;
-            }
-            if (wmaServerThread != null) {
-                wmaServerThread.interrupt();
-                wmaServerThread = null;
             }
             if (soundPool != null) {
                 soundPool.release();

@@ -30,9 +30,9 @@ import {
     getCanonicalOrderAlertKey,
     getCanonicalSlipAlertKey
 } from '../utils/audioHelper';
-import { simulateWmaOrder } from '../utils/wmaNativeBridge';
 import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast } from '../utils/realtimeNotifier';
 import POSVolumeControl from './POSVolumeControl';
+import { guardReservationCheckIn } from '../utils/reservationCheckIn';
 
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey, isActive = true }) {
     const [orders, setOrders] = useState([]);
@@ -42,8 +42,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const [searchQuery, setSearchQuery] = useState('');
     const [persistentAlert, setPersistentAlert] = useState(null);
     const [approvingId, setApprovingId] = useState(null);
-    const [showWmaGuideModal, setShowWmaGuideModal] = useState(false);
-    const [isSimulating, setIsSimulating] = useState(false);
 
     const alertIntervalRef = useRef(null);
     const isFetchingRef = useRef(false);
@@ -142,8 +140,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
                 if (isExplicitInHouse) return false;
 
-                // Physical dine-in table QR orders belong strictly to Table Grid / Floorplan, NEVER to Online Hub
-                const isTableQrOrder = Boolean(b.table_id) && (sourceLower === 'qr' || remarkLower.includes('qr walk-in') || b.booking_type === 'walk_in');
+                // Physical dine-in table QR orders belong strictly to Table Grid / Floorplan, NEVER to Online Hub.
+                // An online advance reservation stays here even if a table QR order touched it (source flipped to 'qr').
+                const isOnlineReservation = b.booking_type === 'dine_in' && remarkLower.includes('[online]');
+                const isTableQrOrder = !isOnlineReservation && Boolean(b.table_id) && (sourceLower === 'qr' || remarkLower.includes('qr walk-in') || b.booking_type === 'walk_in');
                 if (isTableQrOrder) return false;
 
                 const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || isHausmade);
@@ -321,26 +321,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         };
     }, []);
 
-    // Fast-path listener for local native WMA bridge interception
-    useEffect(() => {
-        const handleWmaOrder = (event) => {
-            if (isActiveRef.current) scheduleFetchOnlineData(100);
-            const b = event.detail?.booking;
-            if (b) {
-                const eventKey = getCanonicalOrderAlertKey(b.id) || `order_${Date.now()}`;
-                if (checkEventDeduplication(eventKey, 5000)) {
-                    setPersistentAlert(b);
-                    playAlert(eventKey);
-                }
-            }
-        };
-
-        window.addEventListener('wma_order_received', handleWmaOrder);
-        return () => {
-            window.removeEventListener('wma_order_received', handleWmaOrder);
-        };
-    }, []);
-
     useEffect(() => {
         if (isActive && refreshKey > 0) {
             scheduleFetchOnlineData(150);
@@ -383,9 +363,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             });
 
             scheduleFetchOnlineData(50);
+            return true;
         } catch (err) {
             console.error(err);
             toast.error('ไม่สามารถอัปเดตสถานะได้: ' + (err.message || 'Error'));
+            return false;
         }
     };
 
@@ -870,7 +852,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         <button
                             type="button"
                             onClick={async () => {
-                                await updateBookingStatus(order.id, 'seated');
+                                const allowed = await guardReservationCheckIn(order, {
+                                    tableName: order.tables_layout?.table_name || tableName || '',
+                                    onBlocked: (msg) => toast.error(msg)
+                                });
+                                if (!allowed) return;
+                                const ok = await updateBookingStatus(order.id, 'seated');
+                                if (!ok) return;
                                 if (onOpenSlipModal && items.length > 0) {
                                     onOpenSlipModal({ ...order, status: 'seated' }, 'kitchen');
                                 }
@@ -882,7 +870,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             className="flex-1 py-2 rounded-lg bg-[oklch(18%_0.012_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                         >
                             <CheckCircle2 size={12} />
-                            <span>SEAT GUEST (เช็คอิน)</span>
+                            <span className="whitespace-nowrap">เช็คอิน · SEAT</span>
                         </button>
                     )}
 
@@ -1176,59 +1164,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     </div>
                 </div>
-
-                {/* WMA Virtual Bridge & Interceptor Status Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[oklch(94%_0.010_28)] rounded-xl border border-[oklch(85%_0.012_28)] mt-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="font-mono text-[10px] font-bold tracking-wider text-[oklch(18%_0.012_28)]">
-                            WMA / LINE MAN INTERCEPTOR: ACTIVE
-                        </span>
-                        <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)] hidden sm:inline">
-                            · ระบบดักจับออเดอร์อัตโนมัติบนเครื่อง Sunmi
-                        </span>
-                        {typeof window !== 'undefined' && window.AndroidCfdBridge?.isNotificationServiceEnabled && !window.AndroidCfdBridge.isNotificationServiceEnabled() && (
-                            <button
-                                type="button"
-                                onClick={() => window.AndroidCfdBridge.openNotificationListenerSettings()}
-                                className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white text-[9px] font-mono font-bold rounded animate-pulse cursor-pointer flex items-center gap-1 ml-1"
-                                title="คลิกเพื่อเปิดหน้าตั้งค่า Notification Listener ของ Android"
-                            >
-                                <span>⚠️</span>
-                                <span>เปิดสิทธิ์ดักจับ LINE MAN</span>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-wider">
-                        <button
-                            type="button"
-                            disabled={isSimulating}
-                            onClick={async () => {
-                                try {
-                                    setIsSimulating(true);
-                                    await simulateWmaOrder();
-                                    toast.success('🚀 ยิงออเดอร์จำลอง LINE MAN สำเร็จ!');
-                                } catch (e) {
-                                    toast.error('จำลองออเดอร์ไม่สำเร็จ: ' + (e.message || 'Error'));
-                                } finally {
-                                    setIsSimulating(false);
-                                }
-                            }}
-                            className="px-2.5 py-1.5 rounded-lg bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                        >
-                            <span>{isSimulating ? 'SIMULATING...' : '🧪 SIMULATE LINE MAN'}</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowWmaGuideModal(true)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:opacity-90 transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                        >
-                            <span>📖 วิธีตั้งค่า WMA</span>
-                        </button>
-                    </div>
-                </div>
             </div>
 
             {/* Active Kanban View */}
@@ -1467,102 +1402,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </motion.div>
                     );
                 })()}
-            </AnimatePresence>
-
-            {/* WMA Setup Guide Modal */}
-            <AnimatePresence>
-                {showWmaGuideModal && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.96, y: 10 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.96, y: 10 }}
-                            className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden font-sans text-[oklch(18%_0.012_28)]"
-                        >
-                            <div className="p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                        📖 วิธีตั้งค่า WMA เชื่อมต่อ POS
-                                    </h3>
-                                    <p className="text-[10px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
-                                        Wongnai Merchant App Virtual ESC/POS Printer
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowWmaGuideModal(false)}
-                                    className="p-1.5 rounded-lg bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            <div className="p-5 space-y-4 text-xs font-sans max-h-[80vh] overflow-y-auto">
-                                <div className="space-y-3.5">
-                                    <div className="flex gap-3 items-start">
-                                        <span className="w-5 h-5 rounded-full bg-[oklch(18%_0.012_28)] text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
-                                        <div>
-                                            <p className="font-bold text-[oklch(18%_0.012_28)]">เปิดแอป Wongnai Merchant App (WMA)</p>
-                                            <p className="text-[oklch(55%_0.010_28)] text-[11px]">ไปที่เมนู <strong>ตั้งค่า (Settings)</strong> &gt; <strong>เครื่องพิมพ์ (Printers)</strong> &gt; กด <strong>เพิ่มเครื่องพิมพ์ (Add Printer)</strong></p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-3 items-start">
-                                        <span className="w-5 h-5 rounded-full bg-[oklch(18%_0.012_28)] text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
-                                        <div>
-                                            <p className="font-bold text-[oklch(18%_0.012_28)]">เลือกประเภทการเชื่อมต่อ LAN / Wi-Fi</p>
-                                            <p className="text-[oklch(55%_0.010_28)] text-[11px]">เลือกยี่ห้อ/รุ่นเป็น <strong>ทั่วไป / ESC/POS (Generic ESC/POS)</strong> หรือ <strong>Epson</strong></p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-3 items-start">
-                                        <span className="w-5 h-5 rounded-full bg-[oklch(18%_0.012_28)] text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
-                                        <div className="space-y-1.5 flex-1">
-                                            <p className="font-bold text-[oklch(18%_0.012_28)]">ระบุ IP Address และ Port</p>
-                                            <div className="grid grid-cols-2 gap-2 bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] font-mono text-[11px]">
-                                                <div>
-                                                    <span className="text-[oklch(55%_0.010_28)] text-[9px] block">IP ADDRESS:</span>
-                                                    <strong className="text-[oklch(18%_0.012_28)] text-sm">127.0.0.1</strong>
-                                                </div>
-                                                <div>
-                                                    <span className="text-[oklch(55%_0.010_28)] text-[9px] block">PORT:</span>
-                                                    <strong className="text-[oklch(18%_0.012_28)] text-sm">9100</strong>
-                                                </div>
-                                            </div>
-                                            <p className="text-[10px] text-[oklch(55%_0.010_28)] italic">* หาก WMA ติดตั้งบนมือถือ/แท็บเล็ตเครื่องอื่นในร้าน ให้ใส่ IP ของเครื่อง POS แทน 127.0.0.1</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-3 items-start">
-                                        <span className="w-5 h-5 rounded-full bg-[oklch(18%_0.012_28)] text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
-                                        <div>
-                                            <p className="font-bold text-[oklch(18%_0.012_28)]">เปิดพิมพ์อัตโนมัติ (Auto-Print)</p>
-                                            <p className="text-[oklch(55%_0.010_28)] text-[11px]">เลือกขนาดกระดาษ <strong>80mm</strong> และเปิด <strong>"พิมพ์ใบออเดอร์/สลิปอัตโนมัติเมื่อมีออเดอร์ใหม่"</strong> แล้วกดบันทึก</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950 space-y-1">
-                                    <p className="font-bold font-mono text-[10px] uppercase text-emerald-800">⚡ ระบบสำรอง Android Notification Listener</p>
-                                    <p className="text-[11px] leading-relaxed">POS APK มีระบบดักจับการแจ้งเตือนของ Android อัตโนมัติ หากเครื่องเปิด Notification Access ไว้ เมื่อมีออเดอร์แจ้งเตือนจาก LINE MAN / WMA ระบบจะดูดเข้า Online Hub ทันที</p>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setShowWmaGuideModal(false)}
-                                    className="w-full py-2.5 rounded-xl bg-[oklch(18%_0.012_28)] text-white font-mono font-bold text-xs uppercase tracking-wider hover:opacity-90 cursor-pointer shadow-2xs"
-                                >
-                                    เข้าใจแล้ว (DONE)
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
             </AnimatePresence>
         </div>
     );

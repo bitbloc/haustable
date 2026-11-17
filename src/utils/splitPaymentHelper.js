@@ -46,6 +46,7 @@ export function getBookingSplitRounds(booking) {
                     method: (r.method || 'qr').toLowerCase(),
                     mode: r.mode || 'CUSTOM',
                     percent: r.percent !== undefined && r.percent !== null ? parseFloat(r.percent) : null,
+                    people: r.people ? parseInt(r.people, 10) || null : null,
                     payer: r.payer || null,
                     time: r.time || null,
                     splitBookingId: r.splitBookingId || null
@@ -126,9 +127,11 @@ export function getSplitTotalPaid(booking) {
  * @param {Object} booking - Active table booking
  * @param {Array} orderItems - Current order items array
  * @param {boolean} includeTax - Whether 7% VAT is included
+ * @param {number|null} [netTotalOverride] - Net total from the order panel (all discounts applied);
+ *   when given it is the bill total, so split rounds charge what the panel shows
  * @returns {Object} Calculated split balance metrics
  */
-export function calculateSplitBalance(booking, orderItems = [], includeTax = false) {
+export function calculateSplitBalance(booking, orderItems = [], includeTax = false, netTotalOverride = null) {
     const rounds = getBookingSplitRounds(booking);
     const splitPaid = rounds.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount) || 0) : 0;
@@ -149,16 +152,16 @@ export function calculateSplitBalance(booking, orderItems = [], includeTax = fal
 
     // If orderItems is empty, fallback to booking.total_amount if available
     let computedTotal = fullOrderTotal;
-    if (computedTotal === 0 && booking?.total_amount && parseFloat(booking.total_amount) > 0) {
+    if (Number.isFinite(netTotalOverride) && netTotalOverride > 0) {
+        computedTotal = Math.ceil(netTotalOverride);
+    } else if (computedTotal === 0 && booking?.total_amount && parseFloat(booking.total_amount) > 0) {
         computedTotal = Math.ceil(parseFloat(booking.total_amount));
     }
 
     let remainingBalance = Math.max(0, computedTotal - alreadyPaid);
     
-    // In case items were already deleted from DB in ITEMS mode, computedTotal might equal remaining
-    if (rounds.length > 0 && computedTotal < alreadyPaid) {
-        remainingBalance = computedTotal;
-    }
+    // Paid more than the bill now totals (e.g. an item voided after a round was paid): nothing is due.
+    // (It used to show the full total as due again, inviting a second collection.)
 
     const currentRoundNumber = rounds.length + 1;
     const isFullySettled = remainingBalance <= 0;
@@ -208,6 +211,7 @@ export function appendSplitRoundToRemark(currentRemark = '', newRound = {}) {
         method: (newRound.method || 'qr').toLowerCase(),
         mode: newRound.mode || 'CUSTOM',
         percent: newRound.percent !== undefined && newRound.percent !== null ? parseFloat(newRound.percent) : null,
+        people: newRound.people ? parseInt(newRound.people, 10) || null : null,
         payer: newRound.payer || null,
         time: newRound.time || new Date().toISOString(),
         splitBookingId: newRound.splitBookingId || null

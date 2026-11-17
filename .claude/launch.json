@@ -22,6 +22,19 @@
         "dev:pos-preview"
       ],
       "port": 5175
+    },
+    {
+      "name": "pos-readonly-preview-alt",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--mode",
+        "posreadonly",
+        "--port",
+        "5176",
+        "--strictPort"
+      ],
+      "port": 5176
     }
   ]
 }

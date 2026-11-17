@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
 import { posCache } from '../utils/offlineHelper';
-import { parseTableTransferInfo, isTableSessionActive } from '../utils/tableTransferHelper';
+import { parseTableTransferInfo, isTableSessionActive, pickActiveTableSession } from '../utils/tableTransferHelper';
 export { isTableSessionActive };
 import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
 import { isHoldExpired, getBookingHoldMinutes, isCallConfirmOrder, formatPosDateTime } from '../utils/availabilityUtils';
@@ -38,17 +38,30 @@ export const getReservationDiffMins = (bookingTime, now = new Date()) => {
 export const formatReservationCountdown = (bookingTime, now = new Date()) => {
     if (!bookingTime) return '';
     const diff = getReservationDiffMins(bookingTime, now);
+    // Non-breaking spaces keep "อีก" with its duration when a narrow tile wraps the label
+    const NB = '\u00A0';
     if (diff < 0) {
         const overdue = Math.abs(diff);
-        return overdue < 60 ? `เลย ${overdue}น.` : `เลย ${Math.floor(overdue / 60)}ชม.`;
+        return overdue < 60 ? `เลย${NB}${overdue}น.` : `เลย${NB}${Math.floor(overdue / 60)}ชม.`;
     }
     if (diff <= 45) {
-        return `อีก ${diff} นาที`;
+        return `อีก${NB}${diff}${NB}นาที`;
     }
     const hours = Math.floor(diff / 60);
     const mins = diff % 60;
-    if (hours === 0) return `อีก ${mins} นาที`;
-    return mins === 0 ? `อีก ${hours} ชม.` : `อีก ${hours}ชม.${mins}น.`;
+    if (hours === 0) return `อีก${NB}${mins}${NB}นาที`;
+    return mins === 0 ? `อีก${NB}${hours}${NB}ชม.` : `อีก${NB}${hours}ชม.${mins}น.`;
+};
+
+/** How long a table has been seated: "35 นาที", "1ชม.12น." */
+export const formatSeatedDuration = (since, nowMs = Date.now()) => {
+    const start = new Date(since).getTime();
+    if (!Number.isFinite(start)) return '-';
+    const mins = Math.max(0, Math.floor((nowMs - start) / 60000));
+    if (mins < 60) return `${mins} นาที`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m === 0 ? `${h} ชม.` : `${h}ชม.${m}น.`;
 };
 
 const formatUpcomingResTime = (timeStr) => {
@@ -134,15 +147,17 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                 const merged = cachedTables.map(t => {
                     const tableBookings = cachedBookings.filter(b => String(b.table_id) === String(t.id) && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
-                    const booking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
-                    const upcomingRes = tableBookings.find(b => {
+                    const booking = pickActiveTableSession(tableBookings, now);
+                    // Every booking still to come today, earliest first: the next one drives the countdown/clash
+                    const upcomingList = tableBookings.filter(b => {
                         if (b.id === booking?.id) return false;
                         if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
                         if (isHoldExpired(b, now)) return false;
                         const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
                         const holdMins = getBookingHoldMinutes(b) ?? 30;
                         return isToday && (new Date(b.booking_time).getTime() > now.getTime() - holdMins * 60000);
-                    });
+                    }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time));
+                    const upcomingRes = upcomingList[0] || null;
                     const expiredHoldRes = tableBookings.find(b => {
                         if (b.id === booking?.id) return false;
                         const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
@@ -169,6 +184,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         hasCallBill: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]')),
                         booking: booking || null,
                         upcomingReservation: upcomingRes || null,
+                        upcomingReservations: upcomingList,
                         expiredHoldReservation: expiredHoldRes || null,
                         isAdvanceReserved: Boolean(isUpcomingFar),
                         reservationDiffMins: diffMins,
@@ -473,7 +489,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                         // 1. Actively occupying in-store dining booking (strictly validated against stale/past-day sessions)
                         const isCurrentPosTable = Boolean(activeTableId && (String(t.id) === String(activeTableId)) && activeBooking);
-                        const activeBookingCandidate = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
+                        const activeBookingCandidate = pickActiveTableSession(tableBookings, now);
                         const activeBookingToUse = isCurrentPosTable ? activeBooking : activeBookingCandidate;
 
                         // Check for unacknowledged new order items on this table (within last 5 min and after table ack)
@@ -501,7 +517,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         const tableHasCallBill = tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]'));
 
                         // 2. Upcoming advance reservation (scheduled for later today, not yet seated)
-                        const upcomingRes = tableBookings.find(b => {
+                        // Every booking still to come today, earliest first: the next one drives the countdown/clash
+                        const upcomingList = tableBookings.filter(b => {
                             if (b.id === activeBookingToUse?.id) return false;
                             if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
                             if (isHoldExpired(b, now)) return false;
@@ -509,7 +526,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
                             const holdMins = getBookingHoldMinutes(b) ?? 30;
                             return isToday && (bTime.getTime() > now.getTime() - holdMins * 60000);
-                        });
+                        }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time));
+                        const upcomingRes = upcomingList[0] || null;
                         const expiredHoldRes = tableBookings.find(b => {
                             if (b.id === activeBookingToUse?.id) return false;
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
@@ -541,6 +559,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             hasCallBill: Boolean(tableHasCallBill || t.hasCallBill || prevTable?.hasCallBill),
                             booking: activeBookingToUse || prevTable?.booking || null,
                             upcomingReservation: upcomingRes || null,
+                            upcomingReservations: upcomingList,
                             expiredHoldReservation: expiredHoldRes || null,
                             isAdvanceReserved: Boolean(isUpcomingFar),
                             reservationDiffMins: diffMins,
@@ -560,15 +579,17 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     
                     const merged = cachedTables.map(t => {
                         const tableBookings = cachedBookings.filter(b => String(b.table_id) === String(t.id) && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
-                        const booking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
-                        const upcomingRes = tableBookings.find(b => {
+                        const booking = pickActiveTableSession(tableBookings, now);
+                        // Every booking still to come today, earliest first: the next one drives the countdown/clash
+                        const upcomingList = tableBookings.filter(b => {
                             if (b.id === booking?.id) return false;
                             if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
                             if (isHoldExpired(b, now)) return false;
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
                             const holdMins = getBookingHoldMinutes(b) ?? 30;
                             return isToday && (new Date(b.booking_time).getTime() > now.getTime() - holdMins * 60000);
-                        });
+                        }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time));
+                        const upcomingRes = upcomingList[0] || null;
                         const expiredHoldRes = tableBookings.find(b => {
                             if (b.id === booking?.id) return false;
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
@@ -595,6 +616,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             hasCallBill: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]')),
                             booking: booking || null,
                             upcomingReservation: upcomingRes || null,
+                            upcomingReservations: upcomingList,
                             expiredHoldReservation: expiredHoldRes || null,
                             isAdvanceReserved: Boolean(isUpcomingFar),
                             reservationDiffMins: diffMins,
@@ -656,7 +678,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 .animate-pos-blink-blue { background-color: #EDF7FF !important; border-color: #0099FF !important; color: #004C80 !important; animation: pos-blink-opacity 1.4s infinite ease-in-out !important; }
             `}</style>
             {/* Top Toolbar */}
-            <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-col md:flex-row gap-3 items-center justify-between z-10 shrink-0 shadow-xs">
+            <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-wrap gap-3 items-center justify-between z-10 shrink-0 shadow-xs">
                 {/* Search and Filters */}
                 <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
                     <div className="relative w-full sm:w-64">
@@ -670,7 +692,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         />
                     </div>
 
-                    <div className="flex bg-[var(--color-paper)] p-1 rounded-md border border-[var(--color-rule)] text-xs font-mono font-bold uppercase tracking-wider touch-manipulation">
+                    <div className="flex shrink-0 bg-[var(--color-paper)] p-1 rounded-md border border-[var(--color-rule)] text-xs font-bold touch-manipulation whitespace-nowrap">
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('all')}
@@ -699,7 +721,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             onClick={() => setStatusFilter('occupied')}
                             className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'occupied' ? 'bg-[var(--color-accent)] text-[var(--color-paper)] font-bold shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-white"></span>
+                            <span className="w-2 h-2 rounded-full bg-current"></span>
                             มีลูกค้า
                         </button>
                         <button 
@@ -714,7 +736,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 </div>
 
                 {/* Layout Mode Toggle & Walk-in Pickup Action */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                     {onNewWalkInPickup && (
                         <button 
                             type="button"
@@ -1145,6 +1167,14 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
 });
 
 const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) {
+    // Re-render once a minute so "นั่งมา" counts up while the tile is on screen
+    const [minuteTick, setMinuteTick] = useState(() => Date.now());
+    const isSeatedTile = table.status === 'occupied' || table.status === 'pending';
+    useEffect(() => {
+        if (!isSeatedTile) return undefined;
+        const id = setInterval(() => setMinuteTick(Date.now()), 60000);
+        return () => clearInterval(id);
+    }, [isSeatedTile]);
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending' || table.booking?.status === 'pending';
     const isReserved = table.status === 'reserved';
@@ -1185,6 +1215,45 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
         ledColor = 'bg-[#FFAA00] animate-pulse';
     }
 
+    // Status line (centered) and the detail rows under it
+    const upcoming = table.upcomingReservation;
+    const upcomingGuest = upcoming ? (upcoming.pickup_contact_name || upcoming.customer_name || upcoming.profiles?.display_name || '') : '';
+    const isShortTurn = isAdvanceReserved && table.reservationDiffMins < 90;
+    let statusText = 'ว่าง';
+    let statusToneClass = 'text-[var(--color-neutral)]';
+    if (isOccupied || isPending) {
+        statusText = table.booking ? `มีลูกค้า · #${getShortBookingId(table.booking)}` : 'มีลูกค้า';
+        statusToneClass = 'text-white/85';
+    } else if (isReserved) {
+        statusText = upcoming?.status === 'pending' && isCallConfirmOrder(upcoming) ? 'จองแล้ว · รอโทรยืนยัน' : 'จองแล้ว · รอลูกค้า';
+        statusToneClass = 'text-amber-800';
+    } else if (isAdvanceReserved) {
+        statusText = isShortTurn ? 'ว่าง · รอบด่วน' : 'ว่าง · มีจอง';
+        statusToneClass = isShortTurn ? 'text-[var(--color-accent)]' : 'text-[oklch(35%_0.08_140)]';
+    }
+
+    const detailRows = [];
+    if (isOccupied || isPending) {
+        if (table.booking?.pax) detailRows.push(['ลูกค้า', `${table.booking.pax} คน`]);
+        if (table.booking?.booking_time) detailRows.push(['เข้า', new Date(table.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })]);
+        if (table.booking?.booking_time) detailRows.push(['นั่งมา', formatSeatedDuration(table.booking.booking_time, minuteTick)]);
+    } else if (upcoming) {
+        detailRows.push(['จอง', formatUpcomingResTime(upcoming.booking_time)]);
+        if (upcomingGuest) detailRows.push(['ชื่อ', upcomingGuest]);
+        const countdown = formatReservationCountdown(upcoming.booking_time);
+        const isLate = countdown.startsWith('เลย');
+        detailRows.push([isLate ? 'เลยเวลา' : 'อีก', countdown.replace(/^(อีก|เลย)\u00A0/, '')]);
+        // More bookings later the same day: show the next one, and how many come after it
+        const laterToday = (table.upcomingReservations || []).slice(1);
+        if (laterToday.length > 0) {
+            const next = laterToday[0];
+            const nextName = next.pickup_contact_name || next.customer_name || next.profiles?.display_name || '';
+            const nextTime = formatUpcomingResTime(next.booking_time).replace(/^วันนี้s*/, '');
+            const more = laterToday.length > 1 ? ` +${laterToday.length - 1}` : '';
+            detailRows.push(['ถัดไป', `${nextTime}${nextName ? ` ${nextName}` : ''}${more}`]);
+        }
+    }
+
     return (
         <button
             key={table.id}
@@ -1213,15 +1282,6 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                      {isReserved && (
                          <span className="bg-amber-500 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase shadow-xs">
                              {isReserved && table.upcomingReservation?.status === 'pending' && isCallConfirmOrder(table.upcomingReservation) ? 'จองแล้ว · รอโทรยืนยัน' : 'จองแล้ว · RESERVED'}
-                         </span>
-                     )}
-                     {isAdvanceReserved && (
-                         <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase border ${
-                             table.reservationDiffMins < 90
-                                 ? 'bg-[oklch(52%_0.16_28_/_0.10)] text-[var(--color-accent)] border-[var(--color-accent)] font-bold'
-                                 : 'bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)]'
-                         }`}>
-                             {table.reservationDiffMins < 90 ? 'รอบด่วน' : 'ว่าง'} · มีจอง {formatUpcomingResTime(table.upcomingReservation.booking_time)}
                          </span>
                      )}
                      {transfer.isMergedTarget && (
@@ -1260,49 +1320,25 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                 <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
             </div>
             
-            {/* Center row: Table Info */}
-            <div className="flex flex-col items-center gap-0.5 my-2.5 select-none">
-                 <span className="font-mono font-bold text-2xl tracking-tight">{table.table_name}</span>
-                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${
-                     isOccupied || isPending 
-                         ? 'text-white/80' 
-                         : isReserved 
-                         ? 'text-amber-800' 
-                         : isAdvanceReserved 
-                         ? (table.reservationDiffMins < 90 ? 'text-[var(--color-accent)] font-bold' : 'text-[oklch(35%_0.08_140)]') 
-                         : 'text-[var(--color-neutral)]'
-                 }`}>
-                     {isReserved && table.upcomingReservation 
-                         ? (table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name || 'ONLINE RESERVED')
-                         : isAdvanceReserved && table.upcomingReservation
-                         ? (table.reservationDiffMins < 90
-                             ? `รอบด่วน (${formatReservationCountdown(table.upcomingReservation.booking_time)})`
-                             : `รับ WALK-IN ได้ (${formatReservationCountdown(table.upcomingReservation.booking_time)})`)
-                         : (table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT · ว่าง')}
-                 </span>
+            {/* Center: table name, then its status centered under it */}
+            <div className="flex flex-col items-center gap-1 my-2 select-none">
+                <span className="font-mono font-bold text-2xl tracking-tight leading-none">{table.table_name}</span>
+                <span className={`text-[11px] font-bold leading-[1.5] text-center whitespace-nowrap ${statusToneClass}`}>
+                    {statusText}
+                </span>
             </div>
-            
-            {/* Bottom row: Capacity / Timing */}
-            <div className="flex justify-between items-center w-full border-t border-black/10 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none opacity-80">
-                 <span>{(isOccupied || isPending) && table.booking?.pax ? `PAX: ${table.booking.pax}` : `CAP: ${table.capacity}P`}</span>
-                {(isOccupied || isPending) ? (
-                    <div className="flex items-center gap-1">
-                        <Clock size={10} />
-                        <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
+
+            {/* Bottom: label | value rows divided by 1px rules (one fact per row, nothing repeated) */}
+            {detailRows.length > 0 && (
+            <dl className="w-full border-t border-current/15 text-[10px] leading-[1.5] select-none">
+                {detailRows.map(([label, value]) => (
+                    <div key={label} className="grid grid-cols-[auto_1fr] gap-2 py-1 border-b border-current/10 last:border-b-0">
+                        <dt className="opacity-70 whitespace-nowrap">{label}</dt>
+                        <dd className="font-mono font-bold text-right whitespace-nowrap truncate">{value}</dd>
                     </div>
-                ) : table.upcomingReservation && (
-                    <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-xs text-[8px] font-mono font-bold ${
-                        isReserved 
-                            ? 'text-amber-900 bg-amber-100 border border-amber-300' 
-                            : table.reservationDiffMins < 90
-                            ? 'text-amber-950 bg-amber-100 border border-amber-400 font-bold'
-                            : 'text-[oklch(30%_0.08_140)] bg-[oklch(92%_0.04_140)] border border-[oklch(80%_0.06_140)]'
-                    }`}>
-                        <Clock size={9} />
-                        <span>{table.reservationDiffMins < 90 ? 'รอบด่วน ' : 'จอง '}{formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})</span>
-                    </div>
-                )}
-            </div>
+                ))}
+            </dl>
+            )}
         </button>
     );
 });

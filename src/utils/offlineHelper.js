@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { resolveMenuItemId } from './menuHelper';
-import { extractCarryOverTags } from './splitPaymentHelper';
+import { extractCarryOverTags, getBookingSplitRounds } from './splitPaymentHelper';
 import { addLocallyPrintedIds, markItemsPrinted } from './printClaim';
 
 const OFFLINE_QUEUE_KEY = 'pos_offline_queue';
@@ -560,25 +560,31 @@ export async function syncOfflineQueue(isManual = false) {
                 const updatedRemark = bookingMetadata?.staff_remark;
                 const resolvedTotal = Number(action.payload.fullOrderTotal ?? bookingMetadata?.total_amount) || 0;
 
+                // Errors must throw so the action stays queued (a swallowed error used to drop the payment).
+                // bookings has no completed_at column: writing it made every offline final round fail.
                 if (isFullySettled) {
-                    await supabase
+                    const rounds = getBookingSplitRounds({ staff_remark: updatedRemark || '' });
+                    const methods = [...new Set(rounds.map(r => (r.method || 'qr').toLowerCase()))];
+                    const resolvedMethod = methods.length === 1 ? methods[0] : (methods.length > 1 ? 'split' : (paymentMethod || 'qr'));
+                    const { error } = await supabase
                         .from('bookings')
                         .update({
                             status: 'completed',
-                            completed_at: new Date().toISOString(),
-                            payment_method: 'split',
+                            payment_method: resolvedMethod,
                             ...(resolvedTotal > 0 ? { total_amount: resolvedTotal } : {}),
                             staff_remark: updatedRemark
                         })
                         .eq('id', bookingId);
+                    if (error) throw error;
                 } else {
-                    await supabase
+                    const { error } = await supabase
                         .from('bookings')
                         .update({
                             ...(resolvedTotal > 0 ? { total_amount: resolvedTotal } : {}),
                             staff_remark: updatedRemark
                         })
                         .eq('id', bookingId);
+                    if (error) throw error;
                 }
             }
             

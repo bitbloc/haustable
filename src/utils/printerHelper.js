@@ -53,6 +53,16 @@ export const getPrinterConfig = () => {
     };
 };
 
+/**
+ * True when a dine-in slip is printed more than 30 minutes before the guest's booked time,
+ * so the kitchen slip must carry the appointment time.
+ */
+export function isFutureDineInAppointment(booking, isPickupOrder = false, now = Date.now()) {
+    if (isPickupOrder || !booking?.booking_time) return false;
+    const t = new Date(booking.booking_time).getTime();
+    return Number.isFinite(t) && t - now > 30 * 60 * 1000;
+}
+
 export function getShortBookingId(booking) {
     if (!booking) return '0000';
     if (typeof booking === 'string') {
@@ -1178,6 +1188,15 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                    .line(`วันเวลาที่จองโต๊ะ: ${formattedBookingTimeStr}`);
         } else {
             encoder.line(`เวลาสั่ง: ${orderPlacedStr}`);
+        }
+
+        // A pre-order for a guest booked later (e.g. checked in early, or a QR-sourced online booking)
+        // must tell the kitchen when to cook, not just when it was ordered.
+        if (isFutureDineInAppointment(booking, isPickupOrder)) {
+            if (!isOnlineBooking) {
+                encoder.line(`วันเวลาที่จองโต๊ะ: ${formattedBookingTimeStr}`);
+            }
+            encoder.line('ลูกค้ายังไม่มา ทำตามเวลานัด');
         }
 
         if (!isPickupOrder) {
@@ -3553,6 +3572,11 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
     const payerName = splitDetails.payerName || splitDetails.attachedMember?.display_name || null;
     const promptpayName = splitDetails.promptpayName || 'ร้านในบ้าน นครพนม';
     const promptpayId = splitDetails.promptpayId || '0614232455';
+    // paidReceipt: the round is already paid; print a receipt for it instead of a "scan to pay" QR slip
+    const isPaidReceipt = Boolean(splitDetails.paidReceipt);
+    const methodLabel = { cash: 'เงินสด', qr: 'พร้อมเพย์ QR', transfer: 'โอนเงิน' }[String(splitDetails.paymentMethod || '').toLowerCase()] || 'เงินสด';
+    const cashRecv = Number(splitDetails.cashReceived) || 0;
+    const changeDue = Number(splitDetails.changeDue) || 0;
 
     // Header
     encoder.align('center')
@@ -3563,7 +3587,7 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
            .line('POS SYSTEM')
            .line(divider)
            .bold(true)
-           .line('สแกนชำระเงิน PROMPTPAY QR')
+           .line(isPaidReceipt ? 'ใบรับเงิน แบ่งชำระ' : 'สแกนชำระเงิน PROMPTPAY QR')
            .line(`(แบ่งชำระ รอบที่ ${roundNum})`)
            .bold(false)
            .line(divider)
@@ -3581,16 +3605,25 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
     encoder.align('center')
            .bold(true)
            .size(0, 1)
-           .line(`ยอดชำระ: ฿${formatReceiptMoney(splitAmount)}`)
+           .line(`${isPaidReceipt ? 'รับชำระ' : 'ยอดชำระ'}: ฿${formatReceiptMoney(splitAmount)}`)
            .size(0, 0)
            .bold(false)
            .line('')
            .align('left');
 
-    // Account info
-    encoder.line(formatTwoCols('บัญชีรับเงิน', promptpayName, maxCols, null, colOpts));
-    encoder.line(formatTwoCols('พร้อมเพย์', promptpayId, maxCols, null, colOpts));
-    encoder.line(divider);
+    if (isPaidReceipt) {
+        encoder.line(formatTwoCols('ชำระโดย', methodLabel, maxCols, null, colOpts));
+        if (cashRecv > 0) {
+            encoder.line(formatTwoCols('รับเงินสด', `฿${formatReceiptMoney(cashRecv)}`, maxCols, null, colOpts));
+            encoder.line(formatTwoCols('เงินทอน', `฿${formatReceiptMoney(changeDue)}`, maxCols, null, colOpts));
+        }
+        encoder.line(divider);
+    } else {
+        // Account info
+        encoder.line(formatTwoCols('บัญชีรับเงิน', promptpayName, maxCols, null, colOpts));
+        encoder.line(formatTwoCols('พร้อมเพย์', promptpayId, maxCols, null, colOpts));
+        encoder.line(divider);
+    }
 
     // Bill context
     encoder.line(formatTwoCols('บิลรวมทั้งหมด', `฿${formatReceiptMoney(fullTotal)}`, maxCols, null, colOpts));
@@ -3603,11 +3636,33 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
     const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     encoder.align('center')
            .line(`วันที่ ${dateStr} เวลา ${timeStr}`)
-           .line('กรุณาสแกน QR ด้านล่างเพื่อชำระเงิน')
+           .line(isPaidReceipt ? 'ได้รับเงินเรียบร้อย ขอบคุณครับ' : 'กรุณาสแกน QR ด้านล่างเพื่อชำระเงิน')
            .line('')
            .feed(1);
 
     return encoder.encode();
+}
+
+/**
+ * Receipt for one paid split round (no QR): what this payer paid, how, and what is left on the bill.
+ */
+export async function printSplitRoundReceipt(booking = {}, splitDetails = {}) {
+    const config = getPrinterConfig() || {};
+    const printerType = config.cashier_printer_type || 'sunmi';
+    const paperSize = config.cashier_paper_size || config.paper_width || '80mm';
+    const rawBytes = encodeSplitQrSlipData(booking, { ...splitDetails, paidReceipt: true }, paperSize);
+    if (printerType === 'sunmi') {
+        const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
+        await printToSunmiBuiltIn(rawBytes, config.shop_logo_url || storedLogo || null, null);
+        return true;
+    } else if (printerType === 'rawbt') {
+        await printToRawBTWebSocket(rawBytes);
+        return true;
+    } else if (printerType === 'bluetooth') {
+        await printToBluetoothDirect(config.bluetooth_device_name || '', rawBytes);
+        return true;
+    }
+    return false;
 }
 
 // Print Dedicated Split Payment PromptPay QR Thermal Slip directly to printer
