@@ -6,7 +6,7 @@
 
 const DEFAULT_TARGET_EMAIL = 'Rithawat@gmail.com'
 const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_123456789' // Uses RESEND_API_KEY if configured in Vercel
-const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || 'LKoEdJlI0uQUbjxot6TQEhxKGfZNDyPifZAYcuXK4OIxbHF56bqZvCT5NPuUSEsdZY2LOuDkDdMRwf62buy8il5ytzTqFxmjJToe3Hn3KFuAy4Jz2PQ7joM9xABSuyL4vkrU31DllxrMMqBFz1Up3gdB04t89/1O/w1cDnyilFU='
+const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN
 const LINE_GROUP_ID = process.env.LINE_GROUP_ID || 'Cc2c65da5408563ef57ae61dee6ce3c1d'
 
 export default async function handler(req, res) {
@@ -375,7 +375,11 @@ ${slipFullUrl ? `\n🧾 สลิปชำระเงิน: ${slipFullUrl}` : 
 
         // 2. Dispatch to LINE Group
         let lineSent = false
-        if (LINE_CHANNEL_ACCESS_TOKEN && LINE_GROUP_ID) {
+        let lineError = null
+        if (!LINE_CHANNEL_ACCESS_TOKEN) {
+            lineError = 'LINE_CHANNEL_ACCESS_TOKEN is not configured'
+            console.error('[send-order-email] LINE_CHANNEL_ACCESS_TOKEN is not configured')
+        } else if (LINE_GROUP_ID) {
             try {
                 const lineResp = await fetch('https://api.line.me/v2/bot/message/push', {
                     method: 'POST',
@@ -390,8 +394,11 @@ ${slipFullUrl ? `\n🧾 สลิปชำระเงิน: ${slipFullUrl}` : 
                 })
                 if (lineResp.ok) {
                     lineSent = true
+                } else {
+                    lineError = `LINE API responded ${lineResp.status}`
                 }
             } catch (lErr) {
+                lineError = lErr.message
                 console.warn('[send-order-email] LINE dispatch exception:', lErr)
             }
         }
@@ -418,6 +425,7 @@ ${slipFullUrl ? `\n🧾 สลิปชำระเงิน: ${slipFullUrl}` : 
             success: true,
             emailSent,
             lineSent,
+            line: { sent: lineSent, error: lineError },
             discordSent,
             targetEmail,
             orderId,
