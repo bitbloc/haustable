@@ -116,11 +116,16 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
             {/* Structural Tabular Sidebar for Navigation */}
             <aside className="w-24 bg-[var(--color-paper-2)] border-r border-[var(--color-rule)] flex flex-col items-center py-4 justify-between select-none shrink-0">
                 <div className="flex flex-col items-center gap-4 w-full">
-                    <div className="w-12 h-12 flex flex-col items-center justify-center border border-[var(--color-rule)] rounded-md bg-[var(--color-paper)] shadow-xs select-none overflow-hidden">
+                    {/* Shop mark at the top of the nav rail: not a button, so no tile frame. The ในบ้าน wordmark
+                        (no tagline at this size) spans the 80px column of the nav tiles below; the 48px height
+                        is kept so the tiles do not move. */}
+                    <div className="w-full h-12 px-2 flex items-center justify-center select-none">
                         <img 
-                            src="/logo.png" 
-                            alt="Haus Table" 
-                            className="w-full h-full object-cover grayscale-[10%]"
+                            src="/logo-inbaan-wordmark-plum-96.png" 
+                            alt="ในบ้าน In the haus" 
+                            width="80"
+                            height="44"
+                            className="max-w-full max-h-full object-contain"
                         />
                     </div>
 

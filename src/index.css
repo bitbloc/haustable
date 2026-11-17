@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
+/* ── Brand v2 fonts (.agents/AGENTS.md §3): self-hosted woff2 in public/fonts, font-display: swap.
+   SOV_monomon = headlines only · IBM Plex Sans Thai = body · DM Mono = Latin labels and numbers.
+   A page downloads only the faces and unicode ranges it actually renders. ── */
+@font-face { font-family: 'SOV_monomon'; src: url('/fonts/sov-monomon-thai-latin.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; unicode-range: U+0020-007E, U+00A0, U+00B7, U+0E01-0E5B, U+2013-2014, U+2018-201D, U+2026, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-300-thai.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-300-latin.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-400-thai.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-400-latin.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-500-thai.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-500-latin.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-600-thai.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-600-latin.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-700-thai.woff2') format('woff2'); font-weight: 700 900; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/fonts/ibm-plex-sans-thai-700-latin.woff2') format('woff2'); font-weight: 700 900; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'DM Mono'; src: url('/fonts/dm-mono-400-latin.woff2') format('woff2'); font-weight: 100 400; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
+@font-face { font-family: 'DM Mono'; src: url('/fonts/dm-mono-500-latin.woff2') format('woff2'); font-weight: 500 900; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
+
 @theme {
   --color-sage: #BFCBC2;
-  --color-primary: #DFFF00;
-  --color-dark: #1A1A1A;
-  --color-surface: #FFFFFF;
-  
-  /* Semantic Tokens for Admin Clean Theme */
-  --color-canvas: #F9FAFB; /* Background */
-  --color-paper: #FFFFFF;  /* Cards/Sidebar */
-  --color-ink: #111827;    /* Primary Text */
-  --color-subInk: #6B7280; /* Secondary Text */
-  --color-brand: #DFFF00;  /* Brand Accent */
+  /* Brand v2 (.agents/AGENTS.md): utilities bg-plum / bg-lime / text-error ... */
+  --color-plum: oklch(25.18% 0.1001 348.33);       /* #41032A */
+  --color-plum-2: oklch(33.03% 0.0965 348.04);     /* #571C3E */
+  --color-lime: oklch(86.55% 0.1900 114.95);       /* #D0E020, one primary action, charcoal text */
+  --color-lime-press: oklch(80.01% 0.1802 115.06); /* #BBCA08 */
+  --color-charcoal: oklch(21.78% 0 0);             /* #1A1A1A */
+  --color-cream: oklch(96.20% 0.0115 84.58);       /* #F6F2EA */
+  --color-error: oklch(50.03% 0.1821 29.51);       /* #B42318, errors / destructive only */
+  /* Older names, now the brand (was neon #DFFF00 and greys) */
+  --color-primary: oklch(86.55% 0.1900 114.95);    /* lime */
+  --color-dark: oklch(21.78% 0 0);                 /* charcoal */
+  --color-surface: oklch(96.20% 0.0115 84.58);     /* cream (no pure white) */
+
+  /* Semantic Tokens */
+  --color-canvas: oklch(92.60% 0.0095 352.37);     /* #ECE4E7 page background behind cards */
+  --color-paper: oklch(96.20% 0.0115 84.58);       /* #F6F2EA cards */
+  --color-ink: oklch(21.78% 0 0);                  /* #1A1A1A */
+  --color-subInk: oklch(48.01% 0.0120 345.78);     /* #635B5F, 5.27:1 on canvas */
+  --color-brand: oklch(86.55% 0.1900 114.95);      /* lime */
 
   /* Font utilities. Tailwind v4 ignores tailwind.config.js (no @config), so
-     font-sans / font-mono must be set here or they fall back to system stacks
-     with no Thai font. Sans matches body text (IBM Plex Sans Thai for Thai and
-     Latin). Mono keeps the existing Latin monospace widths (POS grids depend on
-     them); IBM Plex Sans Thai sits before the generic `monospace` so only Thai
-     glyphs switch away from the OS fallback. */
+     font-sans / font-mono / font-display must be set here or they fall back to
+     system stacks with no Thai font. Sans = IBM Plex Sans Thai (body). Mono =
+     DM Mono for Latin labels and numbers (still monospaced, so POS columns line
+     up); Thai inside a mono label falls through to IBM Plex Sans Thai.
+     Display = SOV_monomon, headlines only. */
   --font-sans: 'IBM Plex Sans Thai', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', monospace;
+  /* DM Mono for Latin labels and numbers; Thai inside a mono label falls through to Plex Sans Thai */
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'IBM Plex Sans Thai', monospace;
+  --font-display: 'SOV_monomon', 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Chinese and Lao views (LanguageContext sets <html lang>). The approved Thai/Latin
@@ -30,34 +58,57 @@
 :root:lang(zh-Hans) {
   --font-sans: 'IBM Plex Sans Thai', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'IBM Plex Sans Thai', 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC', sans-serif;
 }
 
 :root:lang(lo) {
   --font-sans: 'IBM Plex Sans Thai', 'Inter', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'IBM Plex Sans Thai', 'Inter', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', 'IBM Plex Sans Thai', 'Noto Sans Lao', 'Lao Sangam MN', 'Leelawadee UI', sans-serif;
 }
 
 :root {
-  /* Thai Modern OKLCH Palette Tokens (Anchor Hue: 28 - Terracotta Clay) */
-  --color-paper: oklch(97% 0.008 28);
-  --color-paper-2: oklch(94% 0.010 28);
-  --color-rule: oklch(85% 0.012 28);
-  --color-neutral: oklch(55% 0.010 28);
-  --color-muted: oklch(42% 0.010 28);
-  --color-ink: oklch(18% 0.012 28);
-  --color-accent: oklch(52% 0.16 28);
+  /* ── Brand v2 "Thai twist modern": single source of truth is .agents/AGENTS.md §2.
+     OKLCH converted from the brand hex (kept in comments). ── */
+  --brand-plum: oklch(25.18% 0.1001 348.33);        /* #41032A header, hero, login, focus, secondary */
+  --brand-plum-2: oklch(33.03% 0.0965 348.04);      /* #571C3E */
+  --brand-plum-3: oklch(41.92% 0.0851 347.97);      /* #6E3855 hover on plum, not text */
+  --on-plum-2: oklch(79.98% 0.0348 349.28);         /* #D0B5C1 secondary text on plum */
+  --accent-lime: oklch(86.55% 0.1900 114.95);       /* #D0E020 ONE primary action, charcoal text, never on cream as text */
+  --accent-lime-press: oklch(80.01% 0.1802 115.06); /* #BBCA08 */
+  --charcoal: oklch(21.78% 0 0);                    /* #1A1A1A */
+  --charcoal-2: oklch(26.96% 0.0069 345.80);        /* #292527 */
+  --charcoal-3: oklch(33.10% 0.0078 351.28);        /* #393436 */
+  --cream: oklch(96.20% 0.0115 84.58);              /* #F6F2EA */
+  --error-red: oklch(50.03% 0.1821 29.51);          /* #B42318 errors / destructive only */
+  --dark-muted: oklch(77.97% 0.0133 345.58);        /* #BEB4B9 */
+  --dark-rule: oklch(37.96% 0.0107 349.77);         /* #474043 */
+  /* HAUSMADE products and loyalty / KEYTAG surfaces ONLY, never general UI */
+  --hausmade-orange: #FF5A00;
+  --hausmade-blue: #0047AB;
+  --hausmade-green: #32CD32;
+  --hausmade-dark: #2A2A2A;
+
+  /* Light theme (customer, HR): the older names, mapped onto the brand */
+  --color-paper: var(--cream);
+  --color-paper-2: oklch(92.60% 0.0095 352.37);     /* #ECE4E7 */
+  --color-paper-3: oklch(89.47% 0.0128 345.51);     /* #E3D9DE */
+  --color-rule: oklch(85.05% 0.0113 348.48);        /* #D4CBCF */
+  --color-neutral: oklch(48.01% 0.0120 345.78);     /* #635B5F 5.89:1 on cream */
+  --color-muted: oklch(41.84% 0.0124 345.90);       /* #524A4E 7.68:1 on cream */
+  --color-ink: var(--charcoal);
+  /* Terracotta is retired: non-error accents are plum. Status green stays a status colour. */
+  --color-accent: var(--brand-plum);
   --color-accent-2: oklch(45% 0.08 140);
-  --color-focus: oklch(60% 0.15 28);
+  --color-focus: var(--brand-plum);
   --color-accent-yellow: oklch(88% 0.18 95);
   --color-paper-warm: oklch(91% 0.012 35);
   --color-accent-sky: oklch(85% 0.06 220);
 
   /* Hallmark Typography Tokens */
-  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-display: 'SOV_monomon', 'IBM Plex Sans Thai', sans-serif;  /* headlines only */
   --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
-  --font-outlier: 'Space Mono', monospace;
+  --font-outlier: 'DM Mono', 'IBM Plex Sans Thai', monospace;     /* Latin labels and numbers */
 
   /* Hallmark Palette (Tinted neutrals & rich darks) */
   --color-hallmark-paper: oklch(97% 0.008 100);      /* Warm tinted background */
@@ -67,8 +118,8 @@
   --color-hallmark-rule: oklch(85% 0.008 100);        /* Border line */
   
   /* Brand & Status Accents */
-  --color-brand: oklch(88% 0.18 100);                 /* HAUS yellow-green #DFFF00 */
-  --color-accent-red: oklch(62% 0.22 25);             /* Alert / Phone red #FF453A */
+  --color-brand: var(--accent-lime);                  /* was HAUS yellow-green #DFFF00 */
+  --color-accent-red: var(--error-red);               /* was #FF453A; errors only */
   --color-accent-green: oklch(64% 0.22 140);           /* Line / Delivery green #06C755 */
   --color-accent-blue: oklch(52% 0.16 250);            /* Q&A / Maps blue */
 
@@ -76,6 +127,21 @@
   --dur-short: 150ms;
   --dur-medium: 300ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* POS / bar dark theme (charcoal). Tokens only: add data-theme="pos-dark" to a POS root to use it.
+   Not applied anywhere yet, because POS components still hard-code light surfaces. */
+[data-theme="pos-dark"] {
+  --color-paper: var(--charcoal);
+  --color-paper-2: var(--charcoal-2);
+  --color-paper-3: var(--charcoal-3);
+  --color-rule: var(--dark-rule);
+  --color-neutral: var(--dark-muted);
+  --color-muted: var(--dark-muted);
+  --color-ink: var(--cream);
+  --color-accent: var(--accent-lime);   /* on charcoal lime passes (11.91:1); charcoal text on lime */
+  --color-focus: var(--accent-lime);
+  color-scheme: dark;
 }
 
 @tailwind base;
@@ -272,40 +338,40 @@ input[type="range"]::-moz-range-thumb {
 
 /* Hallmark Redesign - Dieter Rams Scoped Variables */
 .ads-landing-page {
-  --color-hallmark-paper: oklch(97% 0.008 28);      /* Warm cream/sand surface */
-  --color-hallmark-paper-dark: oklch(94% 0.010 28); /* Elevated surface */
-  --color-hallmark-ink: oklch(18% 0.012 28);        /* Primary text / high-contrast reading */
-  --color-hallmark-ink-muted: oklch(55% 0.010 28);  /* Muted lettering */
-  --color-hallmark-rule: oklch(85% 0.012 28);       /* Hairline layout divisions */
+  --color-hallmark-paper: var(--color-paper);
+  --color-hallmark-paper-dark: var(--color-paper-2);
+  --color-hallmark-ink: var(--color-ink);
+  --color-hallmark-ink-muted: var(--color-neutral);
+  --color-hallmark-rule: var(--color-rule);
   
-  --font-display: 'Cabinet Grotesk', 'Geist', 'Space Mono', monospace;
-  --font-body: 'Switzer', 'Geist', 'Inter', sans-serif;
-  --font-outlier: 'Geist Mono', 'Space Mono', monospace;
+  --font-display: 'SOV_monomon', 'IBM Plex Sans Thai', sans-serif;
+  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+  --font-outlier: 'DM Mono', 'IBM Plex Sans Thai', monospace;
 
-  /* Accent Colors */
-  --color-brand: oklch(52% 0.16 28);                /* Clay Terracotta */
-  --color-accent-red: oklch(52% 0.16 28);
+  /* Accent Colors (brand v2) */
+  --color-brand: var(--brand-plum);
+  --color-accent-red: var(--error-red);
   --color-accent-green: oklch(45% 0.08 140);
-  --color-accent-blue: oklch(60% 0.15 28);
+  --color-accent-blue: var(--brand-plum);
 }
 
 /* Hallmark Redesign - Dieter Rams & Thai Modern Scoped Variables */
 .haus-home-page {
-  --color-hallmark-paper: oklch(97% 0.008 28);      /* Warm cream/sand surface */
-  --color-hallmark-paper-dark: oklch(94% 0.010 28); /* Elevated surface */
-  --color-hallmark-ink: oklch(18% 0.012 28);        /* Primary text / high-contrast reading */
-  --color-hallmark-ink-muted: oklch(55% 0.010 28);  /* Muted lettering */
-  --color-hallmark-rule: oklch(85% 0.012 28);       /* Hairline layout divisions */
+  --color-hallmark-paper: var(--color-paper);
+  --color-hallmark-paper-dark: var(--color-paper-2);
+  --color-hallmark-ink: var(--color-ink);
+  --color-hallmark-ink-muted: var(--color-neutral);
+  --color-hallmark-rule: var(--color-rule);
   
-  --font-display: 'Cabinet Grotesk', 'Geist', 'Space Mono', monospace;
-  --font-body: 'Switzer', 'Geist', 'Inter', sans-serif;
-  --font-outlier: 'Geist Mono', 'Space Mono', monospace;
+  --font-display: 'SOV_monomon', 'IBM Plex Sans Thai', sans-serif;
+  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+  --font-outlier: 'DM Mono', 'IBM Plex Sans Thai', monospace;
 
-  /* Accent Colors */
-  --color-brand: oklch(52% 0.16 28);                /* Clay Terracotta */
-  --color-accent-red: oklch(52% 0.16 28);
+  /* Accent Colors (brand v2) */
+  --color-brand: var(--brand-plum);
+  --color-accent-red: var(--error-red);
   --color-accent-green: oklch(45% 0.08 140);
-  --color-accent-blue: oklch(60% 0.15 28);
+  --color-accent-blue: var(--brand-plum);
 }
 
 .haus-home-page .glass-card {
@@ -341,21 +407,21 @@ input[type="range"]::-moz-range-thumb {
 
 /* Hallmark Redesign - Dieter Rams & Thai Modern Scoped Variables for SOP */
 .sop-rams-page {
-  --color-hallmark-paper: oklch(97% 0.008 28);      /* Warm cream/sand surface */
-  --color-hallmark-paper-dark: oklch(94% 0.010 28); /* Elevated surface */
-  --color-hallmark-ink: oklch(18% 0.012 28);        /* Primary text / high-contrast reading */
-  --color-hallmark-ink-muted: oklch(55% 0.010 28);  /* Muted lettering */
-  --color-hallmark-rule: oklch(85% 0.012 28);       /* Hairline layout divisions */
+  --color-hallmark-paper: var(--color-paper);
+  --color-hallmark-paper-dark: var(--color-paper-2);
+  --color-hallmark-ink: var(--color-ink);
+  --color-hallmark-ink-muted: var(--color-neutral);
+  --color-hallmark-rule: var(--color-rule);
   
-  --font-display: 'Cabinet Grotesk', 'Geist', 'Space Mono', monospace;
-  --font-body: 'Switzer', 'Geist', 'Inter', sans-serif;
-  --font-outlier: 'Geist Mono', 'Space Mono', monospace;
+  --font-display: 'SOV_monomon', 'IBM Plex Sans Thai', sans-serif;
+  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+  --font-outlier: 'DM Mono', 'IBM Plex Sans Thai', monospace;
 
-  /* Accent Colors */
-  --color-brand: oklch(52% 0.16 28);                /* Clay Terracotta */
-  --color-accent-red: oklch(52% 0.16 28);
+  /* Accent Colors (brand v2) */
+  --color-brand: var(--brand-plum);
+  --color-accent-red: var(--error-red);
   --color-accent-green: oklch(45% 0.08 140);
-  --color-accent-blue: oklch(60% 0.15 28);
+  --color-accent-blue: var(--brand-plum);
 }
 
 /* ==========================================================================

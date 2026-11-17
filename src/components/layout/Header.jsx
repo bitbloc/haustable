@@ -29,10 +29,13 @@ export default function Header({ session }) {
             <nav className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-100 sticky top-0 z-40 flex justify-between items-center transition-all bg-[#FFFFFFCC]">
                 <div>
                     <Link to="/" className="flex items-center gap-2 group">
+                        {/* ในบ้าน wordmark, transparent, brand plum on the light header; whole mark shown, never cropped */}
                         <img 
-                            src="/logo.png" 
-                            alt="Haus Table" 
-                            className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
+                            src="/logo-inbaan-wordmark-plum-96.png" 
+                            alt="ในบ้าน In the haus" 
+                            width="73"
+                            height="40"
+                            className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
                         />
                     </Link>
                 </div>
@@ -52,7 +55,7 @@ export default function Header({ session }) {
                                 
                                 {/* Notification Dot */}
                                 {hasActiveOrder && (
-                                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                    <span className="absolute top-0 right-0 w-3 h-3 bg-[var(--error-red)] rounded-full border-2 border-[var(--color-paper)]" />
                                 )}
                             </button>
 

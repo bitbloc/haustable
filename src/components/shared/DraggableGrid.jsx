@@ -162,7 +162,7 @@ const GridCard = memo(function GridCard({
                             WebkitLineClamp: 8,
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
-                            fontFamily: "Space Mono, Geist Mono, Courier New, monospace",
+                            fontFamily: "'DM Mono', 'IBM Plex Sans Thai', monospace",
                             fontWeight: 500,
                             fontSize: (item.text || "").length <= 15 ? "19px" : ((item.text || "").length <= 30 ? "15.5px" : ((item.text || "").length <= 50 ? "13px" : "11px")),
                             lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),

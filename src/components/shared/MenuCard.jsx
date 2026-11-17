@@ -71,7 +71,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
                     <div className="absolute inset-0 cursor-pointer" onClick={(e) => onAdd(item)}></div>
 
                     {item.is_recommended && (
-                        <div className="absolute top-2 left-2 bg-brand text-ink border border-ink text-[10px] font-mono font-bold px-2 py-0.5 rounded-none flex items-center gap-0.5 z-10 uppercase">
+                        <div className="absolute top-2 left-2 bg-plum text-cream border border-plum text-[10px] font-mono font-bold px-2 py-0.5 rounded-none flex items-center gap-0.5 z-10 uppercase">
                             <Star size={10} fill="currentColor" /> Rec.
                         </div>
                     )}

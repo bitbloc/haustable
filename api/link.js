@@ -665,8 +665,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     <meta name="description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · มีที่จอดรถสะดวก">
     <link rel="canonical" href="https://haustable.vercel.app/link">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-    <link rel="apple-touch-icon" href="/pwa-icon.png">
-    <meta name="theme-color" content="#181815">
+    <link rel="apple-touch-icon" href="/apple-touch-icon-inbaan.png">
+    <meta name="theme-color" content="#41032A">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -693,10 +693,10 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
     <link rel="ard" href="/.well-known/ard.json" type="application/json">
 
-    <!-- Fonts: IBM Plex Sans Thai (display + body, Thai + Latin) · IBM Plex Mono (numbers only). Non-blocking. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <!-- Fonts: self-hosted woff2 (public/fonts/link-fonts.css), font-display: swap. The stylesheet is non-blocking,
+         so the first paint uses fallback fonts and the font files never compete with the LCP photo. -->
+    <link rel="stylesheet" href="/fonts/link-fonts.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/fonts/link-fonts.css"></noscript>
 
     <script>
         // Language: ?lang=th|en|zh|lo, else the visitor's saved choice, else a phone whose first
@@ -724,45 +724,59 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         })();
     </script>
     <style>
-        /* Hallmark · macrostructure: Catalogue · tone: utilitarian (Dieter Rams × Thai modern) · anchor hue: 28 terracotta
-         * theme: custom (.agents/AGENTS.md) · paper oklch(97% 0.008 28) · accent oklch(52% 0.16 28) · IBM Plex Sans Thai + IBM Plex Mono
+        /* Hallmark · macrostructure: Catalogue · tone: Thai twist modern · anchor hue: 348 plum
+         * theme: brand v2 (.agents/AGENTS.md) · cream #F6F2EA · plum #41032A · lime #D0E020 (one primary action) · SOV_monomon / IBM Plex Sans Thai / DM Mono
          * axes: light / grotesk-sans / warm · nav: tabular tab strip · footer: Ft4 dense colophon · sticky: C4 tabular bar · enrichment: none
          * tasteskill pass (--keep palette,type): blocks separated by tone + 8px ground gaps; first-time set chooser is the one dark field with a large starter photo
          * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
         :root {
-            --color-paper: oklch(97% 0.008 28);
-            --color-paper-2: oklch(94% 0.010 28);
-            --color-paper-3: oklch(91% 0.012 28);
-            --color-rule: oklch(85% 0.012 28);
-            --color-neutral: oklch(55% 0.010 28);
-            /* Small labels on paper / paper-2: neutral darkened just enough for 4.5:1 (55% measures ~4.1 on paper-2) */
-            --color-label: oklch(51% 0.010 28);
-            --color-muted: oklch(42% 0.010 28);
-            --color-ink: oklch(18% 0.012 28);
-            --color-ink-2: oklch(28% 0.012 28);
-            --color-ink-3: oklch(36% 0.012 28);
-            --color-on-ink-2: oklch(84% 0.012 28);
-            /* First-time field: roasted clay brown, softer against the cream than ink */
-            --color-field: oklch(31% 0.035 28);
-            --color-field-2: oklch(37% 0.035 28);
-            --color-field-3: oklch(44% 0.035 28);
-            --color-accent: oklch(52% 0.16 28);
-            --color-accent-light: oklch(76% 0.12 28);
+            /* Brand v2 "Thai twist modern" (.agents/AGENTS.md): OKLCH converted from the brand hex */
+            --brand-plum: oklch(25.18% 0.1001 348.33);      /* #41032A */
+            --brand-plum-2: oklch(33.03% 0.0965 348.04);    /* #571C3E */
+            --brand-plum-3: oklch(41.92% 0.0851 347.97);    /* #6E3855 */
+            --on-plum-2: oklch(79.98% 0.0348 349.28);       /* #D0B5C1 */
+            --accent-lime: oklch(86.55% 0.1900 114.95);     /* #D0E020, one primary action, charcoal text */
+            --accent-lime-press: oklch(80.01% 0.1802 115.06); /* #BBCA08 */
+            --charcoal: oklch(21.78% 0 0);                  /* #1A1A1A */
+            --cream: oklch(96.20% 0.0115 84.58);            /* #F6F2EA */
+            --error-red: oklch(50.03% 0.1821 29.51);        /* #B42318, errors only */
+
+            /* Existing names mapped onto the brand (class names unchanged) */
+            --color-paper: var(--cream);
+            --color-paper-2: oklch(92.60% 0.0095 352.37);   /* #ECE4E7 */
+            --color-paper-3: oklch(89.47% 0.0128 345.51);   /* #E3D9DE */
+            --color-rule: oklch(85.05% 0.0113 348.48);      /* #D4CBCF */
+            --color-neutral: oklch(48.01% 0.0120 345.78);   /* #635B5F, 5.27:1 on paper-2 */
+            --color-label: var(--color-neutral);
+            --color-muted: oklch(41.84% 0.0124 345.90);     /* #524A4E */
+            --color-ink: var(--charcoal);
+            --color-ink-2: oklch(26.96% 0.0069 345.80);     /* #292527 */
+            --color-ink-3: oklch(33.10% 0.0078 351.28);     /* #393436 */
+            --color-on-ink-2: var(--on-plum-2);
+            /* First-time set block: plum field */
+            --color-field: var(--brand-plum);
+            --color-field-2: var(--brand-plum-2);
+            --color-field-3: var(--brand-plum-3);
+            /* Terracotta was never an error here (set tag, spice): it becomes plum. Red is for errors only. */
+            --color-accent: var(--brand-plum);
+            --color-accent-light: var(--on-plum-2);
+            /* Status green (open dot, "not spicy") stays a status colour */
             --color-accent-2: oklch(45% 0.08 140);
             --color-accent-2-light: oklch(80% 0.10 140);
             --color-accent-2-wash: oklch(95% 0.025 140);
-            --color-focus: oklch(60% 0.15 28);
-            --color-signal: oklch(93% 0.19 113);
-            --color-signal-2: oklch(88% 0.19 113);
+            --color-focus: var(--brand-plum);
+            /* Primary action */
+            --color-signal: var(--accent-lime);
+            --color-signal-2: var(--accent-lime-press);
             /* LINE green, darkened from 53% so paper text clears 4.5:1 (was 4.49); hover stays one step darker */
             --color-line: oklch(50% 0.14 152);
             --color-line-2: oklch(45% 0.13 152);
-            --color-scrim: oklch(14% 0.010 28 / 0.9);
-            --color-scrim-soft: oklch(14% 0.010 28 / 0);
+            --color-scrim: oklch(16% 0.02 348 / 0.9);
+            --color-scrim-soft: oklch(16% 0.02 348 / 0);
 
-            --font-display: "IBM Plex Sans Thai", -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+            --font-display: "SOV_monomon", "IBM Plex Sans Thai", -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
             --font-body: "IBM Plex Sans Thai", -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
-            --font-mono: "IBM Plex Mono", "IBM Plex Sans Thai", ui-monospace, Menlo, Consolas, monospace;
+            --font-mono: "DM Mono", "IBM Plex Sans Thai", ui-monospace, Menlo, Consolas, monospace;
 
             --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
             --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
@@ -784,6 +798,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         img { display: block; max-width: 100%; height: auto; }
         a, button, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+        /* On plum surfaces a plum ring would vanish: lime there (11.3:1 on plum) */
+        :is(.marquee, .loc-hero, .sets, .row-link.ink, .full-menu-btn, .loc-map-btn, .lang-cell) :focus-visible, :is(.row-link.ink, .full-menu-btn, .loc-map-btn, .lang-cell):focus-visible { outline-color: var(--accent-lime); }
         .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
         .arrow { font-family: var(--font-mono); }
         .nb { white-space: nowrap; }
@@ -812,18 +828,18 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         html[lang="zh-Hans"] { --font-display: "IBM Plex Sans Thai", -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif; --font-body: "IBM Plex Sans Thai", -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif; }
         /* Each USP phrase is its own line, so no separator is ever left dangling on a line of its own */
         .marquee .nb { display: block; white-space: normal; }
-        .marquee { display: flex; align-items: center; gap: var(--space-3); background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; }
+        .marquee { display: flex; align-items: center; gap: var(--space-3); background: var(--brand-plum); color: var(--color-paper); border-bottom: 1px solid var(--color-ink); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; }
         .marquee-text { flex: 1; min-width: 0; text-align: center; text-wrap: balance; }
         /* Language cells: each language named in its own script, so a visitor who can't read Thai still finds theirs */
         .lang-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--color-ink); background: var(--color-paper); }
         .lang-cell { min-height: 48px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
         .lang-cell + .lang-cell { border-left: 1px solid var(--color-rule); }
         .lang-cell:hover { color: var(--color-ink); }
-        html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--color-ink); color: var(--color-paper); }
+        html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--brand-plum); color: var(--color-paper); }
         /* Masthead: brand cell | live status cell */
         .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
         .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
-        .logo-box { width: 48px; height: 48px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
+        .logo-box { width: 48px; height: 48px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: contain; background: var(--brand-plum); }
         .shop-name { display: flex; flex-direction: column; min-width: 0; }
         .shop-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; white-space: nowrap; }
         .shop-sub { font-size: var(--text-sm); font-weight: 400; line-height: 1.5; color: var(--color-muted); }
@@ -842,23 +858,23 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .dot.closed { background: var(--color-neutral); }
         .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-ink); line-height: 1.4; }
         .loc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-        .loc-map-btn { flex-shrink: 0; min-height: 48px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
-        .loc-map-btn:hover { background: var(--color-ink-2); }
+        .loc-map-btn { flex-shrink: 0; min-height: 48px; padding: var(--space-2) var(--space-4); background: var(--brand-plum); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .loc-map-btn:hover { background: var(--brand-plum-2); }
         .loc-more summary { font-size: var(--text-xs); color: var(--color-muted); cursor: pointer; margin-top: var(--space-1); width: fit-content; }
         .loc-more p { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); line-height: 1.6; }
 
         /* Location-first banner (utm_content = location / map / naga) */
-        .loc-hero { background: var(--color-signal); padding: var(--space-4); border-bottom: 1px solid var(--color-ink); display: flex; flex-direction: column; gap: var(--space-2); }
+        .loc-hero { background: var(--brand-plum); color: var(--color-paper); padding: var(--space-4); border-bottom: 1px solid var(--color-ink); display: flex; flex-direction: column; gap: var(--space-2); }
         .loc-hero[hidden] { display: none; }
-        .loc-hero-title { font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; }
+        .loc-hero-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; }
         .loc-hero-sub { font-size: var(--text-sm); font-weight: 500; }
-        .loc-hero-btn { margin-top: var(--space-1); min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-lg); font-weight: 600; border-radius: var(--radius); }
+        .loc-hero-btn { margin-top: var(--space-1); min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--accent-lime); color: var(--color-ink); font-size: var(--text-lg); font-weight: 600; border-radius: var(--radius); }
 
         /* First-time set chooser: the page's one dark field, so the first decision is read first.
          * Inside it the starter set is a light card with a large photo; the other sets are dark tiles. */
         .sets { background: var(--color-field); color: var(--color-paper); padding-bottom: var(--space-2); }
         .sets-head { padding: var(--space-6) var(--space-4) var(--space-5); }
-        .sets-title { font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+        .sets-title { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
         .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-md); font-weight: 500; color: var(--color-on-ink-2); }
         .sets-menu-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: var(--space-1); font-size: var(--text-md); font-weight: 600; color: var(--color-paper); text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 4px; transition: text-decoration-color var(--dur) var(--ease-out); }
         .sets-menu-link:hover { text-decoration-color: var(--color-paper); }
@@ -885,6 +901,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .set-thumb { width: 64px; height: 64px; object-fit: cover; background: var(--color-field-3); cursor: zoom-in; }
         .set-thumb-empty { width: 64px; height: 64px; background: var(--color-field-3); }
         .set-name { font-size: var(--text-lg); font-weight: 700; line-height: 1.4; }
+        .set-row .set-tag { background: var(--color-paper); color: var(--brand-plum); }
         .set-tag { display: inline-block; margin-left: var(--space-2); padding: 0 var(--space-2); font-size: var(--text-xs); font-weight: 600; line-height: 22px; vertical-align: 2px; color: var(--color-paper); background: var(--color-accent); border-radius: var(--radius); white-space: nowrap; }
         .set-dishes { font-size: var(--text-sm); color: var(--color-on-ink-2); line-height: 1.6; margin-top: var(--space-1); }
         .set-price { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
@@ -920,9 +937,9 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .row-link:hover { background: var(--color-paper-2); }
         .row-link .row-sub { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-muted); margin-top: 2px; }
         .row-link .arrow { color: var(--color-muted); }
-        .row-link.ink { background: var(--color-ink); color: var(--color-paper); }
-        .row-link.ink:hover { background: var(--color-ink-2); }
-        .row-link.ink .arrow, .row-link.ink .row-sub { color: var(--color-rule); }
+        .row-link.ink { background: var(--brand-plum); color: var(--color-paper); }
+        .row-link.ink:hover { background: var(--brand-plum-2); }
+        .row-link.ink .arrow, .row-link.ink .row-sub { color: var(--on-plum-2); }
         .row-link.line { background: var(--color-line); color: var(--color-paper); }
         .row-link.line:hover { background: var(--color-line-2); }
         .row-link.line .arrow, .row-link.line .row-sub { color: var(--color-paper); }
@@ -949,7 +966,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
         .section-header.sub { padding: var(--space-4) var(--space-4) var(--space-2); background: var(--color-paper-2); }
-        .section-title { font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+        .section-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
         /* Category index for the full menu: sticks under the section strip, scrolls sideways */
         .cat-index { position: sticky; top: 49px; z-index: calc(var(--z-sticky) - 1); display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; padding: var(--space-2) var(--space-4); background: var(--color-paper); border-bottom: 1px solid var(--color-rule); }
         .cat-index::-webkit-scrollbar { display: none; }
@@ -986,8 +1003,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .item-row .heat { margin-top: var(--space-1); }
         .item-thumb { width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-2); }
         /* Full menu: the main way into all dishes, so a full-width ink block rather than a quiet row */
-        .full-menu-btn { width: 100%; min-height: 64px; padding: var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); text-align: left; font-size: var(--text-lg); font-weight: 700; line-height: 1.35; background: var(--color-ink); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
-        .full-menu-btn:hover { background: var(--color-ink-2); }
+        .full-menu-btn { width: 100%; min-height: 64px; padding: var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); text-align: left; font-size: var(--text-lg); font-weight: 700; line-height: 1.35; background: var(--brand-plum); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+        .full-menu-btn:hover { background: var(--brand-plum-2); }
         .full-menu-btn:active { transform: scale(0.99); }
         .full-menu-sub { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-on-ink-2); margin-top: 2px; }
         .full-menu-btn .arrow { font-size: var(--text-xl); color: var(--color-paper); }
@@ -1054,11 +1071,11 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .sticky-btn { min-height: var(--bar-h); padding: var(--space-2) var(--space-3); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: var(--text-md); font-weight: 600; line-height: 1.25; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .sticky-btn + .sticky-btn { border-left: 1px solid var(--color-rule); }
         .sticky-btn:hover { background: var(--color-paper-2); }
-        .sticky-btn.map { background: var(--color-ink); color: var(--color-paper); }
-        .sticky-btn.map:hover { background: var(--color-ink-2); }
+        .sticky-btn.map { background: var(--accent-lime); color: var(--color-ink); }
+        .sticky-btn.map:hover { background: var(--accent-lime-press); }
         .sticky-btn.line { background: var(--color-line); color: var(--color-paper); }
         .sticky-btn.line:hover { background: var(--color-line-2); }
-        .sticky-sub { font-size: 11px; font-weight: 400; color: var(--color-rule); white-space: normal; line-height: 1.3; }
+        .sticky-sub { font-size: 11px; font-weight: 400; color: var(--color-muted); white-space: normal; line-height: 1.3; }
 
         /* Modals */
         .modal { display: none; position: fixed; inset: 0; z-index: var(--z-modal); background: var(--color-scrim); align-items: center; justify-content: center; padding: var(--space-4); }

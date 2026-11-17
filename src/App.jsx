@@ -147,12 +147,12 @@ function App() {
         gap={8}
         closeButton
         toastOptions={{
-          className: 'font-sans border border-[oklch(85%_0.012_28)] shadow-xs rounded-xl text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]',
+          className: 'font-sans border border-[var(--color-rule)] shadow-xs rounded-xl text-[var(--color-ink)] bg-[var(--color-paper)]',
           style: {
-            fontFamily: 'Switzer, Geist, sans-serif',
-            background: 'oklch(97% 0.008 28)',
-            color: 'oklch(18% 0.012 28)',
-            borderColor: 'oklch(85% 0.012 28)',
+            fontFamily: 'var(--font-body)',
+            background: 'var(--color-paper)',
+            color: 'var(--color-ink)',
+            borderColor: 'var(--color-rule)',
             borderRadius: '12px',
             padding: '12px 16px',
             fontSize: '13px',
