@@ -68,14 +68,10 @@
     <meta name="twitter:image" content="https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_og_image_url_1781846569771.jpg" />
     <!-- DYNAMIC_OG_TAGS_END -->
     
-    <!-- Fast & Optimized Google Fonts (Non-blocking Asynchronous Preload) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" media="print" onload="this.media='all'" crossorigin="anonymous">
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" crossorigin="anonymous">
-    </noscript>
+    <!-- Brand fonts are self-hosted (public/fonts, @font-face in src/index.css). Only the headline face is preloaded. -->
+    <link rel="preload" href="/fonts/sov-monomon-thai-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Pixelify Sans stays on Google Fonts: arcade pages only, not part of the brand set -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'" crossorigin="anonymous">
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
     
     <!-- Dynamic & Non-blocking External Analytics SDKs (Safe for Native APK, Offline Mode & High CWV) -->

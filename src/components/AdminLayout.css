@@ -18,7 +18,7 @@
   --ram-alert: oklch(62% 0.22 25);        /* Red indicator lamp */
   --ram-ok: oklch(64% 0.22 140);          /* Green status lamp */
   
-  --ram-font-display: 'Space Mono', monospace;
+  --ram-font-display: 'DM Mono', 'IBM Plex Sans Thai', monospace;
   --ram-font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
   
 }
