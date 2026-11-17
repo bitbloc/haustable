@@ -139,32 +139,41 @@ export function stockQtyParts(item) {
             unit, open: null, openPercent: 0, total: null, totalValue: null, totalUnit: null
         };
     }
-    const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
-        item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor
-    );
-    // The big number is what is on the shelf, the opened pack included: "0" with an open bottle read as out.
-    // The line under it says one of them is open and how much is left in it.
-    // "เต็ม 1 · เปิดอยู่ 1 เหลือ 225 กรัม": the line spells out what the big number is made of
-    const left = remainderUsage !== null ? `${remainderUsage.toLocaleString('th-TH')} ${cardUnit(item.usage_unit)}` : `${percent}%`;
-    const open = hasOpen
-        ? `${fullUnits > 0 ? `เต็ม ${fullUnits.toLocaleString('th-TH')} · ` : ''}เปิดอยู่ 1 เหลือ ${left}`
-        : null;
-    const onShelf = hasOpen ? fullUnits + 1 : fullUnits;
-    // Packs of countable things (bags, cups, straws): how many pieces that is, so a glance answers "how many are left"
     const factor = Number(item.conversion_factor) || 1;
+    const usageType = getUnitType(item.usage_unit);
+    const usageCounts = usageType === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(item.usage_unit);
+    // Pieces, grams and millilitres are whole numbers: a 4-decimal balance (1.4167 crates) is 17 bottles, not 17.0004
+    const wholeUsage = usageCounts || ['g', 'ml'].includes(String(item.usage_unit || '').toLowerCase());
+    const roundUsage = (n) => wholeUsage ? Math.round(n) : Math.round(n * 100) / 100;
+    const qty = Math.max(0, Number(Number(item.current_quantity).toFixed(4)) || 0);
+    const capacity = packCapacity(item);
+    let fullUnits = Math.floor(qty + 1e-9);
+    let remainder = Math.max(0, qty - fullUnits);
+    let leftInOpen = capacity ? roundUsage(remainder * capacity.amount) : null;
+    // What is left in the opened one rounds to a full one or to nothing: there is no opened one
+    if (capacity && leftInOpen >= capacity.amount) { fullUnits += 1; remainder = 0; leftInOpen = 0; }
+    const percent = Math.round(remainder * 100);
+    const hasOpen = capacity ? leftInOpen > 0 : percent > 0;
+    const left = capacity ? `${leftInOpen.toLocaleString('th-TH')} ${cardUnit(capacity.unit)}` : `${percent}%`;
+    // A crate of bottles, a pack of cups: the big number is the full ones, the open one is said
+    // in pieces under it ("1 ลัง" and "+ เปิดอยู่ 1 ลัง เหลือ 5 ขวด"), so 17 bottles never read as
+    // "2 ลัง" (24 bottles). A bottle of gin keeps counting the opened bottle: "0" read as out.
+    const piecesInside = !!capacity && (getUnitType(capacity.unit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(capacity.unit));
+    const open = !hasOpen ? null
+        : piecesInside ? `+ เปิดอยู่ 1 ${unit} เหลือ ${left}`
+        : `${fullUnits > 0 ? `เต็ม ${fullUnits.toLocaleString('th-TH')} · ` : ''}เปิดอยู่ 1 เหลือ ${left}`;
+    const onShelf = hasOpen && !piecesInside ? fullUnits + 1 : fullUnits;
     // Both figures (owner, 2026-11-16): how many packs, and how much that is in the unit recipes use
     // ("2 แพ็ค · 143 ชิ้น", "5 ชิ้น · 5,000 กรัม"). Left out when the converter cannot be true
     // ("1 ชิ้น = 1,000 ขวด") so the card never prints a nonsense total.
     const isContainer = (u) => CONTAINER_UNITS.includes(String(u || '').trim().toLowerCase());
     const packUnit = String(item.unit || item.pack_unit || '').trim().toLowerCase();
-    const usageType = getUnitType(item.usage_unit);
-    const usageCounts = usageType === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(item.usage_unit);
     const packHolds = isContainer(item.pack_unit) || isContainer(item.unit);
     const sound = usageCounts
         ? packHolds                                   // pieces only from a real container
         : ['mass', 'volume'].includes(usageType);     // grams or ml from a pack, bottle or generic piece
     const hasTotal = factor > 1 && sound && String(item.usage_unit || '').trim().toLowerCase() !== packUnit;
-    const amount = hasTotal ? Math.round((Number(item.current_quantity) || 0) * factor * 100) / 100 : 0;
+    const amount = hasTotal ? roundUsage(qty * factor) : 0;
     const total = amount > 0 ? `${amount.toLocaleString('th-TH')} ${cardUnit(item.usage_unit)}` : null;
     return {
         main: onShelf.toLocaleString('th-TH'), unit, open, openPercent: hasOpen ? percent : 0, total,

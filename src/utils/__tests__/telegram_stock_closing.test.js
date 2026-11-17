@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildStockClosingMessage, isAbnormal, needsReorder, thaiDay } from '../../../supabase/functions/telegram-report/stockClosing.ts';
+import { buildStockClosingMessage, isAbnormal, needsReorder, thaiDay, amountText } from '../../../supabase/functions/telegram-report/stockClosing.ts';
 
 const row = (name, variance, value, extra = {}) => ({
     stock_item_id: name, name, unit: 'kg', expected_close: 10, closing_qty: 10 + variance,
@@ -37,7 +37,7 @@ describe('stock closing message', () => {
         expect(lines[2]).toBe('<b>ผิดปกติ 2 รายการ · ขาด ฿549.00</b>');
         expect(text).toContain('นม  −3 ขวด  <code>−฿294.00</code>\nหมู  −1.5 กก.  <code>−฿255.00</code>');
         expect(text).toContain('<b>ต้องสั่ง 1 รายการ</b>');
-        expect(text).toContain('โซดา  เหลือ 4 / สั่งที่ 12 ขวด');
+        expect(text).toContain('โซดา  เหลือ 4 ขวด / สั่งที่ 12 ขวด');
         expect(text).not.toContain('น้ำแข็ง');
     });
 
@@ -45,5 +45,14 @@ describe('stock closing message', () => {
         const text = buildStockClosingMessage({ day: '2026-11-15', session: {}, round: 1, timeLabel: '', rows: [row('ไข่', 0, 0)], reorder: [] });
         expect(text.split('\n').slice(0, 3)).toEqual(['<b>นับปิดร้าน · อา. 15 พ.ย.</b>', 'Staff · นับ 1 รายการ', 'ไม่มีรายการผิดปกติ']);
         expect(thaiDay('2026-11-13')).toBe('ศ. 13 พ.ย.');
+    });
+});
+
+describe('amounts in crates and bottles', () => {
+    it('never says 1.417 crates', () => {
+        const singha = { unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 12 };
+        expect(amountText(1.4167, singha)).toBe('1 ลัง 5 ขวด');
+        expect(amountText(-0.25, singha)).toBe('3 ขวด');
+        expect(amountText(1.5, { unit: 'kg' })).toBe('1.5 กก.');
     });
 });

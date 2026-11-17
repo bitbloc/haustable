@@ -561,7 +561,7 @@ async function sendStockClosing(s: Settings, day: string, sessionId?: string) {
   const { data: rows, error } = await supabase.rpc('stock_daily_reconciliation', { p_day: day })
   if (error) throw error
   const { data: items } = await supabase.from('stock_items')
-    .select('name, unit, current_quantity, reorder_point, min_stock_threshold, item_type, prep_mode, track_mode')
+    .select('id, name, unit, pack_unit, usage_unit, conversion_factor, current_quantity, reorder_point, min_stock_threshold, item_type, prep_mode, track_mode')
   const reorder = (items || []).filter((i: any) =>
     (i.track_mode ?? 'weekly') !== 'none' &&
     (i.item_type === 'raw' || (i.item_type === 'prep' && (i.prep_mode ?? 'stocked') === 'stocked')))
@@ -582,6 +582,7 @@ async function sendStockClosing(s: Settings, day: string, sessionId?: string) {
     timeLabel: fmtTime(session.created_at),
     rows: rows || [],
     reorder,
+    units: Object.fromEntries((items || []).map((i: any) => [i.id, i])),
   })
   await sendTelegram(s.telegram_chat_id, text)
   return 'sent'

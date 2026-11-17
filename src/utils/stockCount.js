@@ -210,6 +210,20 @@ export const splitQty = (qty) => {
     return frac >= 0.9999 ? { whole: whole + 1, frac: 0 } : { whole, frac: Math.max(0, frac) };
 };
 
+/**
+ * Whole units and the opened part as staff would say it: a part that rounds to nothing in the
+ * usage unit (5.0002 crates = 60 bottles and a rounding crumb) is no opened unit, and one that
+ * rounds to a full unit is one more whole unit.
+ */
+const splitSaid = (n, capacity) => {
+    const { whole, frac } = splitQty(n);
+    if (!capacity || !frac) return { whole, frac };
+    const left = Math.round(frac * capacity.amount);
+    if (left <= 0) return { whole, frac: 0 };
+    if (left >= capacity.amount) return { whole: whole + 1, frac: 0 };
+    return { whole, frac };
+};
+
 /** What is left in the opened unit: "140 มล." when the pack size is known, else "20%". */
 export const openLeftText = (frac, capacity = null) => (capacity
     ? `${Math.round(frac * capacity.amount).toLocaleString('th-TH')} ${shortUnit(capacity.unit)}`
@@ -230,7 +244,7 @@ export const qtyInWords = (item, qty, capacity = null) => {
             : null;
         return packed && packed !== '0' ? packed : `${round4(n).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${unit}`.trim();
     }
-    const { whole, frac } = splitQty(n);
+    const { whole, frac } = splitSaid(n, capacity);
     if (!frac) return `${whole.toLocaleString('th-TH')} ${unit}`.trim();
     const open = `เปิดอยู่ 1 เหลือ ${openLeftText(frac, capacity)}`;
     return whole > 0 ? `${whole.toLocaleString('th-TH')} ${unit} + ${open}` : open;
@@ -243,7 +257,8 @@ export const diffInWords = (item, diff, capacity = null) => {
     const sign = n < 0 ? '-' : '+';
     if (!countsWholeUnits(item)) return sign + qtyInWords(item, Math.abs(n), capacity);
     const unit = displayUnit(item?.unit || item?.pack_unit);
-    const { whole, frac } = splitQty(Math.abs(n));
+    const { whole, frac } = splitSaid(Math.abs(n), capacity);
+    if (!whole && !frac) return 'ตรง';
     const parts = [];
     if (whole > 0) parts.push(`${whole.toLocaleString('th-TH')} ${unit}`.trim());
     if (frac > 0) parts.push(openLeftText(frac, capacity));

@@ -1,30 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { buildStockSummaryMessage } from "./stockSummary.ts"
+import { buildStockSummaryMessage, remainingText } from "./stockSummary.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-function formatStockQty(qty: number, unit: string): string {
-  const roundedQty = Math.max(0, Number(qty.toFixed(4)));
-  const fullUnits = Math.floor(roundedQty);
-  const remainder = Number((roundedQty - fullUnits).toFixed(4));
-  const percent = Math.round(remainder * 100);
-  const hasOpen = percent > 0;
-  const openedUnits = hasOpen ? 1 : 0;
-  const totalPhysical = fullUnits + openedUnits;
-  const unitLabel = unit || '';
-
-  if (hasOpen) {
-    if (fullUnits > 0) {
-      return `${totalPhysical} ${unitLabel} (ยังไม่เปิด ${fullUnits}, เหลืออยู่ ${percent}%)`;
-    } else {
-      return `1 ${unitLabel} (เหลืออยู่ ${percent}%)`;
-    }
-  } else {
-    return `${fullUnits} ${unitLabel}`;
-  }
 }
 
 function parseBookingPayment(b: any) {
@@ -1183,7 +1162,7 @@ Deno.serve(async (req) => {
 
             let query = supabaseAdmin
               .from('stock_items')
-              .select('name, unit, current_quantity, min_stock_threshold, reorder_point, updated_at')
+              .select('name, unit, pack_unit, usage_unit, conversion_factor, current_quantity, min_stock_threshold, reorder_point, updated_at')
               .order('name', { ascending: true })
 
             if (isBuyback) {
@@ -1317,7 +1296,7 @@ Deno.serve(async (req) => {
                              contents: [
                                  {
                                      type: "text",
-                                     text: formatStockQty(current, item.unit || ''),
+                                     text: remainingText(current, item),
                                      color: "#1A1A1A",
                                      size: "sm",
                                      weight: "bold",
@@ -1492,7 +1471,10 @@ Deno.serve(async (req) => {
                   category,
                   current_quantity,
                   min_stock_threshold,
-                  reorder_point
+                  reorder_point,
+                  pack_unit,
+                  usage_unit,
+                  conversion_factor
                 )
               `)
               .gte('created_at', dbStart)

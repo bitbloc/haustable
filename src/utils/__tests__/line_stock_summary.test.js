@@ -40,6 +40,17 @@ describe('quarter display', () => {
         expect(changeText(2, 'unit')).toBe('+2 หน่วย')
     })
 
+    it('says a crate of bottles in crates and bottles', () => {
+        const singha = { unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 12 }
+        expect(remainingText(1.4167, singha)).toBe('1 ลัง + 5 ขวด')
+        expect(remainingText(0.4167, singha)).toBe('5 ขวด')
+        expect(remainingText(5.0002, singha)).toBe('5 ลัง')
+        expect(changeText(-0.0833, singha)).toBe('-1 ขวด')
+        expect(changeText(2, singha)).toBe('+2 ลัง')
+        expect(changeText(-1.0833, singha)).toBe('-1 ลัง + 1 ขวด')
+        expect(unitLabel('crate')).toBe('ลัง')
+    })
+
     it('speaks Thai units and categories', () => {
         expect(unitLabel('gallon')).toBe('แกลลอน')
         expect(unitLabel('ม้วน')).toBe('ม้วน')

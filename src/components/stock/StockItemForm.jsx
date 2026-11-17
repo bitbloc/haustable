@@ -9,6 +9,8 @@ import { calculateRealUnitCost } from '../../utils/costUtils';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
 import { unitSetupWarnings } from '../../utils/stockHealth';
+import { usagePerStockUnit } from '../../utils/recipeGraph';
+import { rescaleForCountUnitChange } from '../../utils/stockUnitChange';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
@@ -63,6 +65,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 cost_price: item.cost_price || 0,
                 pack_size: item.pack_size || 1,
                 pack_unit: item.pack_unit || 'unit',
+                // The counting unit as stored: an old "counted in bottles, bought in ml" item keeps it
+                // until someone presses "use the buying unit", so a price edit never re-means the stock
+                unit: item.unit || item.pack_unit || 'unit',
                 usage_unit: item.usage_unit || item.unit || 'unit', // migration fallback
                 conversion_factor: item.conversion_factor || 1,
                 yield_percent: item.yield_percent || 100,
@@ -75,6 +80,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     // Auto-Calculate Conversion Factor when Units Change
     const handleUnitChange = (type, value) => {
         const newData = { ...formData, [type]: value };
+        // Counted in the buying unit: changing the buying unit changes the counting unit with it
+        if (type === 'pack_unit' && (!formData.unit || formData.unit === formData.pack_unit)) newData.unit = value;
         
         // Suggest Factor if either unit changed
         if (type === 'pack_unit' || type === 'usage_unit') {
@@ -130,7 +137,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         try {
             const payload = { 
                 ...formData,
-                unit: formData.pack_unit, // FIX: Standardize on Purchase (Pack) Unit for counting and reordering
+                unit: formData.unit || formData.pack_unit, // counted in the buying unit unless an older item says otherwise
                 barcode: formData.barcode ? formData.barcode.trim() : null
             };
             
@@ -138,8 +145,24 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
             if (isEdit) {
                  // Prevent Stale Update: Strip current_quantity from update payload
                  delete payload.current_quantity;
+                 // A new counting unit (bottles -> crates of 12): the stock left and the alert levels
+                 // are re-said in it, so 17 bottles stay 17 bottles and never become 17 crates
+                 const rescale = rescaleForCountUnitChange(item, payload, usagePerStockUnit);
+                 Object.assign(payload, rescale.levels);
                  const { error: err } = await supabase.from('stock_items').update(payload).eq('id', item.id);
                  error = err;
+                 if (!err && rescale.quantity !== null) {
+                     const moved = await postStockMovement({
+                         itemId: item.id,
+                         mode: 'set',
+                         quantity: rescale.quantity,
+                         reason: STOCK_REASONS.ADJUST,
+                         performedBy: 'System (unit change)',
+                         note: rescale.note
+                     });
+                     if (moved.ok) toast.info(rescale.note, { duration: 8000 });
+                     else toast.error('เปลี่ยนหน่วยแล้ว แต่แปลงยอดคงเหลือไม่สำเร็จ ตรวจนับใหม่อีกครั้ง');
+                 }
                  // Recipes store quantities in the usage unit: keep them meaning the same amount.
                  if (!err && item.usage_unit && payload.usage_unit && item.usage_unit !== payload.usage_unit) {
                      const res = await convertRecipesForUnitChange(item.id, item.usage_unit, payload.usage_unit);

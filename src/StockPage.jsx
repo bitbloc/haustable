@@ -1,7 +1,8 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: custom · designed-as-app */
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
-import { formatStockDisplay, stockStatus, STOCK_STATUS_LABEL } from './utils/stockUtils';
+import { stockStatus, STOCK_STATUS_LABEL, packCapacity } from './utils/stockUtils';
+import { qtyInWords, displayUnit } from './utils/stockCount';
 import { logStaffActivity } from './utils/auditLogger';
 import { postStockMovement, recordSpotCount, STOCK_REASONS } from './utils/stockLedger';
 
@@ -339,7 +340,7 @@ export default function StockPage() {
                     quantity_change, 
                     transaction_type,
                     performed_by,
-                    stock_items ( name, unit, current_quantity, min_stock_threshold, reorder_point, usage_unit, conversion_factor )
+                    stock_items ( name, unit, pack_unit, pack_size, item_type, current_quantity, min_stock_threshold, reorder_point, usage_unit, conversion_factor )
                 `)
                 .gt('created_at', oneHourAgo)
                 .order('created_at', { ascending: true });
@@ -412,32 +413,9 @@ export default function StockPage() {
                     statusColor = '#D05D00'; // Braun Clock Orange
                 }
                 
-                // Compact format for quantities (Unopened + Opened) to fit the Flex row width perfectly
-                const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
-                    qty, 
-                    item.unit,
-                    item.usage_unit,
-                    item.conversion_factor
-                );
+                // Same words as the stock card and count sheet: "1 ลัง + เปิดอยู่ 1 เหลือ 5 ขวด", Thai units
+                const qtyDisplay = qty <= EPSILON ? 'หมด' : qtyInWords(item, qty, packCapacity(item));
 
-                let qtyDisplay = '';
-                if (fullUnits > 0) {
-                    qtyDisplay = `${fullUnits} ${item.unit || ''}`;
-                    if (hasOpen) {
-                        const openText = remainderUsage !== null 
-                            ? `${remainderUsage} ${item.usage_unit}`
-                            : `${percent}%`;
-                        qtyDisplay += ` + เปิดแล้ว ${openText}`;
-                    }
-                } else if (hasOpen) {
-                    const openText = remainderUsage !== null 
-                        ? `${remainderUsage} ${item.usage_unit}`
-                        : `${percent}%`;
-                    qtyDisplay = `เปิดแล้ว ${openText}`;
-                } else {
-                    qtyDisplay = 'หมด';
-                }
-                
                 // Map Action Types
                 const actionLabels = Array.from(types).map(t => {
                     if (t === 'in') return 'รับเข้า';
@@ -446,7 +424,7 @@ export default function StockPage() {
                     return t;
                 }).join(', ');
 
-                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${qtyDisplay} ${statusEmoji} (Critical: ${minThreshold} / Reorder: ${reorderPoint})\n\n`;
+                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${qtyDisplay} ${statusEmoji} (จุดวิกฤต ${minThreshold} / จุดสั่งซื้อ ${reorderPoint} ${displayUnit(item.unit)})\n\n`;
                 
                 const displayIndex = String(index).padStart(2, '0');
                 

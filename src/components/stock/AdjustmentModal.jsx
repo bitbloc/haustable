@@ -3,7 +3,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import * as ui from './stockUi';
 import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
-import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
+import { formatStockDisplay, packCapacity } from '../../utils/stockUtils';
+import { displayUnit, qtyInWords } from '../../utils/stockCount';
 import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import { STOCK_REASONS } from '../../utils/stockLedger';
 
@@ -24,6 +25,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
     const [unitOptions, setUnitOptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const savingRef = useRef(false); // Sync lock to prevent double-click
+    const countInPieces = useRef(null); // a crate of bottles is counted in bottles
     const reduceMotion = useReducedMotion();
     
     // Liquid / Partial State (for Set/Count mode)
@@ -53,7 +55,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             // Add Base Unit (Purchase/Pack Unit)
             options.push({
                 key: 'base',
-                label: item.unit || 'unit',
+                label: displayUnit(item.unit) || 'หน่วย',
                 factor: 1
             });
 
@@ -61,7 +63,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             if (item.usage_unit && item.usage_unit !== item.unit) {
                 options.push({
                     key: 'usage',
-                    label: item.usage_unit,
+                    label: displayUnit(item.usage_unit),
                     // Same rule as recipe deduction: a soda bottle holds 325 ml, not 1 ml
                     factor: 1 / (usagePerStockUnit(item) || 1)
                 });
@@ -80,6 +82,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
             setUnitOptions(options);
             setSelectedUnit(options[0]);
+            countInPieces.current = options.find(o => o.key === 'usage' && packCapacity(item)?.unit === item.usage_unit) || null;
             setAmount('');
             setPartialAmount(0);
             
@@ -99,23 +102,28 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
         }
     }, [remainingMl, fullCapacityMl, useMlCalculator]);
 
-    // Pre-fill when entering Set mode
+    // Pre-fill when entering Set mode, in the unit picked. A crate of bottles is counted in
+    // bottles (17), never as "1 crate + 42% of one", so the opened part only exists for the
+    // counting unit itself.
     useEffect(() => {
-        if (mode === 'set' && item) {
-             // Use utility to safely split Integer / Part (percentage)
-            const { fullUnits, remainder, percent } = formatStockDisplay(item.current_quantity);
-            
-            setAmount(fullUnits.toString());
-            setPartialAmount(remainder); // 0.something
-            
-            if (fullCapacityMl) {
-                setRemainingMl(Math.round(remainder * fullCapacityMl));
+        if (mode === 'set' && item && selectedUnit) {
+            const qty = Math.max(0, Number(item.current_quantity) || 0);
+            if (selectedUnit.factor !== 1) {
+                const inUnit = qty / selectedUnit.factor;
+                setAmount(String(Number(inUnit.toFixed(2))));
+                setPartialAmount(0);
+            } else {
+                const { fullUnits, remainder } = formatStockDisplay(qty);
+                setAmount(fullUnits.toString());
+                setPartialAmount(remainder);
+                if (fullCapacityMl) setRemainingMl(Math.round(remainder * fullCapacityMl));
             }
-        } else {
-            // Should we clear for In/Out? Yes, standard behavior.
-            setAmount('');
-            setPartialAmount(0);
         }
+    }, [mode, item, selectedUnit]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Receiving and withdrawing start from an empty field
+    useEffect(() => {
+        if (mode !== 'set') { setAmount(''); setPartialAmount(0); }
     }, [mode, item]);
 
     const handleSave = async () => {
@@ -127,49 +135,14 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             const mainVal = parseFloat(amount || 0); // Integer part
             
             if (mode === 'set') {
-                // Set Absolute Quantity
-                
-                // Use safe calculation utility
-                // Note: Component uses partialAmount as (0.9), but calculateTotalFromComponents expects (90) if used as second arg?
-                // Wait, calculateTotalFromComponents takes (full, percent0-100).
-                // My state partialAmount is 0.9.
-                // So I should pass partialAmount * 100.
-                
-                const percent = Math.round(partialAmount * 100);
-                const totalBaseQty = calculateTotalFromComponents(mainVal, percent);
-                
-                // Factor logic? If user selected a Factor Unit (e.g. Box = 12), then mainVal represents Boxes.
-                // But partial is usually Base Unit. 
-                // But wait, my UI shows partial as "Opened Bottle" (Base Unit).
-                // If I have 1 Box and 0.5 Bottle.
-                // 1 Box = 12 Bottles.
-                // Total = 1 * 12 + 0.5 = 12.5.
-                
-                // Let's check logic:
-                // If unit factor > 1 (e.g. Check by Box), 
-                // then mainVal is Boxes.
-                // partialAmount is usually "remainder of base unit" if the UI context means "Opened Bottle".
-                // Yes "เศษที่เหลือ (เปิดใช้แล้ว)" implies base unit.
-                
-                // So: Total = (MainVal * Factor) + Remainder(Base)
-                
-                // However, calculateTotalFromComponents is designed for: X.Y where X is integer of Base.
-                // If I am counting Boxes, I should convert Boxes to Base first.
-                
-                let finalTotal = 0;
-                if (selectedUnit.factor !== 1) {
-                     // MainVal is Multi-unit or Usage-unit (e.g. 5 Boxes or 500 Glasses)
-                     // Partial is Base Unit (e.g. 0.5 Bottle) - we assume partial is always base unit remainder
-                     const qtyFromMain = mainVal * selectedUnit.factor;
-                     finalTotal = qtyFromMain + partialAmount;
-                     finalTotal = Number(finalTotal.toFixed(4));
-                } else {
-                     // Base Unit
-                     finalTotal = calculateTotalFromComponents(mainVal, percent);
-                }
+                // Counted in another unit (bottles of a crate): that count is the whole amount.
+                // Counted in the counting unit: whole units plus the opened one, kept exact
+                // (rounding it to a percent turned 17 bottles into 17.04 on an untouched save).
+                const opened = selectedUnit.factor !== 1 ? 0 : partialAmount;
+                const finalTotal = Number((mainVal * selectedUnit.factor + opened).toFixed(4));
 
                 await onUpdate(item.id, finalTotal, 'set', {
-                    note: `นับสต็อกได้: ${mainVal} ${selectedUnit.label} (เต็ม) ${partialAmount > 0 ? `+ เปิดแล้ว ${(partialAmount * 100).toFixed(0)}%` : ''}`
+                    note: `นับสต็อกได้: ${qtyInWords(item, finalTotal, packCapacity(item))}`
                 });
 
             } else {
@@ -221,7 +194,11 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
         { id: 'set', label: 'ตรวจนับ' }
     ];
     const decrement = () => { const val = parseFloat(amount || 0); if (val > 0) setAmount(String(Math.max(0, val - 1))); };
-    const stockNow = formatStockDisplay(item.current_quantity, item.unit).displayString;
+    const stockNow = qtyInWords(item, item.current_quantity, packCapacity(item));
+    // An opened bottle is guessed by eye; a crate of bottles is counted in bottles only, so
+    // the loose bottles of an opened crate can never be dropped by counting "1 ลัง"
+    const countsOpened = selectedUnit?.factor === 1 && !countInPieces.current;
+    const shownUnits = mode === 'set' && countInPieces.current ? unitOptions.filter(o => o.key !== 'base') : unitOptions;
     const disabled = loading || (mode !== 'set' && (!amount || parseFloat(amount) <= 0)) || (mode === 'out' && !outReason);
     const confirmLabel = loading ? 'กำลังบันทึก…' : mode === 'set' ? 'บันทึกการนับ' : mode === 'in' ? 'ยืนยันรับเข้า' : 'ยืนยันเบิกออก';
 
@@ -281,7 +258,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                 type="button"
                                 role="tab"
                                 aria-selected={mode === m.id}
-                                onClick={() => setMode(m.id)}
+                                onClick={() => { if (m.id === 'set' && countInPieces.current) setSelectedUnit(countInPieces.current); setMode(m.id); }}
                                 className={`relative h-9 rounded text-sm transition-colors ${mode === m.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[var(--color-ink)]`}`}
                             >
                                 {mode === m.id && (
@@ -300,11 +277,11 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 {/* Body */}
                 <div className="px-4 py-4 flex-1 overflow-y-auto space-y-4">
                     {/* Unit */}
-                    {unitOptions.length > 1 && (
+                    {shownUnits.length > 1 && (
                         <div>
                             <span className={ui.label}>หน่วย</span>
                             <div className="flex flex-wrap gap-1.5">
-                                {unitOptions.map(opt => (
+                                {shownUnits.map(opt => (
                                     <button key={opt.key} type="button" onClick={() => setSelectedUnit(opt)} className={ui.chip(selectedUnit?.key === opt.key)}>
                                         {opt.label}
                                     </button>
@@ -317,12 +294,12 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                         {mode === 'set' ? (
                             <motion.div key="set" {...ui.panelMotion(reduceMotion)} className="space-y-4">
                                 <div>
-                                    <span className={ui.label}>ยังไม่เปิด ({selectedUnit?.label})</span>
+                                    <span className={ui.label}>{countsOpened ? 'ยังไม่เปิด' : 'นับได้ทั้งหมด'} ({selectedUnit?.label})</span>
                                     {renderStepper('จำนวนที่ยังไม่เปิด')}
                                 </div>
 
-                                {/* Opened container */}
-                                <div className={`rounded-md border ${ui.RULE} p-3 space-y-3`}>
+                                {/* Opened container: only when counting in the counting unit */}
+                                {countsOpened && <div className={`rounded-md border ${ui.RULE} p-3 space-y-3`}>
                                     <div className="flex items-center justify-between gap-2">
                                         <span className={`text-sm ${ui.INK}`}>มีของที่เปิดใช้อยู่</span>
                                         <button
@@ -386,14 +363,14 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
-                                </div>
+                                </div>}
 
                                 {/* Summary */}
                                 <div className={`rounded-md ${ui.PAPER2} px-3 py-2.5`}>
                                     <div className={`text-xs ${ui.NEUTRAL}`}>จะบันทึกว่า</div>
                                     <div className={`text-sm font-semibold tabular-nums ${ui.INK}`}>
-                                        {amount || 0} {selectedUnit?.label || item.unit}
-                                        {partialAmount > 0 && ` + ที่เปิดอยู่ ${Math.round(partialAmount * 100)}%`}
+                                        {amount || 0} {selectedUnit?.label || displayUnit(item.unit)}
+                                        {countsOpened && partialAmount > 0 && ` + ที่เปิดอยู่ ${Math.round(partialAmount * 100)}%`}
                                     </div>
                                     <div className={`text-xs ${ui.NEUTRAL}`}>
                                         โดย {currentUser?.user_metadata?.full_name || 'พนักงาน'} · {new Date().toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
