@@ -176,6 +176,20 @@ the definitions recorded in the audit, drop the new functions and `staff_pin_cre
 Throttling it without a device identity lets an attacker lock the staff out instead, so it is
 not added here. It is closed properly in Phase B (only a signed-in POS device may call it).
 
+### 4.6 Implementation notes (what changed while building Phase A)
+
+- `save_menu_recipe(bigint, jsonb)` was SECURITY DEFINER and callable with the public key, which
+  bypassed the lock on `recipe_ingredients`. Migration A2 revokes it from `PUBLIC` and `anon`.
+  It still has no role check, so any signed-in user can call it (Phase B).
+- Clearing `profiles.pin` would fire `trg_auto_link_profile_bookings`, which re-links bookings
+  to members by phone. The migration asserts the trigger's state, disables it for that one
+  statement and re-enables it in the same transaction.
+- Only two old functions existed to restore in the A3 rollback (`verify_staff_pin_login`,
+  `get_staff_offline_pin_hashes`).
+- Result on a local copy of the production schema: 83 checks pass, 0 fail, 9 listed as still
+  open for Phase B; identical after rollback and re-apply; policies after rollback match
+  production exactly.
+
 ## 5. Phase B — screens that still need `anon` writes, and what each needs
 
 Not built in this branch. Listed per the rule "stop and list the screen and the RPC".
