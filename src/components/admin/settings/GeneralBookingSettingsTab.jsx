@@ -29,7 +29,7 @@ export default function GeneralBookingSettingsTab({
     const handleTestEasySlip = async () => {
         setTestingEasySlip(true);
         try {
-            const key = settings.easyslip_api_key || 'e0650eb6-a4c8-4e25-b109-54bf3a10256e';
+            const key = settings.easyslip_api_key || '';
             const res = await testEasySlipConnection(key);
             if (res.success) {
                 setEasySlipQuota(res.data);
@@ -586,10 +586,10 @@ export default function GeneralBookingSettingsTab({
                         </label>
                         <input
                             type="text"
-                            value={settings.easyslip_api_key || 'e0650eb6-a4c8-4e25-b109-54bf3a10256e'}
+                            value={settings.easyslip_api_key || ''}
                             onChange={(e) => handleSave('easyslip_api_key', e.target.value)}
                             className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs tabular-nums font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
-                            placeholder="e0650eb6-a4c8-4e25-b109-..."
+                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                         />
                         <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
                             คีย์ API สำหรับเรียกตรวจสอบสลิปผ่าน EasySlip v2

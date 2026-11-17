@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
 
-export const DEFAULT_EASYSLIP_KEY = 'e0650eb6-a4c8-4e25-b109-54bf3a10256e'
 const EASYSLIP_BASE_URL = 'https://api.easyslip.com/v2'
 
 /**
@@ -114,7 +113,7 @@ export async function verifyPaymentSlip({ file, base64: rawBase64, matchAmount =
         }
 
         // Fetch custom API key from app_settings if available
-        let apiKey = DEFAULT_EASYSLIP_KEY
+        let apiKey = null // none set: the server resolves its own key
         try {
             const { data: settingData } = await supabase
                 .from('app_settings')
@@ -201,8 +200,9 @@ export async function testEasySlipConnection(customApiKey = null) {
         let keyToTest = customApiKey
         if (!keyToTest) {
             const { data } = await supabase.from('app_settings').select('value').eq('key', 'easyslip_api_key').maybeSingle()
-            keyToTest = data?.value || DEFAULT_EASYSLIP_KEY
+            keyToTest = data?.value || null
         }
+        const apiKeyToSend = keyToTest ? keyToTest.trim() : undefined
 
         // 1. Try Vercel Serverless Proxy (/api/verify-slip with action='info')
         try {
@@ -214,7 +214,7 @@ export async function testEasySlipConnection(customApiKey = null) {
                 },
                 body: JSON.stringify({
                     action: 'info',
-                    apiKey: keyToTest.trim()
+                    apiKey: apiKeyToSend
                 })
             })
 
@@ -225,7 +225,7 @@ export async function testEasySlipConnection(customApiKey = null) {
                     data: result.data,
                     message: 'เชื่อมต่อ EasySlip API สำเร็จเรียบร้อย'
                 }
-            } else if (result.error) {
+            } else if (result.error && resp.status !== 500) {
                 return {
                     success: false,
                     error: result.error
@@ -240,7 +240,7 @@ export async function testEasySlipConnection(customApiKey = null) {
             const { data, error } = await supabase.functions.invoke('verify-payment-slip', {
                 body: {
                     action: 'info',
-                    apiKey: keyToTest.trim()
+                    apiKey: apiKeyToSend
                 }
             })
 
