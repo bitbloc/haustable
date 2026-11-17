@@ -275,6 +275,11 @@ button, a, select, input, textarea, [role="button"] {
   animation: fade-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+/* Horizontal tab rows: scroll without a scrollbar (a scrollbar appearing when the
+   categories load used to push the menu down: layout shift on /pickup) */
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* Customer step change (booking / pickup). Only on a step change, never on first paint. */
 @keyframes step-enter-fwd {
   from { opacity: 0; transform: translateX(16px); }

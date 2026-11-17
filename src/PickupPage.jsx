@@ -71,7 +71,8 @@ export default function PickupPage() {
     // Payment & Slip Verification State
     const [paymentMethod, setPaymentMethod] = useState('promptpay') // 'promptpay' | 'truewallet'
     const [payTiming, setPayTiming] = useState('now') // 'now' (transfer + slip) | 'store' (pay on pickup, staff calls to confirm)
-    const [payAtStoreEnabled, setPayAtStoreEnabled] = useState(true)
+    // null until settings arrive: the note is not drawn and then removed (that moved the menu 133px, CLS)
+    const [payAtStoreEnabled, setPayAtStoreEnabled] = useState(null)
     const [promptpayId, setPromptpayId] = useState('')
     const [promptpayName, setPromptpayName] = useState('')
     const [truewalletPhone, setTruewalletPhone] = useState('')
@@ -138,7 +139,7 @@ export default function PickupPage() {
                 if (map.qr_kitchen_close_time) setKitchenCloseTime(map.qr_kitchen_close_time)
                 if (map.crm_base_spend_amount) setCrmBaseSpendAmount(parseFloat(map.crm_base_spend_amount) || 100)
                 if (map.easyslip_enabled_pickup !== undefined) setEasySlipEnabled(map.easyslip_enabled_pickup !== 'false')
-                if (map.pickup_pay_at_store_enabled !== undefined) setPayAtStoreEnabled(map.pickup_pay_at_store_enabled !== 'false')
+                setPayAtStoreEnabled(map.pickup_pay_at_store_enabled !== 'false')
 
                 setCrmSettings(prev => ({
                     ...prev,
@@ -382,7 +383,7 @@ export default function PickupPage() {
     }
 
     const isContactValid = Boolean(contactName?.trim() && contactPhone?.trim()?.replace(/\D/g, '').length >= 9)
-    const isPayAtStore = payAtStoreEnabled && payTiming === 'store'
+    const isPayAtStore = payAtStoreEnabled === true && payTiming === 'store'
 
     const handleSubmit = async () => {
         if (submitting || isSubmitting) return
@@ -538,7 +539,7 @@ export default function PickupPage() {
                             <div className="mb-4">
                                 <h1 className="text-3xl font-display leading-normal">{t('orderFood')}</h1>
                                 <p className="text-[var(--color-muted)] text-sm leading-normal">{t('pickup')}</p>
-                                {payAtStoreEnabled && (
+                                {payAtStoreEnabled === true && (
                                     <div className="mt-3 px-4 py-3 bg-paper border border-[var(--color-rule)] rounded-rams text-sm leading-relaxed text-ink">
                                         <span className="font-bold mr-1.5">จ่ายหน้าร้านตอนรับได้</span>
                                         <span>
@@ -860,7 +861,7 @@ export default function PickupPage() {
                                     </div>
 
                                     {/* Pay now vs pay at store */}
-                                    {payAtStoreEnabled && finalTotal > 0 && (
+                                    {payAtStoreEnabled === true && finalTotal > 0 && (
                                         <div className="grid grid-cols-2 border border-[var(--color-rule)] rounded-rams overflow-hidden bg-canvas">
                                             <button
                                                 type="button"
