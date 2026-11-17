@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { 
     Search, Shield, User, Phone, Edit2, X, Clock, Trash2, 
-    Key, RefreshCw, Eye, EyeOff, Plus, Minus, Coins,
+    Key, RefreshCw, EyeOff, Plus, Minus, Coins,
     Calendar, ArrowUpDown, CheckCircle2, ChevronRight,
     Coffee, Award, Gift, Lock, CheckSquare, Square
 } from 'lucide-react'
@@ -25,7 +25,11 @@ export default function AdminMembers() {
     const [searchTerm, setSearchTerm] = useState('')
     const [roleTab, setRoleTab] = useState('all') // 'all' | 'staff' | 'customer'
     const [sortBy, setSortBy] = useState('newest') // 'newest' | 'name' | 'xhaus' | 'bookings' | 'stamps'
-    const [visiblePins, setVisiblePins] = useState({})
+    // PINs are stored only as hashes: the list knows who has one, and a newly set PIN is
+    // shown once in this session (justSetPins) and can never be read back afterwards.
+    const [pinStatus, setPinStatus] = useState({}) // { [profileId]: updated_at }
+    const [canManagePins, setCanManagePins] = useState(false)
+    const [justSetPins, setJustSetPins] = useState({}) // { [profileId]: pin }
 
     // History Modal State
     const [selectedMember, setSelectedMember] = useState(null)
@@ -44,6 +48,7 @@ export default function AdminMembers() {
         birth_month: '',
         gender: '',
         pin: '',
+        clearPin: false,
         drink_stamp_count: 0,
         free_drink_quota: 0
     })
@@ -106,6 +111,15 @@ export default function AdminMembers() {
             })
 
             setMembers(merged)
+
+            // 4. Which profiles have a POS PIN (owner/admin only; no PIN or hash is returned)
+            const [{ data: adminFlag }, { data: pinRows, error: pinError }] = await Promise.all([
+                supabase.rpc('is_admin'),
+                supabase.rpc('admin_staff_pin_status')
+            ])
+            if (pinError) console.warn('Could not load PIN status:', pinError)
+            setCanManagePins(adminFlag === true)
+            setPinStatus(Object.fromEntries((pinRows || []).map(r => [r.profile_id, r.updated_at])))
         } catch (err) {
             console.error('Error fetching members:', err)
             toast.error('ไม่สามารถโหลดข้อมูลสมาชิกได้: ' + (err.message || ''))
@@ -197,25 +211,48 @@ export default function AdminMembers() {
         }
     }
 
-    // Reset / Randomize POS PIN
+    // POS PIN: set / change / clear through admin_set_staff_pin (the PIN is stored hashed)
+    const pinErrorMessage = (err) => {
+        if (err?.code === '23505') return 'รหัส PIN นี้มีพนักงานคนอื่นใช้อยู่แล้ว กรุณาใช้รหัสอื่น'
+        if (err?.code === '42501') return 'เฉพาะเจ้าของร้านหรือแอดมินเท่านั้นที่ตั้งรหัส PIN ได้'
+        if (err?.code === '22023') return 'รหัส PIN ต้องเป็นตัวเลข 4-8 หลัก'
+        return 'ไม่สามารถบันทึกรหัส PIN ได้: ' + (err?.message || '')
+    }
+
+    const setStaffPin = async (memberId, pin) => {
+        const { error } = await supabase.rpc('admin_set_staff_pin', { p_profile_id: memberId, p_pin: pin || null })
+        if (error) throw error
+        if (pin) {
+            setPinStatus(prev => ({ ...prev, [memberId]: new Date().toISOString() }))
+            setJustSetPins(prev => ({ ...prev, [memberId]: pin }))
+        } else {
+            setPinStatus(prev => { const next = { ...prev }; delete next[memberId]; return next })
+            setJustSetPins(prev => { const next = { ...prev }; delete next[memberId]; return next })
+        }
+    }
+
+    // Reset / Randomize POS PIN (shown once, right after it is set)
     const handleResetPin = async (member) => {
-        const randomPin = Math.floor(1000 + Math.random() * 9000).toString()
-        if (!window.confirm(`ต้องการสร้างรหัส PIN ใหม่ของ "${member.display_name || member.nickname || 'พนักงาน'}" เป็น "${randomPin}" ใช่หรือไม่?`)) return
+        if (!window.confirm(`ต้องการสุ่มรหัส PIN ใหม่ของ "${member.display_name || member.nickname || 'พนักงาน'}" ใช่หรือไม่?\nรหัสใหม่จะแสดงเพียงครั้งเดียว กรุณาจดไว้ทันที`)) return
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ pin: randomPin })
-                .eq('id', member.id)
-
-            if (error) throw error
-
-            setMembers(prev => prev.map(m => m.id === member.id ? { ...m, pin: randomPin } : m))
-            setVisiblePins(prev => ({ ...prev, [member.id]: true }))
-            toast.success(`รีเซ็ตรหัส PIN ของ ${member.display_name} เป็น ${randomPin} สำเร็จ`)
+            // A random PIN may already belong to someone else: try a few times
+            let lastErr = null
+            for (let attempt = 0; attempt < 5; attempt++) {
+                const randomPin = Math.floor(1000 + Math.random() * 9000).toString()
+                try {
+                    await setStaffPin(member.id, randomPin)
+                    toast.success(`รหัส PIN ใหม่ของ ${member.display_name || 'พนักงาน'} คือ ${randomPin} (แสดงครั้งเดียว)`, { duration: 15000 })
+                    return
+                } catch (err) {
+                    lastErr = err
+                    if (err?.code !== '23505') break
+                }
+            }
+            throw lastErr
         } catch (err) {
             console.error(err)
-            toast.error('ไม่สามารถรีเซ็ตรหัส PIN ได้: ' + err.message)
+            toast.error(pinErrorMessage(err))
         }
     }
 
@@ -236,7 +273,8 @@ export default function AdminMembers() {
             birth_day: member.birth_day || '',
             birth_month: member.birth_month || '',
             gender: member.gender || '',
-            pin: member.pin || '',
+            pin: '',
+            clearPin: false,
             drink_stamp_count: member.drink_stamp_count || 0,
             free_drink_quota: member.free_drink_quota || 0,
             role: memberRole,
@@ -249,8 +287,26 @@ export default function AdminMembers() {
         e.preventDefault()
         if (!editingMember) return
 
+        const cleanPin = editForm.pin ? String(editForm.pin).trim() : ''
+        if (cleanPin && !/^[0-9]{4,6}$/.test(cleanPin)) {
+            toast.error('รหัส PIN ต้องเป็นตัวเลข 4-6 หลัก')
+            return
+        }
+
+        // PIN first: if it is refused (already in use, not allowed) nothing else is saved
         try {
-            const cleanPin = editForm.pin ? String(editForm.pin).trim() : null
+            if (cleanPin) {
+                await setStaffPin(editingMember.id, cleanPin)
+            } else if (editForm.clearPin) {
+                await setStaffPin(editingMember.id, null)
+            }
+        } catch (err) {
+            console.error('Failed to set PIN:', err)
+            toast.error(pinErrorMessage(err))
+            return
+        }
+
+        try {
             const finalPermissions = (editForm.role === 'owner' || editForm.role === 'admin')
                 ? ['*']
                 : (editForm.role === 'customer' ? [] : (editForm.admin_permissions || []))
@@ -264,7 +320,6 @@ export default function AdminMembers() {
                 birth_day: editForm.birth_day ? parseInt(editForm.birth_day, 10) : null,
                 birth_month: editForm.birth_month ? parseInt(editForm.birth_month, 10) : null,
                 gender: editForm.gender || null,
-                pin: cleanPin,
                 drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
                 free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10)),
                 role: editForm.role || 'customer',
@@ -278,10 +333,9 @@ export default function AdminMembers() {
 
             if (error) throw error
 
-            setMembers(prev => prev.map(m => m.id === editingMember.id ? { 
-                ...m, 
-                ...payload, 
-                pin: cleanPin 
+            setMembers(prev => prev.map(m => m.id === editingMember.id ? {
+                ...m,
+                ...payload
             } : m))
 
             setEditingMember(null)
@@ -420,7 +474,6 @@ export default function AdminMembers() {
                 (m.display_name || '').toLowerCase().includes(searchLower) ||
                 (m.nickname || '').toLowerCase().includes(searchLower) ||
                 (m.phone_number || '').includes(searchTerm) ||
-                (m.pin || '').includes(searchTerm) ||
                 (m.line_user_id || m.line_uid || '').toLowerCase().includes(searchLower) ||
                 (m.admin_notes || '').toLowerCase().includes(searchLower)
 
@@ -538,7 +591,7 @@ export default function AdminMembers() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] w-3.5 h-3.5" />
                         <input
                             type="text"
-                            placeholder="ค้นชื่อ, เบอร์, PIN, LINE ID..."
+                            placeholder="ค้นชื่อ, เบอร์, LINE ID..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] tabular-nums placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-all"
@@ -565,7 +618,8 @@ export default function AdminMembers() {
                         const isMaster = isOwner || isAdmin
                         const isCustom = member.role === 'custom'
                         const isStaff = ['staff', 'cashier', 'kitchen', 'manager'].includes(member.role) || isCustom
-                        const pinVisible = visiblePins[member.id]
+                        const hasPin = Boolean(pinStatus[member.id])
+                        const justSetPin = justSetPins[member.id]
 
                         return (
                             <motion.div
@@ -654,28 +708,36 @@ export default function AdminMembers() {
                                                 <Key size={12} className="text-[oklch(52%_0.16_28)]" />
                                                 <span className="text-xs text-[oklch(55%_0.010_28)]">PIN POS:</span>
                                                 <span className="font-bold tracking-wider text-[oklch(18%_0.012_28)]">
-                                                    {member.pin ? (pinVisible ? member.pin : '••••') : <span className="text-[oklch(55%_0.010_28)] italic font-normal text-xs">ยังไม่ตั้ง</span>}
+                                                    {!canManagePins
+                                                        ? <span className="text-[oklch(55%_0.010_28)] italic font-normal text-xs">เฉพาะแอดมิน</span>
+                                                        : justSetPin
+                                                            ? justSetPin
+                                                            : hasPin
+                                                                ? '••••'
+                                                                : <span className="text-[oklch(55%_0.010_28)] italic font-normal text-xs">ยังไม่ตั้ง</span>}
                                                 </span>
-                                                {member.pin && (
+                                                {justSetPin && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => setVisiblePins(prev => ({ ...prev, [member.id]: !prev[member.id] }))}
+                                                        onClick={() => setJustSetPins(prev => { const next = { ...prev }; delete next[member.id]; return next })}
                                                         className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-0.5 cursor-pointer ml-0.5"
-                                                        title={pinVisible ? "ซ่อน PIN" : "แสดง PIN"}
+                                                        title="ซ่อน PIN (จะดูซ้ำไม่ได้)"
                                                     >
-                                                        {pinVisible ? <EyeOff size={11} /> : <Eye size={11} />}
+                                                        <EyeOff size={11} />
                                                     </button>
                                                 )}
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => handleResetPin(member)}
-                                                className="text-[11px] tabular-nums font-bold text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-xs transition-colors flex items-center gap-1 cursor-pointer"
-                                                title="สุ่มรีเซ็ตรหัส PIN 4 หลักใหม่"
-                                            >
-                                                <RefreshCw size={9} /> สุ่ม PIN ใหม่
-                                            </button>
+                                            {canManagePins && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleResetPin(member)}
+                                                    className="text-[11px] tabular-nums font-bold text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-xs transition-colors flex items-center gap-1 cursor-pointer"
+                                                    title="สุ่มรีเซ็ตรหัส PIN 4 หลักใหม่"
+                                                >
+                                                    <RefreshCw size={9} /> สุ่ม PIN ใหม่
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1003,33 +1065,50 @@ export default function AdminMembers() {
                                     )}
                                 </div>
 
+                                {canManagePins && (
                                 <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                                         <label className="text-xs font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
-                                            <Key size={12} />
+                                            <Key size={12} className="shrink-0" />
                                             <span>POS Staff PIN Code (รหัส PIN พนักงาน 4-6 หลัก)</span>
                                         </label>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const newPin = Math.floor(1000 + Math.random() * 9000).toString()
-                                                setEditForm({ ...editForm, pin: newPin })
-                                            }}
-                                            className="text-xs text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
-                                        >
-                                            <RefreshCw size={10} /> สุ่ม PIN 4 หลัก
-                                        </button>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {pinStatus[editingMember.id] && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditForm({ ...editForm, pin: '', clearPin: !editForm.clearPin })}
+                                                    className="text-xs text-[oklch(42%_0.010_28)] hover:underline font-bold cursor-pointer"
+                                                >
+                                                    {editForm.clearPin ? 'ยกเลิกการลบ' : 'ลบ PIN'}
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newPin = Math.floor(1000 + Math.random() * 9000).toString()
+                                                    setEditForm({ ...editForm, pin: newPin, clearPin: false })
+                                                }}
+                                                className="text-xs text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                                            >
+                                                <RefreshCw size={10} /> สุ่ม PIN 4 หลัก
+                                            </button>
+                                        </div>
                                     </div>
                                     <input
                                         type="text"
+                                        inputMode="numeric"
                                         maxLength={6}
-                                        placeholder="เช่น 1234"
+                                        placeholder={editForm.clearPin
+                                            ? 'จะลบรหัส PIN เมื่อกดบันทึก'
+                                            : (pinStatus[editingMember.id] ? 'ตั้งรหัสไว้แล้ว เว้นว่างถ้าไม่เปลี่ยน' : 'เช่น 1234')}
+                                        disabled={editForm.clearPin}
                                         value={editForm.pin || ''}
-                                        onChange={e => setEditForm({ ...editForm, pin: e.target.value.replace(/\D/g, '') })}
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-base font-bold tracking-widest text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        onChange={e => setEditForm({ ...editForm, pin: e.target.value.replace(/\D/g, ''), clearPin: false })}
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-base font-bold tracking-widest text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] placeholder:font-normal placeholder:tracking-normal placeholder:text-[13px] disabled:opacity-60"
                                     />
-                                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">ใช้สำหรับปลดล็อกหน้าจอ POS และเปิด/ปิดกะพนักงาน</p>
+                                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">ใช้สำหรับปลดล็อกหน้าจอ POS และเปิด/ปิดกะพนักงาน รหัสที่บันทึกแล้วจะดูย้อนหลังไม่ได้ กรุณาจดไว้ก่อนกดบันทึก</p>
                                 </div>
+                                )}
 
                                 {/* Drink Stamps & Quota */}
                                 <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">

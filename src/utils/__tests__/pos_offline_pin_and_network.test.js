@@ -1,15 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { 
-    hashPin, 
-    saveOfflineStaffCredential, 
-    saveBulkOfflineStaffCredentials, 
-    verifyPinOffline, 
-    getOfflineStaffAuth, 
-    getOfflineStaffCount, 
-    getOfflineStaffList,
-    STORAGE_OFFLINE_AUTH, 
-    STORAGE_STAFF_CACHE,
-    PIN_SALT 
+
+const { rpcMock } = vi.hoisted(() => ({ rpcMock: vi.fn() }));
+vi.mock('../../lib/supabaseClient', () => ({ supabase: { rpc: rpcMock } }));
+
+import {
+    hashPin,
+    saveOfflineStaffCredential,
+    pruneOfflineStaffCredentials,
+    syncStaffCredentialsOnline,
+    resetStaffSyncThrottle,
+    verifyPinOffline,
+    getOfflineStaffAuth,
+    getOfflineStaffCount
 } from '../staffAuthHelper';
 import { 
     isOnline, 
@@ -24,6 +26,8 @@ describe('POS Offline PIN Authentication & Network Resilience Tests', () => {
     beforeEach(() => {
         localStorage.clear();
         setNetworkStatus(true);
+        rpcMock.mockReset();
+        resetStaffSyncThrottle();
     });
 
     describe('1. PIN Hashing & Security', () => {
@@ -116,50 +120,73 @@ describe('POS Offline PIN Authentication & Network Resilience Tests', () => {
             expect(auth3.staff.role).toBe('owner');
         });
 
-        it('should support bulk sync from Supabase RPC without exposing raw PINs', async () => {
-            const pinHash1 = await hashPin('7890');
-            const pinHash2 = await hashPin('9988');
-
-            const serverPayload = [
-                { id: 'uuid-1', display_name: 'Admin A', role: 'admin', pin_hash: pinHash1 },
-                { id: 'uuid-2', display_name: 'Cashier B', role: 'cashier', pin_hash: pinHash2 }
-            ];
-
-            saveBulkOfflineStaffCredentials(serverPayload);
-
+        it('should drop cached credentials of staff no longer on the server list', async () => {
+            await saveOfflineStaffCredential({ id: 'uuid-1', display_name: 'Admin A', role: 'admin' }, '7890');
+            await saveOfflineStaffCredential({ id: 'uuid-2', display_name: 'Cashier B', role: 'cashier' }, '9988');
             expect(getOfflineStaffCount()).toBe(2);
 
-            const check1 = await verifyPinOffline('7890');
-            expect(check1.success).toBe(true);
-            expect(check1.staff.display_name).toBe('Admin A');
+            const removed = pruneOfflineStaffCredentials(['uuid-1']);
+            expect(removed).toBe(1);
+            expect(getOfflineStaffCount()).toBe(1);
 
-            const check2 = await verifyPinOffline('9988');
-            expect(check2.success).toBe(true);
-            expect(check2.staff.display_name).toBe('Cashier B');
-
-            // Safe list returns names without hashes
-            const safeList = getOfflineStaffList();
-            expect(safeList.length).toBe(2);
-            expect(safeList[0].pin_hash).toBeUndefined();
+            expect((await verifyPinOffline('7890')).success).toBe(true);
+            const gone = await verifyPinOffline('9988');
+            expect(gone.success).toBe(false);
+            expect(gone.reason).toBe('INVALID_PIN');
         });
 
-        it('should NOT dispatch pos-staff-cache-updated event if identical credentials are bulk saved again (loop prevention)', async () => {
-            const pinHash = await hashPin('5555');
-            const payload = [{ id: 'u-1', display_name: 'Staff 1', role: 'staff', pin_hash: pinHash }];
+        it('should keep the cache when the server list is empty (a bad answer must not lock staff out)', async () => {
+            await saveOfflineStaffCredential({ id: 'uuid-1', display_name: 'Admin A', role: 'admin' }, '7890');
+            expect(pruneOfflineStaffCredentials([])).toBe(0);
+            expect(pruneOfflineStaffCredentials(undefined)).toBe(0);
+            expect(getOfflineStaffCount()).toBe(1);
+        });
 
-            // First save: should dispatch
+        it('should NOT dispatch pos-staff-cache-updated event when nothing was pruned (loop prevention)', async () => {
+            await saveOfflineStaffCredential({ id: 'u-1', display_name: 'Staff 1', role: 'staff' }, '5555');
+
             let dispatchCount = 0;
             const listener = () => { dispatchCount++; };
             window.addEventListener('pos-staff-cache-updated', listener);
 
-            saveBulkOfflineStaffCredentials(payload);
-            expect(dispatchCount).toBe(1);
+            pruneOfflineStaffCredentials(['u-1']);
+            expect(dispatchCount).toBe(0);
 
-            // Second save with identical data: must NOT dispatch event to prevent infinite loop
-            saveBulkOfflineStaffCredentials(payload);
+            pruneOfflineStaffCredentials(['someone-else']);
             expect(dispatchCount).toBe(1);
 
             window.removeEventListener('pos-staff-cache-updated', listener);
+        });
+    });
+
+    describe('2b. Online sync never asks the server for PIN hashes', () => {
+        it('should read only get_staff_list_safe and prune removed staff', async () => {
+            await saveOfflineStaffCredential({ id: 'keep', display_name: 'ก้อย', role: 'staff' }, '1111');
+            await saveOfflineStaffCredential({ id: 'removed', display_name: 'แนน', role: 'cashier' }, '2222');
+            rpcMock.mockResolvedValue({ data: [{ id: 'keep', display_name: 'ก้อย', role: 'staff' }], error: null });
+
+            await syncStaffCredentialsOnline(true);
+
+            expect(rpcMock).toHaveBeenCalledTimes(1);
+            expect(rpcMock).toHaveBeenCalledWith('get_staff_list_safe');
+            expect(rpcMock).not.toHaveBeenCalledWith('get_staff_offline_pin_hashes');
+            expect(Object.keys(getOfflineStaffAuth())).toEqual(['keep']);
+        });
+
+        it('should leave the cache alone when the RPC fails', async () => {
+            await saveOfflineStaffCredential({ id: 'keep', display_name: 'ก้อย', role: 'staff' }, '1111');
+            rpcMock.mockResolvedValue({ data: null, error: { message: 'network' } });
+
+            await syncStaffCredentialsOnline(true);
+
+            expect(getOfflineStaffCount()).toBe(1);
+            expect((await verifyPinOffline('1111')).success).toBe(true);
+        });
+
+        it('should not call the server while offline', async () => {
+            setNetworkStatus(false);
+            await syncStaffCredentialsOnline(true);
+            expect(rpcMock).not.toHaveBeenCalled();
         });
     });
 

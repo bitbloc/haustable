@@ -3,9 +3,11 @@
  * 
  * Provides:
  * 1. Salted SHA-256 PIN hashing (Web Crypto API with deterministic fallback).
- * 2. Secure local credential caching for offline POS APK login and unlock.
+ * 2. Secure local credential caching for offline POS APK login and unlock
+ *    (written only after a successful online login on this device).
  * 3. Offline PIN validation matching against hashed credentials (zero raw PIN storage).
- * 4. Online synchronization of staff hashes from Supabase RPC.
+ * 4. When online, removal of cached credentials of staff no longer on the staff list.
+ *    The server never sends PIN hashes (get_staff_offline_pin_hashes was retired).
  */
 
 import { supabase } from '../lib/supabaseClient';
@@ -172,46 +174,33 @@ export async function saveOfflineStaffCredential(staff, pin) {
 }
 
 /**
- * Bulk save offline credentials (used during online sync from Supabase RPC).
+ * Drop cached offline credentials of anyone who is no longer on the server's staff list,
+ * so a removed staff member cannot keep logging in offline on this device.
+ * Returns the number of entries removed.
  */
-export function saveBulkOfflineStaffCredentials(credentialsList = []) {
-    if (!Array.isArray(credentialsList) || credentialsList.length === 0) return;
+export function pruneOfflineStaffCredentials(activeStaffIds = []) {
+    if (!Array.isArray(activeStaffIds) || activeStaffIds.length === 0) return 0;
     try {
+        const active = new Set(activeStaffIds.map(id => String(id)));
         const store = getOfflineStaffAuth();
-        const safeStaffList = [];
-        let hasChanges = false;
-
-        for (const item of credentialsList) {
-            if (item && item.id && item.pin_hash) {
-                const prev = store[item.id];
-                if (!prev || prev.pin_hash !== item.pin_hash || prev.display_name !== item.display_name || prev.role !== item.role) {
-                    hasChanges = true;
-                }
-                store[item.id] = {
-                    id: String(item.id),
-                    display_name: item.display_name || 'Staff',
-                    role: item.role || 'staff',
-                    pin_hash: item.pin_hash,
-                    cached_at: new Date().toISOString()
-                };
-                safeStaffList.push({
-                    id: String(item.id),
-                    display_name: item.display_name || 'Staff',
-                    role: item.role || 'staff'
-                });
+        let removed = 0;
+        for (const id of Object.keys(store)) {
+            if (!active.has(String(id))) {
+                delete store[id];
+                removed++;
             }
         }
-        localStorage.setItem(STORAGE_OFFLINE_AUTH, JSON.stringify(store));
-        if (safeStaffList.length > 0) {
-            localStorage.setItem(STORAGE_STAFF_CACHE, JSON.stringify(safeStaffList));
+        if (removed > 0) {
+            localStorage.setItem(STORAGE_OFFLINE_AUTH, JSON.stringify(store));
+            // Only dispatch when something changed, to avoid needless re-renders
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('pos-staff-cache-updated'));
+            }
         }
-
-        // Only dispatch event when credentials actually changed to avoid triggering unnecessary re-renders
-        if (hasChanges && typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('pos-staff-cache-updated'));
-        }
+        return removed;
     } catch (e) {
-        console.error('[StaffAuth] Failed to save bulk offline credentials:', e);
+        console.error('[StaffAuth] Failed to prune offline credentials:', e);
+        return 0;
     }
 }
 
@@ -303,9 +292,11 @@ export function resetStaffSyncThrottle() {
 }
 
 /**
- * Sync staff credentials from server when online.
- * Tries the `get_staff_offline_pin_hashes` RPC if deployed.
- * If not deployed, safely falls back without error.
+ * When online, reconcile this device's offline credentials with the server's staff list
+ * (`get_staff_list_safe`: id, name, role only). The server never hands out PIN hashes;
+ * a credential is cached on the device only by a successful online login
+ * (saveOfflineStaffCredential). Here entries of removed staff are dropped.
+ * An empty or failed answer changes nothing, so a bad response cannot lock staff out offline.
  * Includes concurrency lock and 15-minute cooldown to eliminate runaway egress polling.
  */
 export async function syncStaffCredentialsOnline(force = false) {
@@ -319,15 +310,17 @@ export async function syncStaffCredentialsOnline(force = false) {
 
     _isSyncingStaffCredentials = true;
     try {
-        const { data, error } = await supabase.rpc('get_staff_offline_pin_hashes');
+        const { data, error } = await supabase.rpc('get_staff_list_safe');
         if (!error && Array.isArray(data) && data.length > 0) {
             _lastStaffCredentialsSyncTime = Date.now();
-            saveBulkOfflineStaffCredentials(data);
-            console.log(`[StaffAuth] Synced ${data.length} staff credentials for offline access.`);
+            const removed = pruneOfflineStaffCredentials(data.map(s => s && s.id).filter(Boolean));
+            if (removed > 0) {
+                console.log(`[StaffAuth] Removed ${removed} offline credential(s) of staff no longer on the list.`);
+            }
         }
     } catch (err) {
-        // RPC might not exist or network timed out; silent fallback to opportunistic caching
-        console.log('[StaffAuth] Background sync of offline PIN hashes skipped:', err?.message || err);
+        // Network timed out; keep the device cache as it is
+        console.log('[StaffAuth] Background staff list check skipped:', err?.message || err);
     } finally {
         _isSyncingStaffCredentials = false;
     }
