@@ -29,26 +29,26 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
     // Helper: render ingredients table rows
     const renderIngredientRows = (items) => (
         items.map((ing, idx) => (
-            <tr key={idx} className={`border-b border-[oklch(90%_0.008_28)] last:border-b-0 ${ing.is_sweetener ? 'bg-[oklch(95%_0.02_45)]/30' : ''}`}>
+            <tr key={idx} className={`border-b border-[var(--color-paper-3)] last:border-b-0 ${ing.is_sweetener ? 'bg-[oklch(95%_0.02_45)]/30' : ''}`}>
                 <td className={`${isExtremeDensity ? 'py-0.5 pl-2' : isHighDensity ? 'py-1 pl-2' : 'p-1.5 pl-2.5'}`}>
-                    <div className={`font-semibold text-[oklch(18%_0.012_28)] ${isExtremeDensity ? 'text-[10px]' : isHighDensity ? 'text-[11px]' : 'text-xs'} leading-tight`}>
+                    <div className={`font-semibold text-[var(--color-ink)] ${isExtremeDensity ? 'text-[10px]' : isHighDensity ? 'text-[11px]' : 'text-xs'} leading-tight`}>
                         {ing.name}
                     </div>
                     {ing.remark && (
-                        <div className="text-[8px] text-[oklch(55%_0.010_28)] line-clamp-1 leading-tight">
+                        <div className="text-[8px] text-[var(--color-neutral)] line-clamp-1 leading-tight">
                             {ing.remark}
                         </div>
                     )}
                     {ing.is_sweetener && (
-                        <span className="font-mono text-[7px] font-bold text-[oklch(52%_0.16_28)] tracking-wider">
+                        <span className="font-mono text-[7px] font-bold text-[var(--brand-plum)] tracking-wider">
                             [SWEETENER]
                         </span>
                     )}
                 </td>
-                <td className={`${isExtremeDensity ? 'py-0.5' : isHighDensity ? 'py-1' : 'p-1.5'} text-right font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums ${isExtremeDensity ? 'text-[10px]' : isHighDensity ? 'text-[11px]' : 'text-xs'}`}>
+                <td className={`${isExtremeDensity ? 'py-0.5' : isHighDensity ? 'py-1' : 'p-1.5'} text-right font-mono font-bold text-[var(--color-ink)] tabular-nums ${isExtremeDensity ? 'text-[10px]' : isHighDensity ? 'text-[11px]' : 'text-xs'}`}>
                     {ing.qty}
                 </td>
-                <td className={`${isExtremeDensity ? 'py-0.5 pr-2' : isHighDensity ? 'py-1 pr-2' : 'p-1.5 pr-2.5'} text-right font-mono ${isExtremeDensity ? 'text-[8px]' : isHighDensity ? 'text-[9px]' : 'text-[10px]'} text-[oklch(42%_0.010_28)]`}>
+                <td className={`${isExtremeDensity ? 'py-0.5 pr-2' : isHighDensity ? 'py-1 pr-2' : 'p-1.5 pr-2.5'} text-right font-mono ${isExtremeDensity ? 'text-[8px]' : isHighDensity ? 'text-[9px]' : 'text-[10px]'} text-[var(--color-muted)]`}>
                     {ing.unit}
                 </td>
             </tr>
@@ -57,57 +57,57 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
     return (
         <div 
-            className="sop-print-sheet w-[794px] min-h-[1123px] max-h-[1123px] bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] p-6 box-border flex flex-col justify-between font-sans relative select-none border border-[oklch(85%_0.012_28)]"
+            className="sop-print-sheet w-[794px] min-h-[1123px] max-h-[1123px] bg-[var(--color-paper)] text-[var(--color-ink)] p-6 box-border flex flex-col justify-between font-sans relative select-none border border-[var(--color-rule)]"
             style={{ pageBreakAfter: 'always', breakAfter: 'page' }}
         >
             {/* Top Section */}
             <div className="flex-1 flex flex-col min-h-0">
                 {/* 1. Top Running Header */}
-                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5 font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider flex-shrink-0">
+                <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-1.5 font-mono text-[10px] text-[var(--color-neutral)] uppercase tracking-wider flex-shrink-0">
                     <span>IN THE HAUS — STANDARD OPERATING PROCEDURE</span>
                     <span>SECTION: {recipe.category?.label || 'BEVERAGE'}</span>
                     <span>DOC ID: SOP-{String(recipe.id || '001').substring(0, 8).toUpperCase()}</span>
                 </div>
 
                 {/* 2. Recipe Header Block */}
-                <div className="mt-3 border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-3 flex justify-between items-start flex-shrink-0">
+                <div className="mt-3 border border-[var(--color-rule)] bg-[var(--color-paper)] p-3 flex justify-between items-start flex-shrink-0">
                     <div className="flex-1 min-w-0 pr-4">
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[9px] font-bold uppercase tracking-wider">
+                            <span className="px-2 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[9px] font-bold uppercase tracking-wider">
                                 {recipe.category?.label || 'BAR'}
                             </span>
-                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="font-mono text-[10px] text-[var(--color-neutral)]">
                                 BASE {recipe.base_glass_size_oz || 16} OZ
                             </span>
                         </div>
-                        <h1 className="text-xl font-bold tracking-tight text-[oklch(18%_0.012_28)] mt-1 uppercase leading-tight">
+                        <h1 className="text-xl font-bold tracking-tight text-[var(--color-ink)] mt-1 uppercase leading-tight">
                             {recipe.name}
                         </h1>
                         {recipe.name_en && (
-                            <p className="text-[11px] font-mono text-[oklch(42%_0.010_28)] mt-0.5 uppercase tracking-wide">
+                            <p className="text-[11px] font-mono text-[var(--color-muted)] mt-0.5 uppercase tracking-wide">
                                 {recipe.name_en}
                             </p>
                         )}
                         {adv.profile && (
-                            <p className="text-[11px] text-[oklch(55%_0.010_28)] mt-1 line-clamp-1 italic">
+                            <p className="text-[11px] text-[var(--color-neutral)] mt-1 line-clamp-1 italic">
                                 "{adv.profile}"
                             </p>
                         )}
                     </div>
 
                     {/* Quick Metric Cells */}
-                    <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-center flex-shrink-0 bg-[oklch(94%_0.010_28)]">
+                    <div className="flex border border-[var(--color-rule)] divide-x divide-[var(--color-rule)] font-mono text-center flex-shrink-0 bg-[var(--color-paper-2)]">
                         <div className="px-3 py-1.5">
-                            <span className="block text-[8px] text-[oklch(55%_0.010_28)] uppercase">GLASS</span>
-                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">{recipe.base_glass_size_oz || 16} oz</span>
+                            <span className="block text-[8px] text-[var(--color-neutral)] uppercase">GLASS</span>
+                            <span className="text-xs font-bold text-[var(--color-ink)]">{recipe.base_glass_size_oz || 16} oz</span>
                         </div>
                         <div className="px-3 py-1.5">
-                            <span className="block text-[8px] text-[oklch(55%_0.010_28)] uppercase">PREP TIME</span>
-                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">{adv.prep_time || '2-3 min'}</span>
+                            <span className="block text-[8px] text-[var(--color-neutral)] uppercase">PREP TIME</span>
+                            <span className="text-xs font-bold text-[var(--color-ink)]">{adv.prep_time || '2-3 min'}</span>
                         </div>
                         <div className="px-3 py-1.5">
-                            <span className="block text-[8px] text-[oklch(55%_0.010_28)] uppercase">ICE</span>
-                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">{adv.ice_level || '100%'}</span>
+                            <span className="block text-[8px] text-[var(--color-neutral)] uppercase">ICE</span>
+                            <span className="text-xs font-bold text-[var(--color-ink)]">{adv.ice_level || '100%'}</span>
                         </div>
                     </div>
                 </div>
@@ -117,22 +117,22 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                     /* ── NO STEPS LAYOUT: Full-width multi-column grid for ingredients ── */
                     <div className="mt-3 space-y-3 flex-1">
                         {/* Ingredients Table (2 side-by-side columns if > 6 items) */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                            <div className="p-2 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
-                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                            <div className="p-2 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center">
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                     ส่วนผสมและวัตถุดิบ (INGREDIENTS SPECIFICATION)
                                 </span>
-                                <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)]">
+                                <span className="font-mono text-[9px] text-[var(--color-neutral)]">
                                     {ingredients.length} ITEMS
                                 </span>
                             </div>
 
                             {ingredients.length > 6 ? (
-                                <div className="grid grid-cols-2 divide-x divide-[oklch(85%_0.012_28)]">
+                                <div className="grid grid-cols-2 divide-x divide-[var(--color-rule)]">
                                     {/* Left Sub-Column */}
                                     <table className="w-full text-left font-sans text-xs">
                                         <thead>
-                                            <tr className="font-mono text-[9px] text-[oklch(55%_0.010_28)] bg-[oklch(96%_0.006_28)] border-b border-[oklch(85%_0.012_28)]">
+                                            <tr className="font-mono text-[9px] text-[var(--color-neutral)] bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                                 <th className="p-1.5 pl-2.5">รายการ</th>
                                                 <th className="p-1.5 text-right">จำนวน</th>
                                                 <th className="p-1.5 pr-2.5 text-right">หน่วย</th>
@@ -146,7 +146,7 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                                     {/* Right Sub-Column */}
                                     <table className="w-full text-left font-sans text-xs">
                                         <thead>
-                                            <tr className="font-mono text-[9px] text-[oklch(55%_0.010_28)] bg-[oklch(96%_0.006_28)] border-b border-[oklch(85%_0.012_28)]">
+                                            <tr className="font-mono text-[9px] text-[var(--color-neutral)] bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                                 <th className="p-1.5 pl-2.5">รายการ</th>
                                                 <th className="p-1.5 text-right">จำนวน</th>
                                                 <th className="p-1.5 pr-2.5 text-right">หน่วย</th>
@@ -160,7 +160,7 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                             ) : (
                                 <table className="w-full text-left font-sans text-xs">
                                     <thead>
-                                        <tr className="font-mono text-[9px] text-[oklch(55%_0.010_28)] bg-[oklch(96%_0.006_28)] border-b border-[oklch(85%_0.012_28)]">
+                                        <tr className="font-mono text-[9px] text-[var(--color-neutral)] bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                             <th className="p-1.5 pl-2.5">รายการ</th>
                                             <th className="p-1.5 text-right">จำนวน</th>
                                             <th className="p-1.5 pr-2.5 text-right">หน่วย</th>
@@ -170,7 +170,7 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                                         {renderIngredientRows(ingredients)}
                                         {ingredients.length === 0 && (
                                             <tr>
-                                                <td colSpan="3" className="p-3 text-center text-[oklch(55%_0.010_28)] font-mono text-xs">
+                                                <td colSpan="3" className="p-3 text-center text-[var(--color-neutral)] font-mono text-xs">
                                                     ไม่มีรายการส่วนผสม
                                                 </td>
                                             </tr>
@@ -182,27 +182,27 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                         {/* Sweetness Matrix (Full-width) */}
                         {sweeteners.length > 0 && (
-                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                                <div className="p-2 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
-                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                                <div className="p-2 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                         ระดับความหวาน (SWEETNESS MATRIX)
                                     </span>
-                                    <span className="font-mono text-[8px] text-[oklch(52%_0.16_28)] font-bold">
+                                    <span className="font-mono text-[8px] text-[var(--brand-plum)] font-bold">
                                         4 LEVELS
                                     </span>
                                 </div>
                                 <div className="p-2">
-                                    <table className="w-full text-center font-mono text-[10px] border border-[oklch(85%_0.012_28)]">
+                                    <table className="w-full text-center font-mono text-[10px] border border-[var(--color-rule)]">
                                         <thead>
-                                            <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
+                                            <tr className="bg-[var(--color-paper-2)] text-[var(--color-muted)] border-b border-[var(--color-rule)]">
                                                 <th className="p-1.5 text-left pl-2">สารหวาน</th>
-                                                <th className="p-1.5 border-l border-[oklch(85%_0.012_28)]">ไม่หวาน (0%)</th>
-                                                <th className="p-1.5 border-l border-[oklch(85%_0.012_28)]">หวานน้อย (50%)</th>
-                                                <th className="p-1.5 border-l border-[oklch(85%_0.012_28)] bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)]">หวานปกติ (100%)</th>
-                                                <th className="p-1.5 border-l border-[oklch(85%_0.012_28)]">หวานมาก (120%)</th>
+                                                <th className="p-1.5 border-l border-[var(--color-rule)]">ไม่หวาน (0%)</th>
+                                                <th className="p-1.5 border-l border-[var(--color-rule)]">หวานน้อย (50%)</th>
+                                                <th className="p-1.5 border-l border-[var(--color-rule)] bg-[var(--color-paper-3)] text-[var(--color-ink)]">หวานปกติ (100%)</th>
+                                                <th className="p-1.5 border-l border-[var(--color-rule)]">หวานมาก (120%)</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                                        <tbody className="divide-y divide-[var(--color-rule)]">
                                             {sweeteners.map((sw, sIdx) => {
                                                 const custom = sweetnessMatrix?.levels?.[sw.name] || {};
                                                 const noneQty = custom.none !== undefined ? custom.none : 0;
@@ -212,11 +212,11 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                                                 return (
                                                     <tr key={sIdx}>
-                                                        <td className="p-1 text-left pl-2 font-sans font-bold text-[oklch(18%_0.012_28)]">{sw.name}</td>
-                                                        <td className="p-1 border-l border-[oklch(85%_0.012_28)] tabular-nums">{noneQty} {sw.unit}</td>
-                                                        <td className="p-1 border-l border-[oklch(85%_0.012_28)] tabular-nums font-bold text-[oklch(52%_0.16_28)]">{lessQty} {sw.unit}</td>
-                                                        <td className="p-1 border-l border-[oklch(85%_0.012_28)] tabular-nums font-bold bg-[oklch(92%_0.015_28)]/50">{normQty} {sw.unit}</td>
-                                                        <td className="p-1 border-l border-[oklch(85%_0.012_28)] tabular-nums">{extraQty} {sw.unit}</td>
+                                                        <td className="p-1 text-left pl-2 font-sans font-bold text-[var(--color-ink)]">{sw.name}</td>
+                                                        <td className="p-1 border-l border-[var(--color-rule)] tabular-nums">{noneQty} {sw.unit}</td>
+                                                        <td className="p-1 border-l border-[var(--color-rule)] tabular-nums font-bold text-[var(--brand-plum)]">{lessQty} {sw.unit}</td>
+                                                        <td className="p-1 border-l border-[var(--color-rule)] tabular-nums font-bold bg-[var(--color-paper-2)]/50">{normQty} {sw.unit}</td>
+                                                        <td className="p-1 border-l border-[var(--color-rule)] tabular-nums">{extraQty} {sw.unit}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -229,26 +229,26 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                         {/* Equipment / Notes row */}
                         <div className="grid grid-cols-2 gap-3">
                             {adv.equipment && (
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-2">
-                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-0.5">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-2">
+                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-0.5">
                                         อุปกรณ์เฉพาะ (EQUIPMENT)
                                     </span>
-                                    <p className="text-xs font-mono text-[oklch(18%_0.012_28)]">
+                                    <p className="text-xs font-mono text-[var(--color-ink)]">
                                         {Array.isArray(adv.equipment) ? adv.equipment.join(', ') : adv.equipment}
                                     </p>
                                 </div>
                             )}
                             {((adv.qc_standards && adv.qc_standards.length > 0) || (adv.shelf_life && adv.shelf_life.length > 0)) && (
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-2">
-                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] block mb-1">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-2">
+                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-ink)] block mb-1">
                                         เกณฑ์มาตรฐาน QC & อายุเก็บรักษา
                                     </span>
-                                    <div className="space-y-0.5 font-mono text-[10px] text-[oklch(42%_0.010_28)]">
+                                    <div className="space-y-0.5 font-mono text-[10px] text-[var(--color-muted)]">
                                         {(adv.qc_standards || []).map((qc, qIdx) => (
                                             <div key={qIdx} className="truncate">• {qc.topic}: {qc.standard}</div>
                                         ))}
                                         {(adv.shelf_life || []).map((sl, sIdx) => (
-                                            <div key={sIdx} className="truncate text-[oklch(52%_0.16_28)]">• {sl.item}: {sl.age}</div>
+                                            <div key={sIdx} className="truncate text-[var(--brand-plum)]">• {sl.item}: {sl.age}</div>
                                         ))}
                                     </div>
                                 </div>
@@ -261,19 +261,19 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                         {/* LEFT COLUMN: Ingredients & Sweetness Matrix (5 Cols) */}
                         <div className="col-span-5 space-y-3">
                             {/* Ingredients Table */}
-                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                                <div className="p-2 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
-                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                                <div className="p-2 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                         ส่วนผสม (INGREDIENTS)
                                     </span>
-                                    <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)]">
+                                    <span className="font-mono text-[9px] text-[var(--color-neutral)]">
                                         {ingredients.length} ITEMS
                                     </span>
                                 </div>
 
                                 <table className="w-full text-left font-sans text-xs">
                                     <thead>
-                                        <tr className="font-mono text-[9px] text-[oklch(55%_0.010_28)] bg-[oklch(96%_0.006_28)] border-b border-[oklch(85%_0.012_28)]">
+                                        <tr className="font-mono text-[9px] text-[var(--color-neutral)] bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                             <th className="p-1 pl-2">รายการ</th>
                                             <th className="p-1 text-right">จำนวน</th>
                                             <th className="p-1 pr-2 text-right">หน่วย</th>
@@ -283,7 +283,7 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                                         {renderIngredientRows(ingredients)}
                                         {ingredients.length === 0 && (
                                             <tr>
-                                                <td colSpan="3" className="p-3 text-center text-[oklch(55%_0.010_28)] font-mono text-xs">
+                                                <td colSpan="3" className="p-3 text-center text-[var(--color-neutral)] font-mono text-xs">
                                                     ไม่มีรายการส่วนผสม
                                                 </td>
                                             </tr>
@@ -294,28 +294,28 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                             {/* Sweetness Breakdown Matrix */}
                             {sweeteners.length > 0 && (
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                                    <div className="p-1.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
-                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                                    <div className="p-1.5 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center">
+                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                             ระดับความหวาน (SWEETNESS)
                                         </span>
-                                        <span className="font-mono text-[7px] text-[oklch(52%_0.16_28)] font-bold">
+                                        <span className="font-mono text-[7px] text-[var(--brand-plum)] font-bold">
                                             4 LEVELS
                                         </span>
                                     </div>
 
                                     <div className="p-1.5">
-                                        <table className="w-full text-center font-mono text-[9px] border border-[oklch(85%_0.012_28)]">
+                                        <table className="w-full text-center font-mono text-[9px] border border-[var(--color-rule)]">
                                             <thead>
-                                                <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
+                                                <tr className="bg-[var(--color-paper-2)] text-[var(--color-muted)] border-b border-[var(--color-rule)]">
                                                     <th className="p-0.5 text-left pl-1">สารหวาน</th>
-                                                    <th className="p-0.5 border-l border-[oklch(85%_0.012_28)]">0%</th>
-                                                    <th className="p-0.5 border-l border-[oklch(85%_0.012_28)]">50%</th>
-                                                    <th className="p-0.5 border-l border-[oklch(85%_0.012_28)] bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)]">100%</th>
-                                                    <th className="p-0.5 border-l border-[oklch(85%_0.012_28)]">120%</th>
+                                                    <th className="p-0.5 border-l border-[var(--color-rule)]">0%</th>
+                                                    <th className="p-0.5 border-l border-[var(--color-rule)]">50%</th>
+                                                    <th className="p-0.5 border-l border-[var(--color-rule)] bg-[var(--color-paper-3)] text-[var(--color-ink)]">100%</th>
+                                                    <th className="p-0.5 border-l border-[var(--color-rule)]">120%</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                                            <tbody className="divide-y divide-[var(--color-rule)]">
                                                 {sweeteners.map((sw, sIdx) => {
                                                     const custom = sweetnessMatrix?.levels?.[sw.name] || {};
                                                     const noneQty = custom.none !== undefined ? custom.none : 0;
@@ -325,13 +325,13 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                                                     return (
                                                         <tr key={sIdx}>
-                                                            <td className="p-0.5 text-left pl-1 font-sans font-bold text-[oklch(18%_0.012_28)] truncate max-w-[80px]">
+                                                            <td className="p-0.5 text-left pl-1 font-sans font-bold text-[var(--color-ink)] truncate max-w-[80px]">
                                                                 {sw.name}
                                                             </td>
-                                                            <td className="p-0.5 border-l border-[oklch(85%_0.012_28)] tabular-nums">{noneQty}</td>
-                                                            <td className="p-0.5 border-l border-[oklch(85%_0.012_28)] tabular-nums font-bold text-[oklch(52%_0.16_28)]">{lessQty}</td>
-                                                            <td className="p-0.5 border-l border-[oklch(85%_0.012_28)] tabular-nums font-bold bg-[oklch(92%_0.015_28)]/50">{normQty}</td>
-                                                            <td className="p-0.5 border-l border-[oklch(85%_0.012_28)] tabular-nums">{extraQty}</td>
+                                                            <td className="p-0.5 border-l border-[var(--color-rule)] tabular-nums">{noneQty}</td>
+                                                            <td className="p-0.5 border-l border-[var(--color-rule)] tabular-nums font-bold text-[var(--brand-plum)]">{lessQty}</td>
+                                                            <td className="p-0.5 border-l border-[var(--color-rule)] tabular-nums font-bold bg-[var(--color-paper-2)]/50">{normQty}</td>
+                                                            <td className="p-0.5 border-l border-[var(--color-rule)] tabular-nums">{extraQty}</td>
                                                         </tr>
                                                     );
                                                 })}
@@ -343,11 +343,11 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                             {/* Equipment */}
                             {adv.equipment && adv.equipment.length > 0 && (
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-2">
-                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] block mb-0.5">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-2">
+                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-0.5">
                                         อุปกรณ์เฉพาะ (EQUIPMENT)
                                     </span>
-                                    <p className="text-[11px] font-mono text-[oklch(18%_0.012_28)]">
+                                    <p className="text-[11px] font-mono text-[var(--color-ink)]">
                                         {Array.isArray(adv.equipment) ? adv.equipment.join(', ') : adv.equipment}
                                     </p>
                                 </div>
@@ -356,47 +356,47 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                         {/* RIGHT COLUMN: Method Steps (7 Cols) */}
                         <div className="col-span-7 space-y-3">
-                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-2.5">
-                                <div className="border-b border-[oklch(85%_0.012_28)] pb-1 mb-2 flex justify-between items-center">
-                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-2.5">
+                                <div className="border-b border-[var(--color-rule)] pb-1 mb-2 flex justify-between items-center">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                         ขั้นตอนการปฏิบัติงาน (PREPARATION STEPS)
                                     </span>
-                                    <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)]">
+                                    <span className="font-mono text-[9px] text-[var(--color-neutral)]">
                                         {steps.length} STEPS
                                     </span>
                                 </div>
 
                                 <div className={`${isHighDensity ? 'space-y-1.5' : 'space-y-2'}`}>
                                     {steps.map((st, sIdx) => (
-                                        <div key={sIdx} className={`border border-[oklch(85%_0.012_28)] ${isHighDensity ? 'p-1.5' : 'p-2'} bg-[oklch(97%_0.008_28)]`}>
+                                        <div key={sIdx} className={`border border-[var(--color-rule)] ${isHighDensity ? 'p-1.5' : 'p-2'} bg-[var(--color-paper)]`}>
                                             <div className="flex items-center justify-between font-mono text-xs">
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="w-4 h-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex items-center justify-center font-bold text-[9px]">
+                                                    <span className="w-4 h-4 bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center font-bold text-[9px]">
                                                         {sIdx + 1}
                                                     </span>
-                                                    <span className="font-bold text-[oklch(18%_0.012_28)] text-[11px]">
+                                                    <span className="font-bold text-[var(--color-ink)] text-[11px]">
                                                         {st.title || `ขั้นตอนที่ ${sIdx + 1}`}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-1 text-[8px] text-[oklch(55%_0.010_28)]">
+                                                <div className="flex items-center gap-1 text-[8px] text-[var(--color-neutral)]">
                                                     {st.duration_sec && <span>[{st.duration_sec}s]</span>}
                                                     {st.action && <span className="uppercase">[{st.action}]</span>}
                                                 </div>
                                             </div>
 
-                                            <p className={`text-[oklch(18%_0.012_28)] ${isHighDensity ? 'mt-1 text-[11px] leading-snug' : 'mt-1.5 text-xs leading-relaxed'} font-sans`}>
+                                            <p className={`text-[var(--color-ink)] ${isHighDensity ? 'mt-1 text-[11px] leading-snug' : 'mt-1.5 text-xs leading-relaxed'} font-sans`}>
                                                 {st.instruction}
                                             </p>
 
                                             {(st.key_points || st.reason) && (
-                                                <div className="mt-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] space-y-0.5 font-mono text-[9px]">
+                                                <div className="mt-1 pt-1 border-t border-dashed border-[var(--color-rule)] space-y-0.5 font-mono text-[9px]">
                                                     {st.key_points && (
-                                                        <div className="text-[oklch(52%_0.16_28)]">
+                                                        <div className="text-[var(--brand-plum)]">
                                                             <span className="font-bold uppercase">[KEY POINT]:</span> {st.key_points}
                                                         </div>
                                                     )}
                                                     {st.reason && (
-                                                        <div className="text-[oklch(42%_0.010_28)]">
+                                                        <div className="text-[var(--color-muted)]">
                                                             <span className="font-bold uppercase">[REASON]:</span> {st.reason}
                                                         </div>
                                                     )}
@@ -409,19 +409,19 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
 
                             {/* QC Standards & Shelf Life Box */}
                             {((adv.qc_standards && adv.qc_standards.length > 0) || (adv.shelf_life && adv.shelf_life.length > 0)) && (
-                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-2">
-                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] block mb-1">
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-2">
+                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-ink)] block mb-1">
                                         เกณฑ์มาตรฐาน QC & อายุการเก็บรักษา
                                     </span>
-                                    <div className="space-y-0.5 font-mono text-[9px] text-[oklch(42%_0.010_28)]">
+                                    <div className="space-y-0.5 font-mono text-[9px] text-[var(--color-muted)]">
                                         {(adv.qc_standards || []).map((qc, qIdx) => (
                                             <div key={qIdx} className="flex gap-2">
-                                                <span className="font-bold text-[oklch(18%_0.012_28)] min-w-[65px]">• {qc.topic}:</span>
+                                                <span className="font-bold text-[var(--color-ink)] min-w-[65px]">• {qc.topic}:</span>
                                                 <span>{qc.standard}</span>
                                             </div>
                                         ))}
                                         {(adv.shelf_life || []).map((sl, sIdx) => (
-                                            <div key={sIdx} className="flex gap-2 text-[oklch(52%_0.16_28)]">
+                                            <div key={sIdx} className="flex gap-2 text-[var(--brand-plum)]">
                                                 <span className="font-bold min-w-[65px]">• อายุ {sl.item}:</span>
                                                 <span>{sl.age}</span>
                                             </div>
@@ -435,7 +435,7 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
             </div>
 
             {/* Bottom Footer & Sign-off */}
-            <div className="mt-3 pt-2 border-t border-[oklch(85%_0.012_28)] flex justify-between items-end font-mono text-[9px] text-[oklch(55%_0.010_28)] flex-shrink-0">
+            <div className="mt-3 pt-2 border-t border-[var(--color-rule)] flex justify-between items-end font-mono text-[9px] text-[var(--color-neutral)] flex-shrink-0">
                 <div>
                     <div>IN THE HAUS CULINARY & BEVERAGE LAB</div>
                     <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
@@ -445,7 +445,7 @@ export function SingleRecipeSheet({ recipe, pageNumber, totalPages }) {
                         <span>ลงชื่อผู้ตรวจสอบ: ____________________</span>
                     </div>
                     {pageNumber && totalPages && (
-                        <div className="font-bold text-[oklch(18%_0.012_28)]">
+                        <div className="font-bold text-[var(--color-ink)]">
                             หน้า {pageNumber} / {totalPages}
                         </div>
                     )}
@@ -481,51 +481,51 @@ export function ManualCoverSheet({ recipes = [], department = 'bar', totalPages 
 
     return (
         <div 
-            className="sop-print-sheet w-[794px] min-h-[1123px] max-h-[1123px] bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] p-8 box-border flex flex-col justify-between font-sans relative select-none border border-[oklch(85%_0.012_28)]"
+            className="sop-print-sheet w-[794px] min-h-[1123px] max-h-[1123px] bg-[var(--color-paper)] text-[var(--color-ink)] p-8 box-border flex flex-col justify-between font-sans relative select-none border border-[var(--color-rule)]"
             style={{ pageBreakAfter: 'always', breakAfter: 'page' }}
         >
             {/* Top Bar & Header */}
             <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2 font-mono text-xs text-[oklch(55%_0.010_28)] uppercase tracking-widest flex-shrink-0">
+                <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2 font-mono text-xs text-[var(--color-neutral)] uppercase tracking-widest flex-shrink-0">
                     <span>IN THE HAUS RESTAURANT & BAR</span>
                     <span>INTERNAL OPERATIONS ONLY</span>
                 </div>
 
                 {/* Hero Title Block */}
-                <div className="mt-8 border-l-4 border-[oklch(52%_0.16_28)] pl-5 flex-shrink-0">
-                    <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest block mb-1.5">
+                <div className="mt-8 border-l-4 border-[var(--brand-plum)] pl-5 flex-shrink-0">
+                    <span className="font-mono text-xs font-bold text-[var(--brand-plum)] uppercase tracking-widest block mb-1.5">
                         STANDARD OPERATING PROCEDURES (SOP)
                     </span>
-                    <h1 className="text-3xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)] leading-tight">
+                    <h1 className="text-3xl font-bold uppercase tracking-tight text-[var(--color-ink)] leading-tight">
                         คู่มือสูตรและมาตรฐาน<br />
                         การปฏิบัติงานเครื่องดื่ม & ครัว
                     </h1>
-                    <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-2">
+                    <p className="text-xs font-mono text-[var(--color-muted)] mt-2">
                         DEPARTMENT: {department.toUpperCase()} LAB & SERVICE
                     </p>
                 </div>
 
                 {/* Meta stats bar */}
-                <div className="grid grid-cols-3 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-mono text-xs mt-6 flex-shrink-0">
+                <div className="grid grid-cols-3 border border-[var(--color-rule)] divide-x divide-[var(--color-rule)] bg-[var(--color-paper-2)] font-mono text-xs mt-6 flex-shrink-0">
                     <div className="p-2.5 text-center">
-                        <span className="block text-[10px] text-[oklch(55%_0.010_28)] uppercase">จำนวนสูตรทั้งหมด</span>
-                        <span className="text-base font-bold text-[oklch(18%_0.012_28)]">{recipes.length} เมนู</span>
+                        <span className="block text-[10px] text-[var(--color-neutral)] uppercase">จำนวนสูตรทั้งหมด</span>
+                        <span className="text-base font-bold text-[var(--color-ink)]">{recipes.length} เมนู</span>
                     </div>
                     <div className="p-2.5 text-center">
-                        <span className="block text-[10px] text-[oklch(55%_0.010_28)] uppercase">หมวดหมู่</span>
-                        <span className="text-base font-bold text-[oklch(18%_0.012_28)]">{Object.keys(categoriesMap).length} หมวด</span>
+                        <span className="block text-[10px] text-[var(--color-neutral)] uppercase">หมวดหมู่</span>
+                        <span className="text-base font-bold text-[var(--color-ink)]">{Object.keys(categoriesMap).length} หมวด</span>
                     </div>
                     <div className="p-2.5 text-center">
-                        <span className="block text-[10px] text-[oklch(55%_0.010_28)] uppercase">วันที่ออกเอกสาร</span>
-                        <span className="text-base font-bold text-[oklch(18%_0.012_28)]">
+                        <span className="block text-[10px] text-[var(--color-neutral)] uppercase">วันที่ออกเอกสาร</span>
+                        <span className="text-base font-bold text-[var(--color-ink)]">
                             {new Date().toLocaleDateString('th-TH', { month: 'short', year: 'numeric' })}
                         </span>
                     </div>
                 </div>
 
                 {/* Table of Contents (สารบัญ) */}
-                <div className="mt-6 border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] p-4 flex-1 flex flex-col min-h-0">
-                    <div className="border-b border-[oklch(85%_0.012_28)] pb-2 mb-3 flex justify-between font-mono text-xs font-bold uppercase text-[oklch(18%_0.012_28)] flex-shrink-0">
+                <div className="mt-6 border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 flex-1 flex flex-col min-h-0">
+                    <div className="border-b border-[var(--color-rule)] pb-2 mb-3 flex justify-between font-mono text-xs font-bold uppercase text-[var(--color-ink)] flex-shrink-0">
                         <span>สารบัญสูตร (TABLE OF CONTENTS)</span>
                         <span>หน้า</span>
                     </div>
@@ -533,7 +533,7 @@ export function ManualCoverSheet({ recipes = [], department = 'bar', totalPages 
                     <div className="space-y-3 font-mono overflow-y-hidden flex-1">
                         {Object.entries(categoriesMap).map(([category, items], cIdx) => (
                             <div key={cIdx} className="space-y-1">
-                                <div className="text-[10px] font-bold uppercase text-[oklch(52%_0.16_28)] tracking-wider border-b border-dashed border-[oklch(90%_0.008_28)] pb-0.5">
+                                <div className="text-[10px] font-bold uppercase text-[var(--brand-plum)] tracking-wider border-b border-dashed border-[var(--color-paper-3)] pb-0.5">
                                     [หมวด {category}] ({items.length} เมนู)
                                 </div>
                                 <div className={tocColsClass}>
@@ -541,9 +541,9 @@ export function ManualCoverSheet({ recipes = [], department = 'bar', totalPages 
                                         // Recipe pages start after cover (page 2 onward)
                                         const recipePageIndex = recipes.findIndex(r => r.id === it.id) + 2;
                                         return (
-                                            <div key={iIdx} className="flex justify-between items-center text-[oklch(18%_0.012_28)] border-b border-[oklch(94%_0.008_28)] pb-0.5">
+                                            <div key={iIdx} className="flex justify-between items-center text-[var(--color-ink)] border-b border-[var(--color-paper-2)] pb-0.5">
                                                 <span className="truncate pr-2 font-sans font-medium">{it.name}</span>
-                                                <span className="text-[oklch(55%_0.010_28)] tabular-nums flex-shrink-0">p.{recipePageIndex}</span>
+                                                <span className="text-[var(--color-neutral)] tabular-nums flex-shrink-0">p.{recipePageIndex}</span>
                                             </div>
                                         );
                                     })}
@@ -555,9 +555,9 @@ export function ManualCoverSheet({ recipes = [], department = 'bar', totalPages 
             </div>
 
             {/* Bottom Signature & Notice */}
-            <div className="border-t border-[oklch(85%_0.012_28)] pt-3 flex justify-between items-end font-mono text-xs text-[oklch(55%_0.010_28)] flex-shrink-0">
+            <div className="border-t border-[var(--color-rule)] pt-3 flex justify-between items-end font-mono text-xs text-[var(--color-neutral)] flex-shrink-0">
                 <div>
-                    <div className="font-bold text-[oklch(18%_0.012_28)]">IN THE HAUS CAFE & RESTAURANT</div>
+                    <div className="font-bold text-[var(--color-ink)]">IN THE HAUS CAFE & RESTAURANT</div>
                     <div className="text-[10px]">เอกสารสงวนสิทธิ์สำหรับใช้ภายในร้านเท่านั้น ห้ามคัดลอกหรือเผยแพร่</div>
                 </div>
                 <div className="text-right text-[10px]">

@@ -33,13 +33,13 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
             // Classify into 4 BCG Quadrants
             let quadrant = 'dogs'
             let quadrantLabel = 'Dogs (รอทบทวน)'
-            let color = 'oklch(55% 0.010 28)'
+            let color = 'oklch(48.01% 0.0120 345.78)'
             let action = 'พิจารณาปรับสูตร ลดต้นทุน หรือหมุนเวียนเมนูใหม่'
 
             if (units >= avgUnits && price >= avgPrice) {
                 quadrant = 'stars'
                 quadrantLabel = 'Stars (ดาวเด่น)'
-                color = 'oklch(52% 0.16 28)'
+                color = 'oklch(25.18% 0.1001 348.33)'
                 action = 'รักษาคุณภาพสม่ำเสมอ เป็นเมนูตัวชูโรงหลักของร้าน'
             } else if (units >= avgUnits && price < avgPrice) {
                 quadrant = 'plowhorses'
@@ -103,19 +103,19 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
     const midY = getY(midPrice)
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] font-sans">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] font-sans">
             {/* Header Toolbar */}
-            <div className="p-4 bg-[oklch(94%_0.010_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 bg-[var(--color-paper-2)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
+                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[var(--color-ink)] text-[var(--color-paper)] ">
                             SCATTER // BCG MATRIX
                         </span>
-                        <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
+                        <h3 className="font-bold text-base md:text-lg text-[var(--color-ink)] tracking-tight">
                             เมทริกซ์วิเคราะห์เมนูแบบโต้ตอบ (Interactive Menu Engineering Scatter Plot)
                         </h3>
                     </div>
-                    <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] tabular-nums text-[var(--color-muted)] mt-0.5">
                         แกน X = จำนวนยอดขาย (Volume) // แกน Y = ราคาต่อจานและกำไร (Margin) // ขนาด Bubble = รายได้รวม
                     </p>
                 </div>
@@ -127,13 +127,13 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                         placeholder="ค้นหาเมนู..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                        className="px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                     />
                 </div>
             </div>
 
             {/* Quadrant Quick Tabs */}
-            <div className="p-2 bg-[oklch(97%_0.008_28)] flex items-center gap-1.5 overflow-x-auto no-scrollbar tabular-nums text-xs border-b border-[oklch(85%_0.012_28)]">
+            <div className="p-2 bg-[var(--color-paper)] flex items-center gap-1.5 overflow-x-auto no-scrollbar tabular-nums text-xs border-b border-[var(--color-rule)]">
                 {[
                     { id: 'all', label: 'ทั้งหมด [ALL]', count: scatterItems.length },
                     { id: 'stars', label: '[STARS] เมนูดาวเด่น', count: scatterItems.filter(i => i.quadrant === 'stars').length },
@@ -146,8 +146,8 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                         onClick={() => setSelectedQuadrant(tab.id)}
                         className={`px-3 py-1 font-bold rounded-sm transition-colors whitespace-nowrap border ${
                             selectedQuadrant === tab.id
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:bg-[var(--color-paper-3)]'
                         }`}
                     >
                         <span>{tab.label}</span>
@@ -170,14 +170,14 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             y={pad.top}
                             width={svgWidth - pad.right - midX}
                             height={midY - pad.top}
-                            fill="oklch(52% 0.16 28)"
+                            fill="oklch(25.18% 0.1001 348.33)"
                             opacity="0.04"
                         />
                         <text
                             x={svgWidth - pad.right - 10}
                             y={pad.top + 18}
                             textAnchor="end"
-                            className="tabular-nums text-xs font-bold fill-[oklch(52%_0.16_28)] "
+                            className="tabular-nums text-xs font-bold fill-[var(--brand-plum)] "
                         >
                             [STARS] (ยอดขายสูง / ราคาสูง)
                         </text>
@@ -224,14 +224,14 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             y={midY}
                             width={midX - pad.left}
                             height={svgHeight - pad.bottom - midY}
-                            fill="oklch(55% 0.010 28)"
+                            fill="oklch(48.01% 0.0120 345.78)"
                             opacity="0.03"
                         />
                         <text
                             x={pad.left + 10}
                             y={svgHeight - pad.bottom - 10}
                             textAnchor="start"
-                            className="tabular-nums text-xs font-bold fill-[oklch(55%_0.010_28)] "
+                            className="tabular-nums text-xs font-bold fill-[var(--color-neutral)] "
                         >
                             [DOGS] (ยอดขายน้อย / ราคาต่ำ)
                         </text>
@@ -242,7 +242,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             y1={pad.top}
                             x2={midX}
                             y2={svgHeight - pad.bottom}
-                            stroke="oklch(75% 0.012 28)"
+                            stroke="oklch(75% 0.012 348.33)"
                             strokeWidth="1.5"
                             strokeDasharray="4 4"
                         />
@@ -251,7 +251,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             y1={midY}
                             x2={svgWidth - pad.right}
                             y2={midY}
-                            stroke="oklch(75% 0.012 28)"
+                            stroke="oklch(75% 0.012 348.33)"
                             strokeWidth="1.5"
                             strokeDasharray="4 4"
                         />
@@ -263,7 +263,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             width={plotW}
                             height={plotH}
                             fill="none"
-                            stroke="oklch(85% 0.012 28)"
+                            stroke="oklch(85.05% 0.0113 348.48)"
                             strokeWidth="1"
                         />
 
@@ -273,8 +273,8 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             const x = pad.left + ratio * plotW
                             return (
                                 <g key={ratio}>
-                                    <line x1={x} y1={svgHeight - pad.bottom} x2={x} y2={svgHeight - pad.bottom + 4} stroke="oklch(55% 0.010 28)" />
-                                    <text x={x} y={svgHeight - pad.bottom + 16} textAnchor="middle" className="tabular-nums text-xs fill-[oklch(55%_0.010_28)]">
+                                    <line x1={x} y1={svgHeight - pad.bottom} x2={x} y2={svgHeight - pad.bottom + 4} stroke="oklch(48.01% 0.0120 345.78)" />
+                                    <text x={x} y={svgHeight - pad.bottom + 16} textAnchor="middle" className="tabular-nums text-xs fill-[var(--color-neutral)]">
                                         {val} จาน
                                     </text>
                                 </g>
@@ -287,8 +287,8 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             const y = svgHeight - pad.bottom - ratio * plotH
                             return (
                                 <g key={ratio}>
-                                    <line x1={pad.left - 4} y1={y} x2={pad.left} y2={y} stroke="oklch(55% 0.010 28)" />
-                                    <text x={pad.left - 8} y={y + 3.5} textAnchor="end" className="tabular-nums text-xs fill-[oklch(55%_0.010_28)]">
+                                    <line x1={pad.left - 4} y1={y} x2={pad.left} y2={y} stroke="oklch(48.01% 0.0120 345.78)" />
+                                    <text x={pad.left - 8} y={y + 3.5} textAnchor="end" className="tabular-nums text-xs fill-[var(--color-neutral)]">
                                         ฿{val}
                                     </text>
                                 </g>
@@ -300,7 +300,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             x={pad.left + plotW / 2}
                             y={svgHeight - 10}
                             textAnchor="middle"
-                            className="tabular-nums text-xs font-bold fill-[oklch(18%_0.012_28)] "
+                            className="tabular-nums text-xs font-bold fill-[var(--color-ink)] "
                         >
                             ยอดขายเชิงปริมาณ (UNITS SOLD) -&gt;
                         </text>
@@ -325,7 +325,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                                         r={isHovered ? radius + 4 : radius}
                                         fill={item.color}
                                         fillOpacity={isHovered ? '0.9' : '0.6'}
-                                        stroke={isHovered ? 'oklch(18% 0.012 28)' : 'white'}
+                                        stroke={isHovered ? 'oklch(21.78% 0 0)' : 'white'}
                                         strokeWidth={isHovered ? 2.5 : 1.5}
                                         className="transition-all duration-150"
                                     />
@@ -335,7 +335,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                                             x={cx}
                                             y={cy - radius - 4}
                                             textAnchor="middle"
-                                            className="font-sans text-xs font-bold fill-[oklch(18%_0.012_28)] pointer-events-none"
+                                            className="font-sans text-xs font-bold fill-[var(--color-ink)] pointer-events-none"
                                         >
                                             {item.name}
                                         </text>
@@ -348,30 +348,30 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
 
                 {/* Hover Details Popover */}
                 {hoveredItem && (
-                    <div className="absolute top-6 right-6 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-3 rounded-sm tabular-nums text-xs shadow-lg border border-[oklch(35%_0.012_28)] max-w-xs pointer-events-none z-10">
-                        <div className="flex items-center justify-between border-b border-[oklch(35%_0.012_28)] pb-1.5 mb-2">
-                            <span className="font-bold text-sm text-[oklch(97%_0.008_28)] font-sans truncate">{hoveredItem.name}</span>
-                            <span className="text-[11px] px-1.5 py-0.2 bg-[oklch(35%_0.012_28)] ">{hoveredItem.quadrant}</span>
+                    <div className="absolute top-6 right-6 bg-[var(--color-ink)] text-[var(--color-paper)] p-3 rounded-sm tabular-nums text-xs shadow-lg border border-[oklch(35%_0.012_348.33)] max-w-xs pointer-events-none z-10">
+                        <div className="flex items-center justify-between border-b border-[oklch(35%_0.012_348.33)] pb-1.5 mb-2">
+                            <span className="font-bold text-sm text-[var(--color-paper)] font-sans truncate">{hoveredItem.name}</span>
+                            <span className="text-[11px] px-1.5 py-0.2 bg-[oklch(35%_0.012_348.33)] ">{hoveredItem.quadrant}</span>
                         </div>
                         <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
-                                <span className="text-[oklch(75%_0.010_28)]">ราคาขาย:</span>
+                                <span className="text-[oklch(75%_0.01_348.33)]">ราคาขาย:</span>
                                 <span className="font-bold">฿{hoveredItem.price}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(75%_0.010_28)]">จำนวนที่ขายได้:</span>
+                                <span className="text-[oklch(75%_0.01_348.33)]">จำนวนที่ขายได้:</span>
                                 <span className="font-bold">{hoveredItem.units} จาน</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(75%_0.010_28)]">รายได้รวม:</span>
-                                <span className="font-bold text-[oklch(52%_0.16_28)]">฿{(hoveredItem.revenue || 0).toLocaleString()}</span>
+                                <span className="text-[oklch(75%_0.01_348.33)]">รายได้รวม:</span>
+                                <span className="font-bold text-[var(--brand-plum)]">฿{(hoveredItem.revenue || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(75%_0.010_28)]">กำไรประเมิน:</span>
+                                <span className="text-[oklch(75%_0.01_348.33)]">กำไรประเมิน:</span>
                                 <span className="font-bold text-[oklch(45%_0.08_140)]">~{hoveredItem.estMarginPct}%</span>
                             </div>
-                            <div className="pt-2 mt-1 border-t border-[oklch(35%_0.012_28)] text-xs text-[oklch(85%_0.012_28)]">
-                                <span className="font-bold text-[oklch(52%_0.16_28)]">คำแนะนำ:</span> {hoveredItem.action}
+                            <div className="pt-2 mt-1 border-t border-[oklch(35%_0.012_348.33)] text-xs text-[var(--color-rule)]">
+                                <span className="font-bold text-[var(--brand-plum)]">คำแนะนำ:</span> {hoveredItem.action}
                             </div>
                         </div>
                     </div>

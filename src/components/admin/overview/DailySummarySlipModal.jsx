@@ -501,15 +501,15 @@ export default function DailySummarySlipModal({
 
     return (
         <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-white border-2 border-[var(--color-rule)] rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
                 
                 {/* Modal Header */}
-                <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono shrink-0">
+                <div className="p-3 sm:p-4 bg-[var(--color-paper)] border-b border-[var(--color-rule)] flex items-center justify-between font-mono shrink-0">
                     <div>
-                        <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)]">
+                        <span className="text-[10px] uppercase font-bold text-[var(--color-neutral)]">
                             {targetShift ? 'SHIFT CLOSURE AUDIT REPORT' : 'DAILY SALES Z-REPORT AUDIT'}
                         </span>
-                        <h3 className="text-sm md:text-base font-black text-[oklch(18%_0.012_28)] uppercase tracking-tight">
+                        <h3 className="text-sm md:text-base font-black text-[var(--color-ink)] uppercase tracking-tight">
                             {targetShift 
                                 ? `สลิปสรุปปิดกะ · กะที่ ${targetShift.index || targetShift.shift_number || ''} · ${targetShift.staff_name || targetShift.staffName || 'Staff'}` 
                                 : `สลิปสรุปยอดปิดวัน · ${selectedDate}`
@@ -518,7 +518,7 @@ export default function DailySummarySlipModal({
                     </div>
                     <button 
                         onClick={onClose}
-                        className="p-1.5 rounded-sm hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-black transition-colors cursor-pointer"
+                        className="p-1.5 rounded-sm hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] hover:text-black transition-colors cursor-pointer"
                         title="ปิดหน้าต่าง"
                     >
                         <X size={18} />
@@ -529,38 +529,38 @@ export default function DailySummarySlipModal({
                 <div className="flex-1 overflow-y-auto p-3 sm:p-5 pb-8 bg-white flex justify-center">
                     <div 
                         ref={slipRef}
-                        className="w-full max-w-md bg-white p-2 sm:p-3 font-mono text-xs text-[oklch(18%_0.012_28)] space-y-3 select-none"
+                        className="w-full max-w-md bg-white p-2 sm:p-3 font-mono text-xs text-[var(--color-ink)] space-y-3 select-none"
                     >
                         {/* 1. Shop Header & Metadata */}
-                        <div className="text-center space-y-1 pb-2.5 border-b-2 border-dashed border-[oklch(80%_0.012_28)]">
+                        <div className="text-center space-y-1 pb-2.5 border-b-2 border-dashed border-[oklch(80%_0.012_348.33)]">
                             <h2 className="text-base font-black tracking-widest uppercase">{shopName}</h2>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider">
+                            <p className="text-[10px] text-[var(--color-muted)] font-bold uppercase tracking-wider">
                                 {targetShift 
                                     ? `SHIFT CLOSURE REPORT (สลิปสรุปปิดกะ)` 
                                     : `DAILY SALES Z-REPORT (สลิปปิดวัน)`
                                 }
                             </p>
                             {shopPhone && (
-                                <p className="text-[9px] text-[oklch(55%_0.010_28)]">TEL: {shopPhone}</p>
+                                <p className="text-[9px] text-[var(--color-neutral)]">TEL: {shopPhone}</p>
                             )}
-                            <div className="text-[10px] text-[oklch(42%_0.010_28)] pt-1 space-y-0.5">
+                            <div className="text-[10px] text-[var(--color-muted)] pt-1 space-y-0.5">
                                 <div>วันที่: <strong>{selectedDate}</strong></div>
                                 {targetShift ? (
                                     <>
-                                        <div className="font-bold text-[oklch(18%_0.012_28)]">
+                                        <div className="font-bold text-[var(--color-ink)]">
                                             กะที่: {targetShift.index || targetShift.shift_number || '1'} · พนักงาน: {targetShift.staff_name || targetShift.staffName || 'Staff'}
                                         </div>
-                                        <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                        <div className="text-[9px] text-[var(--color-neutral)]">
                                             เวลาเปิด: {targetShift.opened_at ? new Date(targetShift.opened_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'} · 
                                             เวลาปิด: {targetShift.closed_at ? new Date(targetShift.closed_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : (targetShift.status === 'open' ? 'กำลังเปิดใช้งาน' : '-')}
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                        <div className="text-[9px] text-[var(--color-neutral)]">
                                             เวลาออกรายงาน: {new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
                                         </div>
-                                        <div className="text-[9px] text-[oklch(55%_0.010_28)] uppercase">
+                                        <div className="text-[9px] text-[var(--color-neutral)] uppercase">
                                             ผู้ตรวจสอบ: ADMIN / CASHIER
                                         </div>
                                     </>
@@ -569,9 +569,9 @@ export default function DailySummarySlipModal({
                         </div>
 
                         {/* 2. Main Revenue Card (Strictly Settled Sales) */}
-                        <div className="bg-[oklch(98%_0.006_28)] p-3 rounded-sm border border-[oklch(88%_0.010_28)] space-y-1.5">
+                        <div className="bg-[var(--color-paper)] p-3 rounded-sm border border-[var(--color-paper-3)] space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                <span className="text-[10px] font-bold text-[var(--color-muted)] uppercase tracking-wider">
                                     TOTAL NET SALES (ยอดขายสุทธิ)
                                 </span>
                                 <span className="text-[9px] px-1.5 py-0.5 rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] font-bold">
@@ -579,59 +579,59 @@ export default function DailySummarySlipModal({
                                 </span>
                             </div>
                             
-                            <div className="text-2xl sm:text-3xl font-black text-[oklch(18%_0.012_28)] tracking-tight">
+                            <div className="text-2xl sm:text-3xl font-black text-[var(--color-ink)] tracking-tight">
                                 ฿{reportData.settledNetRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
 
-                            <div className="text-[10px] text-[oklch(55%_0.010_28)] pt-1 border-t border-[oklch(90%_0.008_28)] flex justify-between">
+                            <div className="text-[10px] text-[var(--color-neutral)] pt-1 border-t border-[var(--color-paper-3)] flex justify-between">
                                 <span>บิลปิดสำเร็จ: <strong>{reportData.completedCount} บิล</strong></span>
                                 <span>ยกเลิก: <strong>{reportData.cancelledCount} บิล</strong></span>
                             </div>
 
                             {reportData.totalDiscounts > 0 && (
-                                <div className="text-[10px] text-[oklch(55%_0.010_28)] flex justify-between">
+                                <div className="text-[10px] text-[var(--color-neutral)] flex justify-between">
                                     <span>ยอดรวมก่อนลด: ฿{reportData.grossSettledRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                                    <span className="text-[oklch(52%_0.16_28)] font-bold">ส่วนลด: -฿{reportData.totalDiscounts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-[var(--brand-plum)] font-bold">ส่วนลด: -฿{reportData.totalDiscounts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
                         </div>
 
                         {/* 2.5 Individual Shifts Breakdown (ยอดขายแยกตามกะ) */}
                         {shiftsSummary.length > 0 && (
-                            <div className="space-y-1.5 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
-                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                            <div className="space-y-1.5 pt-1 border-t border-dashed border-[var(--color-rule)]">
+                                <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1 flex justify-between">
                                     <span>SHIFTS SUMMARY (ยอดขายแยกตามกะ)</span>
-                                    <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">{shiftsSummary.length} กะ</span>
+                                    <span className="text-[9px] font-normal text-[var(--color-neutral)]">{shiftsSummary.length} กะ</span>
                                 </div>
                                 <div className="space-y-1.5">
                                     {shiftsSummary.map((s) => (
-                                        <div key={s.id} className="bg-[oklch(98%_0.006_28)] border border-[oklch(90%_0.008_28)] p-2 rounded-xs space-y-1">
+                                        <div key={s.id} className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-2 rounded-xs space-y-1">
                                             <div className="flex items-center justify-between text-[11px]">
                                                 <div className="font-bold flex items-center gap-1.5">
-                                                    <span className="text-[9px] px-1 py-0.2 bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs uppercase text-[oklch(42%_0.010_28)]">
+                                                    <span className="text-[9px] px-1 py-0.2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs uppercase text-[var(--color-muted)]">
                                                         กะ {s.index}
                                                     </span>
-                                                    <span className="text-[oklch(18%_0.012_28)] font-black truncate max-w-[150px]">
+                                                    <span className="text-[var(--color-ink)] font-black truncate max-w-[150px]">
                                                         {s.staffName}
                                                     </span>
                                                 </div>
-                                                <span className="font-black text-xs text-[oklch(18%_0.012_28)]">
+                                                <span className="font-black text-xs text-[var(--color-ink)]">
                                                     ฿{s.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center justify-between text-[9px] text-[oklch(55%_0.010_28)]">
+                                            <div className="flex items-center justify-between text-[9px] text-[var(--color-neutral)]">
                                                 <span>เวลา: {s.timeStr}</span>
                                                 {s.txCount > 0 && <span>{s.txCount} บิล</span>}
                                             </div>
-                                            <div className="pt-1 border-t border-[oklch(92%_0.008_28)] flex items-center justify-between text-[10px]">
-                                                <span className="text-[oklch(42%_0.010_28)]">
+                                            <div className="pt-1 border-t border-[var(--color-paper-2)] flex items-center justify-between text-[10px]">
+                                                <span className="text-[var(--color-muted)]">
                                                     เงินสด: <strong>฿{s.cashSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                                 </span>
                                                 <span className="text-emerald-900">
                                                     QR: <strong>฿{s.qrSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                                 </span>
                                                 {s.creditSales > 0 && (
-                                                    <span className="text-[oklch(42%_0.010_28)]">
+                                                    <span className="text-[var(--color-muted)]">
                                                         บัตร: <strong>฿{s.creditSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                                     </span>
                                                 )}
@@ -639,7 +639,7 @@ export default function DailySummarySlipModal({
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex justify-between font-bold pt-1 border-t border-[oklch(90%_0.008_28)] text-[11px]">
+                                <div className="flex justify-between font-bold pt-1 border-t border-[var(--color-paper-3)] text-[11px]">
                                     <span>รวมยอดทุกกะ ({shiftsSummary.reduce((acc, s) => acc + s.txCount, 0)} บิล):</span>
                                     <span>฿{shiftsSummary.reduce((acc, s) => acc + s.totalSales, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
@@ -648,15 +648,15 @@ export default function DailySummarySlipModal({
 
                         {/* 3. Warning Alert for Active Unpaid Tables (If any tables still open) */}
                         {reportData.activeCount > 0 && (
-                            <div className="p-2.5 bg-[oklch(97%_0.012_28)] border border-[oklch(82%_0.08_28)] rounded-xs space-y-1 text-[10px]">
-                                <div className="flex items-center justify-between font-bold text-[oklch(52%_0.16_28)]">
+                            <div className="p-2.5 bg-[var(--color-paper)] border border-[oklch(82%_0.08_348.33)] rounded-xs space-y-1 text-[10px]">
+                                <div className="flex items-center justify-between font-bold text-[var(--brand-plum)]">
                                     <span className="flex items-center gap-1">
                                         <AlertCircle size={12} />
                                         <span>ยังมีโต๊ะค้างชำระ ({reportData.activeCount} โต๊ะ)</span>
                                     </span>
                                     <span>฿{reportData.activeUnpaidTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
-                                <div className="space-y-0.5 text-[9px] text-[oklch(42%_0.010_28)] pt-0.5 border-t border-[oklch(88%_0.012_28)]">
+                                <div className="space-y-0.5 text-[9px] text-[var(--color-muted)] pt-0.5 border-t border-[var(--color-paper-3)]">
                                     {reportData.activeTablesList.map((t, idx) => (
                                         <div key={idx} className="flex justify-between">
                                             <span>• {t.name} ({t.itemsCount} รายการ)</span>
@@ -664,7 +664,7 @@ export default function DailySummarySlipModal({
                                         </div>
                                     ))}
                                 </div>
-                                <div className="text-[9px] text-[oklch(55%_0.010_28)] pt-1 italic">
+                                <div className="text-[9px] text-[var(--color-neutral)] pt-1 italic">
                                     * ยอดนี้ยังไม่เช็คบิล จึงยังไม่ถูกรวมในยอดขายสุทธิ
                                 </div>
                             </div>
@@ -672,25 +672,25 @@ export default function DailySummarySlipModal({
 
                         {/* 4. Payment Methods Breakdown (Strictly Realized) */}
                         <div className="space-y-1 pt-1">
-                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                            <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1 flex justify-between">
                                 <span>PAYMENT BREAKDOWN (ช่องทางชำระ)</span>
-                                <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">จำนวน / ยอดเงิน</span>
+                                <span className="text-[9px] font-normal text-[var(--color-neutral)]">จำนวน / ยอดเงิน</span>
                             </div>
                             <div className="space-y-1 text-xs">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[oklch(42%_0.010_28)]">เงินสด (CASH):</span>
+                                    <span className="text-[var(--color-muted)]">เงินสด (CASH):</span>
                                     <span className="font-bold">
                                         {reportData.cashCount > 0 ? `${reportData.cashCount} บิล · ` : ''}฿{reportData.cashTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[oklch(42%_0.010_28)]">PROMPTPAY QR:</span>
+                                    <span className="text-[var(--color-muted)]">PROMPTPAY QR:</span>
                                     <span className="font-bold text-emerald-900">
                                         {reportData.qrCount > 0 ? `${reportData.qrCount} บิล · ` : ''}฿{reportData.qrTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[oklch(42%_0.010_28)]">บัตรเครดิต (CREDIT):</span>
+                                    <span className="text-[var(--color-muted)]">บัตรเครดิต (CREDIT):</span>
                                     <span className="font-bold">
                                         {reportData.creditCount > 0 ? `${reportData.creditCount} บิล · ` : ''}฿{reportData.creditTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
@@ -700,33 +700,33 @@ export default function DailySummarySlipModal({
 
                         {/* 4.5 Cash Drawer & Reconciliation (รอบลิ้นชักและเงินสด) */}
                         {drawerData && (
-                            <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] text-xs">
-                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                            <div className="space-y-1 pt-1 border-t border-dashed border-[var(--color-rule)] text-xs">
+                                <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1 flex justify-between">
                                     <span>CASH DRAWER ({drawerData.shiftsCount} กะ · {drawerData.staffNames})</span>
-                                    <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">ยอดเงิน</span>
+                                    <span className="text-[9px] font-normal text-[var(--color-neutral)]">ยอดเงิน</span>
                                 </div>
                                 <div className="space-y-1 text-xs">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-[oklch(42%_0.010_28)]">เงินทอนตั้งต้น:</span>
+                                        <span className="text-[var(--color-muted)]">เงินทอนตั้งต้น:</span>
                                         <span className="font-bold">฿{drawerData.openingFloat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-[oklch(42%_0.010_28)]">+ ขายเงินสด:</span>
+                                        <span className="text-[var(--color-muted)]">+ ขายเงินสด:</span>
                                         <span className="font-bold text-emerald-900">+฿{drawerData.cashSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     {drawerData.totalIn > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[oklch(42%_0.010_28)]">+ เงินนำเข้าลิ้นชัก:</span>
+                                            <span className="text-[var(--color-muted)]">+ เงินนำเข้าลิ้นชัก:</span>
                                             <span className="font-bold text-emerald-900">+฿{drawerData.totalIn.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
                                     {drawerData.totalOut > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[oklch(42%_0.010_28)]">- เงินนำออกลิ้นชัก:</span>
-                                            <span className="font-bold text-[oklch(52%_0.16_28)]">-฿{drawerData.totalOut.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[var(--color-muted)]">- เงินนำออกลิ้นชัก:</span>
+                                            <span className="font-bold text-[var(--brand-plum)]">-฿{drawerData.totalOut.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center pt-0.5 border-t border-[oklch(90%_0.008_28)] font-bold">
+                                    <div className="flex justify-between items-center pt-0.5 border-t border-[var(--color-paper-3)] font-bold">
                                         <span>= เงินที่ควรมีในลิ้นชัก:</span>
                                         <span>฿{drawerData.expectedCash.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -735,8 +735,8 @@ export default function DailySummarySlipModal({
                                         <span className="font-black">฿{drawerData.closedCash.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-[11px]">
-                                        <span className="text-[oklch(55%_0.010_28)]">ส่วนต่าง:</span>
-                                        <span className={`font-bold ${Math.abs(drawerData.difference) < 0.01 ? 'text-[oklch(35%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                                        <span className="text-[var(--color-neutral)]">ส่วนต่าง:</span>
+                                        <span className={`font-bold ${Math.abs(drawerData.difference) < 0.01 ? 'text-[oklch(35%_0.08_140)]' : 'text-[var(--brand-plum)]'}`}>
                                             {Math.abs(drawerData.difference) < 0.01 ? '0.00 (ยอดตรงพอดี ✓)' : (drawerData.difference > 0 ? `+฿${drawerData.difference.toFixed(2)}` : `-฿${Math.abs(drawerData.difference).toFixed(2)}`)}
                                         </span>
                                     </div>
@@ -746,15 +746,15 @@ export default function DailySummarySlipModal({
 
                         {/* 5. Sales by Category (ยอดขายแยกตามหมวดหมู่) */}
                         {reportData.categorySales.length > 0 && (
-                            <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
-                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                            <div className="space-y-1 pt-1 border-t border-dashed border-[var(--color-rule)]">
+                                <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1 flex justify-between">
                                     <span>SALES BY CATEGORY (ยอดขายตามหมวด)</span>
-                                    <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">จำนวน / ยอดเงิน</span>
+                                    <span className="text-[9px] font-normal text-[var(--color-neutral)]">จำนวน / ยอดเงิน</span>
                                 </div>
                                 <div className="space-y-1 text-xs">
                                     {reportData.categorySales.map((cat, idx) => (
                                         <div key={idx} className="flex justify-between items-center">
-                                            <span className="truncate max-w-[190px] text-[oklch(35%_0.010_28)]">
+                                            <span className="truncate max-w-[190px] text-[oklch(35%_0.01_348.33)]">
                                                 {cat.name}
                                             </span>
                                             <span className="font-bold shrink-0">
@@ -762,7 +762,7 @@ export default function DailySummarySlipModal({
                                             </span>
                                         </div>
                                     ))}
-                                    <div className="flex justify-between font-bold pt-1 border-t border-[oklch(90%_0.008_28)] text-[11px]">
+                                    <div className="flex justify-between font-bold pt-1 border-t border-[var(--color-paper-3)] text-[11px]">
                                         <span>รวมทุกหมวดหมู่ ({reportData.totalItemsSold} ชิ้น):</span>
                                         <span>฿{reportData.settledNetRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -772,8 +772,8 @@ export default function DailySummarySlipModal({
 
                         {/* 6. Top 5 Best-Selling Items */}
                         {reportData.topItems.length > 0 && (
-                            <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
-                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
+                            <div className="space-y-1 pt-1 border-t border-dashed border-[var(--color-rule)]">
+                                <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1">
                                     TOP 5 BEST-SELLERS (5 เมนูขายดี)
                                 </div>
                                 <div className="space-y-1 text-[11px]">
@@ -792,13 +792,13 @@ export default function DailySummarySlipModal({
                         )}
 
                         {/* 7. Service Mix & Channels Breakdown */}
-                        <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] text-xs">
-                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
+                        <div className="space-y-1 pt-1 border-t border-dashed border-[var(--color-rule)] text-xs">
+                            <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1">
                                 SERVICE MIX & CHANNELS (ประเภทและช่องทาง)
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-[11px]">
                                 <div className="space-y-0.5">
-                                    <span className="text-[9px] uppercase text-[oklch(55%_0.010_28)] font-bold">ประเภทบริการ:</span>
+                                    <span className="text-[9px] uppercase text-[var(--color-neutral)] font-bold">ประเภทบริการ:</span>
                                     <div className="flex justify-between">
                                         <span>ทานที่ร้าน:</span>
                                         <span className="font-bold">{reportData.dineInSettledCount} บิล</span>
@@ -809,7 +809,7 @@ export default function DailySummarySlipModal({
                                     </div>
                                 </div>
                                 <div className="space-y-0.5">
-                                    <span className="text-[9px] uppercase text-[oklch(55%_0.010_28)] font-bold">ช่องทางขาย:</span>
+                                    <span className="text-[9px] uppercase text-[var(--color-neutral)] font-bold">ช่องทางขาย:</span>
                                     <div className="flex justify-between">
                                         <span>หน้าร้าน:</span>
                                         <span className="font-bold">{reportData.walkinCount} บิล</span>
@@ -823,29 +823,29 @@ export default function DailySummarySlipModal({
                         </div>
 
                         {/* 8. Operational Performance & Guest Statistics */}
-                        <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] text-[11px]">
-                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
+                        <div className="space-y-1 pt-1 border-t border-dashed border-[var(--color-rule)] text-[11px]">
+                            <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider border-b border-[var(--color-paper-3)] pb-1">
                                 SALES STATISTICS (สถิติการขาย)
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(42%_0.010_28)]">จำนวนลูกค้าทั้งหมด (PAX):</span>
+                                <span className="text-[var(--color-muted)]">จำนวนลูกค้าทั้งหมด (PAX):</span>
                                 <span className="font-bold">{reportData.totalGuests} ท่าน</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(42%_0.010_28)]">ยอดขายเฉลี่ยต่อบิล:</span>
+                                <span className="text-[var(--color-muted)]">ยอดขายเฉลี่ยต่อบิล:</span>
                                 <span className="font-bold">฿{reportData.avgPerBill.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-[oklch(42%_0.010_28)]">ยอดขายเฉลี่ยต่อหัว (PAX):</span>
+                                <span className="text-[var(--color-muted)]">ยอดขายเฉลี่ยต่อหัว (PAX):</span>
                                 <span className="font-bold">฿{reportData.avgPerGuest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
 
                         {/* 9. Tax Status Notice (Strictly NON-VAT per Store Settings) */}
-                        <div className="pt-1.5 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                        <div className="pt-1.5 border-t border-dashed border-[var(--color-rule)]">
                             {isVatEnabled ? (
                                 <div className="space-y-1 text-xs">
-                                    <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider pb-1">
+                                    <div className="text-[10px] font-black text-[var(--color-muted)] uppercase tracking-wider pb-1">
                                         TAX SUMMARY (สรุปภาษี VAT 7%)
                                     </div>
                                     <div className="flex justify-between text-[11px]">
@@ -858,11 +858,11 @@ export default function DailySummarySlipModal({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-[oklch(96%_0.008_28)] p-2 rounded-xs text-center space-y-0.5">
-                                    <div className="text-[10px] font-bold text-[oklch(35%_0.010_28)] uppercase tracking-wider">
+                                <div className="bg-[var(--color-paper)] p-2 rounded-xs text-center space-y-0.5">
+                                    <div className="text-[10px] font-bold text-[oklch(35%_0.01_348.33)] uppercase tracking-wider">
                                         NON-VAT REGISTERED (ไม่คิดภาษีมูลค่าเพิ่ม)
                                     </div>
-                                    <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                    <div className="text-[9px] text-[var(--color-neutral)]">
                                         ร้านค้ายังไม่เปิดระบบ VAT 7% · ยอดทั้งหมดเป็นยอดสุทธิ
                                     </div>
                                 </div>
@@ -870,11 +870,11 @@ export default function DailySummarySlipModal({
                         </div>
 
                         {/* 10. Audit Verification & Sign-off Footer */}
-                        <div className="pt-2 border-t-2 border-dashed border-[oklch(80%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] space-y-1.5">
-                            <div className="pt-0.5 text-[9px] uppercase tracking-widest font-bold text-[oklch(35%_0.010_28)]">
+                        <div className="pt-2 border-t-2 border-dashed border-[oklch(80%_0.012_348.33)] text-center text-[10px] text-[var(--color-neutral)] space-y-1.5">
+                            <div className="pt-0.5 text-[9px] uppercase tracking-widest font-bold text-[oklch(35%_0.01_348.33)]">
                                 {targetShift ? 'SHIFT REPORT AUDITED & VERIFIED' : 'DAILY Z-REPORT AUDITED & VERIFIED'}
                             </div>
-                            <div className="pt-1.5 border-t border-[oklch(90%_0.008_28)] flex justify-between items-end text-[9px] text-[oklch(50%_0.010_28)]">
+                            <div className="pt-1.5 border-t border-[var(--color-paper-3)] flex justify-between items-end text-[9px] text-[var(--color-neutral)]">
                                 <div>
                                     <span>เวลาออกรายงาน: {new Date().toLocaleTimeString('th-TH')}</span>
                                 </div>
@@ -887,10 +887,10 @@ export default function DailySummarySlipModal({
                 </div>
 
                 {/* Modal Footer Controls - Digital First (No Hardware Printing) */}
-                <div className="p-3 sm:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs shrink-0 shadow-lg">
+                <div className="p-3 sm:p-4 bg-white border-t border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs shrink-0 shadow-lg">
                     <button
                         onClick={onClose}
-                        className="px-3.5 py-2 border border-[oklch(85%_0.012_28)] hover:bg-[oklch(95%_0.010_28)] rounded-sm font-bold text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
+                        className="px-3.5 py-2 border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] rounded-sm font-bold text-[var(--color-muted)] transition-colors cursor-pointer"
                     >
                         ปิดหน้าต่าง
                     </button>
@@ -899,7 +899,7 @@ export default function DailySummarySlipModal({
                         {/* Copy Image Button */}
                         <button
                             onClick={handleCopyImage}
-                            className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-3.5 py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                             title="คัดลอกรูปภาพลง Clipboard สำหรับส่งเข้า LINE"
                         >
                             {copied ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
@@ -910,7 +910,7 @@ export default function DailySummarySlipModal({
                         <button
                             onClick={handleSavePng}
                             disabled={saving}
-                            className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                            className="px-4 py-2 bg-[var(--color-ink)] hover:bg-black text-white rounded-sm font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                         >
                             <Download size={14} />
                             <span>{saving ? 'กำลังบันทึก...' : 'SAVE PNG SLIP'}</span>

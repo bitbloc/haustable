@@ -405,7 +405,7 @@ export default function TrackingPage() {
                                 <button 
                                     onClick={handleNotifyArrival}
                                     disabled={notifyingArrival}
-                                    className="w-full bg-[var(--color-accent)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono font-bold py-3.5 px-4 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer shadow-xs"
+                                    className="w-full bg-[var(--color-accent)] hover:bg-[var(--brand-plum)] text-white font-mono font-bold py-3.5 px-4 text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer shadow-xs"
                                 >
                                     {notifyingArrival ? (
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
@@ -518,7 +518,7 @@ export default function TrackingPage() {
                       disabled={!canSaveSlip || isCancelled}
                       className={`w-full py-3 px-3 border border-[var(--color-rule)] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                           canSaveSlip && !isCancelled
-                              ? 'bg-[var(--color-brand)] hover:bg-[oklch(82%_0.18_100)] text-[var(--color-ink)] border-[var(--color-ink)]'
+                              ? 'bg-[var(--color-brand)] hover:bg-[var(--action-primary-hover)] text-[var(--on-action)] border-[var(--color-ink)]'
                               : 'bg-[var(--color-paper)] text-[var(--color-muted)] cursor-not-allowed opacity-60'
                       }`}
                   >

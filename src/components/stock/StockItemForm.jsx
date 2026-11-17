@@ -352,31 +352,31 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     };
 
     // Quiet, token-based form styles shared by every field below
-    const ink = 'text-[oklch(18%_0.012_28)]';
-    const labelCls = 'block text-xs font-medium text-[oklch(42%_0.010_28)] mb-1.5';
-    const inputCls = `w-full h-11 px-3 rounded-md border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] ${ink} text-[15px] outline-none transition-colors focus:border-[oklch(18%_0.012_28)] disabled:bg-[oklch(94%_0.010_28)] disabled:text-[oklch(55%_0.010_28)] disabled:cursor-not-allowed`;
-    const unitSuffix = 'text-xs text-[oklch(55%_0.010_28)] whitespace-nowrap';
+    const ink = 'text-[var(--color-ink)]';
+    const labelCls = 'block text-xs font-medium text-[var(--color-muted)] mb-1.5';
+    const inputCls = `w-full h-11 px-3 rounded-md border border-[var(--color-rule)] bg-[var(--color-paper)] ${ink} text-[15px] outline-none transition-colors focus:border-[var(--color-ink)] disabled:bg-[var(--color-paper-2)] disabled:text-[var(--color-neutral)] disabled:cursor-not-allowed`;
+    const unitSuffix = 'text-xs text-[var(--color-neutral)] whitespace-nowrap';
     const sectionTitle = `text-sm font-semibold ${ink}`;
     const numberChange = (key) => (e) => setFormData({ ...formData, [key]: e.target.value === '' ? 0 : parseFloat(e.target.value) });
     const unitLabel = (u) => (THAI_UNITS.find(x => x.value === u)?.label || u || '').replace(/\s*\(.*\)\s*$/, '');
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[oklch(18%_0.012_28/0.45)] backdrop-blur-sm p-0 sm:p-4">
-            <div className="bg-[oklch(99%_0.004_28)] w-full sm:max-w-lg border border-[oklch(85%_0.012_28)] rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(18%_0.012_28/0.12)] flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[oklch(21.78%_0_0/0.45)] backdrop-blur-sm p-0 sm:p-4">
+            <div className="bg-[var(--color-paper)] w-full sm:max-w-lg border border-[var(--color-rule)] rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(21.78%_0_0/0.12)] flex flex-col max-h-[92vh]">
 
                 {/* Header */}
                 <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4">
                     <div className="min-w-0">
                         <h2 className={`text-lg font-semibold leading-7 ${ink}`}>{isEdit ? 'แก้ไขวัตถุดิบ' : 'เพิ่มวัตถุดิบ'}</h2>
-                        {isEdit && <p className="text-sm text-[oklch(55%_0.010_28)] truncate">{item.name}</p>}
+                        {isEdit && <p className="text-sm text-[var(--color-neutral)] truncate">{item.name}</p>}
                     </div>
-                    <button type="button" onClick={onClose} className="h-9 px-3 rounded-md border border-[oklch(85%_0.012_28)] text-sm text-[oklch(42%_0.010_28)] hover:border-[oklch(18%_0.012_28)] hover:text-[oklch(18%_0.012_28)] transition-colors">
+                    <button type="button" onClick={onClose} className="h-9 px-3 rounded-md border border-[var(--color-rule)] text-sm text-[var(--color-muted)] hover:border-[var(--color-ink)] hover:text-[var(--color-ink)] transition-colors">
                         ปิด
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="px-5 flex gap-6 border-b border-[oklch(85%_0.012_28)]" role="tablist">
+                <div className="px-5 flex gap-6 border-b border-[var(--color-rule)]" role="tablist">
                     {[['basic', 'ข้อมูลทั่วไป'], ['costing', 'ต้นทุนและหน่วย']].map(([id, label]) => (
                         <button
                             key={id}
@@ -384,7 +384,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             role="tab"
                             aria-selected={activeTab === id}
                             onClick={() => setActiveTab(id)}
-                            className={`-mb-px py-2.5 text-sm border-b-2 transition-colors ${activeTab === id ? `border-[oklch(18%_0.012_28)] ${ink} font-semibold` : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                            className={`-mb-px py-2.5 text-sm border-b-2 transition-colors ${activeTab === id ? `border-[var(--color-ink)] ${ink} font-semibold` : 'border-transparent text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             {label}
                         </button>
@@ -398,27 +398,27 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         const { mode, units, previous, recipeCount } = makroUnitsOffer;
                         const before = `1 ${unitLabel(previous.pack_unit)} = ${Number(previous.conversion_factor || 1).toLocaleString('th-TH')} ${unitLabel(previous.usage_unit)}`;
                         return (
-                            <div className="border-l-2 border-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)] pl-3 pr-3 py-2.5 space-y-2" role="status">
+                            <div className="border-l-2 border-[var(--color-ink)] bg-[var(--color-paper)] pl-3 pr-3 py-2.5 space-y-2" role="status">
                                 <p className={`text-sm leading-6 ${ink}`}>
                                     {mode === 'applied'
                                         ? <>ใช้หน่วยจาก makro แล้ว: <strong>{units.summary}</strong> (เดิม {before})</>
                                         : <>makro ขายเป็น <strong>{units.summary}</strong> แต่รายการนี้ตั้งไว้ <strong>{before}</strong></>}
                                 </p>
-                                <p className="text-xs leading-5 text-[oklch(42%_0.010_28)]">
+                                <p className="text-xs leading-5 text-[var(--color-muted)]">
                                     คงเหลือและจุดสั่งซื้อนับเป็น{unitLabel(mode === 'applied' ? units.packUnit : previous.pack_unit)} ตรวจตัวเลขก่อนกดบันทึก
                                     {recipeCount > 0 && <> · รายการนี้อยู่ในสูตร {recipeCount} สูตร ถ้าเปลี่ยนหน่วย ระบบจะแจ้งสูตรที่ต้องแก้จำนวนหลังบันทึก</>}
                                 </p>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                                     {mode === 'applied' ? (
-                                        <button type="button" onClick={restoreUnits} className="text-sm text-[oklch(42%_0.010_28)] underline underline-offset-4 decoration-[oklch(80%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                                        <button type="button" onClick={restoreUnits} className="text-sm text-[var(--color-muted)] underline underline-offset-4 decoration-[oklch(80%_0.01_348.33)] hover:text-[var(--color-ink)]">
                                             คืนหน่วยเดิม
                                         </button>
                                     ) : (
                                         <>
-                                            <button type="button" onClick={applyMakroUnits} className={`text-sm font-semibold ${ink} underline underline-offset-4 decoration-[oklch(70%_0.010_28)] hover:decoration-[oklch(18%_0.012_28)]`}>
+                                            <button type="button" onClick={applyMakroUnits} className={`text-sm font-semibold ${ink} underline underline-offset-4 decoration-[oklch(70%_0.01_348.33)] hover:decoration-[var(--color-ink)]`}>
                                                 ใช้หน่วยจาก makro
                                             </button>
-                                            <button type="button" onClick={() => setMakroUnitsOffer(null)} className="text-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                                            <button type="button" onClick={() => setMakroUnitsOffer(null)} className="text-sm text-[var(--color-muted)] hover:text-[var(--color-ink)]">
                                                 คงหน่วยเดิม
                                             </button>
                                         </>
@@ -430,19 +430,19 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
                     {/* Unit set-ups that are almost certainly a mistake; saving is still allowed */}
                     {unitSetupWarnings(formData).map(text => (
-                        <div key={text} className={`border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] pl-3 pr-3 py-2.5 text-sm leading-6 ${ink}`} role="status">{text}</div>
+                        <div key={text} className={`border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] pl-3 pr-3 py-2.5 text-sm leading-6 ${ink}`} role="status">{text}</div>
                     ))}
 
                     {/* Counting unit differs from buying unit */}
                     {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (
-                        <div className="border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] pl-3 pr-3 py-2.5 space-y-2">
+                        <div className="border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] pl-3 pr-3 py-2.5 space-y-2">
                             <p className={`text-sm ${ink}`}>
                                 หน่วยนับ <strong>{unitLabel(formData.unit)}</strong> ไม่ตรงกับหน่วยซื้อ <strong>{unitLabel(formData.pack_unit)}</strong> จุดสั่งซื้ออาจแจ้งเตือนผิด
                             </p>
                             <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, unit: formData.pack_unit })}
-                                className="text-sm font-semibold text-[oklch(52%_0.16_28)] hover:underline"
+                                className="text-sm font-semibold text-[var(--brand-plum)] hover:underline"
                             >
                                 ใช้ "{unitLabel(formData.pack_unit)}" เป็นหน่วยนับ
                             </button>
@@ -468,7 +468,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             setPriceSearchTerm(formData.name || '');
                                             setShowPriceSearch(true);
                                         }}
-                                        className={`h-11 px-4 rounded-md border border-[oklch(18%_0.012_28)] ${ink} text-sm font-semibold whitespace-nowrap hover:bg-[oklch(94%_0.010_28)] transition-colors`}
+                                        className={`h-11 px-4 rounded-md border border-[var(--color-ink)] ${ink} text-sm font-semibold whitespace-nowrap hover:bg-[var(--color-paper-2)] transition-colors`}
                                         title="ค้นราคาและขนาดจาก makro.pro"
                                     >
                                         ราคากลาง
@@ -499,7 +499,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             value={formData.barcode}
                                             onChange={e => setFormData({ ...formData, barcode: e.target.value })}
                                         />
-                                        <button type="button" onClick={() => setShowScanner(true)} className="absolute right-1.5 top-1.5 h-8 px-2.5 rounded text-xs font-semibold text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                                        <button type="button" onClick={() => setShowScanner(true)} className="absolute right-1.5 top-1.5 h-8 px-2.5 rounded text-xs font-semibold text-[var(--color-muted)] bg-[var(--color-paper-2)] hover:text-[var(--color-ink)]">
                                             สแกน
                                         </button>
                                     </div>
@@ -507,8 +507,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             </div>
 
                             {/* Stock levels, all in the buying unit */}
-                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
-                                <h3 className={sectionTitle}>ระดับสต๊อก <span className="font-normal text-[oklch(55%_0.010_28)]">· นับเป็น {unitLabel(formData.pack_unit)}</span></h3>
+                            <section className="space-y-3 pt-5 border-t border-[var(--color-paper-3)]">
+                                <h3 className={sectionTitle}>ระดับสต๊อก <span className="font-normal text-[var(--color-neutral)]">· นับเป็น {unitLabel(formData.pack_unit)}</span></h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     {[
                                         { key: 'current_quantity', label: 'คงเหลือตอนนี้', disabled: isEdit },
@@ -518,7 +518,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     ].map(f => (
                                         <div key={f.key}>
                                             <label className={labelCls} htmlFor={`stock-${f.key}`}>
-                                                {f.marker && <span className="inline-block w-1.5 h-1.5 mr-1.5 align-middle bg-[oklch(52%_0.16_28)]" aria-hidden="true" />}
+                                                {f.marker && <span className="inline-block w-1.5 h-1.5 mr-1.5 align-middle bg-[var(--brand-plum)]" aria-hidden="true" />}
                                                 {f.label}
                                             </label>
                                             <input
@@ -534,24 +534,24 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     ))}
                                 </div>
                                 {isEdit && (
-                                    <p className="text-xs text-[oklch(55%_0.010_28)] leading-relaxed">
+                                    <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
                                         แก้จำนวนคงเหลือได้จากปุ่มรับเข้า / เบิกออกที่หน้าสต๊อก เพื่อให้ประวัติถูกต้อง
                                     </p>
                                 )}
                             </section>
 
                             {/* Image */}
-                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                            <section className="space-y-3 pt-5 border-t border-[var(--color-paper-3)]">
                                 <h3 className={sectionTitle}>รูปวัตถุดิบ</h3>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-16 h-16 rounded-md overflow-hidden border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] shrink-0">
+                                    <div className="w-16 h-16 rounded-md overflow-hidden border border-[var(--color-rule)] bg-[var(--color-paper-2)] shrink-0">
                                         {formData.image_url ? (
                                             <img src={formData.image_url} className="w-full h-full object-cover" alt="" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-[11px] text-[oklch(55%_0.010_28)]">ไม่มีรูป</div>
+                                            <div className="w-full h-full flex items-center justify-center text-[11px] text-[var(--color-neutral)]">ไม่มีรูป</div>
                                         )}
                                     </div>
-                                    <label className={`h-11 px-4 inline-flex items-center rounded-md border border-dashed border-[oklch(78%_0.012_28)] text-sm ${ink} cursor-pointer hover:border-[oklch(18%_0.012_28)] transition-colors`}>
+                                    <label className={`h-11 px-4 inline-flex items-center rounded-md border border-dashed border-[oklch(78%_0.012_348.33)] text-sm ${ink} cursor-pointer hover:border-[var(--color-ink)] transition-colors`}>
                                         {formData.image_url ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
                                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                                     </label>
@@ -565,7 +565,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         <>
                             {/* A bottle used by the millilitre needs its size. Once the converter says it, there is nothing to warn about. */}
                             {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && !(Number(formData.conversion_factor) > 1) && (
-                                <div className="border-l-2 border-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] px-3 py-2.5">
+                                <div className="border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] px-3 py-2.5">
                                     <p className={`text-sm ${ink} leading-relaxed`}>
                                         หน่วยซื้อ ({unitLabel(formData.pack_unit)}) กับหน่วยใช้ ({unitLabel(formData.usage_unit)}) เป็นคนละประเภท ใส่ตัวแปลงหน่วยตามของจริง เช่น 1 ขวด = 750 มล.
                                     </p>
@@ -575,16 +575,16 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             {/* 1. Buying */}
                             <section className="space-y-3">
                                 <h3 className={sectionTitle}>1 · การซื้อ</h3>
-                                <label className="flex items-start gap-3 p-3 rounded-md border border-[oklch(85%_0.012_28)] cursor-pointer">
+                                <label className="flex items-start gap-3 p-3 rounded-md border border-[var(--color-rule)] cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        className="mt-0.5 w-4 h-4 accent-[oklch(18%_0.012_28)]"
+                                        className="mt-0.5 w-4 h-4 accent-[var(--color-ink)]"
                                         checked={formData.is_base_recipe}
                                         onChange={e => setFormData({ ...formData, is_base_recipe: e.target.checked })}
                                     />
                                     <span>
                                         <span className={`block text-sm font-medium ${ink}`}>ทำเองในร้าน (สูตรพื้นฐาน)</span>
-                                        <span className="block text-xs text-[oklch(55%_0.010_28)]">ผลิตจากวัตถุดิบอื่น เช่น ซอส พริกแกง</span>
+                                        <span className="block text-xs text-[var(--color-neutral)]">ผลิตจากวัตถุดิบอื่น เช่น ซอส พริกแกง</span>
                                     </span>
                                 </label>
                                 <div>
@@ -626,7 +626,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             </section>
 
                             {/* 2. Usage */}
-                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                            <section className="space-y-3 pt-5 border-t border-[var(--color-paper-3)]">
                                 <h3 className={sectionTitle}>2 · หน่วยที่ใช้ในสูตร</h3>
                                 <div>
                                     <label className={labelCls} htmlFor="stock-usage-unit">หน่วยที่ใช้จริง</label>
@@ -657,7 +657,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             </section>
 
                             {/* 3. Yield */}
-                            <section className="space-y-3 pt-5 border-t border-[oklch(90%_0.008_28)]">
+                            <section className="space-y-3 pt-5 border-t border-[var(--color-paper-3)]">
                                 <h3 className={sectionTitle}>3 · ส่วนที่ใช้ได้จริง (Yield)</h3>
                                 <div className="flex items-center gap-3">
                                     <input
@@ -667,7 +667,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         value={formData.yield_percent}
                                         onChange={numberChange('yield_percent')}
                                         className="flex-1"
-                                        style={{ accentColor: 'oklch(18% 0.012 28)' }}
+                                        style={{ accentColor: 'oklch(21.78% 0 0)' }}
                                     />
                                     <div className="flex items-center gap-1.5 w-24">
                                         <input
@@ -681,28 +681,28 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         <span className={unitSuffix}>%</span>
                                     </div>
                                 </div>
-                                <p className="text-xs text-[oklch(55%_0.010_28)] leading-relaxed">
+                                <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
                                     ต่ำกว่า 100% เมื่อมีส่วนที่ทิ้ง เช่น เปลือก กาก ต้นทุนต่อหน่วยจริงจะสูงขึ้น
                                 </p>
                                 {formData.yield_percent < 80 && (
-                                    <p className="text-sm text-[oklch(52%_0.16_28)]">
+                                    <p className="text-sm text-[var(--brand-plum)]">
                                         Yield ต่ำกว่า 80% ตรวจว่าสูญเสียมากขนาดนี้จริงหรือไม่
                                     </p>
                                 )}
                             </section>
 
                             {/* Sweetener: the sweetness option of a drink scales this ingredient */}
-                            <section className="pt-5 border-t border-[oklch(90%_0.008_28)]">
+                            <section className="pt-5 border-t border-[var(--color-paper-3)]">
                                 <label className="flex items-start gap-3 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        className="mt-0.5 w-4 h-4 accent-[oklch(18%_0.012_28)]"
+                                        className="mt-0.5 w-4 h-4 accent-[var(--color-ink)]"
                                         checked={formData.is_sweetener === true}
                                         onChange={e => setFormData({ ...formData, is_sweetener: e.target.checked })}
                                     />
                                     <span>
                                         <span className={`block text-sm font-medium ${ink}`}>สารให้ความหวาน</span>
-                                        <span className="block text-xs text-[oklch(55%_0.010_28)] leading-relaxed">
+                                        <span className="block text-xs text-[var(--color-neutral)] leading-relaxed">
                                             เช่น น้ำเชื่อม น้ำตาล นมข้นหวาน น้ำผึ้ง เมื่อลูกค้าเลือก "หวานน้อย" ระบบตัดสต๊อกรายการนี้ตามตัวคูณของตัวเลือก
                                         </span>
                                     </span>
@@ -710,10 +710,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             </section>
 
                             {/* Result: real cost per usage unit */}
-                            <div className="flex items-baseline justify-between gap-3 p-4 rounded-md bg-[oklch(94%_0.010_28)]">
+                            <div className="flex items-baseline justify-between gap-3 p-4 rounded-md bg-[var(--color-paper-2)]">
                                 <div>
-                                    <div className="text-xs text-[oklch(42%_0.010_28)]">ต้นทุนจริงต่อ 1 {unitLabel(formData.usage_unit)}</div>
-                                    <div className="text-xs text-[oklch(55%_0.010_28)]">ราคา ÷ (จำนวน × ตัวแปลง × yield)</div>
+                                    <div className="text-xs text-[var(--color-muted)]">ต้นทุนจริงต่อ 1 {unitLabel(formData.usage_unit)}</div>
+                                    <div className="text-xs text-[var(--color-neutral)]">ราคา ÷ (จำนวน × ตัวแปลง × yield)</div>
                                 </div>
                                 <div className={`text-2xl font-semibold tabular-nums ${ink}`}>
                                     ฿{realCost.toFixed(4)}
@@ -724,7 +724,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
                 </div>
 
-                <div className="px-5 py-4 border-t border-[oklch(85%_0.012_28)] flex items-center gap-3">
+                <div className="px-5 py-4 border-t border-[var(--color-rule)] flex items-center gap-3">
                     {isEdit && (
                         <button
                             type="button"
@@ -746,7 +746,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 }
                             }}
                             disabled={loading}
-                            className="h-12 px-4 text-sm font-semibold text-[oklch(52%_0.16_28)] hover:underline disabled:opacity-50"
+                            className="h-12 px-4 text-sm font-semibold text-[var(--brand-plum)] hover:underline disabled:opacity-50"
                         >
                             ลบ
                         </button>
@@ -755,7 +755,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         type="button"
                         onClick={handleSave}
                         disabled={loading}
-                        className="flex-1 h-12 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[15px] font-semibold hover:bg-[oklch(25%_0.012_28)] transition-colors disabled:opacity-60"
+                        className="flex-1 h-12 rounded-md bg-[var(--color-ink)] text-[var(--color-paper)] text-[15px] font-semibold hover:bg-[var(--color-ink)] transition-colors disabled:opacity-60"
                     >
                         {loading ? 'กำลังบันทึก…' : 'บันทึก'}
                     </button>

@@ -3478,7 +3478,7 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
         if (printerType === 'sunmi') {
             const qrToPrint = (slipType === 'billing') ? await resolveBillingQrCode(booking, config) : null;
             const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
-            const logoToPrint = (slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
+            const logoToPrint = (slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.shop_logo_url || storedLogo || `${window.location.origin}/logo-inbaan-print.png`) : null;
             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
             printed = true;
         } else if (printerType === 'rawbt') {

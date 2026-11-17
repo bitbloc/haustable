@@ -73,13 +73,13 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
         <div className="w-full flex flex-col gap-6 font-sans select-none">
             
             {/* 1. Courier & Tracking Hero Card */}
-            <div className="bg-[oklch(97%_0.008_28)] border-2 border-[oklch(18%_0.012_28)] p-5 sm:p-6 shadow-sm flex flex-col gap-4">
-                <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-ink)] p-5 sm:p-6 shadow-sm flex flex-col gap-4">
+                <div className="flex justify-between items-start border-b border-[var(--color-rule)] pb-3">
                     <div>
-                        <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest block">
+                        <span className="font-mono text-[10px] font-bold text-[var(--brand-plum)] uppercase tracking-widest block">
                             // PARCEL DELIVERY TRACKING
                         </span>
-                        <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                        <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-[var(--color-ink)]">
                             {courierName}
                         </h2>
                     </div>
@@ -93,7 +93,7 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
                         <span className={`px-2.5 py-1 text-[10px] font-mono font-bold uppercase border ${
                             status === 'shipped' || status === 'completed'
                                 ? 'bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
-                                : 'bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                : 'bg-[var(--brand-plum)]/15 text-[var(--brand-plum)] border-[var(--brand-plum)]'
                         }`}>
                             {status === 'shipped' ? '🚚 กำลังจัดส่ง' : status === 'completed' ? '✓ จัดส่งสำเร็จ' : `[ ${status.toUpperCase()} ]`}
                         </span>
@@ -101,17 +101,17 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
                 </div>
 
                 {/* Tracking Number Display Box */}
-                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     <div>
-                        <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase block">
+                        <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase block">
                             เลขพัสดุ (TRACKING NUMBER)
                         </span>
                         {trackingNumber ? (
-                            <span className="font-mono text-lg sm:text-xl font-bold text-[oklch(18%_0.012_28)] tracking-wider block mt-0.5 select-all">
+                            <span className="font-mono text-lg sm:text-xl font-bold text-[var(--color-ink)] tracking-wider block mt-0.5 select-all">
                                 {trackingNumber}
                             </span>
                         ) : (
-                            <span className="font-mono text-sm text-[oklch(55%_0.010_28)] italic block mt-0.5">
+                            <span className="font-mono text-sm text-[var(--color-neutral)] italic block mt-0.5">
                                 [ กำลังจัดเตรียมเลขพัสดุจากขนส่ง ]
                             </span>
                         )}
@@ -121,7 +121,7 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
                         {trackingNumber && (
                             <button
                                 onClick={handleCopyTracking}
-                                className="px-3.5 py-2 bg-white hover:bg-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:text-white font-mono text-xs font-bold uppercase border border-[oklch(85%_0.012_28)] transition-colors cursor-pointer shadow-2xs"
+                                className="px-3.5 py-2 bg-white hover:bg-[var(--color-ink)] text-[var(--color-ink)] hover:text-white font-mono text-xs font-bold uppercase border border-[var(--color-rule)] transition-colors cursor-pointer shadow-2xs"
                             >
                                 {copied ? '[ ✓ COPIED ]' : '[ 📋 คัดลอกเลข ]'}
                             </button>
@@ -132,7 +132,7 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
                                 href={courierUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase transition-colors flex items-center gap-1.5 shadow-2xs"
+                                className="px-4 py-2 bg-[var(--color-ink)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase transition-colors flex items-center gap-1.5 shadow-2xs"
                             >
                                 <span>เช็คสถานะกับ {courierName.split(' ')[0]} ➔</span>
                             </a>
@@ -142,12 +142,12 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
             </div>
 
             {/* 2. Timeline Progression */}
-            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-5 sm:p-6 flex flex-col gap-4">
-                <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-5 sm:p-6 flex flex-col gap-4">
+                <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                     [ FULFILLMENT TIMELINE // ขั้นตอนการจัดส่ง ]
                 </span>
 
-                <div className="relative flex flex-col gap-6 pl-3 border-l-2 border-[oklch(85%_0.012_28)] ml-2 my-2">
+                <div className="relative flex flex-col gap-6 pl-3 border-l-2 border-[var(--color-rule)] ml-2 my-2">
                     {stages.map((st, idx) => {
                         const isPast = idx < currentStepIdx
                         const isCurrent = idx === currentStepIdx
@@ -158,23 +158,23 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
                                 {/* Dot Indicator */}
                                 <div className={`absolute -left-[19px] top-0.5 w-3.5 h-3.5 rounded-full border-2 transition-all ${
                                     isCurrent
-                                        ? 'bg-[oklch(52%_0.16_28)] border-white ring-2 ring-[oklch(52%_0.16_28)] animate-pulse'
+                                        ? 'bg-[var(--brand-plum)] border-white ring-2 ring-[var(--brand-plum)] animate-pulse'
                                         : isPast
-                                            ? 'bg-[oklch(18%_0.012_28)] border-[oklch(18%_0.012_28)]'
-                                            : 'bg-white border-[oklch(85%_0.012_28)]'
+                                            ? 'bg-[var(--color-ink)] border-[var(--color-ink)]'
+                                            : 'bg-white border-[var(--color-rule)]'
                                 }`} />
 
                                 <div className="flex flex-col">
                                     <span className={`text-xs font-bold ${
                                         isCurrent
-                                            ? 'text-[oklch(52%_0.16_28)] font-bold text-sm'
+                                            ? 'text-[var(--brand-plum)] font-bold text-sm'
                                             : isPast
-                                                ? 'text-[oklch(18%_0.012_28)]'
-                                                : 'text-[oklch(55%_0.010_28)]'
+                                                ? 'text-[var(--color-ink)]'
+                                                : 'text-[var(--color-neutral)]'
                                     }`}>
                                         {st.title} {isCurrent && '(สถานะปัจจุบัน)'}
                                     </span>
-                                    <span className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">
+                                    <span className="text-[11px] text-[var(--color-muted)] mt-0.5">
                                         {st.desc}
                                     </span>
                                 </div>
@@ -187,33 +187,33 @@ export default function HausmadeShippingTracker({ data, settings = {} }) {
             {/* 3. Destination & Package Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
                 {/* Destination Address */}
-                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 flex flex-col gap-1.5">
+                    <span className="text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                         [ DESTINATION ADDRESS // ที่อยู่จัดส่ง ]
                     </span>
-                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">
+                    <span className="font-bold text-sm text-[var(--color-ink)]">
                         {data.pickup_contact_name || data.guest_name || 'ลูกค้า HAUSMADE'}
                     </span>
-                    <span className="text-[11px] text-[oklch(42%_0.010_28)]">
+                    <span className="text-[11px] text-[var(--color-muted)]">
                         TEL: {data.pickup_contact_phone || data.phone_number || '-'}
                     </span>
-                    <span className="text-[11px] leading-relaxed text-[oklch(18%_0.012_28)] font-sans font-medium mt-1">
+                    <span className="text-[11px] leading-relaxed text-[var(--color-ink)] font-sans font-medium mt-1">
                         {data.shipping_address || 'รับหน้าร้าน IN THE HAUS (นครพนม)'}
                     </span>
                 </div>
 
                 {/* Sender & Dispatch Info */}
-                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 flex flex-col gap-1.5">
+                    <span className="text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                         [ DISPATCHED FROM // ส่งตรงจาก ]
                     </span>
-                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">
+                    <span className="font-bold text-sm text-[var(--color-ink)]">
                         HAUSMADE BY IN THE HAUS
                     </span>
-                    <span className="text-[11px] text-[oklch(42%_0.010_28)]">
+                    <span className="text-[11px] text-[var(--color-muted)]">
                         ริมแม่น้ำโขง อำเภอเมือง จังหวัดนครพนม 48000
                     </span>
-                    <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold mt-1">
+                    <span className="text-[10px] text-[var(--brand-plum)] font-bold mt-1">
                         TEL: 098-528-4217 | LINE: @inthehaus
                     </span>
                 </div>

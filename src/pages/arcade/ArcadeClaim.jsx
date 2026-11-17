@@ -258,16 +258,16 @@ export default function ArcadeClaim() {
         }
 
         #arcade-claim-root {
-          --color-paper: oklch(97% 0.008 28);      /* Warm sand base */
-          --color-paper-2: oklch(94% 0.010 28);    /* Elevated surface */
-          --color-paper-3: oklch(91% 0.012 28);
-          --color-ink: oklch(18% 0.012 28);        /* Primary text */
-          --color-ink-2: oklch(35% 0.010 28);      /* Secondary text */
-          --color-neutral: oklch(55% 0.010 28);
-          --color-muted: oklch(42% 0.010 28);
-          --color-rule: oklch(85% 0.012 28);       /* Hairline dividers */
-          --color-brand: oklch(52% 0.16 28);       /* Terracotta Accent */
-          --color-accent: oklch(52% 0.16 28);
+          --color-paper: oklch(96.20% 0.0115 84.58);      /* Warm sand base */
+          --color-paper-2: oklch(92.60% 0.0095 352.37);    /* Elevated surface */
+          --color-paper-3: oklch(89.47% 0.0128 345.51);
+          --color-ink: oklch(21.78% 0 0);        /* Primary text */
+          --color-ink-2: oklch(35% 0.01 348.33);      /* Secondary text */
+          --color-neutral: oklch(48.01% 0.0120 345.78);
+          --color-muted: oklch(41.84% 0.0124 345.90);
+          --color-rule: oklch(85.05% 0.0113 348.48);       /* Hairline dividers */
+          --color-brand: oklch(25.18% 0.1001 348.33);       /* Terracotta Accent */
+          --color-accent: oklch(25.18% 0.1001 348.33);
           
           --font-display: 'Space Mono', monospace;
           --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;

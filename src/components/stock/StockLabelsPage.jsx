@@ -51,7 +51,7 @@ export default function StockLabelsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-sans">
+        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] font-sans">
             <style>{`
                 @media print {
                     @page { size: A4; margin: 8mm; }
@@ -62,27 +62,27 @@ export default function StockLabelsPage() {
             `}</style>
 
             <div className="labels-screen pb-24">
-                <header className="sticky top-0 z-20 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
-                    <div className="max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[oklch(85%_0.012_28)] border-x border-[oklch(85%_0.012_28)]">
+                <header className="sticky top-0 z-20 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
+                    <div className="max-w-3xl mx-auto grid grid-cols-[auto_1fr] divide-x divide-[var(--color-rule)] border-x border-[var(--color-rule)]">
                         <button type="button" onClick={() => navigate('/staff/stock/count')}
-                            className="px-4 font-bold text-[14px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                            className="px-4 font-bold text-[14px] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)] cursor-pointer">
                             กลับ
                         </button>
                         <div className="px-4 py-2.5">
                             <h1 className="font-bold text-xl leading-7">ป้าย QR สำหรับนับสต๊อก</h1>
-                            <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
+                            <p className="text-[12px] leading-5 text-[var(--color-muted)]">
                                 ของที่ไม่มีบาร์โค้ด พิมพ์ป้ายติดชั้นหรือกล่อง แล้วสแกนในหน้านับสต๊อกได้เหมือนบาร์โค้ด
                             </p>
                         </div>
                     </div>
                 </header>
 
-                <main className="max-w-3xl mx-auto border-x border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] min-h-[60vh]">
-                    <div className="p-3 border-b border-[oklch(85%_0.012_28)] space-y-2.5 bg-[oklch(98%_0.004_28)]">
+                <main className="max-w-3xl mx-auto border-x border-[var(--color-rule)] bg-[var(--color-paper)] min-h-[60vh]">
+                    <div className="p-3 border-b border-[var(--color-rule)] space-y-2.5 bg-[var(--color-paper)]">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            <label className="flex items-center gap-2 text-[14px] leading-5 text-[oklch(42%_0.010_28)] cursor-pointer select-none">
+                            <label className="flex items-center gap-2 text-[14px] leading-5 text-[var(--color-muted)] cursor-pointer select-none">
                                 <input type="checkbox" checked={onlyNoBarcode} onChange={e => setOnlyNoBarcode(e.target.checked)}
-                                    className="w-4 h-4 accent-[oklch(18%_0.012_28)]" />
+                                    className="w-4 h-4 accent-[var(--color-ink)]" />
                                 เฉพาะของที่ยังไม่มีบาร์โค้ด
                             </label>
                             <button type="button" onClick={toggleAllVisible} disabled={!visible.length}
@@ -92,36 +92,36 @@ export default function StockLabelsPage() {
                         </div>
                         <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาชื่อ..."
                             aria-label="ค้นหาชื่อวัตถุดิบ"
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[14px] outline-none focus:border-[oklch(18%_0.012_28)]" />
+                            className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[14px] outline-none focus:border-[var(--color-ink)]" />
                     </div>
 
                     {loading ? (
-                        <p className="p-6 text-[14px] text-[oklch(55%_0.010_28)]">กำลังโหลด...</p>
+                        <p className="p-6 text-[14px] text-[var(--color-neutral)]">กำลังโหลด...</p>
                     ) : (
-                        <ul className="divide-y divide-[oklch(90%_0.008_28)]">
+                        <ul className="divide-y divide-[var(--color-paper-3)]">
                             {visible.map(i => (
                                 <li key={i.id}>
-                                    <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-[oklch(98%_0.004_28)]">
+                                    <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-[var(--color-paper)]">
                                         <input type="checkbox" checked={picked.has(i.id)} onChange={() => toggle(i.id)}
-                                            className="w-5 h-5 shrink-0 accent-[oklch(18%_0.012_28)]" />
+                                            className="w-5 h-5 shrink-0 accent-[var(--color-ink)]" />
                                         <span className="font-bold text-base leading-6 min-w-0 break-words flex-1">{i.name}</span>
-                                        <span className="text-[12px] text-[oklch(55%_0.010_28)] shrink-0">{displayUnit(i.unit)}</span>
+                                        <span className="text-[12px] text-[var(--color-neutral)] shrink-0">{displayUnit(i.unit)}</span>
                                     </label>
                                 </li>
                             ))}
-                            {visible.length === 0 && <li className="p-6 text-[14px] text-[oklch(55%_0.010_28)]">ไม่พบรายการ</li>}
+                            {visible.length === 0 && <li className="p-6 text-[14px] text-[var(--color-neutral)]">ไม่พบรายการ</li>}
                         </ul>
                     )}
                 </main>
 
-                <footer className="fixed bottom-0 inset-x-0 z-20 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)]">
-                    <div className="max-w-3xl mx-auto grid grid-cols-[1fr_auto] items-center border-x border-[oklch(85%_0.012_28)]">
-                        <span className="px-4 text-[14px] leading-5 text-[oklch(42%_0.010_28)]">
-                            เลือก <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">{toPrint.length}</span> ป้าย
-                            <span className="block text-[12px] text-[oklch(55%_0.010_28)]">A4 หน้าละ 24 ป้าย (3 × 8)</span>
+                <footer className="fixed bottom-0 inset-x-0 z-20 bg-[var(--color-paper)] border-t border-[var(--color-rule)]">
+                    <div className="max-w-3xl mx-auto grid grid-cols-[1fr_auto] items-center border-x border-[var(--color-rule)]">
+                        <span className="px-4 text-[14px] leading-5 text-[var(--color-muted)]">
+                            เลือก <span className="tabular-nums font-bold text-[var(--color-ink)]">{toPrint.length}</span> ป้าย
+                            <span className="block text-[12px] text-[var(--color-neutral)]">A4 หน้าละ 24 ป้าย (3 × 8)</span>
                         </span>
                         <button type="button" onClick={() => window.print()} disabled={!toPrint.length}
-                            className="px-6 py-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-base hover:bg-[oklch(25%_0.012_28)] disabled:opacity-40 cursor-pointer">
+                            className="px-6 py-4 bg-[var(--color-ink)] text-[var(--color-paper)] font-bold text-base hover:bg-[var(--color-ink)] disabled:opacity-40 cursor-pointer">
                             พิมพ์ป้าย / บันทึก PDF
                         </button>
                     </div>

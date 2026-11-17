@@ -333,7 +333,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
                             const qrToPrint = (activeTab === 'billing') ? (qrCodeUrl || loadedConfig.paymentQrUrl) : null;
-                            const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
+                            const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo-inbaan-print.png`) : null;
                             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                         }
                     }
@@ -1109,7 +1109,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 } else {
                     const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                     if (rawBytes) {
-                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (receiptConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
+                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (receiptConfig.shopLogoUrl || `${window.location.origin}/logo-inbaan-print.png`) : null;
                         const qrToPrint = (activeTab === 'billing') ? (qrCodeUrl || receiptConfig.paymentQrUrl) : null;
                         await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     } else {
@@ -1365,82 +1365,82 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 md:p-6 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[92vh]">
+            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-rule)] rounded-xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[92vh]">
                 
                 {/* Header */}
-                <div className="p-3.5 px-4 bg-white border-b border-[oklch(85%_0.012_28)] flex justify-between items-center text-[oklch(18%_0.012_28)]">
+                <div className="p-3.5 px-4 bg-white border-b border-[var(--color-rule)] flex justify-between items-center text-[var(--color-ink)]">
                     <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs uppercase tracking-widest text-[oklch(18%_0.012_28)]">
+                        <span className="font-mono font-bold text-xs uppercase tracking-widest text-[var(--color-ink)]">
                             {isAdmin ? 'สลิปใบเสร็จ / BILL & RECEIPT' : 'Ticket Preview'}
                         </span>
-                        <span className="font-mono text-[11px] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] px-1.5 py-0.5 rounded-sm">
+                        <span className="font-mono text-[11px] bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-muted)] px-1.5 py-0.5 rounded-sm">
                             #{queueNo}
                         </span>
                     </div>
                     <button 
                         type="button"
                         onClick={onClose} 
-                        className="p-1 rounded-sm hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-black transition-colors cursor-pointer"
+                        className="p-1 rounded-sm hover:bg-[var(--color-paper-3)] text-[var(--color-muted)] hover:text-black transition-colors cursor-pointer"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
                 {/* Tabs Switcher */}
-                <div className="p-3 pb-0 bg-[oklch(97%_0.008_28)]">
+                <div className="p-3 pb-0 bg-[var(--color-paper)]">
                     {isAdmin ? (
                         /* Admin Mode: 2 clean tabs only (Bill vs Receipt) */
-                        <div className="grid grid-cols-2 bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] p-1 rounded-lg gap-1">
+                        <div className="grid grid-cols-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1 rounded-lg gap-1">
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('billing')} 
-                                className={`py-2 rounded-md font-sans font-bold text-xs transition-all cursor-pointer ${activeTab === 'billing' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)]' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`py-2 rounded-md font-sans font-bold text-xs transition-all cursor-pointer ${activeTab === 'billing' ? 'bg-white text-[var(--color-ink)] shadow-xs border border-[var(--color-rule)]' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 ใบแจ้งยอด (Bill & QR)
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('receipt')} 
-                                className={`py-2 rounded-md font-sans font-bold text-xs transition-all cursor-pointer ${activeTab === 'receipt' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)]' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`py-2 rounded-md font-sans font-bold text-xs transition-all cursor-pointer ${activeTab === 'receipt' ? 'bg-white text-[var(--color-ink)] shadow-xs border border-[var(--color-rule)]' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 ใบเสร็จรับเงิน (Receipt)
                             </button>
                         </div>
                     ) : (
                         /* POS / Staff Mode: All tabs */
-                        <div className="flex bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] p-1 rounded-lg gap-1 overflow-x-auto">
+                        <div className="flex bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1 rounded-lg gap-1 overflow-x-auto">
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('kitchen')} 
-                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'kitchen' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'kitchen' ? 'bg-white text-[var(--color-ink)] shadow-xs' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 ครัว (Kitchen)
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('bar')} 
-                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'bar' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'bar' ? 'bg-white text-[var(--color-ink)] shadow-xs' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 บาร์ (Bar)
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('other')} 
-                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'other' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'other' ? 'bg-white text-[var(--color-ink)] shadow-xs' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 อื่นๆ (Other)
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('billing')} 
-                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'billing' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'billing' ? 'bg-white text-[var(--color-ink)] shadow-xs' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 แจ้งยอด (Bill)
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('receipt')} 
-                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'receipt' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'receipt' ? 'bg-white text-[var(--color-ink)] shadow-xs' : 'text-[var(--color-muted)] hover:text-black'}`}
                             >
                                 ใบเสร็จ (Receipt)
                             </button>
@@ -1449,29 +1449,29 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                     {/* Payment Method Selector (Only for Billing / Receipt tabs) */}
                     {(activeTab === 'billing' || activeTab === 'receipt') && (
-                        <div className="flex items-center justify-between bg-white border border-[oklch(85%_0.012_28)] p-2 px-3 rounded-lg mt-2.5">
-                            <span className="text-[11px] font-sans font-bold text-[oklch(42%_0.010_28)]">
+                        <div className="flex items-center justify-between bg-white border border-[var(--color-rule)] p-2 px-3 rounded-lg mt-2.5">
+                            <span className="text-[11px] font-sans font-bold text-[var(--color-muted)]">
                                 ช่องทางชำระเงิน:
                             </span>
                             <div className="flex gap-1">
                                 <button 
                                     type="button"
                                     onClick={() => setPaymentMethod('qr')}
-                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'qr' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'}`}
+                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'qr' ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] hover:bg-[var(--color-paper-3)]'}`}
                                 >
                                     โอนเงิน (QR)
                                 </button>
                                 <button 
                                     type="button"
                                     onClick={() => setPaymentMethod('cash')}
-                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'cash' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'}`}
+                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'cash' ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] hover:bg-[var(--color-paper-3)]'}`}
                                 >
                                     เงินสด (CASH)
                                 </button>
                                 <button 
                                     type="button"
                                     onClick={() => setPaymentMethod('credit')}
-                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'credit' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'}`}
+                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'credit' ? 'bg-[var(--color-ink)] text-white' : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] hover:bg-[var(--color-paper-3)]'}`}
                                 >
                                     บัตร (CREDIT)
                                 </button>
@@ -1481,36 +1481,36 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 </div>
 
                 {/* Preview Window (Dieter Rams + Thai Modern) */}
-                <div className="flex-1 overflow-y-auto py-4 px-3 md:px-4 bg-[oklch(93%_0.010_28)] flex justify-center items-start mt-2.5 border-t border-b border-[oklch(85%_0.012_28)]">
+                <div className="flex-1 overflow-y-auto py-4 px-3 md:px-4 bg-[var(--color-paper-2)] flex justify-center items-start mt-2.5 border-t border-b border-[var(--color-rule)]">
                     <div 
                         ref={slipRef} 
-                        className="bg-white text-[oklch(18%_0.012_28)] p-6 rounded-md border border-[oklch(85%_0.012_28)] shadow-md w-full max-w-[340px] font-sans select-none space-y-4 my-1"
+                        className="bg-white text-[var(--color-ink)] p-6 rounded-md border border-[var(--color-rule)] shadow-md w-full max-w-[340px] font-sans select-none space-y-4 my-1"
                     >
                         {/* BRAND HEADER */}
                         {!isKitchenTab && (
-                            <div className="text-center space-y-1 pb-3 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="text-center space-y-1 pb-3 border-b border-[var(--color-rule)]">
                                 <div className="flex justify-center mb-1.5">
                                     <img 
-                                        src={receiptShopLogoUrl || '/receipt-logo.png'} 
+                                        src={receiptShopLogoUrl || '/logo-inbaan-print.png'} 
                                         alt="Logo" 
                                         className="h-10 w-auto object-contain" 
                                         onError={(e) => {
-                                            if (e.target.src !== `${window.location.origin}/receipt-logo.png`) {
-                                                e.target.src = '/receipt-logo.png';
+                                            if (e.target.src !== `${window.location.origin}/logo-inbaan-print.png`) {
+                                                e.target.src = '/logo-inbaan-print.png';
                                             }
                                         }}
                                     />
                                 </div>
-                                <div className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                <div className="font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
                                     {receiptShopName || 'IN THE HAUS'}
                                 </div>
                                 {receiptShopAddress && (
-                                    <div className="text-[10px] text-[oklch(55%_0.010_28)] leading-tight max-w-[260px] mx-auto">
+                                    <div className="text-[10px] text-[var(--color-neutral)] leading-tight max-w-[260px] mx-auto">
                                         {receiptShopAddress}
                                     </div>
                                 )}
                                 {(receiptShopPhone || receiptShopVat) && (
-                                    <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                    <div className="text-[9px] font-mono text-[var(--color-neutral)]">
                                         {receiptShopPhone && <span>TEL: {receiptShopPhone} </span>}
                                         {receiptShopVat && <span>| TAX ID: {receiptShopVat}</span>}
                                     </div>
@@ -1520,27 +1520,27 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                         {/* DOCUMENT TITLE & ORDER TYPE BADGE */}
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs font-mono font-bold border-b border-[oklch(88%_0.010_28)] pb-1.5">
-                                <span className="uppercase text-[oklch(42%_0.010_28)]">
+                            <div className="flex items-center justify-between text-xs font-mono font-bold border-b border-[var(--color-paper-3)] pb-1.5">
+                                <span className="uppercase text-[var(--color-muted)]">
                                     {activeTab === 'kitchen' ? 'ใบสั่งครัว (KITCHEN)' : activeTab === 'bar' ? 'ใบสั่งบาร์ (BAR)' : activeTab === 'other' ? 'ใบสั่งอื่นๆ (OTHER)' : activeTab === 'billing' ? 'ใบแจ้งยอดชำระเงิน / BILL' : 'ใบเสร็จรับเงิน / RECEIPT'}
                                 </span>
-                                <span className="text-[oklch(18%_0.012_28)]">
+                                <span className="text-[var(--color-ink)]">
                                     #{queueNo}
                                 </span>
                             </div>
 
                             {/* Table / Order Channel Banner (Clean Dieter Rams Structural Block) */}
-                            <div className="bg-[oklch(96%_0.008_28)] border border-[oklch(88%_0.010_28)] p-2.5 rounded-sm flex items-center justify-between">
+                            <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-2.5 rounded-sm flex items-center justify-between">
                                 <div>
-                                    <span className="text-[9px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block leading-none">
+                                    <span className="text-[9px] font-mono font-bold text-[var(--color-neutral)] uppercase block leading-none">
                                         {booking.tables_layout ? 'TABLE / โต๊ะ' : 'ORDER TYPE / ประเภท'}
                                     </span>
                                     <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
-                                        <span className="text-xl font-black text-[oklch(18%_0.012_28)] leading-tight">
+                                        <span className="text-xl font-black text-[var(--color-ink)] leading-tight">
                                             {booking.tables_layout?.table_name || (isPickupOrder ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน')}
                                         </span>
                                         {transfer.isMergedSource && (
-                                            <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold rounded-xs">
+                                            <span className="px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] text-[9px] font-mono font-bold rounded-xs">
                                                 โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                             </span>
                                         )}
@@ -1558,15 +1558,15 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 </div>
                                 {!isPickupOrder && (
                                     <div className="text-right font-mono text-xs">
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PAX / จำนวน</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">{booking.pax || 1} ท่าน</span>
+                                        <span className="text-[10px] text-[var(--color-neutral)] block">PAX / จำนวน</span>
+                                        <span className="font-bold text-[var(--color-ink)]">{booking.pax || 1} ท่าน</span>
                                     </div>
                                 )}
                             </div>
 
                             {/* Table Transfer Banner Strip */}
                             {transfer.isMergedSource && (
-                                <div className="bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] p-2.5 rounded-sm text-[10px] font-mono font-bold space-y-0.5">
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--brand-plum)] text-[var(--brand-plum)] p-2.5 rounded-sm text-[10px] font-mono font-bold space-y-0.5">
                                     <div>[MERGED] โต๊ะรวม: โอนรายการทั้งหมดไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</div>
                                     {transfer.originalTotal > 0 && <div>ยอดเงินเดิมก่อนรวมบิล: ฿{transfer.originalTotal.toLocaleString()}</div>}
                                 </div>
@@ -1579,32 +1579,32 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         </div>
 
                         {/* Order Metadata Grid */}
-                        <div className="grid grid-cols-2 gap-y-1 text-[11px] border-b border-[oklch(88%_0.010_28)] pb-2.5 font-mono">
-                            <span className="text-[oklch(55%_0.010_28)]">
+                        <div className="grid grid-cols-2 gap-y-1 text-[11px] border-b border-[var(--color-paper-3)] pb-2.5 font-mono">
+                            <span className="text-[var(--color-neutral)]">
                                 {isPickupOrder ? 'เวลาที่สั่ง:' : (isOnlineBooking ? 'เวลาทำรายการ:' : 'วันที่ & เวลา:')}
                             </span>
-                            <span className="text-right text-[oklch(18%_0.012_28)] font-semibold">{orderPlacedStr}</span>
+                            <span className="text-right text-[var(--color-ink)] font-semibold">{orderPlacedStr}</span>
 
                             {((isPickupOrder && pickupDisplayStr) || (isOnlineBooking && pickupDisplayStr)) && (
                                 <>
-                                    <span className="text-[oklch(55%_0.010_28)]">
+                                    <span className="text-[var(--color-neutral)]">
                                         {isPickupOrder ? 'วันเวลาที่มารับ:' : 'วันเวลาที่จอง:'}
                                     </span>
-                                    <span className="text-right text-[oklch(52%_0.16_28)] font-bold">
+                                    <span className="text-right text-[var(--brand-plum)] font-bold">
                                         {pickupDisplayStr}
                                     </span>
                                 </>
                             )}
 
-                            <span className="text-[oklch(55%_0.010_28)]">ลูกค้า:</span>
-                            <span className="text-right text-[oklch(18%_0.012_28)] font-semibold truncate">
+                            <span className="text-[var(--color-neutral)]">ลูกค้า:</span>
+                            <span className="text-right text-[var(--color-ink)] font-semibold truncate">
                                 {booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป'}
                             </span>
 
                             {(booking.profiles?.phone_number || booking.pickup_contact_phone) && (
                                 <>
-                                    <span className="text-[oklch(55%_0.010_28)]">โทรศัพท์:</span>
-                                    <span className="text-right text-[oklch(18%_0.012_28)] font-semibold">
+                                    <span className="text-[var(--color-neutral)]">โทรศัพท์:</span>
+                                    <span className="text-right text-[var(--color-ink)] font-semibold">
                                         {booking.profiles?.phone_number || booking.pickup_contact_phone}
                                     </span>
                                 </>
@@ -1613,7 +1613,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                         {/* ORDER ITEMS LIST */}
                         <div className="space-y-2.5">
-                            <div className="flex justify-between items-center text-[10px] font-mono font-bold uppercase text-[oklch(55%_0.010_28)] border-b border-[oklch(88%_0.010_28)] pb-1">
+                            <div className="flex justify-between items-center text-[10px] font-mono font-bold uppercase text-[var(--color-neutral)] border-b border-[var(--color-paper-3)] pb-1">
                                 <span>รายการอาหาร (ITEMS)</span>
                                 {!isKitchenTab && <span>จำนวนเงิน</span>}
                             </div>
@@ -1629,18 +1629,18 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                     const displayName = isKitchenTab ? cleanKitchenItemName(rawName) : rawName
 
                                     return (
-                                        <div key={idx} className="text-xs space-y-0.5 border-b border-[oklch(93%_0.008_28)] last:border-0 pb-1.5 last:pb-0">
+                                        <div key={idx} className="text-xs space-y-0.5 border-b border-[var(--color-paper-2)] last:border-0 pb-1.5 last:pb-0">
                                             <div className="flex justify-between items-start gap-2">
                                                 <div className="flex items-baseline gap-1.5 grow">
-                                                    <span className="font-mono font-black text-xs text-[oklch(18%_0.012_28)] shrink-0">
+                                                    <span className="font-mono font-black text-xs text-[var(--color-ink)] shrink-0">
                                                         {item.quantity}x
                                                     </span>
-                                                    <span className="font-bold text-[oklch(18%_0.012_28)] leading-snug">
+                                                    <span className="font-bold text-[var(--color-ink)] leading-snug">
                                                         {displayName}
                                                     </span>
                                                 </div>
                                                 {!isKitchenTab && (
-                                                    <span className="font-mono text-right shrink-0 text-[oklch(18%_0.012_28)] font-medium">
+                                                    <span className="font-mono text-right shrink-0 text-[var(--color-ink)] font-medium">
                                                         ฿{lineTotal.toLocaleString()}
                                                     </span>
                                                 )}
@@ -1649,7 +1649,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                             {optList.length > 0 && (
                                                 <div className="pl-5 space-y-0.5">
                                                     {optList.map((opt, oIdx) => (
-                                                        <div key={oIdx} className="text-[10px] text-[oklch(45%_0.010_28)] font-sans leading-tight">
+                                                        <div key={oIdx} className="text-[10px] text-[var(--color-muted)] font-sans leading-tight">
                                                             {isKitchenTab ? '- ' : '• '}{opt}
                                                         </div>
                                                     ))}
@@ -1663,8 +1663,8 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                         {/* TOTALS SUMMARY */}
                         {!isKitchenTab && (
-                            <div className="border-t-2 border-[oklch(18%_0.012_28)] pt-2.5 space-y-1.5 font-mono text-xs">
-                                <div className="flex justify-between text-[oklch(55%_0.010_28)]">
+                            <div className="border-t-2 border-[var(--color-ink)] pt-2.5 space-y-1.5 font-mono text-xs">
+                                <div className="flex justify-between text-[var(--color-neutral)]">
                                     <span>รวมค่าอาหาร (SUBTOTAL):</span>
                                     <span>฿{subtotal.toLocaleString()}</span>
                                 </div>
@@ -1683,7 +1683,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                     </div>
                                 )}
 
-                                <div className="flex justify-between items-baseline pt-2 border-t border-[oklch(88%_0.010_28)] text-[oklch(18%_0.012_28)]">
+                                <div className="flex justify-between items-baseline pt-2 border-t border-[var(--color-paper-3)] text-[var(--color-ink)]">
                                     <span className="font-bold text-xs uppercase">
                                         ยอดสุทธิ (TOTAL AMOUNT):
                                     </span>
@@ -1696,8 +1696,8 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 {activeTab === 'billing' && (
                                     <div className={`p-2 rounded-sm border text-center font-mono mt-2 ${
                                         depositAmount > 0 
-                                            ? 'bg-[oklch(96%_0.02_28)] border border-[oklch(75%_0.08_28)] text-[oklch(40%_0.14_28)]' 
-                                            : 'bg-[oklch(96%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(40%_0.16_28)]'
+                                            ? 'bg-[var(--color-paper)] border border-[oklch(75%_0.08_348.33)] text-[var(--brand-plum)]' 
+                                            : 'bg-[var(--color-paper)] border-2 border-[var(--brand-plum)] text-[var(--brand-plum)]'
                                     }`}>
                                         {depositAmount > 0 ? (
                                             <div className="space-y-0.5">
@@ -1718,8 +1718,8 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                         {/* CRM MEMBER DETAILS */}
                         {!isKitchenTab && booking.profiles && (
-                            <div className="bg-[oklch(96%_0.008_28)] p-2.5 rounded-sm border border-[oklch(88%_0.010_28)] text-[11px] font-mono space-y-1">
-                                <div className="flex justify-between font-bold text-[oklch(42%_0.010_28)] text-[10px] uppercase border-b border-[oklch(88%_0.010_28)] pb-0.5">
+                            <div className="bg-[var(--color-paper)] p-2.5 rounded-sm border border-[var(--color-paper-3)] text-[11px] font-mono space-y-1">
+                                <div className="flex justify-between font-bold text-[var(--color-muted)] text-[10px] uppercase border-b border-[var(--color-paper-3)] pb-0.5">
                                     <span>MEMBER</span>
                                     <span>{booking.profiles.display_name || '-'}</span>
                                 </div>
@@ -1730,7 +1730,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                     </div>
                                 )}
                                 {Number(booking.xhaus_redeemed) > 0 && (
-                                    <div className="flex justify-between text-[oklch(52%_0.16_28)]">
+                                    <div className="flex justify-between text-[var(--brand-plum)]">
                                         <span>ใช้แต้ม xhaus:</span>
                                         <span>-{Number(booking.xhaus_redeemed).toLocaleString()} xhaus</span>
                                     </div>
@@ -1740,18 +1740,18 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                         {/* BILL TAB: DYNAMIC PROMPTPAY QR CODE */}
                         {activeTab === 'billing' && qrCodeUrl && (
-                            <div className="pt-2 border-t border-[oklch(88%_0.010_28)] text-center space-y-1.5 flex flex-col items-center">
-                                <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[oklch(42%_0.010_28)]">
+                            <div className="pt-2 border-t border-[var(--color-paper-3)] text-center space-y-1.5 flex flex-col items-center">
+                                <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[var(--color-muted)]">
                                     SCAN TO PAY / สแกนชำระเงิน
                                 </span>
-                                <div className="p-2 bg-white rounded-lg border border-[oklch(85%_0.012_28)] shadow-xs">
+                                <div className="p-2 bg-white rounded-lg border border-[var(--color-rule)] shadow-xs">
                                     <img 
                                         src={qrCodeUrl} 
                                         alt="PromptPay QR" 
                                         className="w-36 h-36 object-contain" 
                                     />
                                 </div>
-                                <span className="text-[9px] text-[oklch(55%_0.010_28)] font-mono">
+                                <span className="text-[9px] text-[var(--color-neutral)] font-mono">
                                     IN THE HAUS PROMPTPAY
                                 </span>
                             </div>
@@ -1767,24 +1767,24 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 : (paymentMethod === 'credit' ? 'บัตรเครดิต (CREDIT)' : 'โอนเงินผ่าน QR (PROMPTPAY)');
 
                             return (
-                                <div className="pt-2 border-t border-[oklch(88%_0.010_28)] space-y-2">
-                                    <div className="bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2.5 rounded-sm space-y-1 font-mono text-xs">
-                                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-[oklch(42%_0.010_28)]">
+                                <div className="pt-2 border-t border-[var(--color-paper-3)] space-y-2">
+                                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-sm space-y-1 font-mono text-xs">
+                                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-[var(--color-muted)]">
                                             <span>สถานะการชำระ:</span>
                                             <span className="text-[oklch(45%_0.08_140)] font-black">PAID / ชำระแล้ว</span>
                                         </div>
-                                        <div className="flex justify-between items-center pt-1 border-t border-[oklch(90%_0.008_28)]">
-                                            <span className="text-[oklch(55%_0.010_28)]">ช่องทางชำระ:</span>
-                                            <span className="font-bold text-[oklch(18%_0.012_28)]">{paymentLabel}</span>
+                                        <div className="flex justify-between items-center pt-1 border-t border-[var(--color-paper-3)]">
+                                            <span className="text-[var(--color-neutral)]">ช่องทางชำระ:</span>
+                                            <span className="font-bold text-[var(--color-ink)]">{paymentLabel}</span>
                                         </div>
 
                                         {isCash && cashDetails && cashDetails.received > 0 && (
-                                            <div className="pt-1 border-t border-[oklch(90%_0.008_28)] space-y-0.5 text-[11px]">
-                                                <div className="flex justify-between text-[oklch(55%_0.010_28)]">
+                                            <div className="pt-1 border-t border-[var(--color-paper-3)] space-y-0.5 text-[11px]">
+                                                <div className="flex justify-between text-[var(--color-neutral)]">
                                                     <span>รับเงินสดมา:</span>
                                                     <span className="font-bold">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between font-bold text-[oklch(18%_0.012_28)]">
+                                                <div className="flex justify-between font-bold text-[var(--color-ink)]">
                                                     <span>เงินทอน:</span>
                                                     <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
                                                 </div>
@@ -1801,12 +1801,12 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             const cleanStaff = getCleanStaffRemark(booking.staff_remark);
                             if (!cleanCust && !cleanStaff) return null;
                             return (
-                                <div className="bg-[oklch(96%_0.008_28)] border border-[oklch(88%_0.010_28)] p-2.5 rounded-sm font-sans text-xs space-y-1">
-                                    <div className="text-[10px] font-mono font-bold uppercase text-[oklch(42%_0.010_28)]">
+                                <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-2.5 rounded-sm font-sans text-xs space-y-1">
+                                    <div className="text-[10px] font-mono font-bold uppercase text-[var(--color-muted)]">
                                         หมายเหตุ (NOTES)
                                     </div>
-                                    {cleanCust && <div className="text-[oklch(18%_0.012_28)]"><strong>ลูกค้า:</strong> {cleanCust}</div>}
-                                    {cleanStaff && <div className="text-[oklch(42%_0.010_28)]"><strong>พนักงาน:</strong> {cleanStaff}</div>}
+                                    {cleanCust && <div className="text-[var(--color-ink)]"><strong>ลูกค้า:</strong> {cleanCust}</div>}
+                                    {cleanStaff && <div className="text-[var(--color-muted)]"><strong>พนักงาน:</strong> {cleanStaff}</div>}
                                 </div>
                             );
                         })()}
@@ -1834,19 +1834,19 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 const paxCount = booking.pax || booking.guest_count || 1;
 
                                 return (
-                                    <div className="border-t-2 border-b-2 border-[oklch(18%_0.012_28)] bg-[oklch(96%_0.008_28)] p-4 sm:p-5 text-center rounded-sm space-y-1.5 mt-2">
-                                        <div className="text-3xl sm:text-4xl font-black text-[oklch(18%_0.012_28)] tracking-tight leading-tight uppercase font-mono py-1">
+                                    <div className="border-t-2 border-b-2 border-[var(--color-ink)] bg-[var(--color-paper)] p-4 sm:p-5 text-center rounded-sm space-y-1.5 mt-2">
+                                        <div className="text-3xl sm:text-4xl font-black text-[var(--color-ink)] tracking-tight leading-tight uppercase font-mono py-1">
                                             {footerTableTitle}
                                         </div>
-                                        <div className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                        <div className="text-xs font-mono font-bold text-[var(--color-muted)] uppercase tracking-wider">
                                             [ {slipLabel} ] {timeOnlyStr} | {totalItemsCount} ชิ้น{!isPickupOrder ? ` | ${paxCount} ท่าน` : ''}
                                         </div>
                                     </div>
                                 );
                             })()
                         ) : (
-                            <div className="text-center pt-2 border-t border-[oklch(88%_0.010_28)] space-y-1">
-                                <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                            <div className="text-center pt-2 border-t border-[var(--color-paper-3)] space-y-1">
+                                <div className="text-[10px] font-mono font-bold text-[var(--color-muted)] uppercase tracking-wider">
                                     {receiptShopFooter || 'THANK YOU FOR YOUR VISIT // ขอบคุณที่ใช้บริการ'}
                                 </div>
                             </div>
@@ -1855,14 +1855,14 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 </div>
 
                 {/* Actions Bar */}
-                <div className="p-3 md:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex items-center justify-between gap-2.5">
+                <div className="p-3 md:p-4 bg-white border-t border-[var(--color-rule)] flex items-center justify-between gap-2.5">
                     {isAdmin ? (
                         /* Admin Mode: Copy Image to Clipboard as Primary CTA, Save PNG as Secondary */
                         <>
                             <button 
                                 type="button"
                                 onClick={handleCopyImage} 
-                                className="flex-1 py-2.5 px-4 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" 
+                                className="flex-1 py-2.5 px-4 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-white rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" 
                                 title="คัดลอกรูปลง Clipboard เพื่อส่งเข้า LINE ให้ลูกค้าทันที"
                             >
                                 {copiedImage ? <Check size={15} className="text-emerald-300" /> : <Copy size={15} />}
@@ -1873,7 +1873,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 type="button"
                                 onClick={handleSaveImage} 
                                 disabled={saving}
-                                className="py-2.5 px-4 bg-[oklch(95%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="py-2.5 px-4 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                                 <Download size={15} />
                                 <span>{saving ? 'กำลังบันทึก...' : 'SAVE PNG'}</span>
@@ -1882,7 +1882,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             <button 
                                 type="button"
                                 onClick={onClose}
-                                className="py-2.5 px-3 bg-white hover:bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-sans text-xs font-semibold transition-colors cursor-pointer"
+                                className="py-2.5 px-3 bg-white hover:bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)] rounded-lg font-sans text-xs font-semibold transition-colors cursor-pointer"
                             >
                                 ปิด
                             </button>
@@ -1894,14 +1894,14 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 type="button"
                                 onClick={handlePrint} 
                                 disabled={isPrinting} 
-                                className={`flex-1 ${isPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white cursor-pointer'} py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}
+                                className={`flex-1 ${isPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-white cursor-pointer'} py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}
                             >
                                 <PrinterIcon size={14} /> {isPrinting ? 'Printing...' : 'Print Ticket'}
                             </button>
                             <button 
                                 type="button"
                                 onClick={handleCopyImage} 
-                                className="px-3 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(95%_0.008_28)] py-2.5 rounded-lg font-mono font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" 
+                                className="px-3 bg-white border border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] py-2.5 rounded-lg font-mono font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" 
                                 title="คัดลอกรูปลง Clipboard"
                             >
                                 {copiedImage ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
@@ -1909,7 +1909,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             <button 
                                 type="button"
                                 onClick={handleSaveImage} 
-                                className="px-3 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(95%_0.008_28)] py-2.5 rounded-lg font-mono font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" 
+                                className="px-3 bg-white border border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] py-2.5 rounded-lg font-mono font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" 
                                 disabled={saving}
                             >
                                 <Download size={14} />

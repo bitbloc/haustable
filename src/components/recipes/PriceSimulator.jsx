@@ -36,15 +36,15 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
     ].filter((v, i, a) => a.findIndex(x => x.value === v.value) === i);
 
     return (
-        <div className="bg-[oklch(99%_0.004_28)] border-t border-[oklch(85%_0.012_28)] overflow-hidden font-sans">
+        <div className="bg-[var(--color-paper)] border-t border-[var(--color-rule)] overflow-hidden font-sans">
             {/* Header Bar — Clickable toggle */}
             <button 
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full p-3 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] flex justify-between items-center gap-2 hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer select-none tabular-nums text-xs"
+                className="w-full p-3 bg-[var(--color-paper-2)] text-[var(--color-ink)] flex justify-between items-center gap-2 hover:bg-[var(--color-paper-3)] transition-colors cursor-pointer select-none tabular-nums text-xs"
             >
                 <div className="flex items-center gap-2">
-                    <span className="font-medium text-[oklch(18%_0.012_28)] text-[13px]">
+                    <span className="font-medium text-[var(--color-ink)] text-[13px]">
                         จำลองราคาขายและกำไรขั้นต้น
                     </span>
                 </div>
@@ -63,14 +63,14 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                                 costPercent <= 30 
                                     ? 'bg-[oklch(94%_0.04_150)] text-[oklch(32%_0.08_150)]' 
                                     : costPercent <= 35 
-                                        ? 'bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)]' 
+                                        ? 'bg-[var(--color-paper-3)] text-[var(--color-ink)]' 
                                         : 'bg-[oklch(95%_0.04_80)] text-[oklch(38%_0.08_60)]'
                             }`}>
                                 ต้นทุน {costPercent.toFixed(1)}%
                             </span>
                         </div>
                     )}
-                    <span className="text-[oklch(55%_0.010_28)] font-bold text-xs">
+                    <span className="text-[var(--color-neutral)] font-bold text-xs">
                         {isExpanded ? 'ย่อ ▲' : 'ขยาย ▼'}
                     </span>
                 </div>
@@ -78,15 +78,15 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
 
             {/* Collapsible Body */}
             {isExpanded && (
-                <div className="p-4 bg-[oklch(98%_0.004_28)] border-t border-[oklch(85%_0.012_28)] space-y-4 tabular-nums">
+                <div className="p-4 bg-[var(--color-paper)] border-t border-[var(--color-rule)] space-y-4 tabular-nums">
                     
                     {/* 1. Dynamic Slider (Target Food Cost %) */}
-                    <div className="bg-[oklch(99%_0.004_28)] p-3 border border-[oklch(85%_0.012_28)] rounded-xs space-y-2">
+                    <div className="bg-[var(--color-paper)] p-3 border border-[var(--color-rule)] rounded-xs space-y-2">
                         <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-[oklch(42%_0.010_28)] text-xs">
+                            <span className="font-bold text-[var(--color-muted)] text-xs">
                                 TARGET FOOD COST (เป้าหมายสัดส่วนต้นทุน)
                             </span>
-                            <span className="font-bold text-[oklch(52%_0.16_28)] text-sm">
+                            <span className="font-bold text-[var(--brand-plum)] text-sm">
                                 {targetPercent}%
                             </span>
                         </div>
@@ -102,13 +102,13 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                                     const val = e.target.value;
                                     setTargetPercent(val === '' ? 0 : parseFloat(val));
                                 }}
-                                className="w-full accent-[oklch(52%_0.16_28)] h-1.5 bg-[oklch(90%_0.012_28)] rounded-none appearance-none cursor-pointer"
+                                className="w-full accent-[var(--brand-plum)] h-1.5 bg-[var(--color-paper-3)] rounded-none appearance-none cursor-pointer"
                             />
                         </div>
 
                         {/* Suggested price quick-set buttons */}
-                        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[oklch(90%_0.008_28)] text-xs">
-                            <span className="text-xs text-[oklch(55%_0.010_28)]">
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[var(--color-paper-3)] text-xs">
+                            <span className="text-xs text-[var(--color-neutral)]">
                                 ราคาแนะนำตามเป้าหมาย:
                             </span>
                             <div className="flex gap-1.5">
@@ -119,8 +119,8 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                                         onClick={() => handleSetPrice(qp.value)}
                                         className={`px-2 py-0.5 border text-xs font-bold transition-colors cursor-pointer ${
                                             sellingPrice === qp.value 
-                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' 
-                                                : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' 
+                                                : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-muted)] hover:border-[var(--color-ink)]'
                                         }`}
                                     >
                                         {qp.label} <span className="text-xs opacity-70">({qp.sub})</span>
@@ -133,16 +133,16 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                     {/* 2. Manual Selling Price Input & Financial Metrics Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {/* Selling Price Input */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-3 rounded-xs">
-                            <label className="block text-xs font-bold text-[oklch(55%_0.010_28)] mb-1">
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-3 rounded-xs">
+                            <label className="block text-xs font-bold text-[var(--color-neutral)] mb-1">
                                 ราคาขายจริง (SELLING PRICE)
                             </label>
                             <div className="flex items-center">
-                                <span className="text-sm font-bold text-[oklch(42%_0.010_28)] mr-1">฿</span>
+                                <span className="text-sm font-bold text-[var(--color-muted)] mr-1">฿</span>
                                 <input 
                                     type="number"
                                     inputMode="numeric"
-                                    className="w-full text-base text-[oklch(18%_0.012_28)] bg-transparent outline-none tabular-nums"
+                                    className="w-full text-base text-[var(--color-ink)] bg-transparent outline-none tabular-nums"
                                     value={sellingPrice || ''}
                                     placeholder="0"
                                     onChange={(e) => handleSetPrice(e.target.value)}
@@ -169,7 +169,7 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                             costPercent <= 30 
                                 ? 'border-[oklch(85%_0.05_150)] bg-[oklch(96%_0.03_150)] text-[oklch(30%_0.08_150)]' 
                                 : costPercent <= 35 
-                                    ? 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)]' 
+                                    ? 'border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)]' 
                                     : 'border-[oklch(88%_0.06_80)] bg-[oklch(96%_0.03_80)] text-[oklch(35%_0.08_60)]'
                         }`}>
                             <div className="text-xs font-bold opacity-70">
@@ -184,17 +184,17 @@ export default function PriceSimulator({ totalCost, price, onPriceChange, initia
                     {/* 3. Cost Breakdown Visual Bar */}
                     {hasPriceSet && (
                         <div className="space-y-1 text-xs">
-                            <div className="flex justify-between text-xs text-[oklch(55%_0.010_28)]">
+                            <div className="flex justify-between text-xs text-[var(--color-neutral)]">
                                 <span>ต้นทุน: ฿{totalCost.toFixed(2)}</span>
                                 <span>ราคาขาย: ฿{sellingPrice}</span>
                             </div>
-                            <div className="w-full h-2 bg-[oklch(90%_0.012_28)] overflow-hidden">
+                            <div className="w-full h-2 bg-[var(--color-paper-3)] overflow-hidden">
                                 <div 
                                     className={`h-full transition-all duration-300 ${
                                         costPercent <= 30 
                                             ? 'bg-[oklch(45%_0.08_140)]' 
                                             : costPercent <= 35 
-                                                ? 'bg-[oklch(52%_0.16_28)]' 
+                                                ? 'bg-[var(--brand-plum)]' 
                                                 : 'bg-[oklch(60%_0.12_70)]'
                                     }`}
                                     style={{ width: `${Math.min(costPercent, 100)}%` }}

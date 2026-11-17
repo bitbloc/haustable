@@ -157,14 +157,14 @@ export default function OwnerPosBroadcastBar() {
     }
 
     return (
-        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(88%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3.5 font-sans">
+        <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] rounded-2xl p-4 md:p-5 space-y-3.5 font-sans">
             {/* Title */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[oklch(88%_0.012_28)]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--color-paper-3)]">
                 <div>
-                    <h3 className="text-sm font-semibold text-[oklch(18%_0.012_28)] tracking-tight">
+                    <h3 className="text-sm font-semibold text-[var(--color-ink)] tracking-tight">
                         ส่งข้อความประกาศถึงหน้าจอ POS
                     </h3>
-                    <p className="text-[13px] text-[oklch(50%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                         แสดงการแจ้งเตือนบนหน้าจอ POS ทุกเครื่องของพนักงานทันทีแบบเรียลไทม์
                     </p>
                 </div>
@@ -178,7 +178,7 @@ export default function OwnerPosBroadcastBar() {
                         <button
                             type="button"
                             onClick={handleClearBroadcast}
-                            className="px-2.5 py-0.5 bg-[oklch(94%_0.02_28)] hover:bg-[oklch(90%_0.03_28)] text-[oklch(45%_0.15_28)] border border-[oklch(85%_0.04_28)] rounded-full font-medium transition-colors cursor-pointer"
+                            className="px-2.5 py-0.5 bg-[var(--color-paper-2)] hover:bg-[oklch(90%_0.03_348.33)] text-[var(--brand-plum)] border border-[oklch(85%_0.04_348.33)] rounded-full font-medium transition-colors cursor-pointer"
                             title="ลบประกาศออกจากหน้าจอ POS"
                         >
                             ล้างประกาศ
@@ -189,16 +189,16 @@ export default function OwnerPosBroadcastBar() {
 
             {/* Active Announcement Preview */}
             {activeBroadcast && (
-                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs">
+                <div className="bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2 truncate">
-                        <span className="font-medium text-[oklch(52%_0.16_28)] shrink-0">
+                        <span className="font-medium text-[var(--brand-plum)] shrink-0">
                             ประกาศล่าสุด:
                         </span>
-                        <span className="font-semibold text-[oklch(18%_0.012_28)] truncate">
+                        <span className="font-semibold text-[var(--color-ink)] truncate">
                             &ldquo;{activeBroadcast.text}&rdquo;
                         </span>
                     </div>
-                    <span className=" text-xs text-[oklch(50%_0.010_28)] shrink-0 tabular-nums">
+                    <span className=" text-xs text-[var(--color-neutral)] shrink-0 tabular-nums">
                         {activeBroadcast.timestamp ? new Date(activeBroadcast.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                 </div>
@@ -217,13 +217,13 @@ export default function OwnerPosBroadcastBar() {
                             handleSendBroadcast()
                         }
                     }}
-                    className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(86%_0.012_28)] rounded-xl px-3.5 py-2.5 text-xs text-[oklch(18%_0.012_28)] placeholder:text-[oklch(60%_0.010_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus:outline-none focus:border-[var(--brand-plum)]"
                 />
                 <button
                     type="button"
                     onClick={() => handleSendBroadcast()}
                     disabled={sending || !message.trim()}
-                    className="w-full sm:w-auto px-4 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] disabled:opacity-45 text-[oklch(97%_0.008_28)] rounded-xl font-medium flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer whitespace-nowrap"
+                    className="w-full sm:w-auto px-4 py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] disabled:opacity-45 text-[var(--color-paper)] rounded-xl font-medium flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer whitespace-nowrap"
                 >
                     <span>{sending ? 'กำลังส่ง...' : 'ส่งถึง POS'}</span>
                     {!sending && <span aria-hidden="true">&rarr;</span>}
@@ -232,7 +232,7 @@ export default function OwnerPosBroadcastBar() {
 
             {/* Quick Preset Chips */}
             <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                <span className="text-[oklch(50%_0.010_28)] font-medium mr-0.5">ข้อความด่วน:</span>
+                <span className="text-[var(--color-neutral)] font-medium mr-0.5">ข้อความด่วน:</span>
                 {QUICK_CHIPS.map((chip, idx) => (
                     <button
                         key={idx}
@@ -241,7 +241,7 @@ export default function OwnerPosBroadcastBar() {
                             setMessage(chip)
                             handleSendBroadcast(chip)
                         }}
-                        className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(88%_0.012_28)] text-[oklch(28%_0.012_28)] rounded-full font-medium transition-colors cursor-pointer"
+                        className="px-2.5 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[oklch(28%_0.012_348.33)] rounded-full font-medium transition-colors cursor-pointer"
                     >
                         + {chip}
                     </button>

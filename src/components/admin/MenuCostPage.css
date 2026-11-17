@@ -4,9 +4,9 @@
  * with cream text and a cream count chip. The chosen chip in the category strip is the same ink.
  */
 :root {
-  --mc-charcoal: oklch(18% 0.012 28);
-  --mc-on-charcoal: oklch(97% 0.008 28);
-  --mc-on-charcoal-2: oklch(80% 0.010 28);
+  --mc-charcoal: var(--color-ink);
+  --mc-on-charcoal: var(--color-paper);
+  --mc-on-charcoal-2: oklch(80% 0.01 348.33);
 }
 
 .mc-band { background: var(--mc-charcoal); color: var(--mc-on-charcoal); }

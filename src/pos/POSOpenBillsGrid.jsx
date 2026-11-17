@@ -238,7 +238,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
                     <div className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex flex-col justify-between shadow-xs">
                         <div className="text-[10px] text-[#767673] font-bold uppercase tracking-wider">OUTSTANDING / ยอดรอเคลียร์</div>
-                        <div className="text-xl font-bold text-[oklch(52%_0.16_28)] mt-1 flex items-baseline justify-between">
+                        <div className="text-xl font-bold text-[var(--brand-plum)] mt-1 flex items-baseline justify-between">
                             <span>฿{totalUnclearedAmount.toLocaleString()}</span>
                             <span className="text-[10px] font-normal text-[#767673]">THB total</span>
                         </div>
@@ -300,7 +300,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                             <button 
                                 type="button"
                                 onClick={() => setStatusMode('merged')}
-                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer flex items-center gap-1 ${statusMode === 'merged' ? 'bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] shadow-xs font-black' : 'text-[oklch(52%_0.16_28)] hover:text-[var(--color-ink)] font-bold'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer flex items-center gap-1 ${statusMode === 'merged' ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] shadow-xs font-black' : 'text-[var(--brand-plum)] hover:text-[var(--color-ink)] font-bold'}`}
                             >
                                 MERGED ({mergedOrders.length})
                             </button>
@@ -423,7 +423,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     onClick={() => onSelectOrder && onSelectOrder(order)}
                                     className={`border rounded-2xl p-4 transition-[border-color,box-shadow] duration-150 shadow-xs flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer ${
                                         isMerged
-                                        ? 'bg-[oklch(99%_0.008_28)] border-[oklch(52%_0.16_28)]/50 hover:border-[oklch(52%_0.16_28)]'
+                                        ? 'bg-[var(--color-paper)] border-[var(--brand-plum)]/50 hover:border-[var(--brand-plum)]'
                                         : isVoid 
                                             ? 'bg-red-50/50 border-red-200 hover:border-red-400 opacity-90' 
                                             : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
@@ -433,7 +433,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     <div className="flex items-center justify-between pb-2 border-b border-[var(--color-rule)]">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {isMerged ? (
-                                                <span className="bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                <span className="bg-[var(--brand-plum)] text-[var(--color-paper)] font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
                                                     รวมโต๊ะ ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                 </span>
                                             ) : isVoid ? (
@@ -459,7 +459,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                     )}
                                                 </span>
                                             ) : catType === 'takeaway' ? (
-                                                <span className="bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                <span className="bg-[var(--brand-plum)] text-[var(--color-paper)] font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
                                                     ออเดอร์กลับบ้าน
                                                 </span>
                                             ) : catType === 'online_pickup' ? (
@@ -497,7 +497,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 </span>
                                             )}
 
-                                            <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-1.5 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20">
+                                            <span className="font-mono text-[10px] font-bold text-[var(--brand-plum)] bg-[var(--brand-plum)]/10 px-1.5 py-0.5 rounded border border-[var(--brand-plum)]/20">
                                                 #{getShortBookingId(order)}
                                             </span>
 
@@ -520,7 +520,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             <span className="truncate">{customerName}</span>
                                         </div>
                                         {isMerged ? (
-                                            <p className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] truncate">
+                                            <p className="text-[10px] font-mono font-bold text-[var(--brand-plum)] truncate">
                                                 ➔ รวมรายการเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                             </p>
                                         ) : transfer.cleanRemark ? (
@@ -533,7 +533,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     {/* Items Preview */}
                                     <div className="bg-[#F5F5F2] border border-[#E0E0DC] rounded-xl p-2.5 text-[11px] space-y-1 font-sans min-h-16 flex flex-col justify-center">
                                         {isMerged ? (
-                                            <span className="text-[10px] font-mono text-[oklch(52%_0.16_28)] text-center font-bold">
+                                            <span className="text-[10px] font-mono text-[var(--brand-plum)] text-center font-bold">
                                                 โอนรายการอาหารไปที่ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                             </span>
                                         ) : items.length === 0 ? (
@@ -565,12 +565,12 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                         </span>
                                         <span className={`text-sm font-mono font-bold ${
                                             isMerged 
-                                            ? 'text-[oklch(52%_0.16_28)]' 
+                                            ? 'text-[var(--brand-plum)]' 
                                             : isVoid 
                                                 ? 'text-red-600 line-through' 
                                                 : orderIsPaid
                                                     ? 'text-emerald-700'
-                                                    : 'text-[oklch(52%_0.16_28)]'
+                                                    : 'text-[var(--brand-plum)]'
                                         }`}>
                                             {isMerged ? `฿0 (โอนไป ${transfer.targetTableDisplay || transfer.mergedToTable})` : `฿${totalAmount.toLocaleString()}${orderIsPaid ? ' (ชำระแล้ว)' : ''}`}
                                         </span>
@@ -612,7 +612,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             }}
                                             className={`w-full py-1.5 rounded-lg transition-[background-color,transform] duration-150 flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate ${
                                                 isMerged
-                                                ? 'bg-[oklch(92%_0.02_28)] hover:bg-[oklch(88%_0.03_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-bold'
+                                                ? 'bg-[var(--color-paper-2)] hover:bg-[oklch(88%_0.03_348.33)] border border-[var(--brand-plum)] text-[var(--brand-plum)] font-bold'
                                                 : isVoid 
                                                     ? 'bg-red-100 hover:bg-red-200 border border-red-300 text-red-800' 
                                                     : 'bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)]'

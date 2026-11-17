@@ -88,14 +88,14 @@ export default function StaffAuthLayout() {
 
     if (authStatus === 'error') {
         return (
-            <div className="min-h-screen bg-[oklch(97%_0.008_28)] flex items-center justify-center p-6">
+            <div className="min-h-screen bg-[var(--color-paper)] flex items-center justify-center p-6">
                 <div className="max-w-sm space-y-3 text-center">
-                    <h1 className="text-lg font-semibold text-[oklch(18%_0.012_28)]">เชื่อมต่อไม่สำเร็จ</h1>
-                    <p className="text-sm leading-6 text-[oklch(42%_0.010_28)]">ตรวจสิทธิ์พนักงานไม่ได้ในตอนนี้ อาจเป็นเพราะอินเทอร์เน็ตหรือเซิร์ฟเวอร์ช้า คุณยังล็อกอินอยู่</p>
+                    <h1 className="text-lg font-semibold text-[var(--color-ink)]">เชื่อมต่อไม่สำเร็จ</h1>
+                    <p className="text-sm leading-6 text-[var(--color-muted)]">ตรวจสิทธิ์พนักงานไม่ได้ในตอนนี้ อาจเป็นเพราะอินเทอร์เน็ตหรือเซิร์ฟเวอร์ช้า คุณยังล็อกอินอยู่</p>
                     <button
                         type="button"
                         onClick={() => { setAuthStatus('loading'); checkUser(); }}
-                        className="h-10 px-4 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-medium cursor-pointer"
+                        className="h-10 px-4 rounded-lg bg-[var(--color-ink)] text-[var(--color-paper)] text-sm font-medium cursor-pointer"
                     >
                         ลองอีกครั้ง
                     </button>

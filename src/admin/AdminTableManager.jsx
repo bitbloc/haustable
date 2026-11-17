@@ -112,7 +112,7 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
                 title="Floor & Tables"
                 description="สถานะโต๊ะสด การจัดที่นั่ง ผังร้าน และ QR ประจำโต๊ะ"
                 meta={metrics.pendingCalls > 0 ? (
-                    <span className="text-[oklch(52%_0.16_28)] font-medium">{metrics.pendingCalls} โต๊ะกำลังเรียกพนักงาน</span>
+                    <span className="text-[var(--brand-plum)] font-medium">{metrics.pendingCalls} โต๊ะกำลังเรียกพนักงาน</span>
                 ) : null}
             >
                 <AdminTabs
@@ -137,7 +137,7 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
             />
 
             {/* Tab Body */}
-            <div className="flex-1 bg-[oklch(98%_0.006_28)] rounded-sm border border-[oklch(85%_0.012_28)] overflow-hidden">
+            <div className="flex-1 bg-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] overflow-hidden">
                 <AdminTabPanel id={activeTab}>
                     {activeTab === 'live' ? (
                         <TableManager isStaffView={false} />

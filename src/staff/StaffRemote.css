@@ -26,8 +26,8 @@
 
   --sr-lime:        oklch(89% 0.2 122);
   --sr-lime-press:  oklch(84% 0.2 122);
-  --sr-warn-bg:     oklch(95% 0.03 28);
-  --sr-warn-ink:    oklch(40% 0.13 28);
+  --sr-warn-bg:     oklch(95% 0.03 348.33);
+  --sr-warn-ink:    var(--brand-plum);
 
   /* The shared option sheet reads the site's global tokens: map them onto this palette while it is open here. */
   --color-paper:   var(--sd-card);

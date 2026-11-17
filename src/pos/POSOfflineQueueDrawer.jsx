@@ -78,19 +78,19 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
 
     return (
         <div className="fixed inset-0 z-50 bg-black/60 flex justify-end font-sans select-none animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] flex flex-col h-full shadow-2xl text-[oklch(18%_0.012_28)]">
+            <div className="w-full max-w-md bg-[var(--color-paper)] border-l border-[var(--color-rule)] flex flex-col h-full shadow-2xl text-[var(--color-ink)]">
                 
                 {/* Drawer Header */}
-                <div className="p-5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center justify-between">
+                <div className="p-5 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/20 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] border border-[var(--brand-plum)]/20 flex items-center justify-center">
                             <Database size={16} />
                         </div>
                         <div>
-                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
                                 OFFLINE QUEUE INSPECTOR
                             </h2>
-                            <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">
+                            <p className="text-[10px] text-[var(--color-neutral)] font-mono">
                                 รายการค้างในเครื่อง ({queue.length} รายการ)
                             </p>
                         </div>
@@ -98,14 +98,14 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                     
                     <button 
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-white border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                        className="w-8 h-8 rounded-full bg-white border border-[var(--color-rule)] flex items-center justify-center text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                     >
                         <X size={16} />
                     </button>
                 </div>
 
                 {/* Queue Summary Status Banner */}
-                <div className="p-4 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                <div className="p-4 bg-[var(--color-paper)] border-b border-[var(--color-rule)] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${isOnline() ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
                         <span className="text-xs font-mono font-bold uppercase tracking-wide">
@@ -128,7 +128,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-sans transition-all cursor-pointer shadow-sm ${
                                 isSyncing || queue.length === 0
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
-                                : 'bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] active:scale-95'
+                                : 'bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] active:scale-95'
                             }`}
                         >
                             <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
@@ -141,9 +141,9 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {/* Dead Letter Queue (DLQ) Section */}
                     {dlq.length > 0 && (
-                        <div className="bg-[oklch(94%_0.010_28)] border-2 border-[oklch(52%_0.16_28)] rounded-xl p-3.5 space-y-3">
+                        <div className="bg-[var(--color-paper-2)] border-2 border-[var(--brand-plum)] rounded-xl p-3.5 space-y-3">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)]">
+                                <div className="flex items-center gap-2 text-[var(--brand-plum)]">
                                     <AlertCircle size={16} />
                                     <span className="text-xs font-mono font-bold uppercase tracking-wider">
                                         DLQ · ค้างตรวจสอบ ({dlq.length} รายการ)
@@ -156,19 +156,19 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                                             refreshQueue();
                                         }
                                     }}
-                                    className="text-[9px] font-mono text-[oklch(52%_0.16_28)] hover:underline uppercase tracking-wider cursor-pointer"
+                                    className="text-[9px] font-mono text-[var(--brand-plum)] hover:underline uppercase tracking-wider cursor-pointer"
                                 >
                                     CLEAR DLQ
                                 </button>
                             </div>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)] font-sans">
+                            <p className="text-[10px] text-[var(--color-muted)] font-sans">
                                 รายการเหล่านี้ติดปัญหาขัดข้องขณะส่งข้อมูล ข้อมูลยังคงถูกเก็บรักษาไว้ในเครื่องและไม่สูญหาย กดลองใหม่เพื่อส่งอีกครั้ง
                             </p>
                             <div className="space-y-2">
                                 {dlq.map((dlqItem, idx) => (
-                                    <div key={dlqItem.id || idx} className="bg-white border border-[oklch(52%_0.16_28)]/30 rounded-lg p-2.5 flex flex-col gap-1.5 text-xs font-mono">
+                                    <div key={dlqItem.id || idx} className="bg-white border border-[var(--brand-plum)]/30 rounded-lg p-2.5 flex flex-col gap-1.5 text-xs font-mono">
                                         <div className="flex items-center justify-between">
-                                            <span className="font-bold text-[oklch(52%_0.16_28)] uppercase text-[10px]">
+                                            <span className="font-bold text-[var(--brand-plum)] uppercase text-[10px]">
                                                 {dlqItem.type}
                                             </span>
                                             <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                                                         retryDeadLetterAction(dlqItem.id);
                                                         refreshQueue();
                                                     }}
-                                                    className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white text-[9px] font-bold uppercase rounded cursor-pointer hover:opacity-90"
+                                                    className="px-2 py-0.5 bg-[var(--brand-plum)] text-white text-[9px] font-bold uppercase rounded cursor-pointer hover:opacity-90"
                                                 >
                                                     RETRY / ลองใหม่
                                                 </button>
@@ -192,7 +192,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="text-[10px] text-[oklch(52%_0.16_28)] truncate font-mono">
+                                        <div className="text-[10px] text-[var(--brand-plum)] truncate font-mono">
                                             สาเหตุ: {dlqItem.failureReason || 'ไม่ทราบสาเหตุ'}
                                         </div>
                                     </div>
@@ -204,10 +204,10 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                     {queue.length === 0 && dlq.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8">
                             <CheckCircle2 size={40} className="text-emerald-500 mb-3 opacity-80" strokeWidth={1.5} />
-                            <p className="text-xs font-mono font-bold uppercase tracking-widest text-[oklch(18%_0.012_28)]">
+                            <p className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--color-ink)]">
                                 ทุกรายการเชื่อมโยงครบถ้วน
                             </p>
-                            <p className="text-[10px] text-[oklch(55%_0.010_28)] font-sans mt-1">
+                            <p className="text-[10px] text-[var(--color-neutral)] font-sans mt-1">
                                 ไม่มีรายการค้างในเครื่องขณะนี้ ข้อมูลทั้งหมดถูกส่งไปยังระบบเซิร์ฟเวอร์แล้ว
                             </p>
                         </div>
@@ -219,11 +219,11 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                             return (
                                 <div 
                                     key={item.id || index}
-                                    className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xs flex flex-col gap-2 relative group hover:border-[oklch(52%_0.16_28)] transition-all"
+                                    className="bg-white border border-[var(--color-rule)] rounded-xl p-3.5 shadow-xs flex flex-col gap-2 relative group hover:border-[var(--brand-plum)] transition-all"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-mono font-bold text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-1.5 py-0.5 rounded">
+                                            <span className="text-[9px] font-mono font-bold text-[var(--color-neutral)] bg-[var(--color-paper-2)] px-1.5 py-0.5 rounded">
                                                 #{index + 1}
                                             </span>
                                             <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${badge.bg}`}>
@@ -232,7 +232,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] flex items-center gap-1">
+                                            <span className="text-[9px] font-mono text-[var(--color-neutral)] flex items-center gap-1">
                                                 <Clock size={10} />
                                                 {timeStr}
                                             </span>
@@ -247,7 +247,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                                     </div>
 
                                     {/* Action Details Summary */}
-                                    <div className="text-xs font-mono text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)] p-2 rounded border border-[oklch(85%_0.012_28)] overflow-x-auto text-[10px]">
+                                    <div className="text-xs font-mono text-[var(--color-ink)] bg-[var(--color-paper)] p-2 rounded border border-[var(--color-rule)] overflow-x-auto text-[10px]">
                                         {item.payload?.tableId && <div>Table ID: {item.payload.tableId}</div>}
                                         {item.payload?.bookingId && <div>Booking ID: {item.payload.bookingId}</div>}
                                         {item.payload?.totalAmount !== undefined && <div>Amount: ฿{item.payload.totalAmount?.toLocaleString()}</div>}
@@ -262,7 +262,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                 </div>
 
                 {/* Footer Notice */}
-                <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[9px] font-mono text-[oklch(55%_0.010_28)] text-center uppercase tracking-wider">
+                <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[9px] font-mono text-[var(--color-neutral)] text-center uppercase tracking-wider">
                     ONHAUS STANDALONE POS SYSTEM © AUTOMATIC SYNC ACTIVE
                 </div>
 

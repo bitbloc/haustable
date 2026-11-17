@@ -131,7 +131,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                                 </span>
                                                             )}
                                                             {Number(order.xhaus_redeemed || 0) > 0 && (
-                                                                <span className="text-[oklch(40%_0.15_25)] bg-[oklch(52%_0.16_28)]/15 px-1.5 py-0.5 border border-[oklch(52%_0.16_28)]/30">
+                                                                <span className="text-[oklch(40%_0.15_25)] bg-[var(--brand-plum)]/15 px-1.5 py-0.5 border border-[var(--brand-plum)]/30">
                                                                     -{Number(order.xhaus_redeemed)} xhaus
                                                                 </span>
                                                             )}

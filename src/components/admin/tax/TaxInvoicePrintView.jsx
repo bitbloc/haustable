@@ -382,9 +382,9 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             `}</style>
 
             {/* Top Toolbar (Non-printable) */}
-            <div className="w-full max-w-[794px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 sm:px-6 py-2.5 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-3 print:hidden gap-2.5 shadow-2xl shrink-0">
+            <div className="w-full max-w-[794px] bg-[var(--color-ink)] text-[var(--color-paper)] px-3.5 sm:px-6 py-2.5 border border-[var(--color-rule)] flex flex-wrap items-center justify-between font-mono text-xs mb-3 print:hidden gap-2.5 shadow-2xl shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider text-[10.5px] sm:text-[11px]">
+                    <span className="font-bold text-[var(--brand-plum)] uppercase tracking-wider text-[10.5px] sm:text-[11px]">
                         [ {isVat ? 'FULL TAX INVOICE' : 'OFFICIAL RECEIPT'} ]
                     </span>
                     <span className="text-zinc-400 font-mono text-[10.5px] sm:text-[11px]">
@@ -398,14 +398,14 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         <button
                             type="button"
                             onClick={() => setActiveCopyType('original')}
-                            className={`px-2 py-1 font-mono transition-colors cursor-pointer ${activeCopyType === 'original' ? 'bg-[oklch(52%_0.16_28)] text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-2 py-1 font-mono transition-colors cursor-pointer ${activeCopyType === 'original' ? 'bg-[var(--brand-plum)] text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
                         >
                             ต้นฉบับ
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveCopyType('copy')}
-                            className={`px-2 py-1 font-mono transition-colors cursor-pointer ${activeCopyType === 'copy' ? 'bg-[oklch(52%_0.16_28)] text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
+                            className={`px-2 py-1 font-mono transition-colors cursor-pointer ${activeCopyType === 'copy' ? 'bg-[var(--brand-plum)] text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
                         >
                             สำเนา
                         </button>
@@ -554,13 +554,13 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                             {/* In The Haus Logo */}
                                             <div className="shrink-0 pt-0.5">
                                                 <img 
-                                                    src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
+                                                    src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo-inbaan-wordmark-charcoal.png'} 
                                                     alt="IN THE HAUS" 
                                                     className="w-16 h-16 object-contain object-left-top shrink-0"
                                                     crossOrigin="anonymous"
                                                     onError={(e) => {
-                                                        if (e.target.src !== `${window.location.origin}/logo.png`) {
-                                                            e.target.src = '/logo.png';
+                                                        if (e.target.src !== `${window.location.origin}/logo-inbaan-wordmark-charcoal.png`) {
+                                                            e.target.src = '/logo-inbaan-wordmark-charcoal.png';
                                                         }
                                                     }}
                                                 />
@@ -850,11 +850,11 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             {/* SEND EMAIL MODAL */}
             {showEmailModal && (
                 <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 font-sans text-xs">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-2xl rounded-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] shadow-2xl rounded-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh]">
                         {/* Modal Header */}
-                        <div className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-5 py-3.5 flex items-center justify-between border-b border-[oklch(85%_0.012_28)]">
+                        <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-5 py-3.5 flex items-center justify-between border-b border-[var(--color-rule)]">
                             <div className="flex items-center gap-2.5">
-                                <div className="p-1.5 bg-[oklch(52%_0.16_28)] text-white rounded">
+                                <div className="p-1.5 bg-[var(--brand-plum)] text-white rounded">
                                     <Mail size={15} />
                                 </div>
                                 <div>
@@ -876,9 +876,9 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto bg-[oklch(97%_0.008_28)]">
+                        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto bg-[var(--color-paper)]">
                             {/* 1. PDF Attachment Status Card */}
-                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                            <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="p-2.5 bg-red-100 text-red-700 rounded-lg shrink-0 border border-red-200">
                                         <FileText size={20} />
@@ -888,11 +888,11 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                             <span className="font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 bg-red-700 text-white rounded">
                                                 PDF DOCUMENT
                                             </span>
-                                            <span className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] truncate">
+                                            <span className="font-mono font-bold text-xs text-[var(--color-ink)] truncate">
                                                 {pdfFileName}
                                             </span>
                                         </div>
-                                        <p className="text-[10px] text-[oklch(42%_0.010_28)] mt-0.5 font-mono">
+                                        <p className="text-[10px] text-[var(--color-muted)] mt-0.5 font-mono">
                                             A4 Portrait • ความละเอียดสูง • พร้อมหัวบิลและลายเซ็นดิจิทัล
                                         </p>
                                     </div>
@@ -902,7 +902,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                     type="button"
                                     onClick={handleSaveOrSharePdf}
                                     disabled={isGeneratingPdf}
-                                    className="w-full sm:w-auto px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-50 text-[oklch(97%_0.008_28)] rounded-lg font-mono font-bold text-[11px] flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                                    className="w-full sm:w-auto px-3.5 py-2 bg-[var(--color-ink)] hover:bg-black disabled:opacity-50 text-[var(--color-paper)] rounded-lg font-mono font-bold text-[11px] flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer"
                                 >
                                     {isGeneratingPdf ? (
                                         <>
@@ -921,7 +921,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                             {/* 2. Customer Email & Subject Inputs */}
                             <div className="grid grid-cols-1 gap-3">
                                 <div>
-                                    <label className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    <label className="font-mono font-bold text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                         อีเมลผู้รับ (Customer Email Address) *
                                     </label>
                                     <input
@@ -929,20 +929,20 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                         value={recipientEmail}
                                         onChange={(e) => setRecipientEmail(e.target.value)}
                                         placeholder="client@company.com หรือ customer@gmail.com"
-                                        className="w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus:outline-none"
+                                        className="w-full px-3 py-2 bg-white border border-[var(--color-rule)] rounded-lg text-xs font-mono text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus:outline-none"
                                         autoFocus
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    <label className="font-mono font-bold text-[10px] text-[var(--color-muted)] uppercase block mb-1">
                                         หัวข้ออีเมล (Subject)
                                     </label>
                                     <input
                                         type="text"
                                         value={emailSubject}
                                         onChange={(e) => setEmailSubject(e.target.value)}
-                                        className="w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus:outline-none"
+                                        className="w-full px-3 py-2 bg-white border border-[var(--color-rule)] rounded-lg text-xs font-semibold text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus:outline-none"
                                     />
                                 </div>
                             </div>
@@ -950,7 +950,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                             {/* 3. Professional Email Message Preview */}
                             <div>
                                 <div className="flex items-center justify-between mb-1">
-                                    <label className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase">
+                                    <label className="font-mono font-bold text-[10px] text-[var(--color-muted)] uppercase">
                                         ตัวอย่างเนื้อหาข้อความในอีเมล (Body Preview)
                                     </label>
                                     <button
@@ -962,18 +962,18 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                         <span>{copiedEmailText ? 'คัดลอกข้อความแล้ว!' : 'คัดลอกข้อความ'}</span>
                                     </button>
                                 </div>
-                                <pre className="p-3 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-[10px] text-zinc-800 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                                <pre className="p-3 bg-white border border-[var(--color-rule)] rounded-lg font-mono text-[10px] text-zinc-800 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                                     {generateEmailBodyText()}
                                 </pre>
                             </div>
 
                             {/* 4. One-Click Send Options with Auto-Download PDF */}
-                            <div className="space-y-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                            <div className="space-y-2 pt-2 border-t border-[var(--color-rule)]">
                                 <div className="flex items-center justify-between">
-                                    <span className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block">
+                                    <span className="font-mono font-bold text-[10px] text-[var(--color-muted)] uppercase block">
                                         เลือกช่องทางส่งเอกสาร (Choose Send Channel):
                                     </span>
-                                    <span className="font-mono text-[9.5px] text-[oklch(52%_0.16_28)]">
+                                    <span className="font-mono text-[9.5px] text-[var(--brand-plum)]">
                                         * บันทึก PDF ให้อัตโนมัติพร้อมแนบส่ง
                                     </span>
                                 </div>
@@ -1043,11 +1043,11 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-3 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex justify-end">
+                        <div className="p-3 bg-[var(--color-paper-2)] border-t border-[var(--color-rule)] flex justify-end">
                             <button
                                 type="button"
                                 onClick={() => setShowEmailModal(false)}
-                                className="px-4 py-2 border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-white rounded-lg font-mono font-bold text-xs cursor-pointer"
+                                className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-ink)] hover:bg-white rounded-lg font-mono font-bold text-xs cursor-pointer"
                             >
                                 ปิดหน้าต่าง (Close)
                             </button>

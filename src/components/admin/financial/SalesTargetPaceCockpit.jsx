@@ -175,15 +175,15 @@ export default function SalesTargetPaceCockpit({
     }, [activeSlots])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
             
             {/* Header / Status Banner */}
-            <div className="p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
+            <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-3 tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 font-bold text-[11px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                    <span className="px-2 py-0.5 font-bold text-[11px] bg-[var(--color-ink)] text-[var(--color-paper)]">
                         PACE // TARGET
                     </span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                    <span className="font-bold text-[var(--color-ink)]">
                         {pacingCalc.title}
                     </span>
                 </div>
@@ -191,10 +191,10 @@ export default function SalesTargetPaceCockpit({
                 <div className="flex items-center gap-3">
                     <span className={`px-2 py-0.5 text-[11px] font-bold border ${
                         isHit
-                            ? 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] border-[oklch(45%_0.08_140)]'
+                            ? 'bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] border-[oklch(45%_0.08_140)]'
                             : pacingCalc.isOnPace
-                            ? 'bg-[oklch(97%_0.008_28)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                            ? 'bg-[var(--color-paper)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
+                            : 'bg-[var(--color-paper)] text-[var(--brand-plum)] border-[var(--brand-plum)]'
                     }`}>
                         {isHit ? '✓ TARGET HIT' : pacingCalc.isOnPace ? '↑ ON TRACK (ตามเป้า)' : '↓ BEHIND PACE (ต้องเร่ง)'}
                     </span>
@@ -202,51 +202,51 @@ export default function SalesTargetPaceCockpit({
             </div>
 
             {/* Split Grid: Left = Target Gauge & Remaining Pace / Right = Period Sparkline Chart */}
-            <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[oklch(85%_0.012_28)]">
+            <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[var(--color-rule)]">
                 
                 {/* Left 6 cols: Target Numbers & Progress Bar */}
                 <div className="p-4 md:p-6 md:col-span-6 space-y-4">
                     <div className="flex items-baseline justify-between">
                         <div>
-                            <span className="text-xs tabular-nums text-[oklch(42%_0.010_28)] block">
+                            <span className="text-xs tabular-nums text-[var(--color-muted)] block">
                                 {pacingCalc.accumulatedLabel}
                             </span>
-                            <div className=" text-3xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                            <div className=" text-3xl font-bold text-[var(--color-ink)] tabular-nums">
                                 ฿{Math.round(currentSales).toLocaleString()}{' '}
-                                <span className="text-sm font-normal text-[oklch(55%_0.010_28)]">
+                                <span className="text-sm font-normal text-[var(--color-neutral)]">
                                     / ฿{targetSales.toLocaleString()}
                                 </span>
                             </div>
                         </div>
                         <div className="text-right tabular-nums">
-                            <span className="text-2xl font-bold text-[oklch(52%_0.16_28)] tabular-nums">{progressPct}%</span>
+                            <span className="text-2xl font-bold text-[var(--brand-plum)] tabular-nums">{progressPct}%</span>
                         </div>
                     </div>
 
                     {/* Progress Bar (Rams Minimalist) */}
-                    <div className="w-full h-3 bg-[oklch(90%_0.010_28)] rounded-none overflow-hidden relative border border-[oklch(85%_0.012_28)]">
+                    <div className="w-full h-3 bg-[var(--color-paper-3)] rounded-none overflow-hidden relative border border-[var(--color-rule)]">
                         <div 
-                            className="h-full bg-[oklch(18%_0.012_28)] transition-all duration-500 ease-out"
+                            className="h-full bg-[var(--color-ink)] transition-all duration-500 ease-out"
                             style={{ width: `${progressPct}%` }}
                         />
                     </div>
 
                     {/* Pace Math Row */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
-                        <div className="p-2.5 bg-[oklch(94%_0.010_28)]">
-                            <span className="text-xs text-[oklch(42%_0.010_28)] block ">ยอดคงเหลือถึงเป้า</span>
-                            <span className="text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-rule)] tabular-nums text-xs">
+                        <div className="p-2.5 bg-[var(--color-paper-2)]">
+                            <span className="text-xs text-[var(--color-muted)] block ">ยอดคงเหลือถึงเป้า</span>
+                            <span className="text-sm font-bold text-[var(--color-ink)] tabular-nums">
                                 {pacingCalc.remainingLabel}
                             </span>
                         </div>
-                        <div className="p-2.5 bg-[oklch(94%_0.010_28)]">
-                            <span className="text-xs text-[oklch(42%_0.010_28)] block ">
+                        <div className="p-2.5 bg-[var(--color-paper-2)]">
+                            <span className="text-xs text-[var(--color-muted)] block ">
                                 {pacingCalc.paceBoxTitle}
                             </span>
-                            <span className={`text-sm font-bold tabular-nums ${pacingCalc.isOnPace ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                            <span className={`text-sm font-bold tabular-nums ${pacingCalc.isOnPace ? 'text-[oklch(45%_0.08_140)]' : 'text-[var(--brand-plum)]'}`}>
                                 {pacingCalc.paceBoxVal}{' '}
                                 {pacingCalc.paceBoxUnit && (
-                                    <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">{pacingCalc.paceBoxUnit}</span>
+                                    <span className="text-xs font-normal text-[var(--color-muted)]">{pacingCalc.paceBoxUnit}</span>
                                 )}
                             </span>
                         </div>
@@ -256,16 +256,16 @@ export default function SalesTargetPaceCockpit({
                 {/* Right 6 cols: Period Sparkline Chart (Hourly for Day, Daily for Month, Monthly for Year) */}
                 <div className="p-4 md:p-6 md:col-span-6 flex flex-col justify-between space-y-3">
                     <div className="flex items-center justify-between text-xs tabular-nums">
-                        <span className="text-xs text-[oklch(42%_0.010_28)] ">
+                        <span className="text-xs text-[var(--color-muted)] ">
                             {pacingCalc.chartTitle}
                         </span>
-                        <span className="text-xs text-[oklch(55%_0.010_28)]">
+                        <span className="text-xs text-[var(--color-neutral)]">
                             {pacingCalc.velocitySubtitle}
                         </span>
                     </div>
 
                     {/* Sparkline Bar Chart */}
-                    <div className="h-28 flex items-end gap-1 pt-4 pb-1 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="h-28 flex items-end gap-1 pt-4 pb-1 border-b border-[var(--color-rule)]">
                         {activeSlots.map(slot => {
                             const barHeightPct = maxSlotAmount > 0 ? Math.min(100, Math.round((slot.amount / maxSlotAmount) * 100)) : 0
                             return (
@@ -274,7 +274,7 @@ export default function SalesTargetPaceCockpit({
                                     className="flex-1 flex flex-col items-center h-full justify-end group relative"
                                 >
                                     {/* Tooltip on hover */}
-                                    <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded-none text-[11px] tabular-nums whitespace-nowrap z-20 transition-opacity">
+                                    <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded-none text-[11px] tabular-nums whitespace-nowrap z-20 transition-opacity">
                                         {slot.tooltip}
                                     </div>
 
@@ -282,14 +282,14 @@ export default function SalesTargetPaceCockpit({
                                     <div 
                                         className={`w-full transition-all duration-300 ${
                                             slot.isCurrent
-                                                ? 'bg-[oklch(52%_0.16_28)]' // Terracotta highlight current period
+                                                ? 'bg-[var(--brand-plum)]' // Terracotta highlight current period
                                                 : slot.amount > 0
-                                                ? 'bg-[oklch(35%_0.012_28)]' // Solid warm charcoal
-                                                : 'bg-[oklch(88%_0.010_28)]' // Empty placeholder
+                                                ? 'bg-[oklch(35%_0.012_348.33)]' // Solid warm charcoal
+                                                : 'bg-[var(--color-paper-3)]' // Empty placeholder
                                         }`}
                                         style={{ height: `${Math.max(barHeightPct, 6)}%` }}
                                     />
-                                    <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)] mt-1 select-none truncate">
+                                    <span className="text-xs tabular-nums text-[var(--color-neutral)] mt-1 select-none truncate">
                                         {slot.label}
                                     </span>
                                 </div>
@@ -297,9 +297,9 @@ export default function SalesTargetPaceCockpit({
                         })}
                     </div>
 
-                    <div className="flex items-center justify-between text-xs tabular-nums text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center justify-between text-xs tabular-nums text-[var(--color-muted)]">
                         <span>{pacingCalc.footerStart}</span>
-                        <span className="text-[oklch(52%_0.16_28)] font-bold">{pacingCalc.footerMid}</span>
+                        <span className="text-[var(--brand-plum)] font-bold">{pacingCalc.footerMid}</span>
                         <span>{pacingCalc.footerEnd}</span>
                     </div>
                 </div>

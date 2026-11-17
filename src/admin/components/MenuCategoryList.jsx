@@ -11,9 +11,9 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
     if (!isOpen) return null
     return createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
-                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
-                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
+                <h3 className="tabular-nums text-sm font-bold tracking-tight text-[var(--color-ink)]">{title}</h3>
+                <p className="text-[13px] text-[var(--color-muted)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
                 <div className="flex gap-2 mt-5">
                     <button
                         type="button"
@@ -25,10 +25,10 @@ function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยั�
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                        className={`flex-1 px-3 py-2 text-xs tabular-nums font-bold rounded-sm transition-colors duration-150 cursor-pointer text-[var(--color-paper)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${
                             isDanger
                                 ? 'bg-red-700 hover:bg-red-800'
-                                : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
+                                : 'bg-[var(--color-ink)] hover:bg-[var(--color-ink)]'
                         }`}
                     >
                         {confirmText}
@@ -266,13 +266,13 @@ export default function MenuCategoryList() {
     }
 
     return (
-        <div className="text-[oklch(18%_0.012_28)] pb-12 animate-fade-in font-sans">
+        <div className="text-[var(--color-ink)] pb-12 animate-fade-in font-sans">
             {/* Header Toolbar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <p className="text-[13px] leading-5 text-[oklch(42%_0.010_28)] min-w-0">
-                    <span className="text-[oklch(18%_0.012_28)] font-medium tabular-nums">{categories.length} หมวดหมู่</span>
+                <p className="text-[13px] leading-5 text-[var(--color-muted)] min-w-0">
+                    <span className="text-[var(--color-ink)] font-medium tabular-nums">{categories.length} หมวดหมู่</span>
                     <span> · จัดลำดับหมวดหมู่แสดงผลบน POS, Customer Menu และตั้งค่าเครื่องดื่มสะสมแก้ว 10 แถม 1</span>
-                    {isSaving && <span className="ml-2 text-[oklch(52%_0.16_28)]">กำลังบันทึกลำดับ...</span>}
+                    {isSaving && <span className="ml-2 text-[var(--brand-plum)]">กำลังบันทึกลำดับ...</span>}
                 </p>
 
                 <button 
@@ -287,11 +287,11 @@ export default function MenuCategoryList() {
             {loading ? (
                 <div className="space-y-2">
                     {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="h-16 bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)]" />
+                        <div key={i} className="h-16 bg-[var(--color-paper-2)] rounded-sm border border-[var(--color-rule)]" />
                     ))}
                 </div>
             ) : categories.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] tabular-nums text-xs">
+                <div className="text-center py-16 border border-dashed border-[var(--color-rule)] rounded-sm bg-[var(--color-paper)] text-[var(--color-neutral)] tabular-nums text-xs">
                     ยังไม่มีหมวดหมู่เมนู คลิก "เพิ่มหมวดหมู่" เพื่อเริ่มต้น
                 </div>
             ) : (
@@ -313,19 +313,19 @@ export default function MenuCategoryList() {
             {/* Create / Edit Planar Modal */}
             {isModalOpen && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-[oklch(98%_0.004_28)] w-full max-w-md rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl p-6 font-sans">
-                        <div className="flex justify-between items-center mb-5 pb-3 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] w-full max-w-md rounded-sm border border-[var(--color-rule)] shadow-2xl p-6 font-sans">
+                        <div className="flex justify-between items-center mb-5 pb-3 border-b border-[var(--color-rule)]">
                             <div>
-                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                                <h3 className="tabular-nums text-base font-bold tracking-tight text-[var(--color-ink)]">
                                     {editingCategory ? 'แก้ไขหมวดหมู่' : 'สร้างหมวดหมู่ใหม่'}
                                 </h3>
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">
+                                <p className="text-[13px] text-[var(--color-neutral)] tabular-nums mt-0.5">
                                     กำหนดชื่อและสิทธิ์ร่วมรายการสะสมแต้ม
                                 </p>
                             </div>
                             <button 
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                                className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                             >
                                 <X size={18} />
                             </button>
@@ -333,7 +333,7 @@ export default function MenuCategoryList() {
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs tabular-nums font-bold text-[oklch(42%_0.010_28)] mb-1.5">
+                                <label className="block text-xs tabular-nums font-bold text-[var(--color-muted)] mb-1.5">
                                     ชื่อหมวดหมู่ (Category Name) *
                                 </label>
                                 <input
@@ -341,24 +341,24 @@ export default function MenuCategoryList() {
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="เช่น Coffee, Signature Drinks, Pasta, Bakery"
-                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-sm text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
+                                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs p-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--brand-plum)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] transition-colors duration-150"
                                     autoFocus
                                     required
                                 />
                             </div>
 
                             {/* Drink Stamp Punchcard Toggle (Planar Row) */}
-                            <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                            <label className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
                                         <span className="tabular-nums text-[11px] font-bold bg-[oklch(96%_0.03_80)] text-[oklch(35%_0.08_60)] border border-[oklch(88%_0.06_80)] px-1.5 py-0.2 rounded-xs">
                                             10 ฟรี 1
                                         </span>
-                                        <span className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                                             ร่วมรายการเครื่องดื่ม 10 แถม 1
                                         </span>
                                     </div>
-                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums leading-relaxed">
+                                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums leading-relaxed">
                                         เปิดสิทธิ์ให้เมนูในหมวดนี้สะสมแก้วอัตโนมัติเมื่อลูกค้าสั่งซื้อ
                                     </p>
                                 </div>
@@ -366,22 +366,22 @@ export default function MenuCategoryList() {
                                     type="checkbox"
                                     checked={formData.is_drink_stamp_eligible}
                                     onChange={e => setFormData({ ...formData, is_drink_stamp_eligible: e.target.checked })}
-                                    className="w-4 h-4 accent-[oklch(52%_0.16_28)] cursor-pointer mt-1"
+                                    className="w-4 h-4 accent-[var(--brand-plum)] cursor-pointer mt-1"
                                 />
                             </label>
 
                             {/* Kitchen Cutoff Toggle (Planar Row, No Emoji) */}
-                            <label className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
+                            <label className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs flex items-start justify-between gap-3 cursor-pointer hover:bg-[var(--color-paper-2)] transition-colors duration-150">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-2">
                                         <span className="tabular-nums text-[11px] font-bold bg-[oklch(95%_0.03_25)] text-[oklch(42%_0.14_25)] border border-[oklch(88%_0.05_25)] px-1.5 py-0.2 rounded-xs">
                                             KITCHEN CUTOFF
                                         </span>
-                                        <span className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                                             ซ่อนหมวดหมู่นี้เมื่อครัวปิด
                                         </span>
                                     </div>
-                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums leading-relaxed">
+                                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums leading-relaxed">
                                         เมื่อถึงเวลาปิดรับออเดอร์ครัว จะซ่อนหมวดหมู่นี้และเมนูทั้งหมดในหมวดไม่ให้สั่งผ่าน QR
                                     </p>
                                 </div>
@@ -438,7 +438,7 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
             dragListener={false} 
             dragControls={controls}
             onDragEnd={onDragEnd}
-            className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm flex items-center justify-between group relative select-none hover:border-[oklch(52%_0.16_28)] transition-colors duration-150 "
+            className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-3 rounded-sm flex items-center justify-between group relative select-none hover:border-[var(--brand-plum)] transition-colors duration-150 "
         >
             <div className="flex items-center gap-3.5 min-w-0">
                 {/* Drag Handle */}
@@ -451,7 +451,7 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                         e.preventDefault()
                         controls.start(e)
                     }}
-                    className="bg-[oklch(94%_0.010_28)] w-8 h-8 rounded-xs flex items-center justify-center text-[oklch(55%_0.010_28)] cursor-grab active:cursor-grabbing hover:bg-[oklch(90%_0.012_28)] hover:text-[oklch(18%_0.012_28)] transition-colors duration-150 touch-none border border-[oklch(85%_0.012_28)] shrink-0"
+                    className="bg-[var(--color-paper-2)] w-8 h-8 rounded-xs flex items-center justify-center text-[var(--color-neutral)] cursor-grab active:cursor-grabbing hover:bg-[var(--color-paper-3)] hover:text-[var(--color-ink)] transition-colors duration-150 touch-none border border-[var(--color-rule)] shrink-0"
                     style={{ touchAction: 'none' }}
                     title="ลากเพื่อเปลี่ยนลำดับ"
                 >
@@ -460,10 +460,10 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
 
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className=" text-xs font-bold text-[oklch(55%_0.010_28)] tabular-nums">
+                        <span className=" text-xs font-bold text-[var(--color-neutral)] tabular-nums">
                             #{index + 1}
                         </span>
-                        <h4 className="font-bold text-base text-[oklch(18%_0.012_28)] truncate">
+                        <h4 className="font-bold text-base text-[var(--color-ink)] truncate">
                             {category.name}
                         </h4>
                         {category.is_drink_stamp_eligible && (
@@ -477,7 +477,7 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                             </span>
                         )}
                     </div>
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5 tabular-nums">
+                    <p className="text-[13px] text-[var(--color-neutral)] mt-0.5 tabular-nums">
                         {itemCount} เมนูในหมวดนี้
                     </p>
                 </div>
@@ -486,14 +486,14 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
             <div className="flex items-center gap-1 shrink-0">
                 <button 
                     onClick={onEdit} 
-                    className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    className="p-1.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                     title="แก้ไขหมวดหมู่"
                 >
                     <Edit2 size={14} />
                 </button>
                 <button 
                     onClick={onDelete} 
-                    className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    className="p-1.5 text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                     title="ลบหมวดหมู่"
                 >
                     <Trash2 size={14} />

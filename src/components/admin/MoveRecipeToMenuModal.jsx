@@ -6,9 +6,9 @@ import { supabase } from '../../lib/supabaseClient';
 import { logStaffActivity } from '../../utils/auditLogger';
 import { planMoveRecipeToMenu } from '../../utils/recipeMove';
 
-const RULE = 'border-[oklch(85%_0.012_28)]';
-const MUTED = 'text-[oklch(42%_0.010_28)]';
-const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
+const RULE = 'border-[var(--color-rule)]';
+const MUTED = 'text-[var(--color-muted)]';
+const NEUTRAL = 'text-[var(--color-neutral)]';
 const key = (s) => String(s || '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[\s\-_().,/:•]+/g, '');
 
 /**
@@ -92,7 +92,7 @@ export default function MoveRecipeToMenuModal({ item, onClose, onMoved }) {
     return createPortal(
         <div className="fixed inset-0 z-[80] bg-black/60 flex items-end sm:items-center justify-center sm:p-4" onClick={() => !busy && onClose()}>
             <div role="dialog" aria-modal="true" aria-labelledby="move-recipe-title"
-                className={`w-full sm:max-w-md max-h-[88dvh] flex flex-col bg-[oklch(97%_0.008_28)] border ${RULE} text-[oklch(18%_0.012_28)] font-sans`}
+                className={`w-full sm:max-w-md max-h-[88dvh] flex flex-col bg-[var(--color-paper)] border ${RULE} text-[var(--color-ink)] font-sans`}
                 onClick={e => e.stopPropagation()}>
                 <div className={`shrink-0 px-4 pt-4 pb-3 border-b ${RULE}`}>
                     <h2 id="move-recipe-title" className="font-bold text-base leading-7 break-words">ย้าย "{item.name}" ไปเป็นสูตรของเมนู</h2>
@@ -102,23 +102,23 @@ export default function MoveRecipeToMenuModal({ item, onClose, onMoved }) {
                 </div>
                 <div className={`shrink-0 p-3 border-b ${RULE}`}>
                     <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาเมนู..." aria-label="ค้นหาเมนู"
-                        className={`w-full p-2 border ${RULE} bg-[oklch(99%_0.004_28)] text-[14px] outline-none focus:border-[oklch(18%_0.012_28)]`} />
+                        className={`w-full p-2 border ${RULE} bg-[var(--color-paper)] text-[14px] outline-none focus:border-[var(--color-ink)]`} />
                 </div>
-                <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]" role="listbox" aria-label="เมนู">
+                <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-[var(--color-paper-3)] bg-[var(--color-paper)]" role="listbox" aria-label="เมนู">
                     {matches.map(m => (
                         <li key={m.id}>
                             <button type="button" role="option" aria-selected={target?.id === m.id} onClick={() => setTarget(m)}
-                                className={`w-full text-left px-4 py-2.5 text-[14px] leading-6 font-bold break-words cursor-pointer ${target?.id === m.id ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(94%_0.010_28)]'}`}>
+                                className={`w-full text-left px-4 py-2.5 text-[14px] leading-6 font-bold break-words cursor-pointer ${target?.id === m.id ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'hover:bg-[var(--color-paper-2)]'}`}>
                                 {m.name}
                             </button>
                         </li>
                     ))}
                     {matches.length === 0 && <li className={`px-4 py-4 text-[14px] ${NEUTRAL}`}>พิมพ์ชื่อเมนูเพื่อค้นหา</li>}
                 </ul>
-                <div className={`shrink-0 grid grid-cols-2 border-t ${RULE} divide-x divide-[oklch(85%_0.012_28)]`}>
-                    <button type="button" onClick={onClose} disabled={busy} className="py-3 font-bold text-[14px] bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer disabled:opacity-40">ยกเลิก</button>
+                <div className={`shrink-0 grid grid-cols-2 border-t ${RULE} divide-x divide-[var(--color-rule)]`}>
+                    <button type="button" onClick={onClose} disabled={busy} className="py-3 font-bold text-[14px] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] cursor-pointer disabled:opacity-40">ยกเลิก</button>
                     <button type="button" onClick={move} disabled={!target || busy}
-                        className="py-3 font-bold text-[14px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(18%_0.012_28)] cursor-pointer disabled:opacity-40">
+                        className="py-3 font-bold text-[14px] bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)] cursor-pointer disabled:opacity-40">
                         {busy ? 'กำลังย้าย...' : target ? `ย้ายไป ${target.name.length > 18 ? target.name.slice(0, 18) + '…' : target.name}` : 'เลือกเมนู'}
                     </button>
                 </div>

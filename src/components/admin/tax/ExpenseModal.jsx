@@ -338,7 +338,7 @@ export default function ExpenseModal({
                 {/* 1. Structural Brutalist Header */}
                 <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-3 sm:px-6 flex items-center justify-between border-b border-[var(--color-rule)] shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="tabular-nums text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-[oklch(97%_0.008_28)]">
+                        <div className="tabular-nums text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-[var(--color-paper)]">
                             ค่าใช้จ่าย
                         </div>
                         <div>
@@ -357,13 +357,13 @@ export default function ExpenseModal({
                         <button
                             type="button"
                             onClick={() => setShowApiKeyModal(true)}
-                            className="tabular-nums text-xs font-bold px-2.5 py-1 text-[var(--color-paper)]/80 hover:text-[oklch(97%_0.008_28)] border border-white/20 hover:border-white/40 transition-colors"
+                            className="tabular-nums text-xs font-bold px-2.5 py-1 text-[var(--color-paper)]/80 hover:text-[var(--color-paper)] border border-white/20 hover:border-white/40 transition-colors"
                         >
                             ตั้งค่า AI
                         </button>
                         <button 
                             onClick={onClose} 
-                            className="p-1 text-[var(--color-paper)]/70 hover:text-[oklch(97%_0.008_28)] transition-colors cursor-pointer"
+                            className="p-1 text-[var(--color-paper)]/70 hover:text-[var(--color-paper)] transition-colors cursor-pointer"
                         >
                             <X size={18} />
                         </button>
@@ -388,7 +388,7 @@ export default function ExpenseModal({
                                             type="button"
                                             onClick={() => handleRotateImage(90)}
                                             title="หมุนภาพ 90 องศาตามเข็มนาฬิกา (สำหรับบิลแนวนอน)"
-                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] tabular-nums text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors "
+                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper)] text-[var(--color-ink)] tabular-nums text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors "
                                         >
                                             <RotateCw size={11} className="text-[var(--color-accent)]" />
                                             <span>หมุน 90°</span>
@@ -423,7 +423,7 @@ export default function ExpenseModal({
                                         />
 
                                         {parsedUrls.length > 1 && (
-                                            <div className="absolute top-2 left-2 bg-black/80 text-[oklch(97%_0.008_28)] tabular-nums text-[11px] font-bold px-2 py-0.5 border border-white/20">
+                                            <div className="absolute top-2 left-2 bg-black/80 text-[var(--color-paper)] tabular-nums text-[11px] font-bold px-2 py-0.5 border border-white/20">
                                                 ชุด {parsedUrls.length} แผ่น
                                             </div>
                                         )}
@@ -431,7 +431,7 @@ export default function ExpenseModal({
                                         {/* Optical Scanning Sweep Animation */}
                                         {isAiScanning && (
                                             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent)]/30 to-transparent border-y-2 border-[var(--color-accent)] pointer-events-none flex items-center justify-center">
-                                                <div className="bg-black/80 text-[oklch(97%_0.008_28)] tabular-nums text-xs font-bold px-3 py-1 tracking-widest flex items-center gap-2 shadow-2xl">
+                                                <div className="bg-black/80 text-[var(--color-paper)] tabular-nums text-xs font-bold px-3 py-1 tracking-widest flex items-center gap-2 shadow-2xl">
                                                     <Loader2 size={13} className="animate-spin text-[var(--color-accent)]" />
                                                     <span>กำลังอ่านด้วย AI…</span>
                                                 </div>
@@ -448,7 +448,7 @@ export default function ExpenseModal({
                                                             setZoomPageIndex(0);
                                                             setImagePreviewZoom(true);
                                                         }}
-                                                        className="px-2 py-1 text-xs tabular-nums font-bold text-[oklch(97%_0.008_28)] hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors cursor-pointer"
+                                                        className="px-2 py-1 text-xs tabular-nums font-bold text-[var(--color-paper)] hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors cursor-pointer"
                                                     >
                                                         <ZoomIn size={12} />
                                                         <span>ขยาย</span>
@@ -467,7 +467,7 @@ export default function ExpenseModal({
                                                     <button
                                                         type="button"
                                                         onClick={() => handleAiScan()}
-                                                        className="px-2.5 py-1 text-xs tabular-nums font-bold bg-[var(--color-accent)] text-[oklch(97%_0.008_28)] hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors cursor-pointer"
+                                                        className="px-2.5 py-1 text-xs tabular-nums font-bold bg-[var(--color-accent)] text-[var(--color-paper)] hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors cursor-pointer"
                                                     >
                                                         <Sparkles size={11} />
                                                         <span>อ่านใหม่</span>
@@ -475,7 +475,7 @@ export default function ExpenseModal({
                                                     <button
                                                         type="button"
                                                         onClick={() => fileInputRef.current?.click()}
-                                                        className="px-2 py-1 text-xs tabular-nums font-bold text-[oklch(50%_0.010_28)] hover:text-[oklch(97%_0.008_28)] border border-white/20 transition-colors cursor-pointer"
+                                                        className="px-2 py-1 text-xs tabular-nums font-bold text-[var(--color-neutral)] hover:text-[var(--color-paper)] border border-white/20 transition-colors cursor-pointer"
                                                     >
                                                         เปลี่ยนรูป
                                                     </button>
@@ -503,7 +503,7 @@ export default function ExpenseModal({
                                         <button
                                             type="button"
                                             onClick={() => cameraInputRef.current?.click()}
-                                            className="flex-1 min-w-[110px] px-3 py-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] tabular-nums text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all "
+                                            className="flex-1 min-w-[110px] px-3 py-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all "
                                         >
                                             <Camera size={13} />
                                             <span>ถ่ายรูป</span>
@@ -511,7 +511,7 @@ export default function ExpenseModal({
                                         <button
                                             type="button"
                                             onClick={() => fileInputRef.current?.click()}
-                                            className="flex-1 min-w-[110px] px-3 py-2 bg-[oklch(99%_0.004_28)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] tabular-nums text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all "
+                                            className="flex-1 min-w-[110px] px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] tabular-nums text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all "
                                         >
                                             <Upload size={13} />
                                             <span>เลือกไฟล์</span>
@@ -593,7 +593,7 @@ export default function ExpenseModal({
                                         onChange={(e) => setAmount(e.target.value)}
                                         placeholder="0.00"
                                         autoFocus
-                                        className="w-full bg-transparent border-none tabular-nums font-black text-2xl text-[var(--color-ink)] focus:outline-none placeholder:text-[oklch(50%_0.010_28)]"
+                                        className="w-full bg-transparent border-none tabular-nums font-black text-2xl text-[var(--color-ink)] focus:outline-none placeholder:text-[var(--color-neutral)]"
                                     />
                                 </div>
                                 {conversionNotice && (
@@ -765,7 +765,7 @@ export default function ExpenseModal({
                                         <AlertTriangle size={15} className="text-amber-600" />
                                         ตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว
                                     </span>
-                                    <span className="px-1.5 py-0.5 bg-amber-600 text-[oklch(97%_0.008_28)] text-[11px] font-bold">
+                                    <span className="px-1.5 py-0.5 bg-amber-600 text-[var(--color-paper)] text-[11px] font-bold">
                                         {duplicateCheckResult.confidence} CONFIDENCE
                                     </span>
                                 </div>
@@ -805,7 +805,7 @@ export default function ExpenseModal({
                         type="button"
                         disabled={saving || isAiScanning}
                         onClick={handleSave}
-                        className="px-6 py-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2 text-xs"
+                        className="px-6 py-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] font-bold transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2 text-xs"
                     >
                         <span>{saving ? 'กำลังบันทึก…' : 'บันทึกค่าใช้จ่าย'}</span>
                     </button>
@@ -821,14 +821,14 @@ export default function ExpenseModal({
                         onClick={() => setImagePreviewZoom(false)}
                     >
                         <div 
-                            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-[oklch(18%_0.012_28)] overflow-hidden shadow-2xl"
+                            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-[var(--color-ink)] overflow-hidden shadow-2xl"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="p-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800 gap-3">
+                            <div className="p-3 bg-[var(--color-ink)] text-[var(--color-paper)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800 gap-3">
                                 <div className="flex items-center gap-3">
                                     <span className="font-bold">RECEIPT OPTICAL INSPECTION // {vendorName}</span>
                                     {zoomUrls.length > 1 && (
-                                        <span className="bg-[oklch(18%_0.012_28)] text-emerald-400 px-2 py-0.5 text-[11px] font-bold border border-zinc-700">
+                                        <span className="bg-[var(--color-ink)] text-emerald-400 px-2 py-0.5 text-[11px] font-bold border border-zinc-700">
                                             PAGE {zoomPageIndex + 1} OF {zoomUrls.length}
                                         </span>
                                     )}
@@ -837,20 +837,20 @@ export default function ExpenseModal({
                                     <button
                                         type="button"
                                         onClick={() => handleRotateImage(90)}
-                                        className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] hover:bg-zinc-700 text-amber-300 tabular-nums text-xs font-bold flex items-center gap-1.5 border border-zinc-600 transition-colors cursor-pointer"
+                                        className="px-2.5 py-1 bg-[var(--color-ink)] hover:bg-zinc-700 text-amber-300 tabular-nums text-xs font-bold flex items-center gap-1.5 border border-zinc-600 transition-colors cursor-pointer"
                                     >
                                         <RotateCw size={13} />
                                         <span>หมุน 90° (ROTATE)</span>
                                     </button>
                                     <button 
                                         onClick={() => setImagePreviewZoom(false)} 
-                                        className="text-[oklch(50%_0.010_28)] hover:text-[oklch(97%_0.008_28)] p-1 cursor-pointer"
+                                        className="text-[var(--color-neutral)] hover:text-[var(--color-paper)] p-1 cursor-pointer"
                                     >
                                         <X size={18} />
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[oklch(18%_0.012_28)] relative min-h-[400px]">
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-[var(--color-ink)] relative min-h-[400px]">
                                 <img 
                                     src={zoomUrls[zoomPageIndex] || zoomUrls[0]} 
                                     alt={`Zoomed Receipt Page ${zoomPageIndex + 1}`} 
@@ -861,7 +861,7 @@ export default function ExpenseModal({
                                     <button
                                         type="button"
                                         onClick={() => setZoomPageIndex(prev => Math.max(0, prev - 1))}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
                                     >
                                         ◀ PREV
                                     </button>
@@ -871,7 +871,7 @@ export default function ExpenseModal({
                                     <button
                                         type="button"
                                         onClick={() => setZoomPageIndex(prev => Math.min(zoomUrls.length - 1, prev + 1))}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
                                     >
                                         NEXT ▶
                                     </button>
@@ -880,7 +880,7 @@ export default function ExpenseModal({
 
                             {/* Thumbnail Navigation */}
                             {zoomUrls.length > 1 && (
-                                <div className="p-2 bg-[oklch(18%_0.012_28)] border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
+                                <div className="p-2 bg-[var(--color-ink)] border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
                                     {zoomUrls.map((url, idx) => (
                                         <button
                                             key={idx}
@@ -912,23 +912,23 @@ export default function ExpenseModal({
                         onClick={() => setCompareImage(null)}
                     >
                         <div 
-                            className="relative w-full max-w-5xl max-h-[92vh] flex flex-col border border-zinc-700 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] overflow-hidden shadow-2xl"
+                            className="relative w-full max-w-5xl max-h-[92vh] flex flex-col border border-zinc-700 bg-[var(--color-ink)] text-[var(--color-paper)] overflow-hidden shadow-2xl"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="p-3.5 bg-[oklch(18%_0.012_28)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800">
+                            <div className="p-3.5 bg-[var(--color-ink)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800">
                                 <span className="font-bold flex items-center gap-2 text-amber-400">
                                     <AlertTriangle size={15} />
                                     เปรียบเทียบบิลเดิมกับบิลใหม่
                                 </span>
-                                <button onClick={() => setCompareImage(null)} className="text-[oklch(97%_0.008_28)] hover:text-red-400 p-1 cursor-pointer">
+                                <button onClick={() => setCompareImage(null)} className="text-[var(--color-paper)] hover:text-red-400 p-1 cursor-pointer">
                                     <X size={18} />
                                 </button>
                             </div>
 
                             <div className="flex-1 overflow-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Left: Previous Saved Receipt */}
-                                <div className="border border-zinc-800 bg-[oklch(18%_0.012_28)] p-3 flex flex-col items-center">
-                                    <span className="tabular-nums text-xs text-[oklch(50%_0.010_28)] font-bold mb-2">
+                                <div className="border border-zinc-800 bg-[var(--color-ink)] p-3 flex flex-col items-center">
+                                    <span className="tabular-nums text-xs text-[var(--color-neutral)] font-bold mb-2">
                                         [1] บิลเดิมที่เคยบันทึกไว้ในระบบ
                                     </span>
                                     <div className="flex-1 flex items-center justify-center w-full min-h-[300px]">
@@ -937,7 +937,7 @@ export default function ExpenseModal({
                                 </div>
 
                                 {/* Right: Current Candidate Receipt */}
-                                <div className="border border-zinc-800 bg-[oklch(18%_0.012_28)] p-3 flex flex-col items-center">
+                                <div className="border border-zinc-800 bg-[var(--color-ink)] p-3 flex flex-col items-center">
                                     <span className="tabular-nums text-xs text-amber-400 font-bold mb-2">
                                         [2] บิลใหม่ที่กำลังสแกน / กรอกอยู่
                                     </span>
@@ -945,20 +945,20 @@ export default function ExpenseModal({
                                         {currentUrls[0] ? (
                                             <img src={currentUrls[0]} alt="New Receipt" className="max-w-full max-h-[60vh] object-contain" />
                                         ) : (
-                                            <span className="text-[oklch(42%_0.010_28)] tabular-nums text-xs">ไม่มีรูปภาพบิลใหม่</span>
+                                            <span className="text-[var(--color-muted)] tabular-nums text-xs">ไม่มีรูปภาพบิลใหม่</span>
                                         )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-3 bg-[oklch(18%_0.012_28)] border-t border-zinc-800 flex justify-between items-center tabular-nums">
-                                <span className="text-[oklch(50%_0.010_28)] text-xs">
+                            <div className="p-3 bg-[var(--color-ink)] border-t border-zinc-800 flex justify-between items-center tabular-nums">
+                                <span className="text-[var(--color-neutral)] text-xs">
                                     หากเป็นคนละใบเสร็จ ให้กดปิดหน้าต่างนี้แล้วกด &quot;บันทึกค่าใช้จ่าย&quot; ได้ตามปกติ
                                 </span>
                                 <button
                                     type="button"
                                     onClick={() => setCompareImage(null)}
-                                    className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-[oklch(18%_0.012_28)] font-bold text-xs cursor-pointer"
+                                    className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-[var(--color-ink)] font-bold text-xs cursor-pointer"
                                 >
                                     เข้าใจแล้ว / ปิดหน้าต่าง
                                 </button>

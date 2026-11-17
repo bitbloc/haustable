@@ -82,16 +82,16 @@ export default function SmartAnomalyAlerts({
     }, [foodCostPct, foodCostTarget, avgTicketGrowthPct, currentAvgTicket, deliveryFeeRatioPct, daypartAnomalies, customAlerts])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
             {/* Header */}
-            <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between tabular-nums text-xs">
+            <div className="p-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between tabular-nums text-xs">
                 <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] "></span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]  ">
+                    <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] "></span>
+                    <span className="font-bold text-[var(--color-ink)]  ">
                         OPERATIONAL ALERTS // ระบบเฝ้าระวังความผิดปกติ
                     </span>
                 </div>
-                <span className="text-xs text-[oklch(42%_0.010_28)] tabular-nums">
+                <span className="text-xs text-[var(--color-muted)] tabular-nums">
                     {alerts.length === 0 ? 'STATUS: NORMAL' : `ตรวจพบ ${alerts.length} รายการ`}
                 </span>
             </div>
@@ -106,27 +106,27 @@ export default function SmartAnomalyAlerts({
                     alerts.map(item => (
                         <div 
                             key={item.id}
-                            className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                            className="p-3 border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                             <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                    <span className="px-1.5 py-0.2 text-[11px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)]">
                                         {item.code}
                                     </span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="font-bold text-[var(--color-ink)]">
                                         {item.title}
                                     </span>
                                 </div>
-                                <p className="text-[13px] text-[oklch(42%_0.010_28)] font-sans">
+                                <p className="text-[13px] text-[var(--color-muted)] font-sans">
                                     → {item.suggestion}
                                 </p>
                             </div>
 
-                            <div className="text-right whitespace-nowrap pl-4 border-l border-[oklch(85%_0.012_28)]">
-                                <div className="text-sm font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                            <div className="text-right whitespace-nowrap pl-4 border-l border-[var(--color-rule)]">
+                                <div className="text-sm font-bold text-[var(--brand-plum)] tabular-nums">
                                     {item.metric}
                                 </div>
-                                <div className="text-xs text-[oklch(55%_0.010_28)]">
+                                <div className="text-xs text-[var(--color-neutral)]">
                                     {item.diff}
                                 </div>
                             </div>

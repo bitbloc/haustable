@@ -128,7 +128,7 @@ export default function MonthlyTaxPrintView({
             `}} />
 
             {/* Top Toolbar (Hidden on Print) */}
-            <div className="w-full max-w-5xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 sm:px-6 py-3 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
+            <div className="w-full max-w-5xl bg-[var(--color-ink)] text-[var(--color-paper)] px-4 sm:px-6 py-3 border border-[var(--color-rule)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
@@ -137,7 +137,7 @@ export default function MonthlyTaxPrintView({
                         <ArrowLeft size={14} />
                         <span>BACK</span>
                     </button>
-                    <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                    <span className="font-bold text-[var(--brand-plum)] uppercase tracking-wider">
                         [ MONTHLY TAX DOSSIER PRINT VIEW ]
                     </span>
                     <span className="text-zinc-400">
@@ -188,13 +188,13 @@ export default function MonthlyTaxPrintView({
                                     {/* In The Haus Logo */}
                                     <div className="shrink-0 pt-1">
                                         <img 
-                                            src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
+                                            src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo-inbaan-wordmark-charcoal.png'} 
                                             alt="IN THE HAUS" 
                                             className="w-20 h-20 object-contain object-left-top shrink-0"
                                             crossOrigin="anonymous"
                                             onError={(e) => {
-                                                if (e.target.src !== `${window.location.origin}/logo.png`) {
-                                                    e.target.src = '/logo.png';
+                                                if (e.target.src !== `${window.location.origin}/logo-inbaan-wordmark-charcoal.png`) {
+                                                    e.target.src = '/logo-inbaan-wordmark-charcoal.png';
                                                 }
                                             }}
                                         />

@@ -61,47 +61,47 @@ export default function FinancialHeatmap({ data }) {
     ]
 
     const getHeatColor = (val) => {
-        if (val === 0) return 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)]'
-        if (val <= 2) return 'bg-[oklch(90%_0.02_28)] text-[oklch(18%_0.012_28)] font-bold'
-        if (val <= 4) return 'bg-[oklch(80%_0.05_28)] text-[oklch(18%_0.012_28)] font-bold'
-        if (val <= 6) return 'bg-[oklch(70%_0.09_28)] text-[oklch(97%_0.008_28)] font-bold'
-        if (val <= 8) return 'bg-[oklch(60%_0.13_28)] text-[oklch(97%_0.008_28)] font-bold'
-        return 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold'
+        if (val === 0) return 'bg-[var(--color-paper-2)] text-[var(--color-neutral)]'
+        if (val <= 2) return 'bg-[var(--color-paper-3)] text-[var(--color-ink)] font-bold'
+        if (val <= 4) return 'bg-[oklch(80%_0.05_348.33)] text-[var(--color-ink)] font-bold'
+        if (val <= 6) return 'bg-[oklch(70%_0.09_348.33)] text-[var(--color-paper)] font-bold'
+        if (val <= 8) return 'bg-[var(--brand-plum)] text-[var(--color-paper)] font-bold'
+        return 'bg-[var(--brand-plum)] text-[var(--color-paper)] font-bold'
     }
 
     return (
-        <div className="space-y-6 text-[oklch(18%_0.012_28)] font-sans">
+        <div className="space-y-6 text-[var(--color-ink)] font-sans">
             
             {/* 1. Heatmap Matrix 7x12 (Neo-Brutalist Grid Container) */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
                 
                 {/* Header */}
-                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[oklch(94%_0.010_28)]">
+                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[var(--color-paper-2)]">
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
+                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[var(--color-ink)] text-[var(--color-paper)] ">
                             MATRIX // DENSITY
                         </span>
-                        <h4 className="font-bold text-sm md:text-base text-[oklch(18%_0.012_28)]">
+                        <h4 className="font-bold text-sm md:text-base text-[var(--color-ink)]">
                             ความหนาแน่นยอดขายรายชั่วโมง (Heatmap 7 Days x 12 Hours)
                         </h4>
                     </div>
-                    <div className="flex items-center gap-2 tabular-nums text-xs text-[oklch(42%_0.010_28)]">
+                    <div className="flex items-center gap-2 tabular-nums text-xs text-[var(--color-muted)]">
                         <span>น้อย</span>
-                        <div className="flex gap-0.5 border border-[oklch(85%_0.012_28)] p-0.5 bg-[oklch(94%_0.010_28)]">
-                            <span className="w-3.5 h-3.5 bg-[oklch(90%_0.02_28)]" />
-                            <span className="w-3.5 h-3.5 bg-[oklch(80%_0.05_28)]" />
-                            <span className="w-3.5 h-3.5 bg-[oklch(70%_0.09_28)]" />
-                            <span className="w-3.5 h-3.5 bg-[oklch(52%_0.16_28)]" />
+                        <div className="flex gap-0.5 border border-[var(--color-rule)] p-0.5 bg-[var(--color-paper-2)]">
+                            <span className="w-3.5 h-3.5 bg-[var(--color-paper-3)]" />
+                            <span className="w-3.5 h-3.5 bg-[oklch(80%_0.05_348.33)]" />
+                            <span className="w-3.5 h-3.5 bg-[oklch(70%_0.09_348.33)]" />
+                            <span className="w-3.5 h-3.5 bg-[var(--brand-plum)]" />
                         </div>
                         <span>พีคสุด</span>
                     </div>
                 </div>
 
                 {/* Heatmap Grid Box */}
-                <div className="p-4 md:p-6 bg-[oklch(97%_0.008_28)] overflow-x-auto">
+                <div className="p-4 md:p-6 bg-[var(--color-paper)] overflow-x-auto">
                     <div className="min-w-[640px]">
                         {/* Time Slots Header */}
-                        <div className="grid grid-cols-13 gap-1 mb-1 tabular-nums text-xs font-bold text-[oklch(42%_0.010_28)] text-center">
+                        <div className="grid grid-cols-13 gap-1 mb-1 tabular-nums text-xs font-bold text-[var(--color-muted)] text-center">
                             <div className="text-left">DAY/HR</div>
                             {timeSlots.map((ts, idx) => (
                                 <div key={idx}>{ts}</div>
@@ -115,11 +115,11 @@ export default function FinancialHeatmap({ data }) {
                                 : Array(12).fill(0)
                             return (
                                 <div key={dayIdx} className="grid grid-cols-13 gap-1 my-1 items-center tabular-nums text-xs">
-                                    <div className="font-bold text-[oklch(18%_0.012_28)] text-left">{day}</div>
+                                    <div className="font-bold text-[var(--color-ink)] text-left">{day}</div>
                                     {row.map((val, timeIdx) => (
                                         <div
                                             key={timeIdx}
-                                            className={`h-9 flex items-center justify-center text-xs border border-[oklch(85%_0.012_28)] cursor-pointer transition-all hover:border-[oklch(18%_0.012_28)] ${getHeatColor(val)}`}
+                                            className={`h-9 flex items-center justify-center text-xs border border-[var(--color-rule)] cursor-pointer transition-all hover:border-[var(--color-ink)] ${getHeatColor(val)}`}
                                             title={`${day} ${timeSlots[timeIdx]}: Level ${val}/10`}
                                         >
                                             {val > 0 ? val : '—'}
@@ -133,12 +133,12 @@ export default function FinancialHeatmap({ data }) {
             </div>
 
             {/* 2. Shift Windows Grid */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                <div className="p-4 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
+                <div className="p-4 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)]">
                     TIME-SLOT BEHAVIOR // สถิติพฤติกรรม 4 ช่วงเวลา
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)]">
                     {shiftWindows.map((sw) => {
                         const isSelected = selectedSlot === sw.id
                         return (
@@ -147,37 +147,37 @@ export default function FinancialHeatmap({ data }) {
                                 onClick={() => setSelectedSlot(sw.id)}
                                 className={`p-4 space-y-3 cursor-pointer transition-colors ${
                                     isSelected
-                                        ? 'bg-[oklch(94%_0.010_28)]'
-                                        : 'bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        ? 'bg-[var(--color-paper-2)]'
+                                        : 'bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)]'
                                 }`}
                             >
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between tabular-nums text-xs">
-                                        <span className="font-bold text-[oklch(52%_0.16_28)]">{sw.code}</span>
-                                        <span className="px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="font-bold text-[var(--brand-plum)]">{sw.code}</span>
+                                        <span className="px-1.5 py-0.2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-[var(--color-ink)]">
                                             {sw.time}
                                         </span>
                                     </div>
-                                    <h5 className="font-bold text-sm text-[oklch(18%_0.012_28)]">{sw.name}</h5>
-                                    <p className="text-[13px] text-[oklch(42%_0.010_28)]">{sw.highlight}</p>
+                                    <h5 className="font-bold text-sm text-[var(--color-ink)]">{sw.name}</h5>
+                                    <p className="text-[13px] text-[var(--color-muted)]">{sw.highlight}</p>
                                 </div>
 
-                                <div className="space-y-1.5 pt-2 border-t border-[oklch(85%_0.012_28)] tabular-nums text-xs">
+                                <div className="space-y-1.5 pt-2 border-t border-[var(--color-rule)] tabular-nums text-xs">
                                     <div className="flex justify-between items-baseline">
-                                        <span className="text-[oklch(42%_0.010_28)]">ยอดขาย:</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                        <span className="text-[var(--color-muted)]">ยอดขาย:</span>
+                                        <span className="font-bold text-[var(--color-ink)] tabular-nums">
                                             ฿{Math.ceil(sw.totalSales || 0).toLocaleString()}
                                         </span>
                                     </div>
 
                                     <div className="flex justify-between items-baseline">
-                                        <span className="text-[oklch(42%_0.010_28)]">ต่อหัว:</span>
-                                        <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                                        <span className="text-[var(--color-muted)]">ต่อหัว:</span>
+                                        <span className="font-bold text-[var(--brand-plum)] tabular-nums">
                                             ฿{Math.ceil(sw.salesPerHead || 0)} /คน
                                         </span>
                                     </div>
 
-                                    <div className="text-xs text-[oklch(42%_0.010_28)] pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                                    <div className="text-xs text-[var(--color-muted)] pt-1 border-t border-dashed border-[var(--color-rule)]">
                                         {sw.foodDrinkRatio}
                                     </div>
                                 </div>

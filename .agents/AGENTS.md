@@ -18,8 +18,8 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 | `--brand-plum-2` | `#571C3E` | `oklch(33.03% 0.0965 348.04)` | Raised surface / secondary button on plum |
 | `--brand-plum-3` | `#6E3855` | `oklch(41.92% 0.0851 347.97)` | Hover and dividers on plum (not for text) |
 | `--on-plum-2` | `#D0B5C1` | `oklch(79.98% 0.0348 349.28)` | Secondary text on plum |
-| `accent.lime` `--accent-lime` | `#D0E020` | `oklch(86.55% 0.1900 114.95)` | ONE primary action per screen, always with charcoal text |
-| `--accent-lime-press` | `#BBCA08` | `oklch(80.01% 0.1802 115.06)` | Pressed / hover lime |
+| `--action-primary` | `#1A1A1A` | `oklch(21.78% 0 0)` | ONE primary action per screen: charcoal fill, cream text (`--on-action`) |
+| `--action-primary-hover` | `#292527` | `oklch(26.96% 0.0069 345.80)` | Pressed / hover primary |
 | `charcoal` `--charcoal` | `#1A1A1A` | `oklch(21.78% 0 0)` | Ink on light surfaces; POS / bar dark theme background |
 | `--charcoal-2` | `#292527` | `oklch(26.96% 0.0069 345.80)` | Dark theme raised surface |
 | `--charcoal-3` | `#393436` | `oklch(33.10% 0.0078 351.28)` | Dark theme hover / pressed |
@@ -34,11 +34,11 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 | `error.red` `--error-red` | `#B42318` | `oklch(50.03% 0.1821 29.51)` | Errors and destructive actions ONLY |
 
 **Rules**
-- **Lime** marks the single primary action on a screen (charcoal text). Never use lime as text or an outline on cream: 1.31:1.
-- **Secondary actions** are plum fills (cream text) or 1px outlines (charcoal or plum). Never a second lime.
+- **Primary action** is charcoal with cream text, one per screen. Lime / neon (`#D0E020`, `#DFFF00`) is retired: too loud for the brand (owner, 2026-11-17). Do not reintroduce neon accents.
+- **Secondary actions** are plum fills (cream text) or 1px outlines (charcoal or plum). On a plum surface the primary charcoal button still reads (cream label 15.59:1); keep it full-width or clearly sized so it does not sink into the plum.
 - **Red** only for errors and destructive actions. Required-field marks, prices, spice and "last order" notes are plum or charcoal.
 - **No pure white or black** except charcoal `#1A1A1A`, which is part of the brand.
-- **Third-party marks** keep their own colour where people look for it (LINE green, TrueMoney orange, Facebook blue), only on that service's own button.
+- **Third-party buttons** follow the brand: LINE chat buttons are plum secondaries like the rest (owner decision 2026-11-17), the label says "LINE". Only a payment method's own selector keeps its mark colour (e.g. TrueMoney orange) so people can find it.
 - **`hausmade.*` namespace** (`--hausmade-orange #FF5A00`, `--hausmade-blue #0047AB`, `--hausmade-green #32CD32`, `--hausmade-dark #2A2A2A`) is ONLY for HAUSMADE products and loyalty / KEYTAG surfaces, never general UI.
 
 **Contrast (WCAG 2.x, computed from the hex values; every text pair must be at least 4.5:1)**
@@ -58,17 +58,13 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 | cream on plum-2 | 11.46:1 |
 | on-plum-2 on plum | 8.70:1 |
 | on-plum-2 on plum-2 | 6.74:1 |
-| charcoal on lime | 11.91:1 |
-| charcoal on lime-press | 9.58:1 |
-| lime on plum (marks) | 11.30:1 |
+| cream on action-primary-hover | 13.55:1 |
 | error-red on cream | 5.89:1 |
 | cream on error-red | 5.89:1 |
 | cream on charcoal | 15.59:1 |
 | cream on charcoal-2 | 13.55:1 |
 | dark-muted on charcoal | 8.63:1 |
 | dark-muted on charcoal-2 | 7.50:1 |
-| lime on charcoal | 11.91:1 |
-| **lime on cream** | **1.31:1, never** |
 
 ### 3. Type
 - **SOV_monomon**: headlines only (page and section titles, hero lines). Self-hosted subset `public/fonts/sov-monomon-*.woff2`; the only font the React app preloads. It has one weight (400): never ask for bold (the `@font-face` covers 100-900 so the browser never fakes a bold).
@@ -110,7 +106,7 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 - **Structural Headers & Tabular Layout**: When designing navigation bars, headers, or footers, prefer a brutalist tabular layout over floating pills. Use full-bleed container blocks divided strictly by 1px solid borders (`border-[var(--color-rule)]`).
 - **Cellular Division**: Treat header sections (Logo, Nav Links, CTAs, Status Indicators) as distinct CSS flex/grid cells with explicit vertical/horizontal borders separating them. 
 - **Banners**: Important states and marquees use a plum banner with cream text. No neon yellow.
-- **CTAs**: The primary CTA is lime with charcoal text and fills its grid cell. Secondary CTAs are plum (cream text) or a 1px outline. One lime per screen.
+- **CTAs**: The primary CTA is charcoal with cream text and fills its grid cell. Secondary CTAs are plum (cream text) or a 1px outline. One primary per screen.
 
 ### 10. Back-Office Audit & Reporting Policy (Mobile & Desktop)
 - **Digital Sharing & Export Priority (Export PNG / PDF)**: In all back-office management interfaces (`/admin`, `AdminDashboard`, `AdminShiftsLedgerTab`, `DailySummarySlipModal`), operators and business owners access reports from personal smartphones and desktop laptops/PCs where physical thermal receipt printers (Sunmi, ESC/POS) are NOT attached.

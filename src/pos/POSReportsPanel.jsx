@@ -778,27 +778,27 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 bg-[oklch(94%_0.010_28)] overflow-y-auto text-[oklch(18%_0.012_28)] font-sans select-none">
+        <div className="h-full flex flex-col p-6 bg-[var(--color-paper-2)] overflow-y-auto text-[var(--color-ink)] font-sans select-none">
             {/* Header controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-4 border-b border-[oklch(85%_0.012_28)] shrink-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-4 border-b border-[var(--color-rule)] shrink-0">
                 <div>
-                    <h3 className="font-mono font-bold text-sm tracking-wider uppercase text-[oklch(18%_0.012_28)]">
+                    <h3 className="font-mono font-bold text-sm tracking-wider uppercase text-[var(--color-ink)]">
                         DAILY SALES & SHIFT REPORT / รายงานยอดขายและสรุปรอบกะ
                     </h3>
-                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-bold font-mono mt-0.5 uppercase tracking-tight">
+                    <p className="text-[10px] text-[var(--color-neutral)] font-bold font-mono mt-0.5 uppercase tracking-tight">
                         ตรวจสอบยอดชำระเงิน ลิ้นชักเงินสด และพิมพ์รายงานสรุปกะ
                     </p>
                 </div>
                 
                 <div className="flex items-center gap-2 w-full md:w-auto font-mono text-[10px] flex-wrap">
-                    <div className="flex items-center bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-0.5 shadow-2xs">
+                    <div className="flex items-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg p-0.5 shadow-2xs">
                         <button
                             type="button"
                             onClick={() => setFilterDate(getBangkokDate())}
                             className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                                 filterDate === getBangkokDate() 
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-2xs' 
+                                    : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             วันนี้
@@ -808,8 +808,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             onClick={() => setFilterDate(getYesterdayBangkokDate())}
                             className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                                 filterDate === getYesterdayBangkokDate() 
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-2xs' 
+                                    : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             เมื่อวาน
@@ -820,13 +820,13 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                         type="date"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
-                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-lg text-xs outline-none text-[oklch(18%_0.012_28)] focus:border-[oklch(18%_0.012_28)]"
+                        className="bg-[var(--color-paper)] border border-[var(--color-rule)] px-3 py-1.5 rounded-lg text-xs outline-none text-[var(--color-ink)] focus:border-[var(--color-ink)]"
                     />
 
                     <button 
                         type="button"
                         onClick={fetchReportData} 
-                        className="p-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                        className="p-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-[var(--color-ink)] transition-colors cursor-pointer"
                         title="Reload"
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -835,8 +835,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
             </div>
 
             {loading ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-60 space-y-3 font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
-                     <Loader2 className="animate-spin w-8 h-8 text-[oklch(52%_0.16_28)]" />
+                <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-60 space-y-3 font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
+                     <Loader2 className="animate-spin w-8 h-8 text-[var(--brand-plum)]" />
                      <p>กำลังคำนวณและประมวลผลข้อมูลยอดขาย...</p>
                 </div>
             ) : (
@@ -845,76 +845,76 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-3.5">
                         
                         {/* Net Revenue */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
-                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-[oklch(52%_0.16_28)]"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
-                                <TrendingUp size={11} className="text-[oklch(52%_0.16_28)]" /> NET REVENUE
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-[var(--brand-plum)]"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold">
+                                <TrendingUp size={11} className="text-[var(--brand-plum)]" /> NET REVENUE
                             </div>
-                            <p className="text-xl font-mono font-bold text-[oklch(18%_0.012_28)] mt-1.5">฿{totalSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">{completedBookings.length} BILLS COMPLETED</p>
+                            <p className="text-xl font-mono font-bold text-[var(--color-ink)] mt-1.5">฿{totalSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[var(--color-neutral)] uppercase">{completedBookings.length} BILLS COMPLETED</p>
                         </div>
 
                         {/* Cash Sales */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
                             <div className="absolute top-0 left-0 w-full h-[2.5px] bg-emerald-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold">
                                 <Banknote size={11} className="text-emerald-600" /> CASH SALES
                             </div>
                             <p className="text-xl font-mono font-bold text-emerald-700 mt-1.5">฿{cashSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">PHYSICAL DRAWER</p>
+                            <p className="text-[9px] font-mono text-[var(--color-neutral)] uppercase">PHYSICAL DRAWER</p>
                         </div>
 
                         {/* QR Sales */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
                             <div className="absolute top-0 left-0 w-full h-[2.5px] bg-blue-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold">
                                 <CreditCard size={11} className="text-blue-600" /> QR TRANSFER
                             </div>
                             <p className="text-xl font-mono font-bold text-blue-700 mt-1.5">฿{qrSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">BANK DEPOSIT</p>
+                            <p className="text-[9px] font-mono text-[var(--color-neutral)] uppercase">BANK DEPOSIT</p>
                         </div>
 
                         {/* Credit Sales */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
                             <div className="absolute top-0 left-0 w-full h-[2.5px] bg-amber-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold">
                                 <CreditCard size={11} className="text-amber-600" /> CREDIT CARD
                             </div>
                             <p className="text-xl font-mono font-bold text-amber-700 mt-1.5">฿{creditSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">CARD EDC</p>
+                            <p className="text-[9px] font-mono text-[var(--color-neutral)] uppercase">CARD EDC</p>
                         </div>
 
                         {/* Discounts */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
                             <div className="absolute top-0 left-0 w-full h-[2.5px] bg-[oklch(45%_0.08_140)]"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold">
                                 <Percent size={11} className="text-[oklch(45%_0.08_140)]" /> DISCOUNTS
                             </div>
                             <p className="text-xl font-mono font-bold text-[oklch(45%_0.08_140)] mt-1.5">฿{totalDiscounts.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">PROMO / CRM</p>
+                            <p className="text-[9px] font-mono text-[var(--color-neutral)] uppercase">PROMO / CRM</p>
                         </div>
 
                         {/* Active Unpaid / Tables */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px] col-span-2 md:col-span-1">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px] col-span-2 md:col-span-1">
                             <div className="absolute top-0 left-0 w-full h-[2.5px] bg-purple-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                            <div className="flex items-center gap-1.5 text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold">
                                 <ShoppingBag size={11} className="text-purple-600" /> ACTIVE UNPAID
                             </div>
                             <p className="text-xl font-mono font-bold text-purple-700 mt-1.5">฿{activeUnpaid.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">{activeBookings.length} TABLES PENDING</p>
+                            <p className="text-[9px] font-mono text-[var(--color-neutral)] uppercase">{activeBookings.length} TABLES PENDING</p>
                         </div>
                     </div>
 
                     {/* Active Shift Section */}
                     {activeShift && (
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 shadow-2xs">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-[oklch(85%_0.012_28)] pb-3 mb-4 select-none">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-5 shadow-2xs">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-[var(--color-rule)] pb-3 mb-4 select-none">
                                 <div>
-                                    <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-2">
+                                    <h4 className="font-mono font-bold text-xs text-[var(--color-ink)] uppercase tracking-wider flex items-center gap-2">
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                         ACTIVE SHIFT / รอบการขายปัจจุบัน - {activeShift.staffName}
                                     </h4>
-                                    <p className="text-[9px] text-[oklch(55%_0.010_28)] font-mono uppercase tracking-tight mt-0.5">
+                                    <p className="text-[9px] text-[var(--color-neutral)] font-mono uppercase tracking-tight mt-0.5">
                                         OPENED: {new Date(activeShift.openedAt).toLocaleString('th-TH')}
                                     </p>
                                 </div>
@@ -924,44 +924,44 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold">OPENING FLOAT / เงินต้น</p>
-                                    <p className="text-sm font-bold mt-1 text-[oklch(18%_0.012_28)]">฿{(activeShift.openingFloat || 0).toLocaleString()}</p>
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[var(--color-neutral)] uppercase tracking-widest font-bold">OPENING FLOAT / เงินต้น</p>
+                                    <p className="text-sm font-bold mt-1 text-[var(--color-ink)]">฿{(activeShift.openingFloat || 0).toLocaleString()}</p>
                                 </div>
 
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-emerald-700">CASH IN / OUT (เข้า-ออก)</p>
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[var(--color-neutral)] uppercase tracking-widest font-bold text-emerald-700">CASH IN / OUT (เข้า-ออก)</p>
                                     <p className="text-sm font-bold mt-1 flex items-center gap-1.5">
                                         <span className="text-emerald-700">+฿{(activeShiftSummary ? activeShiftSummary.totalIn : 0).toLocaleString()}</span>
-                                        <span className="text-[oklch(55%_0.010_28)]">/</span>
+                                        <span className="text-[var(--color-neutral)]">/</span>
                                         <span className="text-red-600">-฿{(activeShiftSummary ? activeShiftSummary.totalOut : 0).toLocaleString()}</span>
                                     </p>
                                 </div>
 
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-emerald-800">CASH SALES / ขายเงินสด</p>
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[var(--color-neutral)] uppercase tracking-widest font-bold text-emerald-800">CASH SALES / ขายเงินสด</p>
                                     <p className="text-sm font-bold mt-1 text-emerald-800">
                                         ฿{(activeShiftSummary ? activeShiftSummary.cashSales : 0).toLocaleString()}
                                     </p>
                                 </div>
 
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-blue-700">QR SALES / ยอดโอนกะนี้</p>
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[var(--color-neutral)] uppercase tracking-widest font-bold text-blue-700">QR SALES / ยอดโอนกะนี้</p>
                                     <p className="text-sm font-bold mt-1 text-blue-700">
                                         ฿{(activeShiftSummary ? activeShiftSummary.qrSales : 0).toLocaleString()}
                                     </p>
                                 </div>
 
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-amber-800">CREDIT / บัตรเครดิตกะนี้</p>
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[var(--color-neutral)] uppercase tracking-widest font-bold text-amber-800">CREDIT / บัตรเครดิตกะนี้</p>
                                     <p className="text-sm font-bold mt-1 text-amber-800">
                                         ฿{(activeShiftSummary ? activeShiftSummary.creditSales : 0).toLocaleString()}
                                     </p>
                                 </div>
 
-                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-[oklch(52%_0.16_28)]">EXPECTED CASH / ในลิ้นชัก</p>
-                                    <p className="text-sm font-bold mt-1 text-[oklch(52%_0.16_28)]">
+                                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[var(--color-neutral)] uppercase tracking-widest font-bold text-[var(--brand-plum)]">EXPECTED CASH / ในลิ้นชัก</p>
+                                    <p className="text-sm font-bold mt-1 text-[var(--brand-plum)]">
                                         ฿{(activeShiftSummary ? activeShiftSummary.expectedCash : 0).toLocaleString()}
                                     </p>
                                 </div>
@@ -970,23 +970,23 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             <div className="grid md:grid-cols-2 gap-5">
                                 {/* Left Column: Cash Adjustments */}
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase select-none">
+                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[var(--color-neutral)] uppercase select-none">
                                         รายการนำเงินเข้า-ออกในรอบนี้ (CASH ADJUSTMENTS)
                                     </div>
-                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg overflow-hidden bg-white max-h-[200px] overflow-y-auto">
+                                    <div className="border border-[var(--color-rule)] rounded-lg overflow-hidden bg-white max-h-[200px] overflow-y-auto">
                                         <table className="w-full text-left text-xs border-collapse">
                                             <thead>
-                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[8px] uppercase tracking-wider text-[oklch(55%_0.010_28)] select-none sticky top-0">
+                                                <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] font-mono text-[8px] uppercase tracking-wider text-[var(--color-neutral)] select-none sticky top-0">
                                                     <th className="py-2 px-3 w-20">TIME</th>
                                                     <th className="py-2 px-3 w-28">TYPE</th>
                                                     <th className="py-2 px-3 text-right w-28">AMOUNT</th>
                                                     <th className="py-2 px-3">REASON / NOTE</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-[oklch(94%_0.010_28)] font-sans text-[oklch(18%_0.012_28)]">
+                                            <tbody className="divide-y divide-[var(--color-paper-2)] font-sans text-[var(--color-ink)]">
                                                 {(activeShift.adjustments || []).map((adj, idx) => (
-                                                    <tr key={adj.id || idx} className="hover:bg-[oklch(94%_0.010_28)]/50 transition-colors">
-                                                        <td className="py-2 px-3 font-mono text-[9px] text-[oklch(55%_0.010_28)]">
+                                                    <tr key={adj.id || idx} className="hover:bg-[var(--color-paper-2)]/50 transition-colors">
+                                                        <td className="py-2 px-3 font-mono text-[9px] text-[var(--color-neutral)]">
                                                             {new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </td>
                                                         <td className="py-2 px-3">
@@ -1003,14 +1003,14 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                         <td className={`py-2 px-3 text-right font-mono font-bold ${adj.type === 'in' ? 'text-emerald-700' : 'text-red-600'}`}>
                                                             {adj.type === 'in' ? '+' : '-'}฿{adj.amount?.toLocaleString()}.-
                                                         </td>
-                                                        <td className="py-2 px-3 text-[10px] truncate max-w-xs text-[oklch(55%_0.010_28)] font-medium">
+                                                        <td className="py-2 px-3 text-[10px] truncate max-w-xs text-[var(--color-neutral)] font-medium">
                                                             {adj.note || '-'}
                                                         </td>
                                                     </tr>
                                                 ))}
                                                 {(!activeShift.adjustments || activeShift.adjustments.length === 0) && (
                                                     <tr>
-                                                        <td colSpan="4" className="py-6 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                                        <td colSpan="4" className="py-6 text-center font-mono text-[9px] text-[var(--color-neutral)] uppercase italic">
                                                             ไม่มีรายการเบิกเงินสดในกะปัจจุบัน
                                                         </td>
                                                     </tr>
@@ -1022,20 +1022,20 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
 
                                 {/* Right Column: Top 10 Best Sellers */}
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase select-none">
+                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[var(--color-neutral)] uppercase select-none">
                                         TOP 10 BEST SELLERS IN ACTIVE SHIFT / เมนูขายดีรอบนี้
                                     </div>
-                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg bg-white p-3 max-h-[200px] overflow-y-auto flex flex-col gap-1 shadow-2xs">
+                                    <div className="border border-[var(--color-rule)] rounded-lg bg-white p-3 max-h-[200px] overflow-y-auto flex flex-col gap-1 shadow-2xs">
                                         {activeShiftTopSellers.length === 0 ? (
-                                            <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-10 uppercase italic">
+                                            <div className="text-center font-mono text-[9px] text-[var(--color-neutral)] py-10 uppercase italic">
                                                 กำลังประมวลผลเมนูขายดี...
                                             </div>
                                         ) : (
                                             activeShiftTopSellers.map((item, idx) => (
-                                                <div key={idx} className="flex justify-between items-center py-1 border-b border-[oklch(94%_0.010_28)] last:border-b-0 text-xs">
+                                                <div key={idx} className="flex justify-between items-center py-1 border-b border-[var(--color-paper-2)] last:border-b-0 text-xs">
                                                     <div className="flex items-center gap-2 select-none truncate pr-2">
-                                                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] w-4 font-bold">{idx + 1}.</span>
-                                                        <span className="font-medium text-[oklch(18%_0.012_28)] truncate">{item.name}</span>
+                                                        <span className="font-mono text-[10px] text-[var(--color-neutral)] w-4 font-bold">{idx + 1}.</span>
+                                                        <span className="font-medium text-[var(--color-ink)] truncate">{item.name}</span>
                                                     </div>
                                                     <span className="font-mono font-bold text-emerald-700 shrink-0">{item.quantity.toLocaleString()} x</span>
                                                 </div>
@@ -1048,21 +1048,21 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     )}
 
                     {/* Filter & Search Bar for Completed Bills */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-2xs select-none">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-3.5 shadow-2xs select-none">
                         <div className="flex items-center gap-2 w-full md:w-auto">
                             <div className="relative flex-1 md:w-72">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" />
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" />
                                 <input
                                     type="text"
                                     placeholder="ค้นหา Short ID (#A2EB), โต๊ะ, ชื่อ..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] focus:border-[oklch(18%_0.012_28)] pl-8 pr-3 py-1.5 rounded-lg text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none placeholder:text-[oklch(55%_0.010_28)]"
+                                    className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] focus:border-[var(--color-ink)] pl-8 pr-3 py-1.5 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none placeholder:text-[var(--color-neutral)]"
                                 />
                                 {searchQuery && (
                                     <button 
                                         onClick={() => setSearchQuery('')}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] text-xs font-mono font-bold"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] hover:text-[var(--color-ink)] text-xs font-mono font-bold"
                                     >
                                         ✕
                                     </button>
@@ -1070,7 +1070,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-0.5 rounded-lg w-full md:w-auto overflow-x-auto">
+                        <div className="flex items-center gap-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-0.5 rounded-lg w-full md:w-auto overflow-x-auto">
                             {[
                                 { id: 'all', label: `ALL (${completedBookings.length})` },
                                 { id: 'cash', label: 'CASH' },
@@ -1085,8 +1085,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                     onClick={() => setPayMethodFilter(btn.id)}
                                     className={`px-3 py-1.5 rounded-md font-mono text-[9px] font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
                                         payMethodFilter === btn.id
-                                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs border border-[oklch(85%_0.012_28)]'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] border border-transparent'
+                                            ? 'bg-white text-[var(--color-ink)] shadow-2xs border border-[var(--color-rule)]'
+                                            : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)] border border-transparent'
                                     }`}
                                 >
                                     {btn.label}
@@ -1099,43 +1099,43 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     <div className="grid md:grid-cols-3 gap-5">
                         
                         {/* Categories Sales Card */}
-                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs">
-                            <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 select-none">
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-5 flex flex-col shadow-2xs">
+                            <h4 className="font-mono font-bold text-xs text-[var(--color-ink)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[var(--color-rule)] pb-2 select-none">
                                 <span>SALES BY CATEGORY / หมวดหมู่</span>
-                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">{categoryList.length} CATEGORIES</span>
+                                <span className="text-[10px] text-[var(--color-neutral)]">{categoryList.length} CATEGORIES</span>
                             </h4>
 
                             <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[340px] pr-1">
                                 {categoryList.map((c, i) => (
-                                    <div key={i} className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] text-xs flex flex-col gap-1">
+                                    <div key={i} className="bg-[var(--color-paper-2)] p-2.5 rounded-lg border border-[var(--color-rule)] text-xs flex flex-col gap-1">
                                         <div className="flex justify-between items-center">
                                             <div>
-                                                <span className="font-bold text-[oklch(18%_0.012_28)]">{c.name}</span>
-                                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] ml-2 uppercase">
+                                                <span className="font-bold text-[var(--color-ink)]">{c.name}</span>
+                                                <span className="text-[9px] font-mono text-[var(--color-neutral)] ml-2 uppercase">
                                                     ({c.quantity} items)
                                                 </span>
                                             </div>
                                             <div className="text-right">
-                                                <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                                <span className="font-mono font-bold text-[var(--color-ink)]">
                                                     ฿{c.amount.toLocaleString()}
                                                 </span>
-                                                <span className="text-[9px] font-mono font-bold text-[oklch(52%_0.16_28)] ml-1.5">
+                                                <span className="text-[9px] font-mono font-bold text-[var(--brand-plum)] ml-1.5">
                                                     {c.pct}%
                                                 </span>
                                             </div>
                                         </div>
 
                                         {/* Progress Bar */}
-                                        <div className="w-full bg-[oklch(85%_0.012_28)]/50 h-1.5 rounded-full overflow-hidden">
+                                        <div className="w-full bg-[var(--color-rule)]/50 h-1.5 rounded-full overflow-hidden">
                                             <div 
-                                                className="bg-[oklch(52%_0.16_28)] h-full rounded-full transition-all duration-300"
+                                                className="bg-[var(--brand-plum)] h-full rounded-full transition-all duration-300"
                                                 style={{ width: `${Math.min(100, Math.max(2, c.pct))}%` }}
                                             />
                                         </div>
                                     </div>
                                 ))}
                                 {categoryList.length === 0 && (
-                                    <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-12 uppercase italic">
+                                    <div className="text-center font-mono text-[9px] text-[var(--color-neutral)] py-12 uppercase italic">
                                         ไม่มีรายการขายในตัวกรองนี้
                                     </div>
                                 )}
@@ -1144,15 +1144,15 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             <button 
                                 type="button"
                                 onClick={handlePrintShiftReport}
-                                className="w-full mt-4 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
+                                className="w-full mt-4 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                             >
                                 <PrinterIcon size={12} /> PRINT DAILY SUMMARY
                             </button>
                         </div>
 
                         {/* Completed / Voided Bills Table */}
-                        <div className="md:col-span-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs">
-                            <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 select-none">
+                        <div className="md:col-span-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-5 flex flex-col shadow-2xs">
+                            <h4 className="font-mono font-bold text-xs text-[var(--color-ink)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[var(--color-rule)] pb-2 select-none">
                                 <span>
                                     {payMethodFilter === 'void' 
                                         ? 'VOIDED BILLS AUDIT TRAIL / รายการบิลยกเลิก' 
@@ -1160,13 +1160,13 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                             ? 'MERGED TABLE TRANSFERS / รายการโอนย้าย-รวมบิล'
                                             : "TODAY'S BILLS LOG / รายการบิล"}
                                 </span>
-                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">{filteredForBreakdown.length} RECORDS</span>
+                                <span className="text-[10px] text-[var(--color-neutral)]">{filteredForBreakdown.length} RECORDS</span>
                             </h4>
 
                             <div className="flex-1 overflow-x-auto max-h-[380px] scrollbar-none">
                                 <table className="w-full text-left text-xs border-collapse">
                                     <thead>
-                                        <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[oklch(94%_0.010_28)]">
+                                        <tr className="border-b border-[var(--color-rule)] text-[var(--color-neutral)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[var(--color-paper-2)]">
                                             <th className="py-2.5 px-3 w-16">BILL NO</th>
                                             <th className="py-2.5 px-3 w-16">TIME</th>
                                             <th className="py-2.5 px-3 w-28 text-center">TABLE</th>
@@ -1176,7 +1176,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                             <th className="py-2.5 px-3 text-right w-24">ACTION</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[oklch(94%_0.010_28)]">
+                                    <tbody className="divide-y divide-[var(--color-paper-2)]">
                                         {filteredForBreakdown.map((b) => {
                                             const timeStr = b.booking_time ? new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
                                             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
@@ -1193,21 +1193,21 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                 <tr 
                                                     key={b.id} 
                                                     onClick={() => setActiveViewBooking(b)}
-                                                    className={`hover:bg-[oklch(94%_0.010_28)]/50 transition-colors cursor-pointer ${
+                                                    className={`hover:bg-[var(--color-paper-2)]/50 transition-colors cursor-pointer ${
                                                         isMerged 
-                                                            ? 'bg-[oklch(98%_0.008_28)]' 
+                                                            ? 'bg-[var(--color-paper)]' 
                                                             : isVoid 
                                                                 ? 'opacity-60 bg-red-50/20' 
                                                                 : ''
                                                     }`}
                                                 >
-                                                    <td className="py-2.5 px-3 font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-[var(--color-ink)]">
                                                         #{getShortBookingId(b)}
                                                     </td>
-                                                    <td className="py-2.5 px-3 font-mono text-[oklch(55%_0.010_28)]">{timeStr}</td>
-                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[oklch(52%_0.16_28)]">
+                                                    <td className="py-2.5 px-3 font-mono text-[var(--color-neutral)]">{timeStr}</td>
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[var(--brand-plum)]">
                                                         {isMerged ? (
-                                                            <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                            <span className="text-[10px] text-[var(--brand-plum)] font-bold">
                                                                 {b.tables_layout?.table_name || 'PICK'} ➔ {transfer.targetTableDisplay || transfer.mergedToTable}
                                                             </span>
                                                         ) : (
@@ -1228,22 +1228,22 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                                     <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-emerald-700 text-white shrink-0">
                                                                         MEMBER
                                                                     </span>
-                                                                    <span className="font-bold text-[oklch(18%_0.012_28)] text-xs truncate">
+                                                                    <span className="font-bold text-[var(--color-ink)] text-xs truncate">
                                                                         {memberName || 'สมาชิก'}
                                                                     </span>
                                                                 </div>
                                                                 {profileObj?.phone_number && (
-                                                                    <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] pl-0.5">
+                                                                    <span className="text-[9px] font-mono text-[var(--color-neutral)] pl-0.5">
                                                                         {profileObj.phone_number}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1.5 max-w-[150px]">
-                                                                <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] shrink-0">
+                                                                <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] shrink-0">
                                                                     GUEST
                                                                 </span>
-                                                                <span className="text-[oklch(55%_0.010_28)] text-xs truncate font-medium">
+                                                                <span className="text-[var(--color-neutral)] text-xs truncate font-medium">
                                                                     {guestName}
                                                                 </span>
                                                             </div>
@@ -1251,7 +1251,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                     </td>
                                                     <td className="py-2.5 px-3">
                                                         {isMerged ? (
-                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-black uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)] whitespace-nowrap">
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-black uppercase border bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)] whitespace-nowrap">
                                                                 MERGED ➔ {transfer.targetTableDisplay || transfer.mergedToTable}
                                                             </span>
                                                         ) : isVoid ? (
@@ -1263,7 +1263,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                                 <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-purple-50 text-purple-800 border-purple-200 whitespace-nowrap">
                                                                     SPLIT PAY{paymentBreakdown.roundsCount > 1 ? ` (${paymentBreakdown.roundsCount} รอบ)` : ''}
                                                                 </span>
-                                                                <span className="text-[9px] font-mono text-[oklch(42%_0.010_28)] whitespace-nowrap">
+                                                                <span className="text-[9px] font-mono text-[var(--color-muted)] whitespace-nowrap">
                                                                     {[
                                                                         paymentBreakdown.cash > 0 ? `สด ฿${paymentBreakdown.cash.toLocaleString()}` : null,
                                                                         paymentBreakdown.qr > 0 ? `QR ฿${paymentBreakdown.qr.toLocaleString()}` : null,
@@ -1288,10 +1288,10 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold">
                                                         {isMerged ? (
                                                             <div className="text-right">
-                                                                <span className="text-[11px] font-mono font-black text-[oklch(52%_0.16_28)] block">
+                                                                <span className="text-[11px] font-mono font-black text-[var(--brand-plum)] block">
                                                                     โอนไป {transfer.targetTableDisplay || transfer.mergedToTable}
                                                                 </span>
-                                                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                                                <span className="text-[9px] font-mono text-[var(--color-neutral)]">
                                                                     {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : '฿0'}
                                                                 </span>
                                                             </div>
@@ -1315,7 +1315,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                         <button 
                                                             type="button"
                                                             onClick={(e) => { e.stopPropagation(); setActiveViewBooking(b); }}
-                                                            className="p-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                            className="p-1.5 bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                             title="ดูรายละเอียดบิล"
                                                         >
                                                             <FileText size={10} />
@@ -1323,7 +1323,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                         <button 
                                                             type="button"
                                                             onClick={(e) => { e.stopPropagation(); setActiveReprintBooking(b); }}
-                                                            className="p-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                            className="p-1.5 bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                             title="พิมพ์สลิปซ้ำ"
                                                         >
                                                             <PrinterIcon size={10} />
@@ -1332,7 +1332,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                             <button 
                                                                 type="button"
                                                                 onClick={(e) => { e.stopPropagation(); handleVoidBill(b.id, b.total_amount); }}
-                                                                className="p-1.5 bg-white hover:bg-red-50 border border-[oklch(85%_0.012_28)] hover:border-red-300 rounded-lg text-red-600 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                                className="p-1.5 bg-white hover:bg-red-50 border border-[var(--color-rule)] hover:border-red-300 rounded-lg text-red-600 transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                                 title="ยกเลิกบิล (Void)"
                                                             >
                                                                 <X size={10} />
@@ -1344,7 +1344,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                         })}
                                         {filteredForBreakdown.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="py-12 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                                <td colSpan="7" className="py-12 text-center font-mono text-[9px] text-[var(--color-neutral)] uppercase italic">
                                                     ไม่มีรายการบิลในเงื่อนไขการค้นหานี้
                                                 </td>
                                             </tr>
@@ -1357,21 +1357,21 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     </div>
 
                     {/* Historical Shift Section */}
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs mt-6">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[oklch(85%_0.012_28)] pb-3 mb-4 select-none">
-                            <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-2">
-                                <Clock size={13} className="text-[oklch(52%_0.16_28)]" /> 
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-5 flex flex-col shadow-2xs mt-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[var(--color-rule)] pb-3 mb-4 select-none">
+                            <h4 className="font-mono font-bold text-xs text-[var(--color-ink)] uppercase tracking-wider flex items-center gap-2">
+                                <Clock size={13} className="text-[var(--brand-plum)]" /> 
                                 <span>SHIFT CLOSURE HISTORY / ประวัติการปิดรอบกะ</span>
                             </h4>
 
                             <div className="relative w-full sm:w-60">
-                                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" />
+                                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" />
                                 <input 
                                     type="text"
                                     placeholder="ค้นหาชื่อพนักงาน, วันที่..."
                                     value={shiftSearchQuery}
                                     onChange={(e) => setShiftSearchQuery(e.target.value)}
-                                    className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] focus:border-[oklch(18%_0.012_28)] pl-7 pr-3 py-1 rounded-lg text-xs font-mono text-[oklch(18%_0.012_28)] outline-none"
+                                    className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] focus:border-[var(--color-ink)] pl-7 pr-3 py-1 rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none"
                                 />
                             </div>
                         </div>
@@ -1379,7 +1379,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                         <div className="overflow-x-auto max-h-[300px]">
                             <table className="w-full text-left text-xs border-collapse">
                                 <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[oklch(94%_0.010_28)]">
+                                    <tr className="border-b border-[var(--color-rule)] text-[var(--color-neutral)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[var(--color-paper-2)]">
                                         <th className="py-2.5 px-3">STAFF / พนักงาน</th>
                                         <th className="py-2.5 px-3">OPENED</th>
                                         <th className="py-2.5 px-3">CLOSED</th>
@@ -1393,7 +1393,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                         <th className="py-2.5 px-3 text-center">ACTION</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[oklch(94%_0.010_28)]">
+                                <tbody className="divide-y divide-[var(--color-paper-2)]">
                                     {filteredShiftHistory.map((s, i) => {
                                         const openTime = new Date(s.openedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
                                         const isShiftOpen = s.status === 'open';
@@ -1424,23 +1424,23 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                             <React.Fragment key={s.id || i}>
                                                 <tr 
                                                     onClick={() => setExpandedShiftId(prev => prev === s.id ? null : s.id)}
-                                                    className="hover:bg-[oklch(94%_0.010_28)]/50 cursor-pointer transition-colors font-mono text-[10px]"
+                                                    className="hover:bg-[var(--color-paper-2)]/50 cursor-pointer transition-colors font-mono text-[10px]"
                                                 >
-                                                    <td className="py-2.5 px-3 font-sans font-bold text-[oklch(18%_0.012_28)] uppercase flex items-center gap-1 select-none">
-                                                        {isExpanded ? <ChevronUp size={10} className="text-[oklch(52%_0.16_28)]" /> : <ChevronDown size={10} className="text-[oklch(55%_0.010_28)]" />}
+                                                    <td className="py-2.5 px-3 font-sans font-bold text-[var(--color-ink)] uppercase flex items-center gap-1 select-none">
+                                                        {isExpanded ? <ChevronUp size={10} className="text-[var(--brand-plum)]" /> : <ChevronDown size={10} className="text-[var(--color-neutral)]" />}
                                                         <span>{s.staffName}</span>
                                                     </td>
-                                                    <td className="py-2.5 px-3 text-[oklch(55%_0.010_28)]">{openTime}</td>
-                                                    <td className="py-2.5 px-3 text-[oklch(55%_0.010_28)]">{closeTime}</td>
+                                                    <td className="py-2.5 px-3 text-[var(--color-neutral)]">{openTime}</td>
+                                                    <td className="py-2.5 px-3 text-[var(--color-neutral)]">{closeTime}</td>
                                                     <td className="py-2.5 px-3 text-right">฿{Math.round(s.openingFloat || 0).toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right font-bold text-emerald-700">฿{shiftCashSales.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right text-emerald-700 font-bold">+฿{totalIn.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right text-red-600 font-bold">-฿{totalOut.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right font-bold">฿{expectedCash.toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right font-bold text-[oklch(55%_0.010_28)]">
+                                                    <td className="py-2.5 px-3 text-right font-bold text-[var(--color-neutral)]">
                                                         {isShiftOpen ? '-' : `฿${closedCash.toLocaleString()}`}
                                                     </td>
-                                                    <td className={`py-2.5 px-3 text-right font-bold ${isShiftOpen ? 'text-[oklch(55%_0.010_28)]' : difference === 0 ? 'text-[oklch(55%_0.010_28)]' : difference > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                                                    <td className={`py-2.5 px-3 text-right font-bold ${isShiftOpen ? 'text-[var(--color-neutral)]' : difference === 0 ? 'text-[var(--color-neutral)]' : difference > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                                                         {isShiftOpen ? '-' : (difference > 0 ? '+' : '') + difference.toLocaleString()}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-center">
@@ -1450,36 +1450,36 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                                 e.stopPropagation();
                                                                 handlePrintHistoricalShiftReport(s);
                                                             }}
-                                                            className="p-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer inline-flex items-center gap-1 font-mono text-[9px] font-bold uppercase"
+                                                            className="p-1.5 bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer inline-flex items-center gap-1 font-mono text-[9px] font-bold uppercase"
                                                         >
                                                             <PrinterIcon size={10} /> REPRINT
                                                         </button>
                                                     </td>
                                                 </tr>
                                                 {isExpanded && (
-                                                    <tr className="bg-[oklch(94%_0.010_28)]/30">
-                                                        <td colSpan="11" className="p-4 border-t border-b border-[oklch(85%_0.012_28)]">
+                                                    <tr className="bg-[var(--color-paper-2)]/30">
+                                                        <td colSpan="11" className="p-4 border-t border-b border-[var(--color-rule)]">
                                                             <div className="grid md:grid-cols-2 gap-5">
                                                                 
                                                                 {/* Left Column: Cash Adjustments */}
                                                                 <div className="flex flex-col gap-1.5">
-                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase mb-0.5 select-none">
+                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[var(--color-neutral)] uppercase mb-0.5 select-none">
                                                                         รายการนำเงินเข้า-ออกระหว่างรอบ (ADJUSTMENTS)
                                                                     </div>
-                                                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg overflow-hidden bg-white shadow-2xs max-h-[200px] overflow-y-auto">
+                                                                    <div className="border border-[var(--color-rule)] rounded-lg overflow-hidden bg-white shadow-2xs max-h-[200px] overflow-y-auto">
                                                                         <table className="w-full text-left text-xs border-collapse">
                                                                             <thead>
-                                                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[8px] uppercase tracking-wider text-[oklch(55%_0.010_28)] select-none sticky top-0">
+                                                                                <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] font-mono text-[8px] uppercase tracking-wider text-[var(--color-neutral)] select-none sticky top-0">
                                                                                     <th className="py-2 px-3 w-20">TIME</th>
                                                                                     <th className="py-2 px-3 w-28">TYPE</th>
                                                                                     <th className="py-2 px-3 text-right w-28">AMOUNT</th>
                                                                                     <th className="py-2 px-3">REASON / NOTE</th>
                                                                                 </tr>
                                                                             </thead>
-                                                                            <tbody className="divide-y divide-[oklch(94%_0.010_28)] font-sans text-[oklch(18%_0.012_28)]">
+                                                                            <tbody className="divide-y divide-[var(--color-paper-2)] font-sans text-[var(--color-ink)]">
                                                                                 {adjs.map((adj, idx) => (
-                                                                                    <tr key={adj.id || idx} className="hover:bg-[oklch(94%_0.010_28)]/50 transition-colors">
-                                                                                        <td className="py-2 px-3 font-mono text-[9px] text-[oklch(55%_0.010_28)]">
+                                                                                    <tr key={adj.id || idx} className="hover:bg-[var(--color-paper-2)]/50 transition-colors">
+                                                                                        <td className="py-2 px-3 font-mono text-[9px] text-[var(--color-neutral)]">
                                                                                             {new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                                         </td>
                                                                                         <td className="py-2 px-3">
@@ -1496,14 +1496,14 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                                                         <td className={`py-2 px-3 text-right font-mono font-bold ${adj.type === 'in' ? 'text-emerald-700' : 'text-red-600'}`}>
                                                                                             {adj.type === 'in' ? '+' : '-'}฿{adj.amount?.toLocaleString()}.-
                                                                                         </td>
-                                                                                        <td className="py-2 px-3 text-[10px] truncate max-w-xs text-[oklch(55%_0.010_28)]">
+                                                                                        <td className="py-2 px-3 text-[10px] truncate max-w-xs text-[var(--color-neutral)]">
                                                                                             {adj.note || '-'}
                                                                                         </td>
                                                                                     </tr>
                                                                                 ))}
                                                                                 {adjs.length === 0 && (
                                                                                     <tr>
-                                                                                        <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                                                                        <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[var(--color-neutral)] uppercase italic">
                                                                                             ไม่มีรายการเบิกจ่ายเงินสดระหว่างรอบ
                                                                                         </td>
                                                                                     </tr>
@@ -1515,24 +1515,24 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
 
                                                                 {/* Right Column: Top 10 Best Sellers */}
                                                                 <div className="flex flex-col gap-1.5">
-                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase mb-0.5 select-none">
+                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[var(--color-neutral)] uppercase mb-0.5 select-none">
                                                                         TOP 10 BEST SELLERS / เมนูขายดีในกะนี้
                                                                     </div>
-                                                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg bg-white p-3 shadow-2xs max-h-[200px] overflow-y-auto flex flex-col gap-1">
+                                                                    <div className="border border-[var(--color-rule)] rounded-lg bg-white p-3 shadow-2xs max-h-[200px] overflow-y-auto flex flex-col gap-1">
                                                                         {expandedShiftDetails[s.id]?.loading ? (
-                                                                            <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-10 uppercase italic animate-pulse">
+                                                                            <div className="text-center font-mono text-[9px] text-[var(--color-neutral)] py-10 uppercase italic animate-pulse">
                                                                                 กำลังโหลดข้อมูลเมนูขายดี...
                                                                             </div>
                                                                         ) : !expandedShiftDetails[s.id]?.topSellers || expandedShiftDetails[s.id]?.topSellers.length === 0 ? (
-                                                                            <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-10 uppercase italic">
+                                                                            <div className="text-center font-mono text-[9px] text-[var(--color-neutral)] py-10 uppercase italic">
                                                                                 ไม่มีข้อมูลรายการขายในกะนี้
                                                                             </div>
                                                                         ) : (
                                                                             expandedShiftDetails[s.id].topSellers.map((item, idx) => (
-                                                                                <div key={idx} className="flex justify-between items-center py-1 border-b border-[oklch(94%_0.010_28)] last:border-b-0 text-xs">
+                                                                                <div key={idx} className="flex justify-between items-center py-1 border-b border-[var(--color-paper-2)] last:border-b-0 text-xs">
                                                                                     <div className="flex items-center gap-2 select-none truncate pr-2">
-                                                                                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] w-4 font-bold">{idx + 1}.</span>
-                                                                                        <span className="font-medium text-[oklch(18%_0.012_28)] truncate">{item.name}</span>
+                                                                                        <span className="font-mono text-[10px] text-[var(--color-neutral)] w-4 font-bold">{idx + 1}.</span>
+                                                                                        <span className="font-medium text-[var(--color-ink)] truncate">{item.name}</span>
                                                                                     </div>
                                                                                     <span className="font-mono font-bold text-emerald-700 shrink-0">{item.quantity.toLocaleString()} x</span>
                                                                                 </div>
@@ -1550,7 +1550,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                     })}
                                     {filteredShiftHistory.length === 0 && (
                                         <tr>
-                                            <td colSpan="11" className="py-12 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                            <td colSpan="11" className="py-12 text-center font-mono text-[9px] text-[var(--color-neutral)] uppercase italic">
                                                 ไม่พบประวัติการปิดรอบกะ
                                             </td>
                                         </tr>

@@ -241,7 +241,7 @@ export default function AdLandingAnalyticsTab() {
                 sub: 'จำนวนการเปิดหน้าเว็บทั้งหมดจากทุกช่องทางโฆษณา',
                 count: pageviews, 
                 pct: 100, 
-                color: 'bg-[oklch(18%_0.012_28)]' 
+                color: 'bg-[var(--color-ink)]' 
             },
             { 
                 stage: '02. สำรวจเมนูและบรรยากาศ (Consideration)', 
@@ -255,7 +255,7 @@ export default function AdLandingAnalyticsTab() {
                 sub: 'คลิกขอเส้นทาง Maps, โทรหาร้าน, หรือทักแชท LINE OA',
                 count: mapClicks + directContacts, 
                 pct: Math.min(100, Math.round(((mapClicks + directContacts) / (pageviews || 1)) * 100)), 
-                color: 'bg-[oklch(52%_0.16_28)]' 
+                color: 'bg-[var(--brand-plum)]' 
             },
             { 
                 stage: '04. สั่งซื้อและจองโต๊ะ (Direct Transactions)', 
@@ -388,20 +388,20 @@ export default function AdLandingAnalyticsTab() {
     }
 
     return (
-        <div className="space-y-6 text-[oklch(18%_0.012_28)] font-sans">
+        <div className="space-y-6 text-[var(--color-ink)] font-sans">
             {/* Header Toolbar */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] ">
-                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] ">
+                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--color-paper-2)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
+                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[var(--color-ink)] text-[var(--color-paper)] ">
                                 ADS // ATTRIBUTION RADAR
                             </span>
-                            <h2 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
+                            <h2 className="font-bold text-base md:text-lg text-[var(--color-ink)] tracking-tight">
                                 สถิติและประสิทธิภาพ Ad Landing Page (/link)
                             </h2>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)] mt-0.5">
                             วิเคราะห์พฤติกรรมลูกค้า 6 มิติ (แผนที่, โทร, LINE, จองโต๊ะ, สั่ง Pick-up, เมนูและบรรยากาศ)
                         </p>
                     </div>
@@ -417,7 +417,7 @@ export default function AdLandingAnalyticsTab() {
                             className={`px-2.5 py-1 text-xs tabular-nums font-bold rounded-xs border transition-colors flex items-center gap-1.5 cursor-pointer ${
                                 demoMode 
                                     ? 'bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border-[oklch(80%_0.06_65)]' 
-                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                    : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:bg-[var(--color-paper-3)]'
                             }`}
                             title="สลับโหมดเพื่อดูตัวอย่างหน้าจอรายงานที่มีทราฟฟิกสูง"
                         >
@@ -426,7 +426,7 @@ export default function AdLandingAnalyticsTab() {
                         </button>
 
                         {/* Thai Calendar Time Range Filter Buttons */}
-                        <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-1 tabular-nums text-xs">
+                        <div className="flex items-center gap-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-1 tabular-nums text-xs">
                             {[
                                 { id: 'today', label: 'วันนี้' },
                                 { id: 'yesterday', label: 'เมื่อวาน' },
@@ -439,8 +439,8 @@ export default function AdLandingAnalyticsTab() {
                                     onClick={() => setTimeRange(t.id)}
                                     className={`px-2.5 py-1 text-xs font-bold rounded-xs transition-colors cursor-pointer ${
                                         timeRange === t.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                            : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                            : 'text-[var(--color-muted)] hover:bg-[var(--color-paper-3)]'
                                     }`}
                                 >
                                     {t.label}
@@ -453,7 +453,7 @@ export default function AdLandingAnalyticsTab() {
                             onClick={fetchAdAnalytics}
                             disabled={loading}
                             title="รีเฟรชข้อมูลล่าสุด"
-                            className="p-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer disabled:opacity-50 transition-colors"
+                            className="p-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-xs cursor-pointer disabled:opacity-50 transition-colors"
                         >
                             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                         </button>
@@ -461,9 +461,9 @@ export default function AdLandingAnalyticsTab() {
                 </div>
 
                 {/* Quick Live Status Alert */}
-                <div className="px-4 py-2 bg-[oklch(94%_0.010_28)] flex items-center justify-between text-xs tabular-nums">
+                <div className="px-4 py-2 bg-[var(--color-paper-2)] flex items-center justify-between text-xs tabular-nums">
                     <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-amber-500' : metrics.hasData ? 'bg-[oklch(45%_0.08_140)] ' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                        <span className={`w-2 h-2 rounded-full ${demoMode ? 'bg-amber-500' : metrics.hasData ? 'bg-[oklch(45%_0.08_140)] ' : 'bg-[var(--color-neutral)]'}`} />
                         <span className="font-bold">
                             {demoMode 
                                 ? 'DEMO SIMULATION // กำลังแสดงข้อมูลตัวอย่างแคมเปญ' 
@@ -476,7 +476,7 @@ export default function AdLandingAnalyticsTab() {
                         href="/link"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[oklch(52%_0.16_28)] font-bold flex items-center gap-1 hover:underline"
+                        className="text-[var(--brand-plum)] font-bold flex items-center gap-1 hover:underline"
                     >
                         <span>เปิดทดสอบหน้า /link</span>
                         <ExternalLink size={12} />
@@ -486,14 +486,14 @@ export default function AdLandingAnalyticsTab() {
 
             {/* Empty State Banner (If live data has 0 events and not in demo mode) */}
             {!demoMode && !metrics.hasData && (
-                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(95%_0.010_28)] p-4 rounded-xs tabular-nums text-xs text-[oklch(42%_0.010_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 rounded-xs tabular-nums text-xs text-[var(--color-muted)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-start gap-2.5">
-                        <AlertCircle size={16} className="text-[oklch(52%_0.16_28)] shrink-0 mt-0.5" />
+                        <AlertCircle size={16} className="text-[var(--error-red)] shrink-0 mt-0.5" />
                         <div>
-                            <span className="font-bold text-[oklch(18%_0.012_28)] block">
+                            <span className="font-bold text-[var(--color-ink)] block">
                                 ไม่มีบันทึก Event ในช่วงเวลาที่เลือก ({dateBounds.label})
                             </span>
-                            <span className="text-xs block mt-0.5 text-[oklch(50%_0.010_28)]">
+                            <span className="text-xs block mt-0.5 text-[var(--color-neutral)]">
                                 ระบบจะบันทึกอัตโนมัติเมื่อมีผู้เข้าชมคลิกเปิดหน้า /link ผ่าน Facebook, TikTok, Instagram หรือ QR บนโต๊ะ
                             </span>
                         </div>
@@ -501,7 +501,7 @@ export default function AdLandingAnalyticsTab() {
                     <button
                         type="button"
                         onClick={() => setDemoMode(true)}
-                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold rounded-xs whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                        className="px-3 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] text-xs font-bold rounded-xs whitespace-nowrap self-start sm:self-auto cursor-pointer"
                     >
                         เปิดดูตัวอย่างข้อมูลจำลอง (Demo)
                     </button>
@@ -509,123 +509,123 @@ export default function AdLandingAnalyticsTab() {
             )}
 
             {/* 1. Top 6 KPI Cards (Dieter Rams Tabular Grid) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border border-[oklch(85%_0.012_28)] divide-x divide-y md:divide-y-0 divide-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] ">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border border-[var(--color-rule)] divide-x divide-y md:divide-y-0 divide-[var(--color-rule)] bg-[var(--color-paper-2)] ">
                 {/* 1. Pageviews */}
-                <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] tabular-nums">
-                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">TOTAL VISITS</span>
-                    <div className="text-xl md:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                <div className="p-3.5 space-y-1 bg-[var(--color-paper)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] block font-bold">TOTAL VISITS</span>
+                    <div className="text-xl md:text-2xl font-bold text-[var(--color-ink)] tabular-nums">
                         {metrics.pageviews.toLocaleString()}
                     </div>
-                    <span className="text-xs text-[oklch(42%_0.010_28)] block">เปิดชมหน้า /link</span>
+                    <span className="text-xs text-[var(--color-muted)] block">เปิดชมหน้า /link</span>
                 </div>
 
                 {/* 2. Total Intent Leads */}
-                <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] tabular-nums">
-                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">ALL INTENT LEADS</span>
+                <div className="p-3.5 space-y-1 bg-[var(--color-paper)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] block font-bold">ALL INTENT LEADS</span>
                     <div className="text-xl md:text-2xl font-bold text-[oklch(45%_0.08_140)] tabular-nums">
                         {metrics.totalHighIntentActions.toLocaleString()}
                     </div>
-                    <span className="text-xs text-[oklch(42%_0.010_28)] block">รวม 6 พฤติกรรมสนใจ</span>
+                    <span className="text-xs text-[var(--color-muted)] block">รวม 6 พฤติกรรมสนใจ</span>
                 </div>
 
                 {/* 3. Overall CVR */}
-                <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] tabular-nums">
-                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">OVERALL CVR (%)</span>
-                    <div className="text-xl md:text-2xl font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                <div className="p-3.5 space-y-1 bg-[var(--color-paper)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] block font-bold">OVERALL CVR (%)</span>
+                    <div className="text-xl md:text-2xl font-bold text-[var(--brand-plum)] tabular-nums">
                         {metrics.cvrOverall}%
                     </div>
-                    <span className="text-xs text-[oklch(42%_0.010_28)] block">อัตราแปลงเป็น Lead</span>
+                    <span className="text-xs text-[var(--color-muted)] block">อัตราแปลงเป็น Lead</span>
                 </div>
 
                 {/* 4. Maps & Calls */}
-                <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] tabular-nums">
-                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">MAPS & CALLS</span>
-                    <div className="text-xl md:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                <div className="p-3.5 space-y-1 bg-[var(--color-paper)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] block font-bold">MAPS & CALLS</span>
+                    <div className="text-xl md:text-2xl font-bold text-[var(--color-ink)] tabular-nums">
                         {(metrics.mapClicks + metrics.phoneClicks).toLocaleString()}
                     </div>
-                    <span className="text-xs text-[oklch(42%_0.010_28)] block">ขอทาง {metrics.mapClicks} · โทร {metrics.phoneClicks}</span>
+                    <span className="text-xs text-[var(--color-muted)] block">ขอทาง {metrics.mapClicks} · โทร {metrics.phoneClicks}</span>
                 </div>
 
                 {/* 5. Online Book & Pickup */}
-                <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] tabular-nums">
-                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">BOOK & PICKUP</span>
-                    <div className="text-xl md:text-2xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                <div className="p-3.5 space-y-1 bg-[var(--color-paper)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] block font-bold">BOOK & PICKUP</span>
+                    <div className="text-xl md:text-2xl font-bold text-[var(--color-ink)] tabular-nums">
                         {metrics.directOrders.toLocaleString()}
                     </div>
-                    <span className="text-xs text-[oklch(42%_0.010_28)] block">คลิกจอง {metrics.bookingClicks} · รับกลับ {metrics.pickupClicks}</span>
+                    <span className="text-xs text-[var(--color-muted)] block">คลิกจอง {metrics.bookingClicks} · รับกลับ {metrics.pickupClicks}</span>
                     <span className="text-xs text-[oklch(45%_0.08_140)] block font-bold">สำเร็จจริง: จอง {metrics.bookingCompletes} · รับกลับ {metrics.pickupCompletes}</span>
                 </div>
 
                 {/* 6. Menu & Vibe Exploration */}
-                <div className="p-3.5 space-y-1 bg-[oklch(97%_0.008_28)] tabular-nums">
-                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">MENU & VIBE</span>
+                <div className="p-3.5 space-y-1 bg-[var(--color-paper)] tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] block font-bold">MENU & VIBE</span>
                     <div className="text-xl md:text-2xl font-bold text-[oklch(35%_0.06_250)] tabular-nums">
                         {metrics.totalExplorations.toLocaleString()}
                     </div>
-                    <span className="text-xs text-[oklch(42%_0.010_28)] block">เมนู {metrics.fullMenuViews} · เซ็ต {metrics.starterSetViews} · วิว {metrics.atmosphereViews}</span>
+                    <span className="text-xs text-[var(--color-muted)] block">เมนู {metrics.fullMenuViews} · เซ็ต {metrics.starterSetViews} · วิว {metrics.atmosphereViews}</span>
                 </div>
             </div>
 
             {/* 1.5 Unit Economics & Ad Spend ROI Calculator Strip */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] ">
-                <div className="p-3 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] ">
+                <div className="p-3 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                        <Calculator size={14} className="text-[oklch(52%_0.16_28)]" />
+                        <Calculator size={14} className="text-[var(--brand-plum)]" />
                         <span>AD SPEND & UNIT ECONOMICS // เครื่องคำนวณต้นทุนต่อผลลัพธ์ ({dateBounds.label})</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                        <span className="text-[oklch(55%_0.010_28)] font-normal">งบโฆษณาที่ใช้:</span>
-                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] px-2 py-0.5 rounded-xs">
-                            <span className="text-[oklch(55%_0.010_28)] text-xs mr-1">฿</span>
+                        <span className="text-[var(--color-neutral)] font-normal">งบโฆษณาที่ใช้:</span>
+                        <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper)] px-2 py-0.5 rounded-xs">
+                            <span className="text-[var(--color-neutral)] text-xs mr-1">฿</span>
                             <input
                                 type="number"
                                 value={adSpendInput}
                                 onChange={(e) => handleAdSpendChange(e.target.value)}
                                 placeholder="0"
-                                className="w-20 tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)] focus:outline-none"
+                                className="w-20 tabular-nums font-bold text-xs text-[var(--color-ink)] focus:outline-none"
                             />
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] tabular-nums text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[var(--color-rule)] bg-[var(--color-paper)] tabular-nums text-xs">
                     {/* Cost Per Visit */}
                     <div className="p-3 space-y-0.5">
-                        <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">COST PER VISIT (CPV)</span>
-                        <div className="text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                        <span className="text-xs text-[var(--color-neutral)] block font-bold">COST PER VISIT (CPV)</span>
+                        <div className="text-base sm:text-lg font-bold text-[var(--color-ink)] tabular-nums">
                             {metrics.costPerVisit ? `฿${metrics.costPerVisit}` : '-'}
                         </div>
-                        <span className="text-xs text-[oklch(42%_0.010_28)] block">ต้นทุน/เปิดชมหน้าเว็บ</span>
+                        <span className="text-xs text-[var(--color-muted)] block">ต้นทุน/เปิดชมหน้าเว็บ</span>
                     </div>
 
                     {/* Cost Per Lead */}
                     <div className="p-3 space-y-0.5">
-                        <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">COST PER LEAD (CPL)</span>
-                        <div className="text-base sm:text-lg font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                        <span className="text-xs text-[var(--color-neutral)] block font-bold">COST PER LEAD (CPL)</span>
+                        <div className="text-base sm:text-lg font-bold text-[var(--brand-plum)] tabular-nums">
                             {metrics.costPerIntent ? `฿${metrics.costPerIntent}` : '-'}
                         </div>
-                        <span className="text-xs text-[oklch(42%_0.010_28)] block">ต้นทุน/ลูกค้าที่มีเจตนาจริง</span>
+                        <span className="text-xs text-[var(--color-muted)] block">ต้นทุน/ลูกค้าที่มีเจตนาจริง</span>
                     </div>
 
                     {/* Cost Per Acquisition */}
                     <div className="p-3 space-y-0.5">
-                        <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">COST PER BOOKING (CPA)</span>
+                        <span className="text-xs text-[var(--color-neutral)] block font-bold">COST PER BOOKING (CPA)</span>
                         <div className="text-base sm:text-lg font-bold text-[oklch(45%_0.08_140)] tabular-nums">
                             {metrics.costPerBooking ? `฿${metrics.costPerBooking}` : '-'}
                         </div>
-                        <span className="text-xs text-[oklch(42%_0.010_28)] block">ต้นทุน/การจองหรือสั่งซื้อสำเร็จ</span>
+                        <span className="text-xs text-[var(--color-muted)] block">ต้นทุน/การจองหรือสั่งซื้อสำเร็จ</span>
                     </div>
 
                     {/* Attributed Revenue & ROAS */}
                     <div className="p-3 space-y-0.5">
-                        <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">ATTRIBUTED REVENUE & ROAS</span>
-                        <div className="text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                        <span className="text-xs text-[var(--color-neutral)] block font-bold">ATTRIBUTED REVENUE & ROAS</span>
+                        <div className="text-base sm:text-lg font-bold text-[var(--color-ink)] tabular-nums">
                             ฿{metrics.attributedRevenue.toLocaleString()}
                             {metrics.roas && (
-                                <span className="ml-1.5 text-xs text-[oklch(52%_0.16_28)] font-bold">({metrics.roas}x)</span>
+                                <span className="ml-1.5 text-xs text-[var(--brand-plum)] font-bold">({metrics.roas}x)</span>
                             )}
                         </div>
-                        <span className="text-xs text-[oklch(42%_0.010_28)] block">
+                        <span className="text-xs text-[var(--color-muted)] block">
                             {metrics.settledAttributedCount} บิลปิดยอดจากโฆษณา
                         </span>
                     </div>
@@ -635,10 +635,10 @@ export default function AdLandingAnalyticsTab() {
             {/* 2. Full-Funnel Visualizer & Direct Action Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Stepped Conversion Funnel (7 cols) */}
-                <div className="lg:col-span-7 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] ">
-                    <div className="p-3 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
+                <div className="lg:col-span-7 border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] ">
+                    <div className="p-3 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)] flex items-center justify-between">
                         <span>CONVERSION FUNNEL // ลำดับ 4 ขั้นตอนการแปลงเป็นลูกค้า</span>
-                        <span className="text-[oklch(52%_0.16_28)]">FULL FUNNEL FLOW</span>
+                        <span className="text-[var(--brand-plum)]">FULL FUNNEL FLOW</span>
                     </div>
 
                     <div className="p-4 space-y-5 tabular-nums text-xs">
@@ -646,14 +646,14 @@ export default function AdLandingAnalyticsTab() {
                             <div key={idx} className="space-y-1.5">
                                 <div className="flex justify-between items-start text-xs gap-2">
                                     <div>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)] font-sans block">{step.stage}</span>
-                                        <span className="text-xs text-[oklch(42%_0.010_28)] block mt-0.5">{step.sub}</span>
+                                        <span className="font-bold text-[var(--color-ink)] font-sans block">{step.stage}</span>
+                                        <span className="text-xs text-[var(--color-muted)] block mt-0.5">{step.sub}</span>
                                     </div>
-                                    <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)] text-right shrink-0">
+                                    <span className="tabular-nums font-bold text-[var(--color-ink)] text-right shrink-0">
                                         {step.count.toLocaleString()} ครั้ง ({step.pct}%)
                                     </span>
                                 </div>
-                                <div className="w-full bg-[oklch(94%_0.010_28)] h-3.5 border border-[oklch(85%_0.012_28)] overflow-hidden relative">
+                                <div className="w-full bg-[var(--color-paper-2)] h-3.5 border border-[var(--color-rule)] overflow-hidden relative">
                                     <div className={`${step.color} h-full transition-all duration-500`} style={{ width: `${Math.max(3, step.pct)}%` }} />
                                 </div>
                             </div>
@@ -661,138 +661,138 @@ export default function AdLandingAnalyticsTab() {
                     </div>
 
                     {/* Executive Insight Note */}
-                    <div className="p-3 bg-[oklch(94%_0.010_28)] text-xs tabular-nums text-[oklch(42%_0.010_28)] leading-relaxed">
-                        <strong className="text-[oklch(18%_0.012_28)] font-bold">ข้อสังเกตฝ่ายการตลาด:</strong> ลูกค้าส่วนใหญ่จะผ่านขั้นตอนสำรวจเมนูและบรรยากาศ (Stage 02) ก่อนตัดสินใจกดขอทางหรือจองโต๊ะ (Stage 03-04) จึงไม่ควรประเมินสัญญาณ Ads จากแค่ Google Maps เพียงอย่างเดียว
+                    <div className="p-3 bg-[var(--color-paper-2)] text-xs tabular-nums text-[var(--color-muted)] leading-relaxed">
+                        <strong className="text-[var(--color-ink)] font-bold">ข้อสังเกตฝ่ายการตลาด:</strong> ลูกค้าส่วนใหญ่จะผ่านขั้นตอนสำรวจเมนูและบรรยากาศ (Stage 02) ก่อนตัดสินใจกดขอทางหรือจองโต๊ะ (Stage 03-04) จึงไม่ควรประเมินสัญญาณ Ads จากแค่ Google Maps เพียงอย่างเดียว
                     </div>
                 </div>
 
                 {/* Detailed Action Breakdown Matrix (5 cols) */}
-                <div className="lg:col-span-5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] ">
-                    <div className="p-3 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
+                <div className="lg:col-span-5 border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] ">
+                    <div className="p-3 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)] flex items-center justify-between">
                         <span>BEHAVIOR MATRIX // แจกแจงการคลิกทั้ง 8 พฤติกรรม</span>
-                        <span className="text-[oklch(42%_0.010_28)]">{metrics.totalHighIntentActions} TOTAL</span>
+                        <span className="text-[var(--color-muted)]">{metrics.totalHighIntentActions} TOTAL</span>
                     </div>
 
                     <div className="p-3 space-y-1.5 tabular-nums text-xs max-h-[440px] overflow-y-auto">
                         {/* 1. Google Maps */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <Navigation size={13} className="text-[oklch(45%_0.08_140)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">ขอเส้นทาง Google Maps</span>
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">ขอเส้นทาง Google Maps</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">เปิด GPS มาร้านริมแม่น้ำโขง</span>
+                                <span className="text-xs text-[var(--color-muted)] block">เปิด GPS มาร้านริมแม่น้ำโขง</span>
                             </div>
                             <div className="text-right">
                                 <span className="font-bold text-sm text-[oklch(45%_0.08_140)] tabular-nums">{metrics.mapClicks}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.mapClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.mapClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 2. Phone Call */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <Phone size={13} className="text-[oklch(52%_0.16_28)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">โทรศัพท์ติดต่อร้าน (098-528-4217)</span>
+                                    <Phone size={13} className="text-[var(--brand-plum)]" />
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">โทรศัพท์ติดต่อร้าน (098-528-4217)</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">โทรสดถามโต๊ะว่างหรือสั่งล่วงหน้า</span>
+                                <span className="text-xs text-[var(--color-muted)] block">โทรสดถามโต๊ะว่างหรือสั่งล่วงหน้า</span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">{metrics.phoneClicks}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.phoneClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="font-bold text-sm text-[var(--brand-plum)] tabular-nums">{metrics.phoneClicks}</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.phoneClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 3. LINE Official */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <MessageCircle size={13} className="text-[#06C755]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">LINE Official Account</span>
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">LINE Official Account</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">แอดเพื่อน / แชทสอบถามเมนู</span>
+                                <span className="text-xs text-[var(--color-muted)] block">แอดเพื่อน / แชทสอบถามเมนู</span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">{metrics.lineClicks}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.lineClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="font-bold text-sm text-[var(--color-ink)] tabular-nums">{metrics.lineClicks}</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.lineClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 4. Table Booking */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <Calendar size={13} className="text-[oklch(18%_0.012_28)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">จองโต๊ะล่วงหน้า (/booking)</span>
+                                    <Calendar size={13} className="text-[var(--color-ink)]" />
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">จองโต๊ะล่วงหน้า (/booking)</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">คลิกเข้าสู่ระบบจองโต๊ะอาหาร</span>
+                                <span className="text-xs text-[var(--color-muted)] block">คลิกเข้าสู่ระบบจองโต๊ะอาหาร</span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">{metrics.bookingClicks}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.bookingClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="font-bold text-sm text-[var(--color-ink)] tabular-nums">{metrics.bookingClicks}</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.bookingClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 5. Online Pickup */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <ShoppingBag size={13} className="text-[#b89b14]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">สั่งรับหน้าร้าน (/pickup)</span>
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">สั่งรับหน้าร้าน (/pickup)</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block font-semibold text-[oklch(52%_0.16_28)]">
+                                <span className="text-xs text-[var(--color-muted)] block font-semibold text-[var(--brand-plum)]">
                                     *เจตนาซื้อจริง แม้ระบบออนไลน์ปิดอยู่
                                 </span>
                             </div>
                             <div className="text-right">
                                 <span className="font-bold text-sm text-[#b89b14] tabular-nums">{metrics.pickupClicks}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.pickupClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.pickupClicks / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 6. Full Menu & Starter Sets */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <Layers size={13} className="text-[oklch(35%_0.06_250)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">เปิดดูเมนูเต็ม & เซ็ตแนะนำ</span>
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">เปิดดูเมนูเต็ม & เซ็ตแนะนำ</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">กดขยายรายการอาหารทั้งหมด ({metrics.fullMenuViews} เมนู · {metrics.starterSetViews} เซ็ต)</span>
+                                <span className="text-xs text-[var(--color-muted)] block">กดขยายรายการอาหารทั้งหมด ({metrics.fullMenuViews} เมนู · {metrics.starterSetViews} เซ็ต)</span>
                             </div>
                             <div className="text-right">
                                 <span className="font-bold text-sm text-[oklch(35%_0.06_250)] tabular-nums">{metrics.fullMenuViews + metrics.starterSetViews}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? (((metrics.fullMenuViews + metrics.starterSetViews) / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? (((metrics.fullMenuViews + metrics.starterSetViews) / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 7. Classic Booklet */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <Eye size={13} className="text-[oklch(42%_0.010_28)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">เปิดดูเมนูเล่ม (Booklet PDF)</span>
+                                    <Eye size={13} className="text-[var(--color-muted)]" />
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">เปิดดูเมนูเล่ม (Booklet PDF)</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">พลิกดูเมนูเล่มทางการใน Lightbox</span>
+                                <span className="text-xs text-[var(--color-muted)] block">พลิกดูเมนูเล่มทางการใน Lightbox</span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">{metrics.bookletViews}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.bookletViews / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="font-bold text-sm text-[var(--color-ink)] tabular-nums">{metrics.bookletViews}</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.bookletViews / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
 
                         {/* 8. Atmosphere Gallery */}
-                        <div className="p-2 hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs flex items-center justify-between gap-2">
+                        <div className="p-2 hover:bg-[var(--color-paper-2)] transition-colors rounded-xs flex items-center justify-between gap-2">
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <Sparkles size={13} className="text-[oklch(52%_0.16_28)]" />
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">ชมบรรยากาศร้าน (Vibe Gallery)</span>
+                                    <Sparkles size={13} className="text-[var(--brand-plum)]" />
+                                    <span className="font-bold text-[var(--color-ink)] font-sans">ชมบรรยากาศร้าน (Vibe Gallery)</span>
                                 </div>
-                                <span className="text-xs text-[oklch(42%_0.010_28)] block">ดูรูปมุมร้านและวิวริมแม่น้ำโขง</span>
+                                <span className="text-xs text-[var(--color-muted)] block">ดูรูปมุมร้านและวิวริมแม่น้ำโขง</span>
                             </div>
                             <div className="text-right">
-                                <span className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">{metrics.atmosphereViews}</span>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block">{metrics.pageviews > 0 ? ((metrics.atmosphereViews / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
+                                <span className="font-bold text-sm text-[var(--brand-plum)] tabular-nums">{metrics.atmosphereViews}</span>
+                                <span className="text-xs text-[var(--color-neutral)] block">{metrics.pageviews > 0 ? ((metrics.atmosphereViews / metrics.pageviews) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
                     </div>
@@ -800,17 +800,17 @@ export default function AdLandingAnalyticsTab() {
             </div>
 
             {/* 3. Campaign & UTM Source Attribution Matrix */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] ">
-                <div className="p-3 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] ">
+                <div className="p-3 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)] flex items-center justify-between">
                     <span>ATTRIBUTION MATRIX // แหล่งที่มาแคมเปญโฆษณาและการแปลงพฤติกรรม ({dateBounds.label})</span>
-                    <span className="text-[oklch(42%_0.010_28)]">{metrics.sources.length} แหล่งที่มา</span>
+                    <span className="text-[var(--color-muted)]">{metrics.sources.length} แหล่งที่มา</span>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left tabular-nums text-[13px] border-collapse">
                         <thead>
-                            <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-xs text-[oklch(42%_0.010_28)]">
-                                <th className="p-3 sticky left-0 bg-[oklch(94%_0.010_28)] z-10">UTM SOURCE / CAMPAIGN</th>
+                            <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-xs text-[var(--color-muted)]">
+                                <th className="p-3 sticky left-0 bg-[var(--color-paper-2)] z-10">UTM SOURCE / CAMPAIGN</th>
                                 <th className="p-3 text-right">VISITS</th>
                                 <th className="p-3 text-right">MAPS</th>
                                 <th className="p-3 text-right">โทร / LINE</th>
@@ -821,19 +821,19 @@ export default function AdLandingAnalyticsTab() {
                                 <th className="p-3 text-right">ACTION</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                        <tbody className="divide-y divide-[var(--color-rule)]">
                             {metrics.sources.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="p-6 text-center text-[oklch(55%_0.010_28)]">
+                                    <td colSpan={9} className="p-6 text-center text-[var(--color-neutral)]">
                                         ไม่มีแหล่งที่มาในระบบสำหรับช่วงเวลาที่เลือก
                                     </td>
                                 </tr>
                             ) : (
                                 metrics.sources.map((s, idx) => (
-                                    <tr key={idx} className="hover:bg-[oklch(94%_0.010_28)] transition-colors">
-                                        <td className="p-3 sticky left-0 bg-[oklch(97%_0.008_28)] z-10 border-r border-[oklch(88%_0.012_28)] sm:border-r-0">
-                                            <div className="font-bold text-[oklch(18%_0.012_28)] font-sans">{s.source}</div>
-                                            <div className="text-xs text-[oklch(55%_0.010_28)]">
+                                    <tr key={idx} className="hover:bg-[var(--color-paper-2)] transition-colors">
+                                        <td className="p-3 sticky left-0 bg-[var(--color-paper)] z-10 border-r border-[var(--color-paper-3)] sm:border-r-0">
+                                            <div className="font-bold text-[var(--color-ink)] font-sans">{s.source}</div>
+                                            <div className="text-xs text-[var(--color-neutral)]">
                                                 {s.campaign || 'default_traffic'} {s.medium ? `· ${s.medium}` : ''}
                                             </div>
                                         </td>
@@ -842,12 +842,12 @@ export default function AdLandingAnalyticsTab() {
                                         <td className="p-3 text-right tabular-nums">{s.contacts || 0}</td>
                                         <td className="p-3 text-right tabular-nums">{s.orders || 0}</td>
                                         <td className="p-3 text-right tabular-nums text-[oklch(35%_0.06_250)]">{s.explores || 0}</td>
-                                        <td className="p-3 text-right font-bold text-[oklch(18%_0.012_28)] tabular-nums">{s.conversions.toLocaleString()}</td>
-                                        <td className="p-3 text-right font-bold text-[oklch(52%_0.16_28)] tabular-nums">{s.cvr}%</td>
+                                        <td className="p-3 text-right font-bold text-[var(--color-ink)] tabular-nums">{s.conversions.toLocaleString()}</td>
+                                        <td className="p-3 text-right font-bold text-[var(--brand-plum)] tabular-nums">{s.cvr}%</td>
                                         <td className="p-3 text-right">
                                             <button
                                                 onClick={() => copyToClipboard(`${typeof window !== 'undefined' ? window.location.origin : ''}/link?utm_source=${s.source}${s.medium ? `&utm_medium=${s.medium}` : ''}`)}
-                                                className="px-2 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold rounded-xs cursor-pointer"
+                                                className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-xs font-bold rounded-xs cursor-pointer"
                                             >
                                                 COPY
                                             </button>
@@ -861,41 +861,41 @@ export default function AdLandingAnalyticsTab() {
             </div>
 
             {/* 4. Campaign Link & UTM Generator Widget */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] ">
-                <div className="p-3 bg-[oklch(94%_0.010_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center justify-between">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] ">
+                <div className="p-3 bg-[var(--color-paper-2)] tabular-nums text-xs font-bold text-[var(--color-ink)] flex items-center justify-between">
                     <span>TRACKING BUILDER // เครื่องมือสร้างลิงก์โฆษณาพร้อม UTM สากล</span>
-                    <span className="text-[oklch(42%_0.010_28)]">AUTO PRESERVE ATTRIBUTION</span>
+                    <span className="text-[var(--color-muted)]">AUTO PRESERVE ATTRIBUTION</span>
                 </div>
 
                 <div className="p-4 space-y-4">
                     {/* Quick Presets */}
                     <div className="flex items-center gap-2 flex-wrap tabular-nums text-xs">
-                        <span className="font-bold text-[oklch(55%_0.010_28)]">พรีเซ็ตแนะนำ:</span>
+                        <span className="font-bold text-[var(--color-neutral)]">พรีเซ็ตแนะนำ:</span>
                         <button 
                             type="button"
                             onClick={() => applyPreset('facebook', 'cpc', 'dinner_rush', 'photo_specialty')}
-                            className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer"
+                            className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-xs cursor-pointer"
                         >
                             Facebook Ad (มื้อค่ำ)
                         </button>
                         <button 
                             type="button"
                             onClick={() => applyPreset('tiktok', 'video', 'river_vibe', 'clip_sunset')}
-                            className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer"
+                            className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-xs cursor-pointer"
                         >
                             TikTok Video (วิวริมโขง)
                         </button>
                         <button 
                             type="button"
                             onClick={() => applyPreset('instagram', 'bio', 'haus_profile', 'profile_link')}
-                            className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer"
+                            className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-xs cursor-pointer"
                         >
                             Instagram Bio
                         </button>
                         <button 
                             type="button"
                             onClick={() => applyPreset('qr_table', 'print', 'standee_qr', 'table_tent')}
-                            className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-xs cursor-pointer"
+                            className="px-2 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-xs cursor-pointer"
                         >
                             QR บนโต๊ะอาหาร
                         </button>
@@ -903,40 +903,40 @@ export default function AdLandingAnalyticsTab() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 tabular-nums text-xs">
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] font-bold block mb-1">
+                            <label className="text-xs text-[var(--color-neutral)] font-bold block mb-1">
                                 UTM_SOURCE (แหล่งที่มา เช่น facebook, tiktok)
                             </label>
                             <input
                                 type="text"
                                 value={customSource}
                                 onChange={(e) => setCustomSource(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] font-bold block mb-1">
+                            <label className="text-xs text-[var(--color-neutral)] font-bold block mb-1">
                                 UTM_MEDIUM (ประเภทสื่อ เช่น cpc, video, bio)
                             </label>
                             <input
                                 type="text"
                                 value={customMedium}
                                 onChange={(e) => setCustomMedium(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] font-bold block mb-1">
+                            <label className="text-xs text-[var(--color-neutral)] font-bold block mb-1">
                                 UTM_CAMPAIGN (ชื่อแคมเปญโปรโมท)
                             </label>
                             <input
                                 type="text"
                                 value={customCampaign}
                                 onChange={(e) => setCustomCampaign(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] font-bold block mb-1">
+                            <label className="text-xs text-[var(--color-neutral)] font-bold block mb-1">
                                 UTM_CONTENT (ระบุเนื้อหา/ชิ้นงานโฆษณา)
                             </label>
                             <input
@@ -944,19 +944,19 @@ export default function AdLandingAnalyticsTab() {
                                 value={customContent}
                                 placeholder="เช่น photo_01, video_vibe"
                                 onChange={(e) => setCustomContent(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full px-2.5 py-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                             />
                         </div>
                     </div>
 
                     {/* Result Link Bar */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
-                        <div className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-3 py-2 tabular-nums text-xs text-[oklch(18%_0.012_28)] truncate select-all">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-[var(--color-rule)]">
+                        <div className="flex-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-3 py-2 tabular-nums text-xs text-[var(--color-ink)] truncate select-all">
                             {generatedLink}
                         </div>
                         <button
                             onClick={() => copyToClipboard(generatedLink)}
-                            className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] tabular-nums text-xs font-bold rounded-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="px-4 py-2 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] tabular-nums text-xs font-bold rounded-xs flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                             {copiedUrl === generatedLink ? <Check size={14} /> : <Copy size={14} />}
                             <span>{copiedUrl === generatedLink ? 'COPIED!' : 'COPY URL'}</span>

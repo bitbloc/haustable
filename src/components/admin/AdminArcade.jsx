@@ -121,17 +121,17 @@ export default function AdminArcade() {
     return (
         <div className="space-y-6 tabular-nums">
             {/* Header Actions Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="font-bold text-[11px] text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
+                        <span className="font-bold text-[11px] text-[var(--brand-plum)] bg-[var(--color-paper-2)] px-2 py-0.5 rounded-xs border border-[var(--color-rule)]">
                             [ ARCADE GAMING & WEEKLY REWARDS ]
                         </span>
                     </div>
-                    <h2 className="text-base font-bold text-[oklch(18%_0.012_28)] mt-1">
+                    <h2 className="text-base font-bold text-[var(--color-ink)] mt-1">
                         ระบบสุ่มรางวัล & รีเซ็ตเกมประจำสัปดาห์ (Sunday Night Draw)
                     </h2>
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                         การแจกเหรียญ xhaus ประจำสัปดาห์แก่ผู้เล่นระดับท็อป 1 และผู้ถือตั๋วชิงโชค (RANK S+ // 40+ PTS)
                     </p>
                 </div>
@@ -140,7 +140,7 @@ export default function AdminArcade() {
                     <button
                         type="button"
                         onClick={() => fetchData(true)}
-                        className="px-3 py-2 bg-[oklch(99%_0.004_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
+                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
                         title="รีเฟรชข้อมูล"
                     >
                         [ REFRESH ]
@@ -149,7 +149,7 @@ export default function AdminArcade() {
                         type="button"
                         onClick={handleRunDrawing}
                         disabled={drawingLoading}
-                        className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-sm text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        className="bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] px-4 py-2 rounded-sm text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                     >
                         <span>{drawingLoading ? '[ กำลังประมวลผล... ]' : '[ ▶ จับรางวัล & รีเซ็ตสัปดาห์ ]'}</span>
                     </button>
@@ -157,9 +157,9 @@ export default function AdminArcade() {
             </div>
 
             {/* Rules & Rank Matrix Info Card */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm text-xs text-[oklch(42%_0.010_28)] space-y-2">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm text-xs text-[var(--color-muted)] space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold">
+                    <div className="flex items-center gap-2 text-[var(--brand-plum)] font-bold">
                         <span className=" text-xs">[ RULES ] กติกาการแจกเหรียญ xhaus & เกณฑ์ Rank:</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
@@ -167,13 +167,13 @@ export default function AdminArcade() {
                         <span className="px-1.5 py-0.5 rounded-xs border bg-[#BD4924] text-[#FAF7F2] border-[#181615]">[RANK S] 35–39</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-emerald-100 text-emerald-900 border-emerald-700">[RANK A] 20–34</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-amber-100 text-amber-900 border-amber-600">[RANK B] 10–19</span>
-                        <span className="px-1.5 py-0.5 rounded-xs border bg-[oklch(90%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]">[RANK C] 0–9</span>
+                        <span className="px-1.5 py-0.5 rounded-xs border bg-[var(--color-paper-3)] text-[var(--color-muted)] border-[var(--color-rule)]">[RANK C] 0–9</span>
                     </div>
                 </div>
-                <ul className="list-disc pl-5 space-y-1 text-xs text-[oklch(55%_0.010_28)]">
-                    <li><strong className="text-[oklch(18%_0.012_28)]">อันดับ 1 Leaderboard</strong> ณ สิ้นสัปดาห์ (คำนวณเฉพาะสถิติสูงสุดของแต่ละผู้เล่น): รับรางวัลพิเศษ 50 xhaus</li>
-                    <li><strong className="text-[oklch(18%_0.012_28)]">RANK A (20+) & RANK S (35+)</strong>: รับภารกิจรายวัน +1.00 XH ต่อระดับ (เพดานสะสมรวม 5.00 XH / สัปดาห์)</li>
-                    <li><strong className="text-[oklch(18%_0.012_28)]">RANK S+ (40+ ท่อ/คะแนน)</strong>: รับตั๋วสุ่มสิทธิ์ (Raffle Ticket) วันละ 1 ใบ เพื่อลุ้นรางวัล 50 xhaus</li>
+                <ul className="list-disc pl-5 space-y-1 text-xs text-[var(--color-neutral)]">
+                    <li><strong className="text-[var(--color-ink)]">อันดับ 1 Leaderboard</strong> ณ สิ้นสัปดาห์ (คำนวณเฉพาะสถิติสูงสุดของแต่ละผู้เล่น): รับรางวัลพิเศษ 50 xhaus</li>
+                    <li><strong className="text-[var(--color-ink)]">RANK A (20+) & RANK S (35+)</strong>: รับภารกิจรายวัน +1.00 XH ต่อระดับ (เพดานสะสมรวม 5.00 XH / สัปดาห์)</li>
+                    <li><strong className="text-[var(--color-ink)]">RANK S+ (40+ ท่อ/คะแนน)</strong>: รับตั๋วสุ่มสิทธิ์ (Raffle Ticket) วันละ 1 ใบ เพื่อลุ้นรางวัล 50 xhaus</li>
                 </ul>
             </div>
 
@@ -184,12 +184,12 @@ export default function AdminArcade() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="bg-[oklch(94%_0.02_140)] border border-[oklch(45%_0.08_140)] p-4 rounded-sm text-xs text-[oklch(18%_0.012_28)] relative "
+                        className="bg-[oklch(94%_0.02_140)] border border-[oklch(45%_0.08_140)] p-4 rounded-sm text-xs text-[var(--color-ink)] relative "
                     >
                         <button
                             type="button"
                             onClick={() => setDrawResult(null)}
-                            className="absolute top-3 right-3 text-[oklch(45%_0.08_140)] hover:text-[oklch(18%_0.012_28)] cursor-pointer font-bold text-xs"
+                            className="absolute top-3 right-3 text-[oklch(45%_0.08_140)] hover:text-[var(--color-ink)] cursor-pointer font-bold text-xs"
                         >
                             [ CLOSE ]
                         </button>
@@ -199,11 +199,11 @@ export default function AdminArcade() {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="bg-[oklch(99%_0.004_28)] p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
-                                <span className="text-xs font-bold text-[oklch(55%_0.010_28)] block">
+                            <div className="bg-[var(--color-paper)] p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
+                                <span className="text-xs font-bold text-[var(--color-neutral)] block">
                                     [ #01 TOP PLAYER // อันดับ 1 ประจำสัปดาห์ ]
                                 </span>
-                                <p className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                <p className="text-base font-bold text-[var(--color-ink)] mt-0.5">
                                     {drawResult.top_player?.name || '-'} ({drawResult.top_player?.score || 0} PTS)
                                 </p>
                                 <span className="text-xs text-[oklch(45%_0.08_140)] font-bold mt-1 block">
@@ -211,11 +211,11 @@ export default function AdminArcade() {
                                 </span>
                             </div>
 
-                            <div className="bg-[oklch(99%_0.004_28)] p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
-                                <span className="text-xs font-bold text-[oklch(55%_0.010_28)] block">
+                            <div className="bg-[var(--color-paper)] p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
+                                <span className="text-xs font-bold text-[var(--color-neutral)] block">
                                     [ RAFFLE WINNER // ผู้ชนะตั๋วสุ่มลุ้นโชค ]
                                 </span>
-                                <p className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                <p className="text-base font-bold text-[var(--color-ink)] mt-0.5">
                                     {drawResult.raffle_winner?.name || '-'}
                                 </p>
                                 <span className="text-xs text-[oklch(45%_0.08_140)] font-bold mt-1 block">
@@ -230,34 +230,34 @@ export default function AdminArcade() {
             {/* Grid Layout: Leaderboard & Raffle Tickets */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* 1. Leaderboard Table */}
-                <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-4 ">
-                    <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)] mb-3">
+                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 ">
+                    <div className="flex items-center justify-between pb-3 border-b border-[var(--color-rule)] mb-3">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">[ ROSTER ]</span>
-                            <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)]">
+                            <span className="text-xs font-bold text-[var(--brand-plum)]">[ ROSTER ]</span>
+                            <h3 className="font-bold text-xs text-[var(--color-ink)]">
                                 คะแนน Leaderboard สัปดาห์นี้ ({leaderboard.length} ผู้เล่น)
                             </h3>
                         </div>
                     </div>
 
                     {loading ? (
-                        <div className="text-center py-12 text-xs text-[oklch(55%_0.010_28)]">กำลังโหลด...</div>
+                        <div className="text-center py-12 text-xs text-[var(--color-neutral)]">กำลังโหลด...</div>
                     ) : leaderboard.length === 0 ? (
-                        <div className="text-center py-12 bg-[oklch(98%_0.006_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)]">
+                        <div className="text-center py-12 bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-sm text-xs text-[var(--color-neutral)]">
                             ยังไม่มีคะแนนการเล่นในสัปดาห์นี้
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-[13px] border-collapse tabular-nums">
                                 <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] text-xs">
+                                    <tr className="border-b border-[var(--color-rule)] text-[var(--color-neutral)] text-xs">
                                         <th className="py-2 px-2 w-12 text-center">อันดับ</th>
                                         <th className="py-2 px-2">ชื่อผู้เล่น</th>
                                         <th className="py-2 px-2 text-center">RANK</th>
                                         <th className="py-2 px-2 text-right">คะแนน</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                                <tbody className="divide-y divide-[var(--color-rule)]">
                                     {leaderboard.map((item, index) => {
                                         const isTop1 = index === 0
                                         const isTop3 = index < 3
@@ -265,20 +265,20 @@ export default function AdminArcade() {
                                         return (
                                             <tr 
                                                 key={item.id || index}
-                                                className={isTop1 ? 'bg-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(98%_0.006_28)]'}
+                                                className={isTop1 ? 'bg-[var(--color-paper)] font-bold' : 'hover:bg-[var(--color-paper)]'}
                                             >
                                                 <td className="py-2.5 px-2 text-center">
                                                     <span className={`px-1.5 py-0.5 rounded-xs text-[11px] font-bold ${
                                                         isTop1 
-                                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 
+                                                            ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' 
                                                             : isTop3 
-                                                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]' 
-                                                                : 'text-[oklch(55%_0.010_28)]'
+                                                                ? 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)]' 
+                                                                : 'text-[var(--color-neutral)]'
                                                     }`}>
                                                         #{String(index + 1).padStart(2, '0')}
                                                     </span>
                                                 </td>
-                                                <td className="py-2.5 px-2 font-medium text-[oklch(18%_0.012_28)]">
+                                                <td className="py-2.5 px-2 font-medium text-[var(--color-ink)]">
                                                     {item.display_name || 'Anonymous Player'}
                                                 </td>
                                                 <td className="py-2.5 px-2 text-center">
@@ -286,8 +286,8 @@ export default function AdminArcade() {
                                                         [{rankInfo.rank} // {rankInfo.titleTh}]
                                                     </span>
                                                 </td>
-                                                <td className="py-2.5 px-2 text-right font-bold text-[oklch(52%_0.16_28)]">
-                                                    {item.score} <span className="text-xs font-normal text-[oklch(55%_0.010_28)]">PTS</span>
+                                                <td className="py-2.5 px-2 text-right font-bold text-[var(--brand-plum)]">
+                                                    {item.score} <span className="text-xs font-normal text-[var(--color-neutral)]">PTS</span>
                                                 </td>
                                             </tr>
                                         )
@@ -299,49 +299,49 @@ export default function AdminArcade() {
                 </div>
 
                 {/* 2. Raffle Tickets Log */}
-                <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-4 ">
-                    <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)] mb-3">
+                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 ">
+                    <div className="flex items-center justify-between pb-3 border-b border-[var(--color-rule)] mb-3">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-[oklch(45%_0.08_140)]">[ RAFFLE ]</span>
-                            <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)]">
+                            <h3 className="font-bold text-xs text-[var(--color-ink)]">
                                 ตั๋วสุ่มลุ้นโชคในสัปดาห์นี้ ({raffleTickets.length} ใบ)
                             </h3>
                         </div>
                     </div>
 
                     {loading ? (
-                        <div className="text-center py-12 text-xs text-[oklch(55%_0.010_28)]">กำลังโหลด...</div>
+                        <div className="text-center py-12 text-xs text-[var(--color-neutral)]">กำลังโหลด...</div>
                     ) : raffleTickets.length === 0 ? (
-                        <div className="text-center py-12 bg-[oklch(98%_0.006_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)]">
+                        <div className="text-center py-12 bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-sm text-xs text-[var(--color-neutral)]">
                             ยังไม่มีผู้สะสมตั๋วสุ่มในสัปดาห์นี้
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-[13px] border-collapse tabular-nums">
                                 <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] text-xs">
+                                    <tr className="border-b border-[var(--color-rule)] text-[var(--color-neutral)] text-xs">
                                         <th className="py-2 px-2">ชื่อผู้ถือตั๋ว</th>
                                         <th className="py-2 px-2 text-center">สถิติ (RANK)</th>
                                         <th className="py-2 px-2 text-right">วันที่ได้รับ</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                                <tbody className="divide-y divide-[var(--color-rule)]">
                                     {raffleTickets.map(log => {
                                         const profileName = log.profiles?.nickname || log.profiles?.display_name || 'Member'
                                         const ticketRank = getArcadeRank(log.score, 'leaderboard')
                                         return (
-                                            <tr key={log.id} className="hover:bg-[oklch(98%_0.006_28)]">
-                                                <td className="py-2.5 px-2 font-medium text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                            <tr key={log.id} className="hover:bg-[var(--color-paper)]">
+                                                <td className="py-2.5 px-2 font-medium text-[var(--color-ink)] flex items-center gap-1.5">
                                                     <span className="text-xs font-bold text-[oklch(45%_0.08_140)]">[TICKET]</span>
                                                     <span>{profileName}</span>
                                                 </td>
-                                                <td className="py-2.5 px-2 text-center font-bold text-[oklch(18%_0.012_28)]">
+                                                <td className="py-2.5 px-2 text-center font-bold text-[var(--color-ink)]">
                                                     <span className={`px-1.5 py-0.5 rounded-xs border text-[11px] font-bold mr-1.5 ${ticketRank.badgeBg} ${ticketRank.badgeText} ${ticketRank.badgeBorder}`}>
                                                         [{ticketRank.rank}]
                                                     </span>
                                                     {log.score} PTS
                                                 </td>
-                                                <td className="py-2.5 px-2 text-right text-[13px] text-[oklch(55%_0.010_28)]">
+                                                <td className="py-2.5 px-2 text-right text-[13px] text-[var(--color-neutral)]">
                                                     {format(new Date(log.created_at), 'dd MMM, HH:mm')}
                                                 </td>
                                             </tr>

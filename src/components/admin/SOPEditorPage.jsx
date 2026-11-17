@@ -69,26 +69,26 @@ const BEVERAGE_STARTER_TEMPLATES = [
 // ── Step Editor Row (Dieter Rams Tabular Cell) ──
 function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients, isExpanded, onToggleExpand }) {
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] overflow-hidden transition-all duration-150 rounded-xs">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden transition-all duration-150 rounded-xs">
             {/* Header (Collapsed View) */}
             <div 
                 onClick={onToggleExpand}
-                className="p-3 bg-[oklch(94%_0.010_28)] flex items-center justify-between cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors select-none"
+                className="p-3 bg-[var(--color-paper-2)] flex items-center justify-between cursor-pointer hover:bg-[var(--color-paper-3)] transition-colors select-none"
             >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="w-5 h-5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex items-center justify-center text-[11px] tabular-nums font-bold flex-shrink-0">
+                    <span className="w-5 h-5 bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center text-[11px] tabular-nums font-bold flex-shrink-0">
                         {index + 1}
                     </span>
-                    <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate">
-                        {step.title || <span className="text-[oklch(55%_0.010_28)] italic tabular-nums">ขั้นตอนยังไม่มีชื่อ</span>}
+                    <span className="text-xs font-bold text-[var(--color-ink)] truncate">
+                        {step.title || <span className="text-[var(--color-neutral)] italic tabular-nums">ขั้นตอนยังไม่มีชื่อ</span>}
                     </span>
                     {step.duration_sec && (
-                        <span className="text-[11px] bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] px-1.5 py-0.2 tabular-nums font-bold flex-shrink-0">
+                        <span className="text-[11px] bg-[var(--color-paper-3)] text-[var(--color-ink)] px-1.5 py-0.2 tabular-nums font-bold flex-shrink-0">
                             {step.duration_sec}S
                         </span>
                     )}
                     {step.action && (
-                        <span className="text-xs text-[oklch(55%_0.010_28)] tabular-nums ">
+                        <span className="text-xs text-[var(--color-neutral)] tabular-nums ">
                             [{step.action}]
                         </span>
                     )}
@@ -98,7 +98,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                         type="button"
                         onClick={() => onMove(index, -1)} 
                         disabled={index === 0} 
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] disabled:opacity-20 cursor-pointer text-xs"
+                        className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] disabled:opacity-20 cursor-pointer text-xs"
                         title="ย้ายขึ้น"
                     >
                         ▲
@@ -107,7 +107,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                         type="button"
                         onClick={() => onMove(index, 1)} 
                         disabled={isLast} 
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] disabled:opacity-20 cursor-pointer text-xs"
+                        className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] disabled:opacity-20 cursor-pointer text-xs"
                         title="ย้ายลง"
                     >
                         ▼
@@ -115,12 +115,12 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                     <button 
                         type="button"
                         onClick={() => onDelete(index)} 
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-red-700 cursor-pointer"
+                        className="p-1 text-[var(--color-neutral)] hover:text-red-700 cursor-pointer"
                         title="ลบขั้นตอน"
                     >
                         <Trash2 size={14} />
                     </button>
-                    <span className="text-xs text-[oklch(55%_0.010_28)] ml-1 tabular-nums font-bold">
+                    <span className="text-xs text-[var(--color-neutral)] ml-1 tabular-nums font-bold">
                         {isExpanded ? 'ย่อ ▲' : 'แก้ไข ▼'}
                     </span>
                 </div>
@@ -128,14 +128,14 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
 
             {/* Expanded Fields */}
             {isExpanded && (
-                <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] space-y-4">
+                <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper)] space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div className="sm:col-span-1">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">ประเภทการทำ</label>
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">ประเภทการทำ</label>
                             <select
                                 value={step.action || 'pour'}
                                 onChange={e => onUpdate(index, { ...step, action: e.target.value })}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)]"
                             >
                                 {SOP_ACTIONS.map(a => (
                                     <option key={a.key} value={a.key}>{a.labelEn || a.label} ({a.label})</option>
@@ -143,61 +143,61 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                             </select>
                         </div>
                         <div className="sm:col-span-3">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">ชื่อขั้นตอน</label>
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">ชื่อขั้นตอน</label>
                             <input 
                                 value={step.title || ''} 
                                 onChange={e => onUpdate(index, { ...step, title: e.target.value })} 
                                 placeholder="ชื่อขั้นตอน (เช่น สกัดช็อตกาแฟ)" 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]" 
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)]" 
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">รายละเอียดขั้นตอน</label>
+                        <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">รายละเอียดขั้นตอน</label>
                         <textarea 
                             value={step.instruction || ''} 
                             onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} 
                             placeholder="รายละเอียดขั้นตอนอย่างย่อ" 
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)] resize-none" 
+                            className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)] resize-none" 
                             rows={3} 
                         />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(52%_0.16_28)] block mb-1">KEY POINT จุดสำคัญ</label>
+                            <label className="text-xs tabular-nums font-bold text-[var(--brand-plum)] block mb-1">KEY POINT จุดสำคัญ</label>
                             <input 
                                 value={step.key_points || ''} 
                                 onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} 
                                 placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(52%_0.16_28)]" 
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--brand-plum)]" 
                             />
                         </div>
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">REASON เหตุผล</label>
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">REASON เหตุผล</label>
                             <input 
                                 value={step.reason || ''} 
                                 onChange={e => onUpdate(index, { ...step, reason: e.target.value })} 
                                 placeholder="เหตุผล (เช่น ลดการแยกชั้น)" 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]" 
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)]" 
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div className="sm:col-span-1">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">เวลา (วินาที)</label>
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">เวลา (วินาที)</label>
                             <input
                                 type="number"
                                 value={step.duration_sec || ''}
                                 onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value, 10) : null })}
                                 placeholder="เช่น 30"
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)] tabular-nums"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)] tabular-nums"
                             />
                         </div>
                         <div className="sm:col-span-3">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">แนบวัตถุดิบ (อ้างอิงสูตร)</label>
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">แนบวัตถุดิบ (อ้างอิงสูตร)</label>
                             {(() => {
                                 const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
                                 const available = (availableIngredients || []).filter(name => !refs.includes(name));
@@ -206,7 +206,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                                         {refs.length > 0 && (
                                             <div className="flex flex-wrap gap-1">
                                                 {refs.map((ref, idx) => (
-                                                    <span key={idx} className="inline-flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2 py-0.5 rounded-xs text-[11px] tabular-nums">
+                                                    <span key={idx} className="inline-flex items-center gap-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.5 rounded-xs text-[11px] tabular-nums">
                                                         {ref}
                                                         <button 
                                                             type="button"
@@ -218,7 +218,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                                                                     ingredient_ref: newRefs.length > 0 ? newRefs[0] : null 
                                                                 });
                                                             }} 
-                                                            className="text-[oklch(55%_0.010_28)] hover:text-red-600 font-bold ml-0.5"
+                                                            className="text-[var(--color-neutral)] hover:text-red-600 font-bold ml-0.5"
                                                         >
                                                             ×
                                                         </button>
@@ -240,7 +240,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                                                         });
                                                     }
                                                 }}
-                                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm text-[oklch(42%_0.010_28)] outline-none cursor-pointer"
+                                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm text-[var(--color-muted)] outline-none cursor-pointer"
                                             >
                                                 <option value="">+ แนบวัตถุดิบ...</option>
                                                 {available.map(name => (
@@ -265,12 +265,12 @@ function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }
     const showWarning = ing.unit && !isStandard;
 
     return (
-        <div className="p-3 bg-[oklch(98%_0.004_28)] rounded-xs border border-[oklch(85%_0.012_28)] space-y-2.5">
+        <div className="p-3 bg-[var(--color-paper)] rounded-xs border border-[var(--color-rule)] space-y-2.5">
             {/* Top row: Name, Qty, Unit */}
             <div className="flex flex-col sm:flex-row gap-2.5">
                 <div className="flex-1 flex gap-2 items-center min-w-0">
                     {ing.isLinked && (
-                        <span className="px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[11px] rounded-xs tabular-nums font-bold flex-shrink-0" title="ดึงข้อมูลจากคลังสินค้า">
+                        <span className="px-1.5 py-0.5 bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] text-[11px] rounded-xs tabular-nums font-bold flex-shrink-0" title="ดึงข้อมูลจากคลังสินค้า">
                             ผูกสูตร
                         </span>
                     )}
@@ -280,7 +280,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }
                         readOnly={ing.isLinked}
                         title={ing.isLinked ? 'แก้ชื่อและปริมาณที่สูตรของเมนู / เบส' : undefined}
                         placeholder="ชื่อวัตถุดิบ"
-                        className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs font-bold outline-none focus:border-[oklch(18%_0.012_28)] ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-[oklch(99%_0.004_28)]'}`}
+                        className={`w-full p-2 border border-[var(--color-rule)] text-xs font-bold outline-none focus:border-[var(--color-ink)] ${ing.isLinked ? 'bg-[var(--color-paper)] text-[var(--color-muted)]' : 'bg-[var(--color-paper)]'}`}
                     />
                 </div>
                 
@@ -291,7 +291,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }
                             value={ing.qty || ''} 
                             onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })}
                             readOnly={ing.isLinked}
-                            className={`w-full p-2 border border-[oklch(85%_0.012_28)] text-xs text-center font-bold outline-none focus:border-[oklch(18%_0.012_28)] tabular-nums ${ing.isLinked ? 'bg-[oklch(96%_0.006_28)] text-[oklch(42%_0.010_28)]' : 'bg-[oklch(99%_0.004_28)]'}`}  
+                            className={`w-full p-2 border border-[var(--color-rule)] text-xs text-center font-bold outline-none focus:border-[var(--color-ink)] tabular-nums ${ing.isLinked ? 'bg-[var(--color-paper)] text-[var(--color-muted)]' : 'bg-[var(--color-paper)]'}`}  
                             placeholder="จำนวน" 
                         />
                     </div>
@@ -302,7 +302,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }
                             onChange={e => onUpdate(index, { ...ing, unit: e.target.value })}
                             readOnly={ing.isLinked}
                             list="sop-units"
-                            className={`w-full p-2 border text-xs text-center tabular-nums outline-none ${showWarning ? 'border-[oklch(60%_0.15_28)] bg-[oklch(95%_0.02_45)]/20' : 'border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]'}`} 
+                            className={`w-full p-2 border text-xs text-center tabular-nums outline-none ${showWarning ? 'border-[var(--error-red)] bg-[oklch(95%_0.02_45)]/20' : 'border-[var(--color-rule)] bg-[var(--color-paper)]'}`} 
                             placeholder="หน่วย" 
                         />
                     </div>
@@ -310,33 +310,33 @@ function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }
             </div>
 
             {/* Bottom row: Remark, Checkboxes, Delete */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 border-t border-[oklch(90%_0.008_28)] pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 border-t border-[var(--color-paper-3)] pt-2">
                 <div className="flex-1">
                     <input 
                         value={ing.remark || ''} 
                         onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} 
-                        className="w-full p-1.5 border border-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]" 
+                        className="w-full p-1.5 border border-[var(--color-paper-3)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)]" 
                         placeholder="หมายเหตุ (เช่น กรองเอาแต่น้ำ)" 
                     />
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-3 tabular-nums">
-                    <label className="flex items-center gap-1.5 text-xs text-[oklch(42%_0.010_28)] cursor-pointer select-none">
-                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded-xs text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--color-muted)] cursor-pointer select-none">
+                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded-xs text-[var(--color-ink)] border-[var(--color-rule)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-xs">ปรับตามขนาดแก้ว</span>
                     </label>
                     {sweetFromMenu && ing.isLinked ? (
-                        <span className="text-xs text-[oklch(42%_0.010_28)]" title="ตั้งที่สูตรของเมนู ในส่วนตัวเลือกความหวาน">
+                        <span className="text-xs text-[var(--color-muted)]" title="ตั้งที่สูตรของเมนู ในส่วนตัวเลือกความหวาน">
                             {ing.is_sweetener ? 'สารหวาน (จากสูตรเมนู)' : ''}
                         </span>
                     ) : (
-                    <label className="flex items-center gap-1.5 text-xs text-[oklch(52%_0.16_28)] font-bold cursor-pointer select-none">
-                        <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded-xs text-[oklch(52%_0.16_28)] border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--brand-plum)] font-bold cursor-pointer select-none">
+                        <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded-xs text-[var(--brand-plum)] border-[var(--color-rule)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-xs">ตัวให้ความหวาน</span>
                     </label>
                     )}
-                    <label className="flex items-center gap-1.5 text-xs text-[oklch(55%_0.010_28)] cursor-pointer select-none">
-                        <input type="checkbox" checked={ing.isHidden === true} onChange={e => onUpdate(index, { ...ing, isHidden: e.target.checked })} className="rounded-xs border-[oklch(85%_0.012_28)] focus:ring-0 w-3.5 h-3.5" />
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--color-neutral)] cursor-pointer select-none">
+                        <input type="checkbox" checked={ing.isHidden === true} onChange={e => onUpdate(index, { ...ing, isHidden: e.target.checked })} className="rounded-xs border-[var(--color-rule)] focus:ring-0 w-3.5 h-3.5" />
                         <span className="text-xs">ซ่อน</span>
                     </label>
 
@@ -344,7 +344,7 @@ function IngredientRow({ ing, index, onUpdate, onDelete, sweetFromMenu = false }
                     <button
                         type="button"
                         onClick={() => onDelete(index)}
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 rounded transition-colors"
+                        className="p-1.5 text-[var(--color-neutral)] hover:text-red-700 rounded transition-colors"
                         title="ลบวัตถุดิบ"
                     >
                         <Trash2 size={14} />
@@ -373,40 +373,40 @@ function QuickPasteModal({ onClose, onApply }) {
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-xl w-full rounded-sm shadow-2xl overflow-hidden font-sans flex flex-col max-h-[85vh]">
-                <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] max-w-xl w-full rounded-sm shadow-2xl overflow-hidden font-sans flex flex-col max-h-[85vh]">
+                <div className="p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center">
                     <div>
-                        <h2 className="tabular-nums text-base font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                        <h2 className="tabular-nums text-base font-bold tracking-tight text-[var(--color-ink)]">
                             วางข้อความนำเข้าสูตรด่วน (Quick Paste)
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                    <button onClick={onClose} className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
                         <X size={18} />
                     </button>
                 </div>
 
                 <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                    <p className="text-[13px] text-[oklch(42%_0.010_28)] leading-relaxed">
+                    <p className="text-[13px] text-[var(--color-muted)] leading-relaxed">
                         คัดลอกข้อความสูตรจาก LINE, Apple Notes หรือ Google Docs มาวางลงในกล่องนี้ ระบบจะตัดแยกชื่อเมนู, ปริมาณ, หน่วย, และขั้นตอนการชงให้อัตโนมัติ:
                     </p>
                     <textarea
                         value={text}
                         onChange={e => setText(e.target.value)}
                         placeholder={`มัทฉะลาเต้เย็น 16oz\n- ผงมัทฉะ 5g\n- น้ำร้อน 30ml\n- นมสด 120ml\n- ไซรัป 15ml (หวานปกติ 15, หวานน้อย 7.5, ไม่หวาน 0)\nขั้นตอน:\n1. ตีมัทฉะกับน้ำร้อน 30 วินาทีจนละลาย\n2. ใส่นมสดและน้ำแข็งเต็มแก้ว\n3. เทมัทฉะท็อปด้านบน`}
-                        className="w-full h-44 p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)] resize-none"
+                        className="w-full h-44 p-3 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)] resize-none"
                         autoFocus
                     />
 
                     {/* Live Parser Feedback */}
                     {text.trim() && (
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 tabular-nums text-xs space-y-1.5">
-                            <div className="text-xs font-bold text-[oklch(52%_0.16_28)]">
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-3 tabular-nums text-xs space-y-1.5">
+                            <div className="text-xs font-bold text-[var(--brand-plum)]">
                                 ผลการวิเคราะห์ข้อมูลสด:
                             </div>
-                            <div className="text-[oklch(18%_0.012_28)]">
+                            <div className="text-[var(--color-ink)]">
                                 <strong>ชื่อเมนู:</strong> {parsed.name} | <strong>ขนาดแก้ว:</strong> {parsed.glassSizeOz} oz
                             </div>
-                            <div className="text-[oklch(42%_0.010_28)]">
+                            <div className="text-[var(--color-muted)]">
                                 ตรวจพบ <strong>{parsed.ingredients.length}</strong> วัตถุดิบ | <strong>{parsed.steps.length}</strong> ขั้นตอน
                                 {parsed.sweetnessMatrix && ' | ตรวจพบสัดส่วนความหวานเฉพาะ'}
                             </div>
@@ -414,7 +414,7 @@ function QuickPasteModal({ onClose, onApply }) {
                     )}
                 </div>
 
-                <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-end gap-2 tabular-nums text-xs">
+                <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-end gap-2 tabular-nums text-xs">
                     <button onClick={onClose} className="admin-btn h-9">
                         ยกเลิก
                     </button>
@@ -448,15 +448,15 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
     };
 
     return (
-        <div className="fixed inset-y-0 right-0 z-[80] w-full max-w-md bg-[oklch(98%_0.004_28)] border-l border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col font-sans">
+        <div className="fixed inset-y-0 right-0 z-[80] w-full max-w-md bg-[var(--color-paper)] border-l border-[var(--color-rule)] shadow-2xl flex flex-col font-sans">
             {/* Drawer Header */}
-            <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center">
+            <div className="p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center">
                 <div>
-                    <h3 className="tabular-nums text-sm font-bold text-[oklch(18%_0.012_28)] truncate max-w-[260px]">
+                    <h3 className="tabular-nums text-sm font-bold text-[var(--color-ink)] truncate max-w-[260px]">
                         {recipe.name}
                     </h3>
                 </div>
-                <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                <button onClick={onClose} className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
                     <X size={18} />
                 </button>
             </div>
@@ -464,27 +464,27 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
             {/* Drawer Body */}
             <div className="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
                 {/* Meta stats */}
-                <div className="grid grid-cols-3 border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] tabular-nums text-center">
+                <div className="grid grid-cols-3 border border-[var(--color-rule)] divide-x divide-[var(--color-rule)] bg-[var(--color-paper)] tabular-nums text-center">
                     <div className="p-2">
-                        <span className="block text-xs text-[oklch(55%_0.010_28)] ">หมวดหมู่</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">{recipe.category?.label || 'ทั่วไป'}</span>
+                        <span className="block text-xs text-[var(--color-neutral)] ">หมวดหมู่</span>
+                        <span className="font-bold text-[var(--color-ink)]">{recipe.category?.label || 'ทั่วไป'}</span>
                     </div>
                     <div className="p-2">
-                        <span className="block text-xs text-[oklch(55%_0.010_28)] ">แก้วฐาน</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">{recipe.base_glass_size_oz || 16} oz</span>
+                        <span className="block text-xs text-[var(--color-neutral)] ">แก้วฐาน</span>
+                        <span className="font-bold text-[var(--color-ink)]">{recipe.base_glass_size_oz || 16} oz</span>
                     </div>
                     <div className="p-2">
-                        <span className="block text-xs text-[oklch(55%_0.010_28)] ">ขั้นตอน</span>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">{(recipe.steps || []).length} steps</span>
+                        <span className="block text-xs text-[var(--color-neutral)] ">ขั้นตอน</span>
+                        <span className="font-bold text-[var(--color-ink)]">{(recipe.steps || []).length} steps</span>
                     </div>
                 </div>
 
                 {/* Sweetness Selector */}
                 <div>
-                    <div className="tabular-nums text-xs font-bold text-[oklch(55%_0.010_28)] mb-1.5">
+                    <div className="tabular-nums text-xs font-bold text-[var(--color-neutral)] mb-1.5">
                         ทดลองสเกลระดับความหวาน (Sweetness Test):
                     </div>
-                    <div className="grid grid-cols-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)] tabular-nums text-xs text-center">
+                    <div className="grid grid-cols-4 border border-[var(--color-rule)] bg-[var(--color-paper-2)] divide-x divide-[var(--color-rule)] tabular-nums text-xs text-center">
                         {['0%', '50%', '100%', '120%'].map(lvl => (
                             <button
                                 key={lvl}
@@ -492,8 +492,8 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                                 onClick={() => setSelectedSweetness(lvl)}
                                 className={`py-1.5 font-bold transition-colors ${
                                     selectedSweetness === lvl 
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                        : 'hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                        : 'hover:bg-[var(--color-paper-3)] text-[var(--color-muted)]'
                                 }`}
                             >
                                 {lvl === '0%' ? 'ไม่หวาน' : lvl === '50%' ? '50%' : lvl === '100%' ? 'ปกติ' : '120%'}
@@ -503,18 +503,18 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 </div>
 
                 {/* Ingredients with Inline Adjust */}
-                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
-                    <div className="p-2 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)] flex justify-between">
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                    <div className="p-2 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] tabular-nums text-xs font-bold text-[var(--color-ink)] flex justify-between">
                         <span>ส่วนผสม (ปรับตัวเลขได้ทันที)</span>
                         <span>{recipe.ingredients?.length || 0} รายการ</span>
                     </div>
-                    <div className="divide-y divide-[oklch(90%_0.008_28)] p-1">
+                    <div className="divide-y divide-[var(--color-paper-3)] p-1">
                         {(recipe.ingredients || []).map((ing, idx) => (
                             <div key={idx} className="p-2 flex items-center justify-between gap-2">
                                 <div className="min-w-0 flex-1">
-                                    <div className="font-bold text-xs text-[oklch(18%_0.012_28)] truncate">{ing.name}</div>
+                                    <div className="font-bold text-xs text-[var(--color-ink)] truncate">{ing.name}</div>
                                     {ing.is_sweetener && (
-                                        <span className="tabular-nums text-xs font-bold text-[oklch(52%_0.16_28)] ">ตัวให้ความหวาน</span>
+                                        <span className="tabular-nums text-xs font-bold text-[var(--brand-plum)] ">ตัวให้ความหวาน</span>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -522,14 +522,14 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                                         type="number"
                                         value={inlineQty[idx] !== undefined ? inlineQty[idx] : ing.qty}
                                         onChange={e => setInlineQty({ ...inlineQty, [idx]: e.target.value })}
-                                        className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center text-sm bg-[oklch(99%_0.004_28)] focus:border-[oklch(18%_0.012_28)] outline-none tabular-nums"
+                                        className="w-16 p-1 border border-[var(--color-rule)] text-center text-sm bg-[var(--color-paper)] focus:border-[var(--color-ink)] outline-none tabular-nums"
                                     />
-                                    <span className="tabular-nums text-xs text-[oklch(42%_0.010_28)] w-8 text-left">{ing.unit}</span>
+                                    <span className="tabular-nums text-xs text-[var(--color-muted)] w-8 text-left">{ing.unit}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="p-2 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex justify-end">
+                    <div className="p-2 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex justify-end">
                         <button
                             type="button"
                             onClick={handleInlineSave}
@@ -542,14 +542,14 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
                 </div>
 
                 {/* Steps Glance */}
-                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] p-3 space-y-2">
-                    <span className="tabular-nums text-xs font-bold text-[oklch(55%_0.010_28)] block">
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-3 space-y-2">
+                    <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)] block">
                         ลำดับขั้นตอนการชงย่อ:
                     </span>
-                    <ol className="space-y-1.5 tabular-nums text-xs text-[oklch(18%_0.012_28)]">
+                    <ol className="space-y-1.5 tabular-nums text-xs text-[var(--color-ink)]">
                         {(recipe.steps || []).map((s, idx) => (
                             <li key={idx} className="flex gap-2">
-                                <span className="font-bold text-[oklch(55%_0.010_28)]">{idx + 1}.</span>
+                                <span className="font-bold text-[var(--color-neutral)]">{idx + 1}.</span>
                                 <span>{s.instruction || s.title}</span>
                             </li>
                         ))}
@@ -558,7 +558,7 @@ function QuickViewDrawer({ recipe, onClose, onEditFull, onDuplicate, onExportPdf
             </div>
 
             {/* Drawer Actions */}
-            <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex gap-2 tabular-nums text-xs">
+            <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex gap-2 tabular-nums text-xs">
                 <button
                     type="button"
                     onClick={() => onExportPdf(recipe.id)}
@@ -613,39 +613,39 @@ function ImportModal({ onClose, onImport }) {
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4 backdrop-blur-xs">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-xs w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
-                <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(94%_0.010_28)]">
-                    <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
+                <div className="p-4 border-b border-[var(--color-rule)] flex justify-between items-center bg-[var(--color-paper-2)]">
+                    <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)]">
                         ผูก SOP กับเมนู / เบส
                     </h3>
-                    <button onClick={onClose} className="p-1 hover:bg-[oklch(90%_0.012_28)] text-[oklch(55%_0.010_28)]"><X size={16} /></button>
+                    <button onClick={onClose} className="p-1 hover:bg-[var(--color-paper-3)] text-[var(--color-neutral)]"><X size={16} /></button>
                 </div>
-                <div className="p-3 border-b border-[oklch(85%_0.012_28)]">
+                <div className="p-3 border-b border-[var(--color-rule)]">
                     <input 
                         value={search} 
                         onChange={e => setSearch(e.target.value)} 
                         placeholder="ค้นหาเมนูหรือเบส..." 
-                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]" 
+                        className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm outline-none focus:border-[var(--color-ink)]" 
                         autoFocus 
                     />
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {loading ? <div className="text-center py-8 tabular-nums text-xs text-[oklch(55%_0.010_28)]">Loading...</div> :
-                    filtered.length === 0 ? <div className="text-center py-8 tabular-nums text-xs text-[oklch(55%_0.010_28)]">ไม่พบข้อมูล</div> :
+                    {loading ? <div className="text-center py-8 tabular-nums text-xs text-[var(--color-neutral)]">Loading...</div> :
+                    filtered.length === 0 ? <div className="text-center py-8 tabular-nums text-xs text-[var(--color-neutral)]">ไม่พบข้อมูล</div> :
                     filtered.map(item => (
                         <button 
                             key={item.type + item.id} 
                             onClick={() => onImport(item.id, item.type)} 
-                            className="w-full p-2.5 hover:bg-[oklch(94%_0.010_28)] text-left flex justify-between items-center border border-transparent hover:border-[oklch(85%_0.012_28)] font-sans"
+                            className="w-full p-2.5 hover:bg-[var(--color-paper-2)] text-left flex justify-between items-center border border-transparent hover:border-[var(--color-rule)] font-sans"
                         >
                             <div>
-                                <div className="font-bold text-xs text-[oklch(18%_0.012_28)] flex items-center gap-2">
-                                    {item.type === 'stock' && <span className="px-1.5 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] text-[11px] tabular-nums font-bold">BASE</span>}
+                                <div className="font-bold text-xs text-[var(--color-ink)] flex items-center gap-2">
+                                    {item.type === 'stock' && <span className="px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--color-ink)] text-[11px] tabular-nums font-bold">BASE</span>}
                                     {item.name}
                                 </div>
-                                <div className="text-xs text-[oklch(55%_0.010_28)] tabular-nums mt-0.5">{item.type === 'menu' ? 'เมนู' : 'เบส / ของเตรียม'}</div>
+                                <div className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5">{item.type === 'menu' ? 'เมนู' : 'เบส / ของเตรียม'}</div>
                             </div>
-                            <Download size={14} className="text-[oklch(55%_0.010_28)]" />
+                            <Download size={14} className="text-[var(--color-neutral)]" />
                         </button>
                     ))}
                 </div>
@@ -952,14 +952,14 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
     // ── LIST VIEW ──
     if (!editing) {
         return (
-            <div className={`font-sans text-[oklch(18%_0.012_28)] ${isEmbedded ? '' : 'min-h-screen bg-[oklch(97%_0.008_28)]'}`}>
+            <div className={`font-sans text-[var(--color-ink)] ${isEmbedded ? '' : 'min-h-screen bg-[var(--color-paper)]'}`}>
                 {/* Header Actions Bar (Dieter Rams Cellular Layout) */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-[var(--color-rule)]">
                     <div>
-                        <h2 className="text-base font-semibold text-[oklch(18%_0.012_28)]">
+                        <h2 className="text-base font-semibold text-[var(--color-ink)]">
                             วิธีทำ (SOP) ครัวและบาร์
                         </h2>
-                        <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums">
+                        <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                             สูตรมาตรฐาน ระดับความหวาน และขั้นตอนการเตรียมพร้อมระบบส่งออกคู่มือ
                         </p>
                     </div>
@@ -1014,10 +1014,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 {(() => {
                     const incomplete = recipes.filter(r => !(r.ingredients || []).length || !(r.steps || []).length).length;
                     return incomplete > 0 ? (
-                        <p className="mb-3 text-[13px] leading-5 text-[oklch(42%_0.010_28)]">
+                        <p className="mb-3 text-[13px] leading-5 text-[var(--color-muted)]">
                             <span className="font-medium text-[oklch(45%_0.12_60)]">{incomplete} จาก {recipes.length} สูตรยังไม่ครบ</span>
                             {' '}· ขาดส่วนผสมหรือขั้นตอน พนักงานบาร์จะเปิดเจอหน้าว่าง
-                            <button type="button" onClick={() => setOnlyIncomplete(v => !v)} className="ml-2 underline underline-offset-2 cursor-pointer text-[oklch(18%_0.012_28)]">
+                            <button type="button" onClick={() => setOnlyIncomplete(v => !v)} className="ml-2 underline underline-offset-2 cursor-pointer text-[var(--color-ink)]">
                                 {onlyIncomplete ? 'แสดงทั้งหมด' : 'ดูเฉพาะที่ยังไม่ครบ'}
                             </button>
                         </p>
@@ -1043,16 +1043,16 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                 {/* Search Bar */}
                 <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(55%_0.010_28)]" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-neutral)]" />
                     <input
                         type="text"
                         placeholder="ค้นหาชื่อเมนู, ชื่ออังกฤษ, หรือวัตถุดิบ..."
                         value={searchQuery || ''}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-10 rounded-lg pl-9 pr-9 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)] transition-colors"
+                        className="w-full h-10 rounded-lg pl-9 pr-9 bg-[var(--color-paper)] border border-[var(--color-rule)] text-sm outline-none focus:border-[var(--color-ink)] transition-colors"
                     />
                     {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
                             <X size={15} />
                         </button>
                     )}
@@ -1061,41 +1061,41 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 {/* Recipe Ledger List */}
                 {loading ? (
                     <div className="space-y-2 tabular-nums text-xs">
-                        {[1,2,3,4].map(i => <div key={i} className="h-14 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] " />)}
+                        {[1,2,3,4].map(i => <div key={i} className="h-14 bg-[var(--color-paper-2)] border border-[var(--color-rule)] " />)}
                     </div>
                 ) : recipes.length === 0 ? (
-                    <div className="text-center py-16 text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
+                    <div className="text-center py-16 text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] bg-[var(--color-paper)]">
                         <p className="text-[13px] tabular-nums mb-2">ยังไม่มีสูตร SOP ในหมวดหมู่นี้</p>
                         <div className="flex justify-center gap-3">
-                            <button onClick={() => setShowQuickPaste(true)} className="text-[oklch(18%_0.012_28)] font-bold text-xs hover:underline tabular-nums">วางจากข้อความ</button>
+                            <button onClick={() => setShowQuickPaste(true)} className="text-[var(--color-ink)] font-bold text-xs hover:underline tabular-nums">วางจากข้อความ</button>
                             <span>•</span>
-                            <button onClick={handleNew} className="text-[oklch(18%_0.012_28)] font-bold text-xs hover:underline tabular-nums">+ สร้าง SOP ใหม่</button>
+                            <button onClick={handleNew} className="text-[var(--color-ink)] font-bold text-xs hover:underline tabular-nums">+ สร้าง SOP ใหม่</button>
                         </div>
                     </div>
                 ) : (
-                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] divide-y divide-[oklch(90%_0.008_28)]">
+                    <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-paper-3)]">
                         {(onlyIncomplete ? recipes.filter(r => !(r.ingredients || []).length || !(r.steps || []).length) : recipes).map(recipe => (
                             <div 
                                 key={recipe.id} 
                                 onClick={() => setDrawerRecipe(recipe)}
-                                className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 hover:bg-[oklch(98%_0.004_28)] transition-colors cursor-pointer group"
+                                className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 hover:bg-[var(--color-paper)] transition-colors cursor-pointer group"
                             >
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <span className="tabular-nums text-xs font-bold px-2 py-1 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] flex-shrink-0">
+                                    <span className="tabular-nums text-xs font-bold px-2 py-1 bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] flex-shrink-0">
                                         {recipe.category?.label || 'BAR'}
                                     </span>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-sm tracking-tight text-[oklch(18%_0.012_28)] truncate">
+                                            <h3 className="font-bold text-sm tracking-tight text-[var(--color-ink)] truncate">
                                                 {recipe.name}
                                             </h3>
                                             {recipe.name_en && (
-                                                <span className="text-xs tabular-nums text-[oklch(55%_0.010_28)] hidden sm:inline truncate">
+                                                <span className="text-xs tabular-nums text-[var(--color-neutral)] hidden sm:inline truncate">
                                                     ({recipe.name_en})
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 whitespace-nowrap">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 whitespace-nowrap">
                                             <span>{recipe.base_glass_size_oz || 16}oz</span>
                                             <span>•</span>
                                             {/* An empty part is the bar's problem, not a zero: say what is missing */}
@@ -1120,7 +1120,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <span className={`px-2 py-0.5 text-[11px] tabular-nums font-bold border ${
                                         recipe.is_published 
                                             ? 'bg-[oklch(95%_0.03_150)] text-[oklch(32%_0.08_150)] border-[oklch(85%_0.05_150)]' 
-                                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(50%_0.010_28)] border-[oklch(90%_0.008_28)]'
+                                            : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-paper-3)]'
                                     }`}>
                                         {recipe.is_published ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}
                                     </span>
@@ -1128,7 +1128,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button 
                                         type="button"
                                         onClick={() => setExportModalConfig({ isOpen: true, recipeId: recipe.id })}
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
+                                        className="p-2 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded transition-colors"
                                         title="พิมพ์คู่มือสูตรนี้ (A4 PDF)"
                                     >
                                         <Download size={15} />
@@ -1137,7 +1137,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button 
                                         type="button"
                                         onClick={() => handleDuplicateRecipe(recipe.id)}
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
+                                        className="p-2 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded transition-colors"
                                         title="โคลนสูตรนี้ (Duplicate)"
                                     >
                                         <Copy size={15} />
@@ -1146,7 +1146,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     <button 
                                         type="button"
                                         onClick={() => setEditing({ ...recipe })} 
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
+                                        className="p-2 text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded transition-colors"
                                         title="แก้ไขสูตร"
                                     >
                                         <Edit2 size={15} />
@@ -1160,7 +1160,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 fetchRecipes(activeCategory); 
                                             }
                                         }} 
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                        className="p-2 text-[var(--color-neutral)] hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                                         title="ลบสูตร"
                                     >
                                         <Trash2 size={15} />
@@ -1221,9 +1221,9 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
     // ── EDIT VIEW (Dieter Rams Single-Scroll with Simplicity Mode Switcher) ──
     return (
-        <div className="font-sans text-[oklch(18%_0.012_28)] pb-24">
+        <div className="font-sans text-[var(--color-ink)] pb-24">
             {/* Top Editor Bar (Tabular Grid) */}
-            <div className="border-b border-[oklch(85%_0.012_28)] pb-3 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="border-b border-[var(--color-rule)] pb-3 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={() => setEditing(null)} 
@@ -1233,7 +1233,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         <span>กลับหน้ารายการ</span>
                     </button>
                     <div>
-                        <h2 className="tabular-nums text-base font-bold text-[oklch(18%_0.012_28)]">
+                        <h2 className="tabular-nums text-base font-bold text-[var(--color-ink)]">
                             {editing.id ? `แก้ไข: ${editing.name}` : 'สร้างสูตร SOP ใหม่'}
                         </h2>
                     </div>
@@ -1242,14 +1242,14 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 {/* Right controls: Mode Toggle & Save */}
                 <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto tabular-nums text-xs">
                     {/* Simple vs Pro Mode Switcher */}
-                    <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                    <div className="flex border border-[var(--color-rule)] bg-[var(--color-paper-2)] divide-x divide-[var(--color-rule)]">
                         <button 
                             type="button"
                             onClick={() => setEditorMode('simple')} 
                             className={`px-3 py-1.5 font-bold transition-colors ${
                                 editorMode === 'simple' 
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             SIMPLE (เรียบง่าย)
@@ -1259,8 +1259,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             onClick={() => setEditorMode('pro')} 
                             className={`px-3 py-1.5 font-bold transition-colors ${
                                 editorMode === 'pro' 
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             PRO (เจาะลึก QC)
@@ -1270,10 +1270,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                     <button 
                         type="button"
                         onClick={() => setShowPreview(!showPreview)} 
-                        className={`px-3 py-1.5 border border-[oklch(85%_0.012_28)] font-bold transition-colors flex items-center gap-1 ${
+                        className={`px-3 py-1.5 border border-[var(--color-rule)] font-bold transition-colors flex items-center gap-1 ${
                             showPreview 
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                         }`}
                     >
                         {showPreview ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -1294,7 +1294,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
             {/* Anchors Bar (Only in Pro Mode) */}
             {editorMode === 'pro' && (
-                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-1.5 mb-5 flex gap-2 overflow-x-auto no-scrollbar tabular-nums text-xs">
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-1.5 mb-5 flex gap-2 overflow-x-auto no-scrollbar tabular-nums text-xs">
                     {[
                         { id: 'basic', label: 'ข้อมูลทั่วไป' },
                         { id: 'scaling', label: 'สเกล & ขนาด' },
@@ -1308,8 +1308,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             onClick={() => scrollToSection(item.id)}
                             className={`px-3 py-1 font-bold whitespace-nowrap transition-colors ${
                                 activeAnchor === item.id 
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' 
-                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                             }`}
                         >
                             {item.label}
@@ -1321,8 +1321,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
             <div className="space-y-6">
                 {/* Live Preview Box */}
                 {showPreview && (
-                    <div className="bg-[oklch(18%_0.012_28)] p-4 rounded-xs border border-[oklch(30%_0.015_28)] shadow-2xl">
-                        <div className="text-[11px] text-[oklch(70%_0.010_28)] tabular-nums mb-3 px-1 border-b border-[oklch(30%_0.015_28)] pb-1 flex justify-between items-center">
+                    <div className="bg-[var(--color-ink)] p-4 rounded-xs border border-[oklch(30%_0.012_348.33)] shadow-2xl">
+                        <div className="text-[11px] text-[oklch(70%_0.01_348.33)] tabular-nums mb-3 px-1 border-b border-[oklch(30%_0.012_348.33)] pb-1 flex justify-between items-center">
                             <span>SIMULATION: SOP RECIPE VIEWER SCREEN</span>
                             <span className="text-emerald-400 font-bold">LIVE PREVIEW</span>
                         </div>
@@ -1342,47 +1342,47 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 )}
 
                 {/* ── SECTION 1: ข้อมูลทั่วไป (General Info) ── */}
-                <section id="sec-basic" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
-                    <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex justify-between items-center">
-                        <h3 className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)]  ">
+                <section id="sec-basic" className="bg-[var(--color-paper)] p-5 rounded-xs border border-[var(--color-rule)] space-y-4">
+                    <div className="border-b border-[var(--color-paper-3)] pb-2 flex justify-between items-center">
+                        <h3 className="text-xs tabular-nums font-bold text-[var(--color-neutral)]  ">
                             ข้อมูลทั่วไป
                         </h3>
-                        <span className="text-xs tabular-nums text-[oklch(52%_0.16_28)] font-bold">
+                        <span className="text-xs tabular-nums text-[var(--brand-plum)] font-bold">
                             {editorMode === 'simple' ? 'โหมดง่าย' : 'โหมดละเอียด'}
                         </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">
                                 ชื่อเมนู (ภาษาไทย) *
                             </label>
                             <input 
                                 value={editing.name} 
                                 onChange={e => setEditing({ ...editing, name: e.target.value })} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none" 
+                                className="w-full p-2 border border-[var(--color-rule)] text-sm focus:border-[var(--color-ink)] outline-none" 
                                 placeholder="เช่น มัทฉะลาเต้เย็น" 
                             />
                         </div>
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">
                                 ชื่อเมนู (EN / optional)
                             </label>
                             <input 
                                 value={editing.name_en || ''} 
                                 onChange={e => setEditing({ ...editing, name_en: e.target.value })} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none" 
+                                className="w-full p-2 border border-[var(--color-rule)] text-sm focus:border-[var(--color-ink)] outline-none" 
                                 placeholder="e.g. Iced Matcha Latte" 
                             />
                         </div>
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">
                                 หมวดหมู่สูตร SOP
                             </label>
                             <select 
                                 value={editing.category_id || ''} 
                                 onChange={e => setEditing({ ...editing, category_id: e.target.value })} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm focus:border-[var(--color-ink)] outline-none"
                             >
                                 <option value="">-- เลือกหมวดหมู่ --</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -1390,13 +1390,13 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         </div>
                         {!isCustomMode && (
                             <div>
-                                <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">
+                                <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">
                                     ขนาดแก้วมาตรฐาน (Base Glass Size)
                                 </label>
                                 <select 
                                     value={editing.base_glass_size_oz} 
                                     onChange={e => setEditing({ ...editing, base_glass_size_oz: parseInt(e.target.value, 10) })} 
-                                    className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none"
+                                    className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm focus:border-[var(--color-ink)] outline-none"
                                 >
                                     {glassSizes.map(gs => <option key={gs.id} value={gs.size_oz}>{gs.size_oz} oz ({gs.name || gs.label})</option>)}
                                     <option value="16">16 oz (Default)</option>
@@ -1404,24 +1404,24 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             </div>
                         )}
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">
                                 เวลาสกัด/เตรียม (Prep Time)
                             </label>
                             <input 
                                 value={editing.advanced_details?.prep_time || ''} 
                                 onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, prep_time: e.target.value }})} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none" 
+                                className="w-full p-2 border border-[var(--color-rule)] text-sm focus:border-[var(--color-ink)] outline-none" 
                                 placeholder="เช่น 2-3 นาที" 
                             />
                         </div>
                         <div>
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block mb-1">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block mb-1">
                                 ระดับน้ำแข็งมาตรฐาน (Ice Level)
                             </label>
                             <input 
                                 value={editing.advanced_details?.ice_level || ''} 
                                 onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, ice_level: e.target.value }})} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none" 
+                                className="w-full p-2 border border-[var(--color-rule)] text-sm focus:border-[var(--color-ink)] outline-none" 
                                 placeholder="เช่น เต็มแก้ว 100%" 
                             />
                         </div>
@@ -1430,23 +1430,23 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                 {/* ── SECTION 2: สเกลและขนาด (Scaling Rules) - Shown in PRO Mode ── */}
                 {editorMode === 'pro' && (
-                    <section id="sec-scaling" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
-                        <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex justify-between items-start">
+                    <section id="sec-scaling" className="bg-[var(--color-paper)] p-5 rounded-xs border border-[var(--color-rule)] space-y-4">
+                        <div className="border-b border-[var(--color-paper-3)] pb-2 flex justify-between items-start">
                             <div>
-                                <h3 className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)]  ">
+                                <h3 className="text-xs tabular-nums font-bold text-[var(--color-neutral)]  ">
                                     การปรับสเกลและล็อตใหญ่
                                 </h3>
                             </div>
-                            <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
-                                <button type="button" onClick={() => toggleCustomMode(false)} className={`px-2.5 py-1 text-xs tabular-nums font-bold ${!isCustomMode ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>แก้ว (OZ)</button>
-                                <button type="button" onClick={() => toggleCustomMode(true)} className={`px-2.5 py-1 text-xs tabular-nums font-bold ${isCustomMode ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>เบส (CUSTOM)</button>
+                            <div className="flex border border-[var(--color-rule)] bg-[var(--color-paper-2)]">
+                                <button type="button" onClick={() => toggleCustomMode(false)} className={`px-2.5 py-1 text-xs tabular-nums font-bold ${!isCustomMode ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-muted)]'}`}>แก้ว (OZ)</button>
+                                <button type="button" onClick={() => toggleCustomMode(true)} className={`px-2.5 py-1 text-xs tabular-nums font-bold ${isCustomMode ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-muted)]'}`}>เบส (CUSTOM)</button>
                             </div>
                         </div>
 
                         {isCustomMode ? (
                             <div className="space-y-2.5">
                                 {(editing.scaling_rules?.presets || []).map((preset, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 p-2 bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)]">
+                                    <div key={idx} className="flex items-center gap-2 p-2 bg-[var(--color-paper)] border border-[var(--color-rule)]">
                                         <input 
                                             value={preset.name} 
                                             onChange={e => {
@@ -1455,10 +1455,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
                                             }}
                                             placeholder="ชื่อปุ่ม (เช่น 1.5 ลิตร)"
-                                            className="flex-1 p-1.5 border border-[oklch(85%_0.012_28)] text-sm bg-[oklch(99%_0.004_28)]"
+                                            className="flex-1 p-1.5 border border-[var(--color-rule)] text-sm bg-[var(--color-paper)]"
                                         />
-                                        <div className="flex items-center gap-1 bg-[oklch(99%_0.004_28)] px-2 py-1 border border-[oklch(85%_0.012_28)]">
-                                            <span className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)]">MULTIPLIER</span>
+                                        <div className="flex items-center gap-1 bg-[var(--color-paper)] px-2 py-1 border border-[var(--color-rule)]">
+                                            <span className="text-xs tabular-nums font-bold text-[var(--color-neutral)]">MULTIPLIER</span>
                                             <input 
                                                 type="number" step="0.01"
                                                 value={preset.multiplier}
@@ -1467,7 +1467,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                     newPresets[idx].multiplier = parseFloat(e.target.value) || 1;
                                                     setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
                                                 }}
-                                                className={`w-14 text-center tabular-nums font-bold text-xs outline-none ${preset.isBase ? 'text-[oklch(55%_0.010_28)]' : 'text-[oklch(18%_0.012_28)]'}`}
+                                                className={`w-14 text-center tabular-nums font-bold text-xs outline-none ${preset.isBase ? 'text-[var(--color-neutral)]' : 'text-[var(--color-ink)]'}`}
                                                 disabled={preset.isBase}
                                             />
                                         </div>
@@ -1476,7 +1476,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums">เลือกขนาดแก้วที่จำหน่ายสำหรับเมนูนี้ (ระบบคำนวณสเกลให้อัตโนมัติ):</p>
+                                <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">เลือกขนาดแก้วที่จำหน่ายสำหรับเมนูนี้ (ระบบคำนวณสเกลให้อัตโนมัติ):</p>
                                 <div className="flex flex-wrap gap-2">
                                     {glassSizes.map(gs => {
                                         const isBase = gs.size_oz === editing.base_glass_size_oz;
@@ -1494,8 +1494,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 }}
                                                 className={`px-3 py-2 border tabular-nums text-left transition-all ${
                                                     isAvailable 
-                                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' 
-                                                        : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' 
+                                                        : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:border-[var(--color-ink)]'
                                                 }`}
                                             >
                                                 <div className="text-xs ">{isBase ? 'STANDARD' : isAvailable ? 'ON SALE' : 'OFF'}</div>
@@ -1510,10 +1510,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 )}
 
                 {/* ── SECTION 3: ส่วนผสมและระดับความหวาน (Ingredients & Sweetness Matrix) ── */}
-                <section id="sec-ingredients" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
-                    <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <section id="sec-ingredients" className="bg-[var(--color-paper)] p-5 rounded-xs border border-[var(--color-rule)] space-y-4">
+                    <div className="border-b border-[var(--color-paper-3)] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
-                            <h3 className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)]  ">
+                            <h3 className="text-xs tabular-nums font-bold text-[var(--color-neutral)]  ">
                                 {editorMode === 'simple' ? 'รายการส่วนผสม & ความหวาน' : 'ส่วนผสม & ความหวาน'}
                             </h3>
                         </div>
@@ -1545,7 +1545,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             )}
                         </div>
                     </div>
-                    <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)] font-sans">
+                    <p className="text-[12px] leading-5 text-[var(--color-muted)] font-sans">
                         {editing.source_menu_item_id || editing.source_stock_item_id
                             ? 'ส่วนผสมที่มีป้าย "ผูกสูตร" มาจากสูตรของเมนู / เบส ใช้ทั้งคิดต้นทุนและตัดสต๊อก แก้ปริมาณได้ที่ปุ่ม "แก้ส่วนผสมในสูตร" ส่วนที่นี่ตั้งได้แค่ SCALE / SWEETENER / ซ่อน / หมายเหตุ'
                             : 'SOP นี้ยังไม่ได้ผูกกับเมนูหรือเบส ส่วนผสมด้านล่างเป็นแค่ข้อความ ไม่คิดต้นทุนและไม่ตัดสต๊อก'}
@@ -1557,7 +1557,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} sweetFromMenu={!!editing.source_menu_item_id} />
                         ))}
                         {(editing.ingredients || []).length === 0 && (
-                            <div className="text-center py-6 tabular-nums text-xs text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] p-4">
+                            <div className="text-center py-6 tabular-nums text-xs text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] p-4">
                                 ยังไม่มีส่วนผสม กรุณากดปุ่มเพิ่มวัตถุดิบ หรือใช้วางข้อความนำเข้าด่วน (Quick Paste)
                             </div>
                         )}
@@ -1572,11 +1572,11 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                     {/* ── SWEETNESS: owned by the linked menu (one place: its recipe and sweetness option) ── */}
                     {editing.source_menu_item_id && (
-                        <div className="mt-5 pt-4 border-t border-[oklch(85%_0.012_28)] space-y-3">
+                        <div className="mt-5 pt-4 border-t border-[var(--color-rule)] space-y-3">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <div>
-                                    <h4 className="text-sm font-semibold text-[oklch(18%_0.012_28)]">ระดับความหวาน</h4>
-                                    <p className="text-[13px] leading-6 text-[oklch(42%_0.010_28)]">
+                                    <h4 className="text-sm font-semibold text-[var(--color-ink)]">ระดับความหวาน</h4>
+                                    <p className="text-[13px] leading-6 text-[var(--color-muted)]">
                                         ตั้งที่สูตรของเมนูที่เดียว (สารหวาน และตัวคูณของแต่ละระดับ) ใช้ทั้งตัดสต๊อกตอนขายและสูตรที่บาร์เห็น
                                     </p>
                                 </div>
@@ -1585,29 +1585,29 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 </button>
                             </div>
                             {menuSweet === null ? (
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)]">กำลังโหลด...</p>
+                                <p className="text-[13px] text-[var(--color-neutral)]">กำลังโหลด...</p>
                             ) : menuSweet.length === 0 ? (
-                                <p className="text-[13px] leading-6 text-[oklch(42%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] px-3 py-2.5">
+                                <p className="text-[13px] leading-6 text-[var(--color-muted)] border border-dashed border-[var(--color-rule)] px-3 py-2.5">
                                     เมนูนี้ยังไม่มีตัวเลือกความหวาน บาร์จะไม่เห็นปุ่มเลือกระดับ ผูกกลุ่มความหวานกับเมนูที่ Modifiers &amp; Options ก่อน แล้วตั้งตัวคูณที่สูตรของเมนู
                                 </p>
                             ) : sweetenersList.length === 0 ? (
-                                <p className="text-[13px] leading-6 text-[oklch(42%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] px-3 py-2.5">
+                                <p className="text-[13px] leading-6 text-[var(--color-muted)] border border-dashed border-[var(--color-rule)] px-3 py-2.5">
                                     ระดับ: {menuSweet.map(l => `${l.label} ${factorPercent(l.factor)}`).join(' · ')}
                                     <span className="block">ยังไม่มีส่วนผสมที่เป็นสารหวาน กดเลือกสารหวานในสูตรของเมนู</span>
                                 </p>
                             ) : (
-                                <div className="overflow-x-auto border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                                    <table className="w-full text-center tabular-nums text-[13px] divide-y divide-[oklch(85%_0.012_28)]">
+                                <div className="overflow-x-auto border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                                    <table className="w-full text-center tabular-nums text-[13px] divide-y divide-[var(--color-rule)]">
                                         <thead>
-                                            <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-xs">
+                                            <tr className="bg-[var(--color-paper-2)] text-[var(--color-muted)] text-xs">
                                                 <th className="p-2 text-left pl-3">สารหวาน (ขนาดหลัก)</th>
                                                 {menuSweet.map(l => <th key={l.id} className="p-2">{l.label} ({factorPercent(l.factor)})</th>)}
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                                        <tbody className="divide-y divide-[var(--color-paper-3)]">
                                             {sweetenersList.map((sw, sIdx) => (
                                                 <tr key={sIdx}>
-                                                    <td className="p-2 text-left pl-3 font-sans font-bold text-[oklch(18%_0.012_28)]">{sw.name}</td>
+                                                    <td className="p-2 text-left pl-3 font-sans font-bold text-[var(--color-ink)]">{sw.name}</td>
                                                     {menuSweet.map(l => (
                                                         <td key={l.id} className="p-2">{Math.round((Number(sw.qty) || 0) * l.factor * 100) / 100} {sw.unit}</td>
                                                     ))}
@@ -1622,10 +1622,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                     {/* ── SWEETNESS MATRIX SUB-PANEL (SOPs not linked to a menu) ── */}
                     {!editing.source_menu_item_id && sweetenersList.length > 0 && (
-                        <div className="mt-5 pt-4 border-t border-[oklch(85%_0.012_28)] space-y-3">
+                        <div className="mt-5 pt-4 border-t border-[var(--color-rule)] space-y-3">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <div>
-                                    <h4 className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                    <h4 className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                                         ตารางกำหนดปริมาณระดับความหวาน (4 ระดับ)
                                     </h4>
                                 </div>
@@ -1642,22 +1642,22 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                 </div>
                             </div>
 
-                            <p className="text-[13px] text-[oklch(42%_0.010_28)] leading-relaxed">
+                            <p className="text-[13px] text-[var(--color-muted)] leading-relaxed">
                                 ระบุปริมาณสารหวานเจาะจง (ml/g) สำหรับแต่ละระดับความหวาน เพื่อให้บาริสต้าตวงได้ตรงตามมาตรฐานร้าน:
                             </p>
 
-                            <div className="overflow-x-auto border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
-                                <table className="w-full text-center tabular-nums text-[13px] divide-y divide-[oklch(85%_0.012_28)]">
+                            <div className="overflow-x-auto border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                                <table className="w-full text-center tabular-nums text-[13px] divide-y divide-[var(--color-rule)]">
                                     <thead>
-                                        <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-xs">
+                                        <tr className="bg-[var(--color-paper-2)] text-[var(--color-muted)] text-xs">
                                             <th className="p-2 text-left pl-3">สารหวาน</th>
                                             <th className="p-2">ไม่หวาน (0%)</th>
-                                            <th className="p-2 text-[oklch(52%_0.16_28)] font-bold">หวานน้อย (50%)</th>
-                                            <th className="p-2 bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)] font-bold">หวานปกติ (100%)</th>
+                                            <th className="p-2 text-[var(--brand-plum)] font-bold">หวานน้อย (50%)</th>
+                                            <th className="p-2 bg-[var(--color-paper-3)] text-[var(--color-ink)] font-bold">หวานปกติ (100%)</th>
                                             <th className="p-2">หวานมาก (120%)</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                                    <tbody className="divide-y divide-[var(--color-paper-3)]">
                                         {sweetenersList.map((sw, sIdx) => {
                                             const custom = editing.advanced_details?.sweetness_matrix?.levels?.[sw.name] || {};
                                             const noneVal = custom.none !== undefined ? custom.none : 0;
@@ -1688,8 +1688,8 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                             };
 
                                             return (
-                                                <tr key={sIdx} className="hover:bg-[oklch(99%_0.004_28)] transition-colors">
-                                                    <td className="p-2 text-left pl-3 font-sans font-bold text-[oklch(18%_0.012_28)]">
+                                                <tr key={sIdx} className="hover:bg-[var(--color-paper)] transition-colors">
+                                                    <td className="p-2 text-left pl-3 font-sans font-bold text-[var(--color-ink)]">
                                                         {sw.name}
                                                     </td>
                                                     <td className="p-2">
@@ -1697,7 +1697,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                             type="number"
                                                             value={noneVal}
                                                             onChange={e => updateLevel('none', e.target.value)}
-                                                            className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center text-sm bg-[oklch(99%_0.004_28)] tabular-nums"
+                                                            className="w-16 p-1 border border-[var(--color-rule)] text-center text-sm bg-[var(--color-paper)] tabular-nums"
                                                         />
                                                     </td>
                                                     <td className="p-2">
@@ -1706,12 +1706,12 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                                 type="number"
                                                                 value={lessVal}
                                                                 onChange={e => updateLevel('less', e.target.value)}
-                                                                className="w-16 p-1 border border-[oklch(52%_0.16_28)] text-center text-sm bg-[oklch(99%_0.004_28)] text-[oklch(52%_0.16_28)] tabular-nums"
+                                                                className="w-16 p-1 border border-[var(--brand-plum)] text-center text-sm bg-[var(--color-paper)] text-[var(--brand-plum)] tabular-nums"
                                                             />
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('less', Math.max(0, lessVal - 5))}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
+                                                                className="px-1 py-0.5 border border-[var(--color-rule)] text-[11px] hover:bg-[var(--color-paper-2)]"
                                                                 title="ลด 5ml"
                                                             >
                                                                 -5
@@ -1719,19 +1719,19 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('less', lessVal + 5)}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
+                                                                className="px-1 py-0.5 border border-[var(--color-rule)] text-[11px] hover:bg-[var(--color-paper-2)]"
                                                                 title="เพิ่ม 5ml"
                                                             >
                                                                 +5
                                                             </button>
                                                         </div>
                                                     </td>
-                                                    <td className="p-2 bg-[oklch(94%_0.010_28)]/50">
+                                                    <td className="p-2 bg-[var(--color-paper-2)]/50">
                                                         <input
                                                             type="number"
                                                             value={normVal}
                                                             onChange={e => updateLevel('normal', e.target.value)}
-                                                            className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center text-sm bg-[oklch(99%_0.004_28)] tabular-nums"
+                                                            className="w-16 p-1 border border-[var(--color-rule)] text-center text-sm bg-[var(--color-paper)] tabular-nums"
                                                         />
                                                     </td>
                                                     <td className="p-2">
@@ -1740,19 +1740,19 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                                 type="number"
                                                                 value={extraVal}
                                                                 onChange={e => updateLevel('extra', e.target.value)}
-                                                                className="w-16 p-1 border border-[oklch(85%_0.012_28)] text-center text-sm bg-[oklch(99%_0.004_28)] tabular-nums"
+                                                                className="w-16 p-1 border border-[var(--color-rule)] text-center text-sm bg-[var(--color-paper)] tabular-nums"
                                                             />
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('extra', Math.max(0, extraVal - 5))}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
+                                                                className="px-1 py-0.5 border border-[var(--color-rule)] text-[11px] hover:bg-[var(--color-paper-2)]"
                                                             >
                                                                 -5
                                                             </button>
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => updateLevel('extra', extraVal + 5)}
-                                                                className="px-1 py-0.5 border border-[oklch(85%_0.012_28)] text-[11px] hover:bg-[oklch(94%_0.010_28)]"
+                                                                className="px-1 py-0.5 border border-[var(--color-rule)] text-[11px] hover:bg-[var(--color-paper-2)]"
                                                             >
                                                                 +5
                                                             </button>
@@ -1769,10 +1769,10 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 </section>
 
                 {/* ── SECTION 4: ขั้นตอนการทำ (Steps with Starter Templates) ── */}
-                <section id="sec-steps" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-4">
-                    <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <section id="sec-steps" className="bg-[var(--color-paper)] p-5 rounded-xs border border-[var(--color-rule)] space-y-4">
+                    <div className="border-b border-[var(--color-paper-3)] pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
-                            <h3 className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)]  ">
+                            <h3 className="text-xs tabular-nums font-bold text-[var(--color-neutral)]  ">
                                 {editorMode === 'simple' ? 'ขั้นตอนการเตรียมและดำเนินการ' : 'ขั้นตอนการเตรียมและดำเนินการ'}
                             </h3>
                         </div>
@@ -1787,7 +1787,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                         e.target.value = '';
                                     }
                                 }}
-                                className="p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-sm outline-none cursor-pointer"
+                                className="p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] text-sm outline-none cursor-pointer"
                             >
                                 <option value="">โหลดขั้นตอนจากเทมเพลตมาตรฐาน...</option>
                                 {BEVERAGE_STARTER_TEMPLATES.map(t => (
@@ -1813,7 +1813,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                             />
                         ))}
                         {(editing.steps || []).length === 0 && (
-                            <div className="text-center py-6 tabular-nums text-xs text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] p-4">
+                            <div className="text-center py-6 tabular-nums text-xs text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] p-4">
                                 ยังไม่มีขั้นตอนดำเนินการบันทึก สามารถเลือกเทมเพลตมาตรฐานด้านบนหรือกดเพิ่มขั้นตอนใหม่
                             </div>
                         )}
@@ -1829,19 +1829,19 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
 
                 {/* ── SECTION 5: QC & มาตรฐานคุณภาพ (Shown only in PRO Mode) ── */}
                 {editorMode === 'pro' && (
-                    <section id="sec-pro" className="bg-[oklch(99%_0.004_28)] p-5 rounded-xs border border-[oklch(85%_0.012_28)] space-y-6">
-                        <div className="border-b border-[oklch(90%_0.008_28)] pb-2 flex justify-between items-center">
-                            <h3 className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)]  ">
+                    <section id="sec-pro" className="bg-[var(--color-paper)] p-5 rounded-xs border border-[var(--color-rule)] space-y-6">
+                        <div className="border-b border-[var(--color-paper-3)] pb-2 flex justify-between items-center">
+                            <h3 className="text-xs tabular-nums font-bold text-[var(--color-neutral)]  ">
                                 มาตรฐานการบริการและ QC
                             </h3>
-                            <span className="tabular-nums text-xs text-[oklch(55%_0.010_28)]">
+                            <span className="tabular-nums text-xs text-[var(--color-neutral)]">
                                 ADVANCED SECTION
                             </span>
                         </div>
 
                         {/* Equipment */}
                         <div className="space-y-2">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block">
                                 อุปกรณ์เฉพาะ (Required Equipment)
                             </label>
                             <textarea
@@ -1851,15 +1851,15 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                     const arr = val.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
                                     setEditing({ ...editing, advanced_details: { ...editing.advanced_details, equipment: arr } });
                                 }}
-                                className="w-full p-2.5 border border-[oklch(85%_0.012_28)] text-sm focus:border-[oklch(18%_0.012_28)] outline-none"
+                                className="w-full p-2.5 border border-[var(--color-rule)] text-sm focus:border-[var(--color-ink)] outline-none"
                                 rows={2}
                                 placeholder="เช่น เหยือกตวง, แปรง Chasen, บิวเรตต์ (คั่นด้วย Enter หรือลูกน้ำ ,)"
                             />
                         </div>
 
                         {/* QC Standards list */}
-                        <div className="space-y-2 border-t border-[oklch(90%_0.008_28)] pt-4">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block">
+                        <div className="space-y-2 border-t border-[var(--color-paper-3)] pt-4">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block">
                                 มาตรฐานของรสชาติและหน้าตา (QC Standards)
                             </label>
                             {(editing.advanced_details?.qc_standards || []).map((qc, i) => (
@@ -1875,7 +1875,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
                                             }));
                                         }} 
-                                        className="w-1/3 p-2 border border-[oklch(85%_0.012_28)] text-sm outline-none" 
+                                        className="w-1/3 p-2 border border-[var(--color-rule)] text-sm outline-none" 
                                         placeholder="หัวข้อ (เช่น สี/หน้าตา)" 
                                     />
                                     <input 
@@ -1889,7 +1889,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
                                             }));
                                         }} 
-                                        className="flex-1 p-2 border border-[oklch(85%_0.012_28)] text-sm outline-none" 
+                                        className="flex-1 p-2 border border-[var(--color-rule)] text-sm outline-none" 
                                         placeholder="มาตรฐานรสชาติที่ยอมรับได้" 
                                     />
                                     <button 
@@ -1901,7 +1901,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
                                             }));
                                         }} 
-                                        className="p-2 text-[oklch(55%_0.010_28)] hover:text-red-700"
+                                        className="p-2 text-[var(--color-neutral)] hover:text-red-700"
                                     >
                                         <Trash2 size={15} />
                                     </button>
@@ -1923,12 +1923,12 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                         </div>
 
                         {/* Troubleshooting */}
-                        <div className="space-y-3 border-t border-[oklch(90%_0.008_28)] pt-4">
-                            <label className="text-xs tabular-nums font-bold text-[oklch(55%_0.010_28)] block">
+                        <div className="space-y-3 border-t border-[var(--color-paper-3)] pt-4">
+                            <label className="text-xs tabular-nums font-bold text-[var(--color-neutral)] block">
                                 การแก้ปัญหาเบื้องต้น (Troubleshooting)
                             </label>
                             {(editing.advanced_details?.troubleshooting || []).map((tb, i) => (
-                                <div key={i} className="p-3 bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] relative space-y-2">
+                                <div key={i} className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] relative space-y-2">
                                     <button 
                                         type="button" 
                                         onClick={() => {
@@ -1938,7 +1938,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                 advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
                                             }));
                                         }} 
-                                        className="absolute top-2 right-2 text-[oklch(55%_0.010_28)] hover:text-red-700"
+                                        className="absolute top-2 right-2 text-[var(--color-neutral)] hover:text-red-700"
                                     >
                                         <Trash2 size={15} />
                                     </button>
@@ -1954,7 +1954,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                     advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
                                                 }));
                                             }} 
-                                            className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm text-red-600" 
+                                            className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm text-red-600" 
                                             placeholder="ปัญหาที่อาจเกิดขึ้น (เช่น ชาขมเกินไป)" 
                                         />
                                         <input 
@@ -1968,7 +1968,7 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                                                     advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
                                                 }));
                                             }} 
-                                            className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm" 
+                                            className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                                             placeholder="สาเหตุที่เป็นไปได้ (เช่น แช่ชานานเกินเวลา)" 
                                         />
                                         <input 
@@ -2006,13 +2006,13 @@ export default function SOPEditorPage({ isEmbedded = false, focus = null, onClos
                 )}
 
                 {/* Published / Draft status */}
-                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center justify-between">
+                <div className="p-4 border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex items-center justify-between">
                     <label className="flex items-center gap-2.5 cursor-pointer select-none tabular-nums text-xs font-bold">
                         <input 
                             type="checkbox" 
                             checked={editing.is_published} 
                             onChange={e => setEditing({ ...editing, is_published: e.target.checked })} 
-                            className="w-4 h-4 rounded-xs text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] focus:ring-0" 
+                            className="w-4 h-4 rounded-xs text-[var(--color-ink)] border-[var(--color-rule)] focus:ring-0" 
                         />
                         <span>{editing.is_published ? 'เผยแพร่แล้ว · แสดงในคู่มือบาร์' : 'ฉบับร่าง · ซ่อนไว้เป็นสูตรร่างภายใน'}</span>
                     </label>

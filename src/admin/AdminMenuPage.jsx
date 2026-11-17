@@ -113,7 +113,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         <Link
                             to="/staff/stock"
                             state={{ from: '/admin/menu?tab=stock' }}
-                            className="text-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors whitespace-nowrap"
+                            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors whitespace-nowrap"
                             title="ไปที่คลังวัตถุดิบของพนักงาน: นับ รับของ ปรับยอด"
                         >
                             คลังวัตถุดิบ ↗
@@ -121,7 +121,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                     ) : (
                         <Link
                             to="/admin/hausmade?tab=catalog"
-                            className="text-sm text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors whitespace-nowrap"
+                            className="text-sm text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors whitespace-nowrap"
                             title="ไปที่ระบบจัดการสินค้าและ Pre-Order ของ HAUSMADE"
                         >
                             HAUSMADE catalog ↗

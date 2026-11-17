@@ -9,7 +9,7 @@ export default function CasualLayout({ children, backgroundImage }) {
   const hasCustomBg = Boolean(backgroundImage && typeof backgroundImage === 'string' && backgroundImage.trim().length > 0);
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#0e0f0a] text-white font-[var(--font-body)] selection:bg-[var(--color-brand)] selection:text-black">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#0e0f0a] text-white font-[var(--font-body)] selection:bg-[var(--brand-plum)] selection:text-cream">
       
       {/* 1. WebGL Background Layer (Reeded Glass Effect with Ambient Dark Vignette) - Only rendered when an image is explicitly configured */}
       {hasCustomBg && (

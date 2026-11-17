@@ -51,7 +51,7 @@ export default function AdminPopover({ label, children, align = 'right', classNa
                         exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
                         transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
                         style={{ transformOrigin: align === 'right' ? 'top right' : 'top left' }}
-                        className={`absolute z-40 top-full mt-2 ${align === 'right' ? 'right-0' : 'left-0'} w-72 max-w-[calc(100vw-32px)] p-4 rounded-lg border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] shadow-[0_8px_24px_oklch(18%_0.012_28/0.10)] font-sans space-y-4`}
+                        className={`absolute z-40 top-full mt-2 ${align === 'right' ? 'right-0' : 'left-0'} w-72 max-w-[calc(100vw-32px)] p-4 rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper)] shadow-[0_8px_24px_oklch(21.78%_0_0/0.10)] font-sans space-y-4`}
                     >
                         {children}
                     </motion.div>
@@ -65,7 +65,7 @@ export default function AdminPopover({ label, children, align = 'right', classNa
 export function AdminPopoverGroup({ label, children }) {
     return (
         <div>
-            <div className="text-xs leading-5 text-[oklch(42%_0.010_28)] mb-1.5">{label}</div>
+            <div className="text-xs leading-5 text-[var(--color-muted)] mb-1.5">{label}</div>
             {children}
         </div>
     )

@@ -19,7 +19,7 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
                 amount: gross,
                 type: 'base', // starting column
                 running: gross,
-                color: 'bg-[oklch(18%_0.012_28)]',
+                color: 'bg-[var(--color-ink)]',
                 tag: 'SALES_01'
             },
             {
@@ -28,7 +28,7 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
                 amount: discounts,
                 type: 'decrease',
                 running: net,
-                color: 'bg-[oklch(52%_0.16_28)]',
+                color: 'bg-[var(--brand-plum)]',
                 tag: 'DEDUCT_01'
             },
             {
@@ -46,7 +46,7 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
                 amount: estimatedCogs,
                 type: 'decrease',
                 running: grossProfit,
-                color: 'bg-[oklch(52%_0.16_28)]',
+                color: 'bg-[var(--brand-plum)]',
                 tag: 'COGS_02'
             },
             {
@@ -64,7 +64,7 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
                 amount: expenses,
                 type: 'decrease',
                 running: netOperating,
-                color: 'bg-[oklch(52%_0.16_28)]',
+                color: 'bg-[var(--brand-plum)]',
                 tag: 'DEDUCT_02'
             },
             {
@@ -85,24 +85,24 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
     }, [liveMetrics])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] font-sans">
+        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] font-sans">
             {/* Header Toolbar */}
-            <div className="p-4 bg-[oklch(94%_0.010_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 bg-[var(--color-paper-2)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
+                        <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[var(--color-ink)] text-[var(--color-paper)] ">
                             WATERFALL // P&L
                         </span>
-                        <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
+                        <h3 className="font-bold text-base md:text-lg text-[var(--color-ink)] tracking-tight">
                             โครงสร้างกำไรสุทธิแท้จริง (Profit & Loss Waterfall Breakdown)
                         </h3>
                     </div>
-                    <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] tabular-nums text-[var(--color-muted)] mt-0.5">
                         สะพานแสดงการหักลดจากยอดขายรวม สู่ต้นทุนวัตถุดิบ และกำไรสุทธิจากการดำเนินงาน // {timeRangeLabel}
                     </p>
                 </div>
 
-                <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                <div className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                     EST. NET MARGIN: <span className="text-[oklch(45%_0.08_140)]">~{liveMetrics?.netProfitMarginPct || 0}%</span>
                 </div>
             </div>
@@ -119,16 +119,16 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
                             <div key={step.id} className="flex flex-col justify-end h-full group relative">
                                 {/* Top Indicator Label */}
                                 <div className="text-center tabular-nums mb-2">
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">
+                                    <span className="text-xs text-[var(--color-neutral)] block font-bold">
                                         {step.tag}
                                     </span>
-                                    <span className={`text-xs font-bold tabular-nums ${isDecrease ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
+                                    <span className={`text-xs font-bold tabular-nums ${isDecrease ? 'text-[var(--brand-plum)]' : 'text-[var(--color-ink)]'}`}>
                                         {isDecrease ? `-฿${step.amount.toLocaleString()}` : `฿${step.amount.toLocaleString()}`}
                                     </span>
                                 </div>
 
                                 {/* Bar Container */}
-                                <div className="w-full bg-[oklch(94%_0.010_28)] h-44 flex flex-col justify-end border border-[oklch(85%_0.012_28)] p-1 relative">
+                                <div className="w-full bg-[var(--color-paper-2)] h-44 flex flex-col justify-end border border-[var(--color-rule)] p-1 relative">
                                     <div
                                         className={`w-full ${step.color} transition-all duration-500 rounded-2xs`}
                                         style={{ height: `${heightPct}%` }}
@@ -137,10 +137,10 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
 
                                 {/* Step Name & Tag */}
                                 <div className="mt-2 text-center tabular-nums">
-                                    <p className="text-[13px] font-bold text-[oklch(18%_0.012_28)] line-clamp-2 leading-tight">
+                                    <p className="text-[13px] font-bold text-[var(--color-ink)] line-clamp-2 leading-tight">
                                         {step.label}
                                     </p>
-                                    <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                    <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                                         {((step.amount / maxVal) * 100).toFixed(0)}% ของ Gross
                                     </p>
                                 </div>
@@ -150,13 +150,13 @@ export default function ProfitWaterfallChart({ liveMetrics, timeRangeLabel = '�
                 </div>
 
                 {/* Explanatory Footer Pill */}
-                <div className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 tabular-nums text-xs">
+                <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 tabular-nums text-xs">
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
-                        <span className="text-[oklch(18%_0.012_28)] font-bold">สรุปสถานะการเงิน:</span>
-                        <span className="text-[oklch(42%_0.010_28)]">ร้านมีสัดส่วนกำไรขั้นต้น (Gross Prime Margin) อยู่ในเกณฑ์แข็งแกร่งหลังหักส่วนลดและต้นทุนวัตถุดิบ</span>
+                        <span className="text-[var(--color-ink)] font-bold">สรุปสถานะการเงิน:</span>
+                        <span className="text-[var(--color-muted)]">ร้านมีสัดส่วนกำไรขั้นต้น (Gross Prime Margin) อยู่ในเกณฑ์แข็งแกร่งหลังหักส่วนลดและต้นทุนวัตถุดิบ</span>
                     </div>
-                    <span className="text-xs text-[oklch(55%_0.010_28)]  ">
+                    <span className="text-xs text-[var(--color-neutral)]  ">
                         BASED ON ACTIVE POS BILLS
                     </span>
                 </div>

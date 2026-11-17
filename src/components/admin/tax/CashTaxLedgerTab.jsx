@@ -489,7 +489,7 @@ export default function CashTaxLedgerTab({
                 <div className="flex items-center gap-2 flex-wrap tabular-nums text-xs">
                     <button
                         onClick={() => loadExpenses(false)}
-                        className="p-2 bg-[var(--color-paper)] hover:bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] border border-[var(--color-rule)] transition-colors cursor-pointer"
+                        className="p-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] transition-colors cursor-pointer"
                         title="รีเฟรชข้อมูล"
                     >
                         <RotateCcw size={14} className={loadingExpenses ? 'animate-spin' : ''} />
@@ -497,7 +497,7 @@ export default function CashTaxLedgerTab({
 
                     <button
                         onClick={() => setShowExcelModal(true)}
-                        className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
+                        className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[var(--color-paper)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                         title="ส่งออกรายงานเงินสดรับ-จ่าย เป็นไฟล์ Excel (.xlsx) ตามแบบฟอร์มสรรพากรบุคคลธรรมดา"
                     >
                         <FileSpreadsheet size={14} className="text-emerald-300" />
@@ -506,15 +506,15 @@ export default function CashTaxLedgerTab({
 
                     <button
                         onClick={handleExportCsv}
-                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[oklch(99%_0.004_28)] text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3 py-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                        <FileText size={14} className="text-[oklch(42%_0.010_28)]" />
+                        <FileText size={14} className="text-[var(--color-muted)]" />
                         <span>CSV</span>
                     </button>
 
                     <button
                         onClick={() => setShowPrintModal(true)}
-                        className="px-4 py-2 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
+                        className="px-4 py-2 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                     >
                         <Printer size={14} />
                         <span>พิมพ์ฟอร์มสรรพากร (A4 / PDF)</span>
@@ -861,14 +861,14 @@ export default function CashTaxLedgerTab({
                                             ) : item.referenceType === 'POS_BILL' && item.rawBooking ? (
                                                 <button
                                                     onClick={() => setSelectedBillForDetail(item.rawBooking)}
-                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.008_28)] text-[11px] font-bold cursor-pointer transition-colors"
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-3)] text-[11px] font-bold cursor-pointer transition-colors"
                                                     title="คลิกเพื่อดูใบเสร็จรับเงิน POS"
                                                 >
-                                                    <FileText size={12} className="text-[oklch(42%_0.010_28)]" />
+                                                    <FileText size={12} className="text-[var(--color-muted)]" />
                                                     <span>{item.proofType || 'ใบเสร็จ POS'}</span>
                                                 </button>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border border-[oklch(90%_0.008_28)] text-[11px] tabular-nums">
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--color-paper)] text-[var(--color-muted)] border border-[var(--color-paper-3)] text-[11px] tabular-nums">
                                                     <span>{item.proofType || 'บิลเงินสด'}</span>
                                                 </span>
                                             )}
@@ -943,7 +943,7 @@ export default function CashTaxLedgerTab({
                             </div>
                             <button
                                 onClick={() => !isExportingExcel && setShowExcelModal(false)}
-                                className="p-1 hover:bg-black/5 text-[var(--color-neutral)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                                className="p-1 hover:bg-black/5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] cursor-pointer"
                             >
                                 <X size={18} />
                             </button>
@@ -981,7 +981,7 @@ export default function CashTaxLedgerTab({
                                     onClick={() => setExcelExportMode('daily')}
                                     className={`p-3.5 border transition-all cursor-pointer flex items-start gap-3 ${excelExportMode === 'daily' ? 'border-emerald-700 bg-emerald-50/50' : 'border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)]'}`}
                                 >
-                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${excelExportMode === 'daily' ? 'border-emerald-700 bg-emerald-700 text-[oklch(97%_0.008_28)]' : 'border-[oklch(85%_0.012_28)]'}`}>
+                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${excelExportMode === 'daily' ? 'border-emerald-700 bg-emerald-700 text-[var(--color-paper)]' : 'border-[var(--color-rule)]'}`}>
                                         {excelExportMode === 'daily' && <Check size={11} strokeWidth={3} />}
                                     </div>
                                     <div className="space-y-0.5">
@@ -1000,7 +1000,7 @@ export default function CashTaxLedgerTab({
                                     onClick={() => setExcelExportMode('detailed')}
                                     className={`p-3.5 border transition-all cursor-pointer flex items-start gap-3 ${excelExportMode === 'detailed' ? 'border-emerald-700 bg-emerald-50/50' : 'border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)]'}`}
                                 >
-                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${excelExportMode === 'detailed' ? 'border-emerald-700 bg-emerald-700 text-[oklch(97%_0.008_28)]' : 'border-[oklch(85%_0.012_28)]'}`}>
+                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${excelExportMode === 'detailed' ? 'border-emerald-700 bg-emerald-700 text-[var(--color-paper)]' : 'border-[var(--color-rule)]'}`}>
                                         {excelExportMode === 'detailed' && <Check size={11} strokeWidth={3} />}
                                     </div>
                                     <div className="space-y-0.5">
@@ -1045,7 +1045,7 @@ export default function CashTaxLedgerTab({
                                 type="button"
                                 onClick={() => handleExportExcel()}
                                 disabled={isExportingExcel}
-                                className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] tabular-nums text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                                className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-[var(--color-paper)] tabular-nums text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                             >
                                 <Download size={15} />
                                 <span>{isExportingExcel ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลด Excel (.xlsx)'}</span>
@@ -1092,7 +1092,7 @@ export default function CashTaxLedgerTab({
                             <span className="tabular-nums text-xs font-bold text-[var(--color-ink)]">หลักฐานการรับ-จ่ายเงิน</span>
                             <button
                                 onClick={() => setPreviewImage(null)}
-                                className="p-1 hover:bg-black/5 text-[var(--color-neutral)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                                className="p-1 hover:bg-black/5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] cursor-pointer"
                             >
                                 <X size={16} />
                             </button>

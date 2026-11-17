@@ -211,7 +211,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
     }, [elementId, attempt]);
 
     return (
-        <section className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(18%_0.012_28)]" aria-label="สแกนบาร์โค้ด">
+        <section className="border-b border-[var(--color-rule)] bg-[var(--color-ink)]" aria-label="สแกนบาร์โค้ด">
             <div className="relative">
                 <video
                     ref={videoRef}
@@ -224,10 +224,10 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     <div aria-hidden="true" className="pointer-events-none absolute"
                         style={{ left: `${AIM.x * 100}%`, top: `${AIM.y * 100}%`, width: `${AIM.width * 100}%`, height: `${AIM.height * 100}%` }}>
                         {['top-0 left-0 border-t-[3px] border-l-[3px]', 'top-0 right-0 border-t-[3px] border-r-[3px]', 'bottom-0 left-0 border-b-[3px] border-l-[3px]', 'bottom-0 right-0 border-b-[3px] border-r-[3px]'].map(corner => (
-                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed === 'one' ? 'border-[oklch(93%_0.22_118)]' : 'border-[oklch(97%_0.008_28)]'}`} />
+                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed === 'one' ? 'border-[oklch(93%_0.22_118)]' : 'border-[var(--color-paper)]'}`} />
                         ))}
                         {aimed === 'many' && (
-                            <span className="absolute inset-x-0 top-2 mx-auto w-max max-w-[90%] rounded px-2 py-1 bg-[oklch(18%_0.012_28)] text-[13px] leading-5 text-[oklch(97%_0.008_28)] text-center">
+                            <span className="absolute inset-x-0 top-2 mx-auto w-max max-w-[90%] rounded px-2 py-1 bg-[var(--color-ink)] text-[13px] leading-5 text-[var(--color-paper)] text-center">
                                 เห็นหลายโค้ด เล็งให้เหลือโค้ดเดียว
                             </span>
                         )}
@@ -235,24 +235,24 @@ export default function ScanStrip({ onCode, onClose, status }) {
                 )}
                 {state !== 'running' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
-                        <p className="font-sans text-[14px] leading-6 text-[oklch(94%_0.010_28)] max-w-xs">
+                        <p className="font-sans text-[14px] leading-6 text-[var(--color-paper-2)] max-w-xs">
                             {state === 'starting' ? 'กำลังเปิดกล้อง...' : error}
                         </p>
                         {state === 'error' && (
                             <button type="button" onClick={() => setAttempt(a => a + 1)}
-                                className="px-4 py-2 border border-[oklch(85%_0.012_28)] font-sans font-bold text-[13px] text-[oklch(97%_0.008_28)] cursor-pointer">
+                                className="px-4 py-2 border border-[var(--color-rule)] font-sans font-bold text-[13px] text-[var(--color-paper)] cursor-pointer">
                                 ลองใหม่
                             </button>
                         )}
                     </div>
                 )}
             </div>
-            <div className="grid grid-cols-[1fr_auto] items-center divide-x divide-[oklch(42%_0.010_28)] border-t border-[oklch(42%_0.010_28)]">
-                <p className="px-3 py-2 font-sans text-[13px] leading-5 text-[oklch(94%_0.010_28)] min-w-0 break-words" aria-live="polite">
+            <div className="grid grid-cols-[1fr_auto] items-center divide-x divide-[var(--color-muted)] border-t border-[var(--color-muted)]">
+                <p className="px-3 py-2 font-sans text-[13px] leading-5 text-[var(--color-paper-2)] min-w-0 break-words" aria-live="polite">
                     {status || 'เล็งโค้ดให้อยู่ในกรอบทีละโค้ด'}
                 </p>
                 <button type="button" onClick={onClose}
-                    className="px-4 py-2 font-sans font-bold text-[13px] text-[oklch(97%_0.008_28)] hover:bg-[oklch(25%_0.012_28)] cursor-pointer">
+                    className="px-4 py-2 font-sans font-bold text-[13px] text-[var(--color-paper)] hover:bg-[var(--color-ink)] cursor-pointer">
                     ปิดกล้อง
                 </button>
             </div>

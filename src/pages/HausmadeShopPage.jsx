@@ -387,7 +387,7 @@ export default function HausmadeShopPage() {
                                         <button
                                             type="button"
                                             onClick={() => handleProductAction(currentHeroItem)}
-                                            className="w-full py-2.5 px-4 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[oklch(12%_0.012_28)] font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
+                                            className="w-full py-2.5 px-4 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink)] font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
                                         >
                                             {isPreOrderItem(currentHeroItem)
                                                 ? '[ ⏳ สั่งจอง / PRE-ORDER ➔ ]'
@@ -650,7 +650,7 @@ export default function HausmadeShopPage() {
                                     <button
                                         type="button"
                                         onClick={() => handleProductAction(spotlightItem)}
-                                        className="px-3 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[10px] font-bold uppercase rounded-full hover:bg-[oklch(12%_0.012_28)] cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
+                                        className="px-3 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[10px] font-bold uppercase rounded-full hover:bg-[var(--color-ink)] cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
                                     >
                                         [ ฿{spotlightItem.price}.- ORDER ➔ ]
                                     </button>
@@ -742,7 +742,7 @@ export default function HausmadeShopPage() {
                                     </div>
                                     <Link
                                         to="/member-card"
-                                        className="px-3.5 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[11px] font-bold uppercase hover:bg-[oklch(12%_0.012_28)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
+                                        className="px-3.5 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[11px] font-bold uppercase hover:bg-[var(--color-ink)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
                                     >
                                         [ 💳 บัตรสมาชิกของฉัน ➔ ]
                                     </Link>
@@ -785,7 +785,7 @@ export default function HausmadeShopPage() {
                                     <button
                                         type="submit"
                                         disabled={quickTrackLoading}
-                                        className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(12%_0.012_28)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] flex items-center justify-center gap-1.5 shadow-xs"
+                                        className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] flex items-center justify-center gap-1.5 shadow-xs"
                                     >
                                         {quickTrackLoading ? (
                                             <span>[ ⏳ ตรวจสอบ... ]</span>
@@ -940,13 +940,13 @@ export default function HausmadeShopPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsPlaygroundOpen(false)}
-                            className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 backdrop-blur-sm"
+                            className="fixed inset-0 bg-[var(--color-ink)]/60 backdrop-blur-sm"
                         />
                         <motion.div
                             initial={{ scale: 0.96, opacity: 0, y: 16 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.96, opacity: 0, y: 16 }}
-                            className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-2xl z-10"
+                            className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-[var(--color-paper)] border border-[var(--color-rule)] shadow-2xl z-10"
                         >
                             <HausmadeKeychainPlayground
                                 onClose={() => setIsPlaygroundOpen(false)}

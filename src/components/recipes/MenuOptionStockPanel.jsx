@@ -5,11 +5,11 @@ import { supabase } from '../../lib/supabaseClient';
 import { THAI_UNITS } from '../../utils/unitUtils';
 import { planChoiceIngredientSave, validateChoiceIngredients } from '../../utils/optionIngredients';
 
-const INK = 'text-[oklch(18%_0.012_28)]';
-const MUTED = 'text-[oklch(42%_0.010_28)]';
-const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
-const RULE = 'border-[oklch(85%_0.012_28)]';
-const ACCENT = 'text-[oklch(52%_0.16_28)]';
+const INK = 'text-[var(--color-ink)]';
+const MUTED = 'text-[var(--color-muted)]';
+const NEUTRAL = 'text-[var(--color-neutral)]';
+const RULE = 'border-[var(--color-rule)]';
+const ACCENT = 'text-[var(--brand-plum)]';
 
 const unitLabel = (u) => (THAI_UNITS.find(x => x.value === u)?.label || u || '').replace(/\s*\(.*\)\s*$/, '');
 const fmt = (n) => Number(Number(n).toFixed(2)).toLocaleString('th-TH', { maximumFractionDigits: 2 });
@@ -129,7 +129,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
     const sweetenerLines = recipeLines.filter(r => r.item.is_sweetener);
 
     return (
-        <section className={`border ${RULE} bg-[oklch(99%_0.004_28)]`}>
+        <section className={`border ${RULE} bg-[var(--color-paper)]`}>
             <div className={`px-3 py-2.5 border-b ${RULE}`}>
                 <h3 className={`text-sm font-semibold ${INK}`}>ตัวเลือกที่มีผลกับสต๊อก</h3>
                 <p className={`text-xs ${NEUTRAL}`}>คิดจากสูตรด้านบน แล้วปรับตามตัวเลือกที่ลูกค้าเลือก</p>
@@ -154,7 +154,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                         type="button"
                                         onClick={() => toggleSweetener(r.item)}
                                         aria-pressed={!!r.item.is_sweetener}
-                                        className={`h-8 px-2.5 border text-xs transition-colors ${r.item.is_sweetener ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : `${RULE} ${MUTED} hover:border-[oklch(18%_0.012_28)]`}`}
+                                        className={`h-8 px-2.5 border text-xs transition-colors ${r.item.is_sweetener ? 'border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-paper)]' : `${RULE} ${MUTED} hover:border-[var(--color-ink)]`}`}
                                     >
                                         {r.item.name}
                                     </button>
@@ -232,7 +232,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                                 type="number" inputMode="decimal" min="0"
                                                 value={r.amount}
                                                 onChange={e => updateDraft(c.id, cur => cur.map(x => x.key === r.key ? { ...x, amount: e.target.value } : x))}
-                                                className={`h-8 w-20 px-2 border ${RULE} bg-[oklch(99%_0.004_28)] text-right text-sm tabular-nums`}
+                                                className={`h-8 w-20 px-2 border ${RULE} bg-[var(--color-paper)] text-right text-sm tabular-nums`}
                                                 aria-label={`จำนวน ${it?.name || ''}`}
                                             />
                                             <span className={`text-xs ${MUTED} w-14 truncate`}>{unitLabel(it?.usage_unit)}</span>
@@ -251,7 +251,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                         className={`h-8 w-full px-2 border border-dashed ${RULE} bg-transparent text-xs`}
                                     />
                                     {matches.length > 0 && (
-                                        <ul className={`absolute z-20 left-0 right-0 mt-1 border ${RULE} bg-[oklch(99%_0.004_28)] shadow-[0_8px_24px_oklch(18%_0.012_28/0.10)]`}>
+                                        <ul className={`absolute z-20 left-0 right-0 mt-1 border ${RULE} bg-[var(--color-paper)] shadow-[0_8px_24px_oklch(21.78%_0_0/0.10)]`}>
                                             {matches.map(i => (
                                                 <li key={i.id}>
                                                     <button type="button"
@@ -259,7 +259,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                                             updateDraft(c.id, cur => [...cur, { key: key(), id: null, stock_item_id: i.id, menu_item_id: menuId, sign: 'plus', amount: '' }]);
                                                             setSearch(prev => ({ ...prev, [c.id]: '' }));
                                                         }}
-                                                        className={`w-full text-left px-2 py-1.5 text-sm ${INK} hover:bg-[oklch(94%_0.010_28)]`}>
+                                                        className={`w-full text-left px-2 py-1.5 text-sm ${INK} hover:bg-[var(--color-paper-2)]`}>
                                                         {i.name} <span className={`text-xs ${NEUTRAL}`}>{unitLabel(i.usage_unit)}</span>
                                                     </button>
                                                 </li>

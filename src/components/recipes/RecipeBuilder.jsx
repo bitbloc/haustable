@@ -31,7 +31,7 @@ function MakroPickButton({ term, current, unitsUnset, onApply }) {
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="h-8 px-3 border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-semibold hover:bg-[oklch(94%_0.010_28)] transition-colors whitespace-nowrap"
+                className="h-8 px-3 border border-[var(--color-ink)] text-[var(--color-ink)] text-xs font-semibold hover:bg-[var(--color-paper-2)] transition-colors whitespace-nowrap"
                 title="ดึงราคา ขนาด และรูปจาก makro.pro"
             >
                 ราคากลาง
@@ -116,14 +116,14 @@ function EditStockModal({ item, onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
-                <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
+                <div className="flex justify-between items-start border-b border-[var(--color-rule)] pb-3">
                     <div>
-                        <h3 className="text-base font-bold tabular-nums text-[oklch(18%_0.012_28)]">
+                        <h3 className="text-base font-bold tabular-nums text-[var(--color-ink)]">
                             แก้ไขข้อมูลวัตถุดิบ: {item.name}
                         </h3>
                     </div>
-                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                    <button onClick={onClose} className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
                         <X size={16} />
                     </button>
                 </div>
@@ -142,9 +142,9 @@ function EditStockModal({ item, onClose, onSave }) {
                     )}
 
                     {/* Buying Info */}
-                    <div className="p-3 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] space-y-2 rounded-xs">
+                    <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] space-y-2 rounded-xs">
                         <div className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">
+                            <span className="font-bold text-xs text-[var(--color-ink)]">
                                 1. ข้อมูลการซื้อ
                             </span>
                             <MakroPickButton
@@ -157,77 +157,77 @@ function EditStockModal({ item, onClose, onSave }) {
                             />
                         </div>
                         {makroNote && (
-                            <div className="flex items-center gap-2 text-xs text-[oklch(42%_0.010_28)] font-sans">
-                                {formData.image_url && <img src={formData.image_url} alt="" className="w-8 h-8 object-cover border border-[oklch(85%_0.012_28)]" />}
+                            <div className="flex items-center gap-2 text-xs text-[var(--color-muted)] font-sans">
+                                {formData.image_url && <img src={formData.image_url} alt="" className="w-8 h-8 object-cover border border-[var(--color-rule)]" />}
                                 <span className="leading-snug">{makroNote} · กดบันทึกเพื่อใช้</span>
                             </div>
                         )}
                         <div className="grid grid-cols-3 gap-2">
                             <div>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block mb-0.5">ราคาซื้อ (บาท)</span>
+                                <span className="text-xs text-[var(--color-neutral)] block mb-0.5">ราคาซื้อ (บาท)</span>
                                 <input 
                                     type="number" 
                                     value={formData.cost_price} 
                                     onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
-                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm" 
+                                    className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                                 />
                             </div>
                             <div>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block mb-0.5">ปริมาณต่อแพ็ค</span>
+                                <span className="text-xs text-[var(--color-neutral)] block mb-0.5">ปริมาณต่อแพ็ค</span>
                                 <input 
                                     type="number" 
                                     value={formData.pack_size} 
                                     onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
-                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm" 
+                                    className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                                 />
                             </div>
                             <div>
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block mb-0.5">หน่วยแพ็ค</span>
+                                <span className="text-xs text-[var(--color-neutral)] block mb-0.5">หน่วยแพ็ค</span>
                                 <select 
                                     value={formData.pack_unit} 
                                     onChange={e => handleUnitChange('pack_unit', e.target.value)} 
-                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm"
+                                    className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm"
                                 >
                                     {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                                 </select>
                             </div>
                         </div>
-                        <div className="text-xs text-[oklch(55%_0.010_28)] text-right">
+                        <div className="text-xs text-[var(--color-neutral)] text-right">
                             เฉลี่ย ฿{costPerPackUnit.toFixed(4)} / {formData.pack_unit}
                         </div>
                     </div>
 
                     {/* Usage Info */}
-                    <div className="p-3 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] space-y-2 rounded-xs">
-                        <span className="font-bold text-xs text-[oklch(18%_0.012_28)] block">
+                    <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] space-y-2 rounded-xs">
+                        <span className="font-bold text-xs text-[var(--color-ink)] block">
                             2. หน่วยที่ใช้ในสูตร
                         </span>
                         <div className="flex gap-2 items-center">
                             <div className="flex-1">
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block mb-0.5">หน่วยที่ตวงในสูตร</span>
+                                <span className="text-xs text-[var(--color-neutral)] block mb-0.5">หน่วยที่ตวงในสูตร</span>
                                 <select
                                     value={formData.usage_unit} 
                                     onChange={e => handleUnitChange('usage_unit', e.target.value)} 
-                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm" 
+                                    className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                                 >
                                     {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                                 </select>
                             </div>
                             <div className="w-24">
-                                <span className="text-xs text-[oklch(55%_0.010_28)] block mb-0.5">YIELD %</span>
+                                <span className="text-xs text-[var(--color-neutral)] block mb-0.5">YIELD %</span>
                                 <input 
                                     type="number"
                                     value={formData.yield_percent}
                                     onChange={e => setFormData({...formData, yield_percent: e.target.value === '' ? 100 : parseFloat(e.target.value)})}
-                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm text-center"
+                                    className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm text-center"
                                 />
                             </div>
                         </div>
 
                         {/* Conversion factor display */}
-                        <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(90%_0.008_28)] text-xs">
+                        <div className="p-2 bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] text-xs">
                             {isStandard ? (
-                                <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                                <div className="flex items-center justify-between text-[var(--color-muted)]">
                                     <span className="font-bold">มาตรฐานสากล</span>
                                     <span>1 {formData.pack_unit} = <strong>{suggestedFactor}</strong> {formData.usage_unit}</span>
                                 </div>
@@ -238,7 +238,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                         <button 
                                             type="button"
                                             onClick={() => setUseRatioMode(!useRatioMode)}
-                                            className="text-[oklch(52%_0.16_28)] hover:underline"
+                                            className="text-[var(--brand-plum)] hover:underline"
                                         >
                                             {useRatioMode ? "สลับเป็น × (คูณ)" : "สลับเป็น ÷ (หาร)"}
                                         </button>
@@ -247,7 +247,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                         <span>1 {formData.pack_unit} =</span>
                                         <input 
                                             type="number" 
-                                            className="w-20 p-1 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-center"
+                                            className="w-20 p-1 border border-[var(--color-rule)] bg-[var(--color-paper)] text-center"
                                             value={formData.conversion_factor}
                                             onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value)})}
                                         />
@@ -259,14 +259,14 @@ function EditStockModal({ item, onClose, onSave }) {
                     </div>
 
                     {/* Cost Preview */}
-                    <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center rounded-xs">
-                        <span className="text-xs font-bold text-[oklch(42%_0.010_28)]">ต้นทุนจริงสุทธิต่อหน่วย:</span>
-                        <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                            ฿{realCostPerUsage.toFixed(4)} <span className="text-xs text-[oklch(55%_0.010_28)]">/ {formData.usage_unit}</span>
+                    <div className="p-3 border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center rounded-xs">
+                        <span className="text-xs font-bold text-[var(--color-muted)]">ต้นทุนจริงสุทธิต่อหน่วย:</span>
+                        <div className="font-bold text-sm text-[var(--color-ink)]">
+                            ฿{realCostPerUsage.toFixed(4)} <span className="text-xs text-[var(--color-neutral)]">/ {formData.usage_unit}</span>
                         </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                    <div className="flex gap-2 pt-2 border-t border-[var(--color-rule)]">
                         <button 
                             type="button" 
                             onClick={onClose} 
@@ -330,27 +330,27 @@ function QuickAddStockModal({ onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
-                <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
+                <div className="flex justify-between items-start border-b border-[var(--color-rule)] pb-3">
                     <div>
-                        <h3 className="text-base font-bold tabular-nums text-[oklch(18%_0.012_28)]">
+                        <h3 className="text-base font-bold tabular-nums text-[var(--color-ink)]">
                             สร้างวัตถุดิบใหม่เข้าคลังสต็อก
                         </h3>
                     </div>
-                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                    <button onClick={onClose} className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
                         <X size={16} />
                     </button>
                 </div>
 
                 <div className="space-y-3 tabular-nums text-xs">
                     <div>
-                        <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">ชื่อวัตถุดิบ *</label>
+                        <label className="text-xs text-[var(--color-neutral)] block mb-1">ชื่อวัตถุดิบ *</label>
                         <div className="flex items-center gap-2">
                             <input 
                                 value={formData.name}
                                 onChange={e => setFormData({...formData, name: e.target.value})}
                                 placeholder="เช่น ไซรัปมะพร้าวน้ำหอม, ผงโกโก้พรีเมียม"
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] font-sans text-sm"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] font-sans text-sm"
                                 autoFocus
                             />
                             <MakroPickButton
@@ -364,8 +364,8 @@ function QuickAddStockModal({ onClose, onSave }) {
                             />
                         </div>
                         {makroNote && (
-                            <div className="mt-2 flex items-center gap-2 text-xs text-[oklch(42%_0.010_28)] font-sans">
-                                {formData.image_url && <img src={formData.image_url} alt="" className="w-8 h-8 object-cover border border-[oklch(85%_0.012_28)]" />}
+                            <div className="mt-2 flex items-center gap-2 text-xs text-[var(--color-muted)] font-sans">
+                                {formData.image_url && <img src={formData.image_url} alt="" className="w-8 h-8 object-cover border border-[var(--color-rule)]" />}
                                 <span className="leading-snug">{makroNote}</span>
                             </div>
                         )}
@@ -373,52 +373,52 @@ function QuickAddStockModal({ onClose, onSave }) {
 
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">หมวดหมู่</label>
+                            <label className="text-xs text-[var(--color-neutral)] block mb-1">หมวดหมู่</label>
                             <select 
                                 value={formData.category}
                                 onChange={e => setFormData({...formData, category: e.target.value})}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm"
                             >
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">ราคาซื้อ (บาท)</label>
+                            <label className="text-xs text-[var(--color-neutral)] block mb-1">ราคาซื้อ (บาท)</label>
                             <input 
                                 type="number" 
                                 value={formData.cost_price} 
                                 onChange={e => setFormData({...formData, cost_price: parseFloat(e.target.value) || 0})}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm" 
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">ขนาดบรรจุ</label>
+                            <label className="text-xs text-[var(--color-neutral)] block mb-1">ขนาดบรรจุ</label>
                             <input 
                                 type="number" 
                                 value={formData.pack_size} 
                                 onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value) || 1})}
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm" 
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">หน่วยซื้อ</label>
+                            <label className="text-xs text-[var(--color-neutral)] block mb-1">หน่วยซื้อ</label>
                             <select 
                                 value={formData.pack_unit} 
                                 onChange={e => handleUnitChange('pack_unit', e.target.value)} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm"
                             >
                                 {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">หน่วยใช้</label>
+                            <label className="text-xs text-[var(--color-neutral)] block mb-1">หน่วยใช้</label>
                             <select 
                                 value={formData.usage_unit} 
                                 onChange={e => handleUnitChange('usage_unit', e.target.value)} 
-                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm"
+                                className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm"
                             >
                                 {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                             </select>
@@ -426,17 +426,17 @@ function QuickAddStockModal({ onClose, onSave }) {
                     </div>
 
                     {(!isCompatible || Number(formData.conversion_factor) !== 1) && (
-                        <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs">
+                        <div className="p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] text-xs">
                             1 {formData.pack_unit} = <input 
                                 type="number" 
-                                className="w-16 p-0.5 border border-[oklch(85%_0.06_80)] bg-[oklch(99%_0.004_28)] text-center" 
+                                className="w-16 p-0.5 border border-[oklch(85%_0.06_80)] bg-[var(--color-paper)] text-center" 
                                 value={formData.conversion_factor} 
                                 onChange={e => setFormData({...formData, conversion_factor: parseFloat(e.target.value) || 1})} 
                             /> {formData.usage_unit}
                         </div>
                     )}
 
-                    <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                    <div className="flex gap-2 pt-2 border-t border-[var(--color-rule)]">
                         <button type="button" onClick={onClose} className="admin-btn h-9 flex-1">
                             ยกเลิก
                         </button>
@@ -512,21 +512,21 @@ function RecipeImportModal({ onClose, onImport }) {
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md shadow-2xl rounded-xs overflow-hidden flex flex-col max-h-[80vh]">
-                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center tabular-nums">
-                    <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md shadow-2xl rounded-xs overflow-hidden flex flex-col max-h-[80vh]">
+                <div className="p-3.5 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex justify-between items-center tabular-nums">
+                    <span className="font-bold text-xs text-[var(--color-ink)]">
                         นำเข้าสูตรจากต้นแบบ
                     </span>
-                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]">
+                    <button onClick={onClose} className="p-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
                         <X size={16}/>
                     </button>
                 </div>
                 
-                <div className="p-3 border-b border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
+                <div className="p-3 border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" size={14} />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={14} />
                         <input 
-                            className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] py-1.5 pl-8 pr-3 text-sm outline-none focus:border-[var(--color-ink)]"
                             placeholder="ค้นหาชื่อเมนู หรือ Base Recipe..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
@@ -535,25 +535,25 @@ function RecipeImportModal({ onClose, onImport }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 tabular-nums text-xs divide-y divide-[oklch(90%_0.008_28)]">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 tabular-nums text-xs divide-y divide-[var(--color-paper-3)]">
                     {loading ? (
-                        <div className="text-center py-10 text-[oklch(55%_0.010_28)]">กำลังโหลดต้นแบบ...</div>
+                        <div className="text-center py-10 text-[var(--color-neutral)]">กำลังโหลดต้นแบบ...</div>
                     ) : filtered.length === 0 ? (
-                        <div className="text-center py-10 text-[oklch(55%_0.010_28)]">ไม่พบรายการที่ค้นหา</div>
+                        <div className="text-center py-10 text-[var(--color-neutral)]">ไม่พบรายการที่ค้นหา</div>
                     ) : (
                         filtered.map(item => (
                             <button
                                 key={`${item.type}-${item.id}`}
                                 onClick={() => handleSelect(item)}
-                                className="w-full text-left p-2.5 hover:bg-[oklch(94%_0.010_28)] flex justify-between items-center transition-colors cursor-pointer"
+                                className="w-full text-left p-2.5 hover:bg-[var(--color-paper-2)] flex justify-between items-center transition-colors cursor-pointer"
                             >
                                 <div>
-                                    <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">{item.name}</div>
-                                    <span className="text-xs text-[oklch(55%_0.010_28)] ">
+                                    <div className="font-bold text-sm text-[var(--color-ink)]">{item.name}</div>
+                                    <span className="text-xs text-[var(--color-neutral)] ">
                                         {item.type === 'menu' ? 'MENU ITEM' : 'BASE RECIPE'}
                                     </span>
                                 </div>
-                                <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">
+                                <span className="text-xs font-bold text-[var(--brand-plum)]">
                                     เลือกนำเข้า →
                                 </span>
                             </button>
@@ -584,26 +584,26 @@ function ExportTemplateModal({ onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-sm p-5 shadow-2xl rounded-xs space-y-4 tabular-nums text-xs">
-                <div className="border-b border-[oklch(85%_0.012_28)] pb-2">
-                    <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] ">บันทึกสูตรเป็น Template กลาง</h3>
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-sm p-5 shadow-2xl rounded-xs space-y-4 tabular-nums text-xs">
+                <div className="border-b border-[var(--color-rule)] pb-2">
+                    <h3 className="font-bold text-sm text-[var(--color-ink)] ">บันทึกสูตรเป็น Template กลาง</h3>
                 </div>
                 
                 <div className="space-y-2">
-                    <label className="text-xs text-[oklch(55%_0.010_28)] block">ชื่อ Template (Base Recipe) *</label>
+                    <label className="text-xs text-[var(--color-neutral)] block">ชื่อ Template (Base Recipe) *</label>
                     <input 
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]"
+                        className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)]"
                         placeholder="เช่น สูตรชาเขียวเข้มข้นมาตรฐาน..."
                         autoFocus
                     />
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)] leading-relaxed">
+                    <p className="text-[13px] text-[var(--color-neutral)] leading-relaxed">
                         ระบบจะสร้างเป็นวัตถุดิบประเภท "Base Recipe" ให้โดยอัตโนมัติใน Recipe Lab
                     </p>
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                <div className="flex gap-2 pt-2 border-t border-[var(--color-rule)]">
                     <button type="button" onClick={onClose} className="admin-btn h-9 flex-1">
                         ยกเลิก
                     </button>
@@ -637,34 +637,34 @@ function PromoteModal({ initialName, onClose, onPromote }) {
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
-            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-sm p-5 shadow-2xl rounded-xs space-y-4 tabular-nums text-xs">
-                <div className="border-b border-[oklch(85%_0.012_28)] pb-2">
-                    <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] ">แปลงเป็นเมนูขายหน้าร้าน</h3>
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-sm p-5 shadow-2xl rounded-xs space-y-4 tabular-nums text-xs">
+                <div className="border-b border-[var(--color-rule)] pb-2">
+                    <h3 className="font-bold text-sm text-[var(--color-ink)] ">แปลงเป็นเมนูขายหน้าร้าน</h3>
                 </div>
                 
                 <div className="space-y-3">
                     <div>
-                        <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">ชื่อเมนู (Menu Name) *</label>
+                        <label className="text-xs text-[var(--color-neutral)] block mb-1">ชื่อเมนู (Menu Name) *</label>
                         <input 
                             value={name}
                             onChange={e => setName(e.target.value)}
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]"
+                            className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)]"
                             autoFocus
                         />
                     </div>
                     <div>
-                        <label className="text-xs text-[oklch(55%_0.010_28)] block mb-1">ราคาขายหน้าร้าน (Selling Price) *</label>
+                        <label className="text-xs text-[var(--color-neutral)] block mb-1">ราคาขายหน้าร้าน (Selling Price) *</label>
                         <input 
                             type="number"
                             value={price}
                             onChange={e => setPrice(e.target.value)}
-                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-base"
+                            className="w-full p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] text-base"
                             placeholder="0.00"
                         />
                     </div>
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                <div className="flex gap-2 pt-2 border-t border-[var(--color-rule)]">
                     <button type="button" onClick={onClose} className="admin-btn h-9 flex-1">
                         ยกเลิก
                     </button>
@@ -693,9 +693,9 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
     return (
         <div 
             ref={setNodeRef} style={style} {...attributes}
-            className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] hover:border-[oklch(18%_0.012_28)] transition-colors rounded-xs tabular-nums text-xs"
+            className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 p-2.5 border border-[var(--color-rule)] bg-[var(--color-paper)] hover:border-[var(--color-ink)] transition-colors rounded-xs tabular-nums text-xs"
         >
-            <div {...listeners} className="cursor-grab text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] flex-shrink-0" title="ลากเพื่อเรียงลำดับ">
+            <div {...listeners} className="cursor-grab text-[var(--color-neutral)] hover:text-[var(--color-ink)] flex-shrink-0" title="ลากเพื่อเรียงลำดับ">
                 <GripVertical size={16} />
             </div>
             
@@ -704,24 +704,24 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
 
             <div className="flex-1 min-w-[11rem] pr-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)] font-sans truncate">
+                    <span className="font-bold text-sm text-[var(--color-ink)] font-sans truncate">
                         {ingredient.name}
                     </span>
                     {isBaseRecipe && (
-                        <span className="text-[11px] font-sans font-bold px-1 leading-5 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] whitespace-nowrap">
+                        <span className="text-[11px] font-sans font-bold px-1 leading-5 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--color-rule)] whitespace-nowrap">
                             {itemType === ITEM_TYPES.PREP ? 'ของเตรียม' : 'สูตร'}
                         </span>
                     )}
                 </div>
                 {missingYield && (
-                    <div className="text-xs font-sans leading-5 text-[oklch(52%_0.16_28)]">
+                    <div className="text-xs font-sans leading-5 text-[var(--brand-plum)]">
                         ยังไม่ได้ระบุปริมาณต่อ portion ต้นทุนบรรทัดนี้ยังไม่ถูก
                     </div>
                 )}
                 <button 
                     type="button"
                     onClick={() => onEditStock(ingredient)}
-                    className="text-xs text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:underline flex items-center gap-1 transition-colors mt-0.5 cursor-pointer"
+                    className="text-xs text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:underline flex items-center gap-1 transition-colors mt-0.5 cursor-pointer"
                 >
                     <span>฿{unitCost?.toFixed(4) || 0} / {ingredient.usage_unit}</span>
                     <span className="text-xs font-medium whitespace-nowrap">แก้ข้อมูลสต็อก</span>
@@ -734,7 +734,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
             <div className="flex items-center gap-1 flex-shrink-0">
                 <input 
                     type="number" 
-                    className="w-16 bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-1 text-right text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
+                    className="w-16 bg-[var(--color-paper)] border border-[var(--color-rule)] p-1 text-right text-sm outline-none focus:border-[var(--color-ink)]"
                     value={quantity ?? ''}
                     placeholder="0"
                     onChange={(e) => {
@@ -742,12 +742,12 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                         onUpdate(id, val === '' ? 0 : parseFloat(val));
                     }}
                 />
-                <span className="text-xs text-[oklch(50%_0.010_28)] min-w-7 max-w-16 whitespace-nowrap" title={unit}>{unit}</span>
+                <span className="text-xs text-[var(--color-neutral)] min-w-7 max-w-16 whitespace-nowrap" title={unit}>{unit}</span>
             </div>
 
             {/* Layer Cost Readout */}
             <div className="text-right w-16 md:w-20 flex-shrink-0 tabular-nums">
-                <div className="font-bold text-[oklch(18%_0.012_28)] text-xs">
+                <div className="font-bold text-[var(--color-ink)] text-xs">
                     ฿{isNaN(cost) ? '0.00' : cost.toFixed(2)}
                 </div>
             </div>
@@ -756,7 +756,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
             <button 
                 type="button" 
                 onClick={() => onDelete(id)} 
-                className="p-1 text-[oklch(55%_0.010_28)] hover:text-red-700 cursor-pointer flex-shrink-0"
+                className="p-1 text-[var(--color-neutral)] hover:text-red-700 cursor-pointer flex-shrink-0"
                 title="ลบส่วนผสมนี้"
             >
                 <Trash2 size={14} />
@@ -1216,7 +1216,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     }, [pickableItems, searchTerm, ingredients, itemFilterType]);
 
     return (
-        <div className="fixed inset-0 z-[70] bg-[oklch(97%_0.008_28)] flex flex-col md:flex-row font-sans text-[oklch(18%_0.012_28)] animate-in fade-in">
+        <div className="fixed inset-0 z-[70] bg-[var(--color-paper)] flex flex-col md:flex-row font-sans text-[var(--color-ink)] animate-in fade-in">
             {/* Sub-Modals */}
             {editingStockItem && (
                 <EditStockModal 
@@ -1266,47 +1266,47 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             )}
 
             {/* Left Column: Recipe Stack & Layers Workbench */}
-            <div className="flex-1 flex flex-col bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] h-full overflow-hidden relative">
+            <div className="flex-1 flex flex-col bg-[var(--color-paper)] border-r border-[var(--color-rule)] h-full overflow-hidden relative">
                 {/* Workbench Top Bar */}
-                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-wrap justify-between items-center gap-2 z-10 sticky top-0">
+                <div className="p-3.5 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-wrap justify-between items-center gap-2 z-10 sticky top-0">
                     <div className="min-w-[12rem] flex-1 pr-2">
                         {isEditingName ? (
                             <div className="flex items-center gap-1.5 tabular-nums">
                                 <input
                                     value={tempName}
                                     onChange={e => setTempName(e.target.value)}
-                                    className="border border-[oklch(18%_0.012_28)] px-2 py-1 text-sm bg-[oklch(99%_0.004_28)] outline-none"
+                                    className="border border-[var(--color-ink)] px-2 py-1 text-sm bg-[var(--color-paper)] outline-none"
                                     autoFocus
                                     onKeyDown={async e => {
                                         if (e.key === 'Enter') await handleSaveName();
                                         if (e.key === 'Escape') setIsEditingName(false);
                                     }}
                                 />
-                                <button onClick={handleSaveName} className="p-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold">
+                                <button onClick={handleSaveName} className="p-1 bg-[var(--color-ink)] text-[var(--color-paper)] text-xs font-bold">
                                     <Check size={13} />
                                 </button>
-                                <button onClick={() => setIsEditingName(false)} className="p-1 border border-[oklch(85%_0.012_28)] text-xs">
+                                <button onClick={() => setIsEditingName(false)} className="p-1 border border-[var(--color-rule)] text-xs">
                                     <X size={13} />
                                 </button>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2 group/builder-title flex-wrap">
-                                <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-[oklch(93%_0.010_28)] text-[oklch(42%_0.010_28)]">
+                                <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-paper-2)] text-[var(--color-muted)]">
                                     {parentType === 'menu' ? 'สูตรเมนู' : (isPrep ? 'ของเตรียม' : 'สูตร')}
                                 </span>
-                                <h2 className="text-base font-bold font-sans text-[oklch(18%_0.012_28)] truncate">
+                                <h2 className="text-base font-bold font-sans text-[var(--color-ink)] truncate">
                                     {parentItem?.name || 'ตัวปรุงสูตร (Recipe Builder)'}
                                 </h2>
                                 <button
                                     onClick={handleStartEditName}
-                                    className="opacity-0 group-hover/builder-title:opacity-100 p-0.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-opacity cursor-pointer"
+                                    className="opacity-0 group-hover/builder-title:opacity-100 p-0.5 text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-opacity cursor-pointer"
                                     title="แก้ไขชื่อ"
                                 >
                                     <Pencil size={12} />
                                 </button>
                             </div>
                         )}
-                        <p className="text-[13px] tabular-nums text-[oklch(55%_0.010_28)] mt-0.5">
+                        <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-0.5">
                             {parentType === 'stock'
                                 ? 'ส่วนผสมด้านล่างคือของที่ใช้ทำ 1 portion'
                                 : 'ลากวางเพื่อจัดลำดับชั้นวัตถุดิบ (Layers)'
@@ -1345,7 +1345,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         {parentType === 'stock' && (
                             <button 
                                 onClick={() => setIsPromoteOpen(true)}
-                                className="hidden sm:flex items-center gap-1 border border-[oklch(85%_0.012_28)] bg-[oklch(90%_0.015_28)] px-2.5 py-1.5 font-bold hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors cursor-pointer"
+                                className="hidden sm:flex items-center gap-1 border border-[var(--color-rule)] bg-[var(--color-paper-3)] px-2.5 py-1.5 font-bold hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] transition-colors cursor-pointer"
                                 title="แปลงสูตรนี้เป็นเมนูขายหน้าร้าน"
                             >
                                 <Rocket size={13} />
@@ -1354,19 +1354,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         )}
 
                         {/* Total Cost Display */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] px-3 py-1 text-right">
-                            <span className="text-xs text-[oklch(55%_0.010_28)] block font-bold">ต้นทุนรวม</span>
-                            <span className="text-base font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{totalCost.toFixed(2)}</span>
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-1 text-right">
+                            <span className="text-xs text-[var(--color-neutral)] block font-bold">ต้นทุนรวม</span>
+                            <span className="text-base font-bold text-[var(--color-ink)] tabular-nums">฿{totalCost.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Portion definition (stock-item recipes only) */}
                 {parentType === 'stock' && (
-                    <div className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] divide-y lg:divide-y-0 lg:divide-x divide-[oklch(85%_0.012_28)] text-xs">
+                    <div className="border-b border-[var(--color-rule)] bg-[var(--color-paper)] grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] divide-y lg:divide-y-0 lg:divide-x divide-[var(--color-rule)] text-xs">
                         <div className="p-3 space-y-1.5">
-                            <span className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block">ชนิด</span>
-                            <div className="flex border border-[oklch(85%_0.012_28)] w-fit">
+                            <span className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block">ชนิด</span>
+                            <div className="flex border border-[var(--color-rule)] w-fit">
                                 {[[ITEM_TYPES.PREP, 'ของเตรียม'], [ITEM_TYPES.RECIPE, 'สูตรต่อแก้ว/จาน']].map(([value, label]) => (
                                     <button
                                         key={value}
@@ -1374,7 +1374,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                         onClick={() => setPortionForm(f => ({ ...f, itemType: value }))}
                                         aria-pressed={portionForm.itemType === value}
                                         className={`px-3 py-1.5 font-sans font-bold leading-5 whitespace-nowrap cursor-pointer transition-colors ${
-                                            portionForm.itemType === value ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                            portionForm.itemType === value ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'bg-[var(--color-paper)] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)]'
                                         }`}
                                     >
                                         {label}
@@ -1387,7 +1387,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                             <>
                                 <div className="p-3 flex flex-wrap gap-x-6 gap-y-3">
                                     <div className="space-y-1.5">
-                                        <label htmlFor="portion-yield" className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block">
+                                        <label htmlFor="portion-yield" className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block">
                                             1 portion ได้
                                         </label>
                                         <div className="flex items-center gap-1.5">
@@ -1399,15 +1399,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                                 value={portionForm.yieldQty}
                                                 onChange={e => setPortionForm(f => ({ ...f, yieldQty: e.target.value }))}
                                                 placeholder="เช่น 2000"
-                                                className={`w-28 p-1.5 border bg-[oklch(99%_0.004_28)] tabular-nums font-bold text-sm text-right outline-none focus:border-[oklch(18%_0.012_28)] ${
-                                                    hasYield ? 'border-[oklch(85%_0.012_28)]' : 'border-[oklch(52%_0.16_28)]'
+                                                className={`w-28 p-1.5 border bg-[var(--color-paper)] tabular-nums font-bold text-sm text-right outline-none focus:border-[var(--color-ink)] ${
+                                                    hasYield ? 'border-[var(--color-rule)]' : 'border-[var(--brand-plum)]'
                                                 }`}
                                             />
                                             <select
                                                 aria-label="หน่วยของปริมาณต่อ portion"
                                                 value={portionForm.yieldUnit}
                                                 onChange={e => setPortionForm(f => ({ ...f, yieldUnit: e.target.value }))}
-                                                className="p-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] text-sm cursor-pointer"
+                                                className="p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm cursor-pointer"
                                             >
                                                 {THAI_UNITS.filter(u => u.type !== 'count').map(u => (
                                                     <option key={u.value} value={u.value}>{u.value}</option>
@@ -1415,15 +1415,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                             </select>
                                         </div>
                                         {!hasYield && (
-                                            <p className="font-sans text-[13px] leading-5 text-[oklch(52%_0.16_28)]">
+                                            <p className="font-sans text-[13px] leading-5 text-[var(--brand-plum)]">
                                                 ชั่งหรือตวงของที่ทำได้จริง 1 รอบ แล้วกรอกที่นี่
                                             </p>
                                         )}
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <span className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block">การตัดสต๊อก</span>
-                                        <div className="flex border border-[oklch(85%_0.012_28)] w-fit">
+                                        <span className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block">การตัดสต๊อก</span>
+                                        <div className="flex border border-[var(--color-rule)] w-fit">
                                             {[[PREP_MODES.STOCKED, 'ผลิตเก็บไว้'], [PREP_MODES.PASSTHROUGH, 'ตัดทะลุ']].map(([value, label]) => (
                                                 <button
                                                     key={value}
@@ -1431,14 +1431,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                                     onClick={() => setPortionForm(f => ({ ...f, prepMode: value }))}
                                                     aria-pressed={portionForm.prepMode === value}
                                                     className={`px-3 py-1.5 font-sans font-bold leading-5 whitespace-nowrap cursor-pointer transition-colors ${
-                                                        portionForm.prepMode === value ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(99%_0.004_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                        portionForm.prepMode === value ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'bg-[var(--color-paper)] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)]'
                                                     }`}
                                                 >
                                                     {label}
                                                 </button>
                                             ))}
                                         </div>
-                                        <p className="font-sans text-[13px] leading-5 text-[oklch(42%_0.010_28)] max-w-xs">
+                                        <p className="font-sans text-[13px] leading-5 text-[var(--color-muted)] max-w-xs">
                                             {portionForm.prepMode === PREP_MODES.STOCKED
                                                 ? 'กดผลิตเมื่อทำเสร็จ ระบบตัดวัตถุดิบและเพิ่มสต๊อกของเตรียม'
                                                 : 'ไม่เก็บสต๊อก ขายแล้วตัดถึงวัตถุดิบทันที'}
@@ -1446,17 +1446,17 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                     </div>
                                 </div>
 
-                                <div className="p-3 lg:text-right space-y-1.5 bg-[oklch(98%_0.004_28)]">
-                                    <span className="font-sans text-xs font-bold leading-5 text-[oklch(55%_0.010_28)] block">ต้นทุนต่อหน่วย</span>
-                                    <div className=" font-bold text-sm tabular-nums text-[oklch(18%_0.012_28)]">
+                                <div className="p-3 lg:text-right space-y-1.5 bg-[var(--color-paper)]">
+                                    <span className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block">ต้นทุนต่อหน่วย</span>
+                                    <div className=" font-bold text-sm tabular-nums text-[var(--color-ink)]">
                                         {costPerUsageUnit !== null ? `฿${costPerUsageUnit.toFixed(4)}` : '—'}
-                                        <span className="text-xs font-normal text-[oklch(55%_0.010_28)]"> / {portionForm.yieldUnit}</span>
+                                        <span className="text-xs font-normal text-[var(--color-neutral)]"> / {portionForm.yieldUnit}</span>
                                     </div>
                                 </div>
                             </>
                         ) : (
                             <div className="p-3 lg:col-span-2 flex items-center">
-                                <p className="font-sans text-[12px] leading-5 text-[oklch(42%_0.010_28)]">
+                                <p className="font-sans text-[12px] leading-5 text-[var(--color-muted)]">
                                     สูตรของ 1 แก้วหรือ 1 จาน ไม่เก็บเป็นสต๊อก ขายแล้วตัดถึงส่วนผสมแต่ละตัว
                                 </p>
                             </div>
@@ -1467,10 +1467,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 {/* Layer Stack Items */}
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 pb-28 md:pb-4">
                     {ingredients.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] p-8 tabular-nums text-xs text-center space-y-2">
-                            <Layers className="w-12 h-12 opacity-30 text-[oklch(55%_0.010_28)]" />
-                            <p className="text-sm font-medium text-[oklch(18%_0.012_28)]">ยังไม่มีส่วนผสม</p>
-                            <p className="text-[13px] text-[oklch(55%_0.010_28)] hidden md:block">
+                        <div className="h-full flex flex-col items-center justify-center text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] p-8 tabular-nums text-xs text-center space-y-2">
+                            <Layers className="w-12 h-12 opacity-30 text-[var(--color-neutral)]" />
+                            <p className="text-sm font-medium text-[var(--color-ink)]">ยังไม่มีส่วนผสม</p>
+                            <p className="text-[13px] text-[var(--color-neutral)] hidden md:block">
                                 คลิกเลือกวัตถุดิบจากแผงด้านขวาเพื่อเพิ่มเข้าสู่สูตร
                             </p>
                             <button 
@@ -1538,7 +1538,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
 
                 {/* Bottom Action Bar */}
-                <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] flex justify-end gap-2 z-20 tabular-nums text-xs">
+                <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex justify-end gap-2 z-20 tabular-nums text-xs">
                     <button 
                         type="button"
                         onClick={onClose} 
@@ -1559,16 +1559,16 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
             {/* Right Column: Ingredients Palette (Responsive Drawer on Mobile) */}
             <aside className={`
-                fixed inset-0 z-40 bg-[oklch(98%_0.004_28)] flex flex-col md:static md:w-[380px] lg:w-[420px] md:shadow-none transition-transform duration-200 border-l border-[oklch(85%_0.012_28)]
+                fixed inset-0 z-40 bg-[var(--color-paper)] flex flex-col md:static md:w-[380px] lg:w-[420px] md:shadow-none transition-transform duration-200 border-l border-[var(--color-rule)]
                 ${isMobilePickerOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
             `}>
                 {/* Palette Header */}
-                <div className="px-3.5 h-14 border-b border-[oklch(88%_0.012_28)] flex justify-between items-center text-sm">
+                <div className="px-3.5 h-14 border-b border-[var(--color-paper-3)] flex justify-between items-center text-sm">
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setIsMobilePickerOpen(false)} className="md:hidden p-1 hover:bg-[oklch(90%_0.008_28)]">
+                        <button onClick={() => setIsMobilePickerOpen(false)} className="md:hidden p-1 hover:bg-[var(--color-paper-3)]">
                             <X size={18} />
                         </button>
-                        <span className="font-semibold text-sm text-[oklch(18%_0.012_28)]">
+                        <span className="font-semibold text-sm text-[var(--color-ink)]">
                             คลังวัตถุดิบ
                         </span>
                     </div>
@@ -1582,11 +1582,11 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 </div>
 
                 {/* Search & Filter Chips */}
-                <div className="p-3 border-b border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] space-y-2 tabular-nums text-xs">
+                <div className="p-3 border-b border-[var(--color-rule)] bg-[var(--color-paper)] space-y-2 tabular-nums text-xs">
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" size={14} />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={14} />
                         <input 
-                            className="w-full h-10 rounded-lg bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] pl-8 pr-3 text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
+                            className="w-full h-10 rounded-lg bg-[var(--color-paper)] border border-[var(--color-rule)] pl-8 pr-3 text-sm outline-none focus:border-[var(--color-ink)]"
                             placeholder="ค้นหาวัตถุดิบหรือสูตรเบส..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -1615,7 +1615,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         return (
                             <div
                                 key={item.id}
-                                className="p-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)] hover:border-[oklch(18%_0.012_28)] transition-colors cursor-pointer flex justify-between items-center group rounded-xs select-none"
+                                className="p-2.5 border border-[var(--color-rule)] bg-[var(--color-paper)] hover:border-[var(--color-ink)] transition-colors cursor-pointer flex justify-between items-center group rounded-xs select-none"
                                 onClick={() => {
                                     handleAddIngredient(item);
                                     if (window.innerWidth < 768) setIsMobilePickerOpen(false);
@@ -1623,34 +1623,34 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                             >
                                 <div className="flex-1 min-w-0 pr-2">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-medium text-[13px] text-[oklch(18%_0.012_28)] truncate">
+                                        <span className="font-medium text-[13px] text-[var(--color-ink)] truncate">
                                             {item.name}
                                         </span>
                                         {paletteType !== ITEM_TYPES.RAW && (
-                                            <span className="text-[11px] font-sans font-bold px-1 leading-5 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] whitespace-nowrap">
+                                            <span className="text-[11px] font-sans font-bold px-1 leading-5 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--color-rule)] whitespace-nowrap">
                                                 {paletteType === ITEM_TYPES.PREP ? 'ของเตรียม' : 'สูตร'}
                                             </span>
                                         )}
                                     </div>
-                                    <div className="text-xs text-[oklch(55%_0.010_28)] mt-0.5">
+                                    <div className="text-xs text-[var(--color-neutral)] mt-0.5">
                                         {hasPortionYield(item)
                                             ? <>฿{unitCost?.toFixed(4) || 0} / {item.usage_unit}</>
-                                            : <span className="font-sans text-xs leading-5 text-[oklch(52%_0.16_28)]">ยังไม่ได้ระบุปริมาณต่อ portion</span>}
+                                            : <span className="font-sans text-xs leading-5 text-[var(--brand-plum)]">ยังไม่ได้ระบุปริมาณต่อ portion</span>}
                                     </div>
                                 </div>
-                                <span className="text-xs font-medium text-[oklch(50%_0.010_28)] group-hover:text-[oklch(18%_0.012_28)] transition-colors">
+                                <span className="text-xs font-medium text-[var(--color-neutral)] group-hover:text-[var(--color-ink)] transition-colors">
                                     + เพิ่ม
                                 </span>
                             </div>
                         );
                     })}
                     {filteredItems.length === 0 && (
-                        <div className="text-center py-10 text-[oklch(55%_0.010_28)] text-xs border border-dashed border-[oklch(85%_0.012_28)] p-4">
+                        <div className="text-center py-10 text-[var(--color-neutral)] text-xs border border-dashed border-[var(--color-rule)] p-4">
                             ไม่พบวัตถุดิบ "{searchTerm}" <br/>
                             <button 
                                 type="button"
                                 onClick={() => setIsQuickAddOpen(true)} 
-                                className="text-[oklch(52%_0.16_28)] font-bold underline mt-2 block mx-auto cursor-pointer"
+                                className="text-[var(--brand-plum)] font-bold underline mt-2 block mx-auto cursor-pointer"
                             >
                                 + สร้างวัตถุดิบใหม่เข้าสต็อก
                             </button>

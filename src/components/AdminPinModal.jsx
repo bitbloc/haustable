@@ -110,7 +110,7 @@ export default function AdminPinModal({ isOpen, onClose, onConfirm, title = "Sec
             <button 
                 onClick={handleSubmit}
                 disabled={pin.length < 4}
-                className="w-full bg-brand text-ink font-bold py-3.5 rounded-xl hover:bg-brandDark disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-brand/20"
+                className="w-full bg-brand text-cream font-bold py-3.5 rounded-xl hover:bg-action-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-brand/20"
             >
                 Confirm
             </button>

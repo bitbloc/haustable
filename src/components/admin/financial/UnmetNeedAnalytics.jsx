@@ -5,26 +5,26 @@ export default function UnmetNeedAnalytics({ data }) {
     const menuMatrix = data?.menuMatrix || []
 
     return (
-        <div className="space-y-6 text-[oklch(18%_0.012_28)] font-sans">
+        <div className="space-y-6 text-[var(--color-ink)] font-sans">
             
             {/* 1. Header Toolbar */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)]">
-                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[oklch(94%_0.010_28)]">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
+                <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--color-paper-2)]">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ">
+                            <span className="px-2 py-0.5 text-[11px] tabular-nums font-bold bg-[var(--color-ink)] text-[var(--color-paper)] ">
                                 MATRIX // ENGINEERING
                             </span>
-                            <h3 className="font-bold text-base md:text-lg text-[oklch(18%_0.012_28)] tracking-tight">
+                            <h3 className="font-bold text-base md:text-lg text-[var(--color-ink)] tracking-tight">
                                 เมทริกซ์วิเคราะห์เมนูและกำไร (Menu Engineering Matrix)
                             </h3>
                         </div>
-                        <p className="text-[13px] tabular-nums text-[oklch(42%_0.010_28)] mt-0.5">
+                        <p className="text-[13px] tabular-nums text-[var(--color-muted)] mt-0.5">
                             จำแนก 4 มิติความนิยมและราคาต่อจานตามหลัก BCG Matrix จากยอดขายจริง
                         </p>
                     </div>
 
-                    <div className="tabular-nums text-xs font-bold text-[oklch(18%_0.012_28)]">
+                    <div className="tabular-nums text-xs font-bold text-[var(--color-ink)]">
                         POPULARITY VS REVENUE
                     </div>
                 </div>
@@ -35,29 +35,29 @@ export default function UnmetNeedAnalytics({ data }) {
                 {menuMatrix.map((q, idx) => (
                     <div
                         key={idx}
-                        className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 space-y-3"
+                        className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-3"
                     >
-                        <div className="flex items-center justify-between tabular-nums text-xs border-b border-[oklch(85%_0.012_28)] pb-2">
-                            <h5 className="font-bold text-sm text-[oklch(18%_0.012_28)] font-sans">{q.quadrant}</h5>
-                            <span className="px-2 py-0.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-[oklch(52%_0.16_28)]">
+                        <div className="flex items-center justify-between tabular-nums text-xs border-b border-[var(--color-rule)] pb-2">
+                            <h5 className="font-bold text-sm text-[var(--color-ink)] font-sans">{q.quadrant}</h5>
+                            <span className="px-2 py-0.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-[var(--brand-plum)]">
                                 {q.tag}
                             </span>
                         </div>
 
-                        <p className="text-[13px] text-[oklch(42%_0.010_28)] tabular-nums">
+                        <p className="text-[13px] text-[var(--color-muted)] tabular-nums">
                             {q.desc}
                         </p>
 
                         {/* Items in Quadrant */}
                         <div className="space-y-1.5 pt-1">
-                            <div className="text-xs tabular-nums font-bold text-[oklch(18%_0.012_28)]">
+                            <div className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
                                 รายการเมนูที่เข้าเกณฑ์:
                             </div>
                             <div className="flex flex-wrap gap-1.5 tabular-nums text-xs">
                                 {q.items.map((it, iIdx) => (
                                     <span
                                         key={iIdx}
-                                        className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold font-sans text-xs"
+                                        className="px-2.5 py-1 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] font-bold font-sans text-xs"
                                     >
                                         {it}
                                     </span>
@@ -66,8 +66,8 @@ export default function UnmetNeedAnalytics({ data }) {
                         </div>
 
                         {/* Recommended Action */}
-                        <div className="text-xs tabular-nums pt-2 border-t border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]">
-                            <span className="text-[oklch(52%_0.16_28)] font-bold">แนวทาง:</span> {q.action}
+                        <div className="text-xs tabular-nums pt-2 border-t border-[var(--color-rule)] text-[var(--color-ink)]">
+                            <span className="text-[var(--brand-plum)] font-bold">แนวทาง:</span> {q.action}
                         </div>
                     </div>
                 ))}

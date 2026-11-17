@@ -204,25 +204,25 @@ export default function DrinkStampManager() {
     return (
         <div className="space-y-6 tabular-nums">
             {/* Info & Action Header */}
-            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="font-bold text-[11px] text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
+                        <span className="font-bold text-[11px] text-[var(--brand-plum)] bg-[var(--color-paper-2)] px-2 py-0.5 rounded-xs border border-[var(--color-rule)]">
                             10+1 PUNCHCARD STAMP RULES
                         </span>
                     </div>
-                    <h2 className="text-base font-bold text-[oklch(18%_0.012_28)] mt-1">
+                    <h2 className="text-base font-bold text-[var(--color-ink)] mt-1">
                         ระบบสะสมแก้ว 10 แถม 1 (Drink Stamp Punchcard)
                     </h2>
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
+                    <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                         กำหนดหมวดหมู่และเครื่องดื่มที่เข้าร่วมรายการสะสมแต้ม เมื่อลูกค้าสั่งซื้อครบ 10 แก้วจะได้รับสิทธิ์แลกฟรี 1 แก้ว
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2.5 shrink-0">
-                    <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] px-3 py-2 rounded-sm text-xs">
-                        <span className="text-[oklch(55%_0.010_28)] text-xs mr-1">สถานะ:</span>
-                        <strong className="text-[oklch(52%_0.16_28)]">{totalEligibleItems} / {allItemsList.length} เมนูร่วม</strong>
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] px-3 py-2 rounded-sm text-xs">
+                        <span className="text-[var(--color-neutral)] text-xs mr-1">สถานะ:</span>
+                        <strong className="text-[var(--brand-plum)]">{totalEligibleItems} / {allItemsList.length} เมนูร่วม</strong>
                     </div>
 
                     <button
@@ -231,8 +231,8 @@ export default function DrinkStampManager() {
                         disabled={isSaving || !hasUnsavedChanges}
                         className={`px-4 py-2 rounded-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
                             hasUnsavedChanges
-                                ? 'bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
-                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] cursor-not-allowed opacity-70'
+                                ? 'bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] ring-2 ring-[var(--brand-plum)]/30'
+                                : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] cursor-not-allowed opacity-70'
                         }`}
                     >
                         <Save size={14} />
@@ -248,9 +248,9 @@ export default function DrinkStampManager() {
                         initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
-                        className="p-3.5 bg-[oklch(94%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md sticky top-4 z-20"
+                        className="p-3.5 bg-[var(--color-paper-2)] border-2 border-[var(--brand-plum)] rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md sticky top-4 z-20"
                     >
-                        <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold text-xs">
+                        <div className="flex items-center gap-2 text-[var(--brand-plum)] font-bold text-xs">
                             <AlertCircle size={18} className="shrink-0 animate-pulse" />
                             <span>มีการปรับเปลี่ยนสิทธิ์สะสมแก้วที่ยังไม่ได้บันทึก (Unsaved Changes)</span>
                         </div>
@@ -259,7 +259,7 @@ export default function DrinkStampManager() {
                                 type="button"
                                 onClick={handleDiscardChanges}
                                 disabled={isSaving}
-                                className="px-3.5 py-1.5 bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)] text-xs font-bold cursor-pointer transition-colors"
+                                className="px-3.5 py-1.5 bg-[var(--color-paper)] text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] rounded-sm border border-[var(--color-rule)] text-xs font-bold cursor-pointer transition-colors"
                             >
                                 <RotateCcw size={12} className="inline mr-1" /> ยกเลิก
                             </button>
@@ -267,7 +267,7 @@ export default function DrinkStampManager() {
                                 type="button"
                                 onClick={handleSaveStampSettings}
                                 disabled={isSaving}
-                                className="px-4.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                                className="px-4.5 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
                             >
                                 <Save size={13} />
                                 {isSaving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า (Save Changes)'}
@@ -278,20 +278,20 @@ export default function DrinkStampManager() {
             </AnimatePresence>
 
             {loading ? (
-                <div className="text-center py-16 bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
-                    <p className="text-[13px] text-[oklch(55%_0.010_28)]">กำลังโหลดการตั้งค่าสะสมแก้ว...</p>
+                <div className="text-center py-16 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[var(--color-rule)] border-b-[var(--color-ink)] mb-2" />
+                    <p className="text-[13px] text-[var(--color-neutral)]">กำลังโหลดการตั้งค่าสะสมแก้ว...</p>
                 </div>
             ) : (
                 <div className="space-y-6">
                     {/* Category Master Toggles */}
-                    <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm ">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm ">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-[var(--color-rule)]">
                             <div>
-                                <h3 className="text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                <h3 className="text-xs font-bold text-[var(--color-ink)] flex items-center gap-1.5">
                                     📁 เปิด/ปิดสิทธิ์ระดับหมวดหมู่ (CATEGORY MASTER TOGGLES)
                                 </h3>
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                                     คลิกปุ่มเพื่อเปิดหรือปิดสิทธิ์สะสม 10 แถม 1 ทั้งหมวดหมู่ในครั้งเดียว
                                 </p>
                             </div>
@@ -308,13 +308,13 @@ export default function DrinkStampManager() {
                                         key={cat.id}
                                         className={`p-3 rounded-sm border transition-all flex items-center justify-between gap-2 ${
                                             isEligible
-                                                ? 'bg-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
-                                                : 'bg-[oklch(99%_0.004_28)] border-[oklch(85%_0.012_28)] opacity-75'
+                                                ? 'bg-[var(--color-paper)] border-[var(--brand-plum)]'
+                                                : 'bg-[var(--color-paper)] border-[var(--color-rule)] opacity-75'
                                         }`}
                                     >
                                         <div className="min-w-0">
-                                            <p className="font-bold text-[13px] text-[oklch(18%_0.012_28)] truncate">{cat.name}</p>
-                                            <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5 tabular-nums">
+                                            <p className="font-bold text-[13px] text-[var(--color-ink)] truncate">{cat.name}</p>
+                                            <p className="text-[13px] text-[var(--color-neutral)] mt-0.5 tabular-nums">
                                                 {eligibleCount} / {catItems.length} เมนูร่วม
                                             </p>
                                         </div>
@@ -324,8 +324,8 @@ export default function DrinkStampManager() {
                                             onClick={() => toggleCategoryEligibility(cat)}
                                             className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-colors cursor-pointer shrink-0 border ${
                                                 isEligible
-                                                    ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] '
-                                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                    ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)] '
+                                                    : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                                             }`}
                                         >
                                             {isEligible ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
@@ -337,13 +337,13 @@ export default function DrinkStampManager() {
                     </div>
 
                     {/* Individual Item Toggles */}
-                    <div className="bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm ">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] p-4 rounded-sm ">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 pb-3 border-b border-[var(--color-rule)]">
                             <div>
-                                <h3 className="text-xs font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                <h3 className="text-xs font-bold text-[var(--color-ink)] flex items-center gap-1.5">
                                     ☕ สิทธิ์รายเมนู (INDIVIDUAL ITEM ELIGIBILITY)
                                 </h3>
-                                <p className="text-[13px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
                                     เปิดหรือปิดสิทธิ์สะสมแต้ม 10 แถม 1 เฉพาะเมนูที่ต้องการ
                                 </p>
                             </div>
@@ -353,7 +353,7 @@ export default function DrinkStampManager() {
                                 <select
                                     value={selectedCategoryFilter}
                                     onChange={e => setSelectedCategoryFilter(e.target.value)}
-                                    className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1.5 rounded-sm text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer font-bold"
+                                    className="bg-[var(--color-paper)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-sm text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] cursor-pointer font-bold"
                                 >
                                     <option value="all">ทุกหมวดหมู่ (All Categories)</option>
                                     {categoriesList.map(c => (
@@ -364,7 +364,7 @@ export default function DrinkStampManager() {
                                 <select
                                     value={eligibilityFilter}
                                     onChange={e => setEligibilityFilter(e.target.value)}
-                                    className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1.5 rounded-sm text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] cursor-pointer font-bold"
+                                    className="bg-[var(--color-paper)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-sm text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] cursor-pointer font-bold"
                                 >
                                     <option value="all">ทุกสถานะ (All Items)</option>
                                     <option value="eligible">เฉพาะที่เปิด 10 แถม 1</option>
@@ -372,20 +372,20 @@ export default function DrinkStampManager() {
                                 </select>
 
                                 <div className="relative w-48">
-                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] w-3.5 h-3.5" />
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] w-3.5 h-3.5" />
                                     <input
                                         type="text"
                                         placeholder="ค้นชื่อเมนู..."
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full bg-[oklch(99%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)] tabular-nums"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] tabular-nums"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         {filteredItems.length === 0 ? (
-                            <div className="text-center py-12 bg-[oklch(98%_0.006_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)]">
+                            <div className="text-center py-12 bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-sm text-xs text-[var(--color-neutral)]">
                                 ไม่พบรายการเมนูที่ตรงกับเงื่อนไขค้นหา
                             </div>
                         ) : (
@@ -397,23 +397,23 @@ export default function DrinkStampManager() {
                                             key={item.id}
                                             className={`p-3 rounded-sm border transition-all flex items-center justify-between gap-2.5 ${
                                                 isEligible
-                                                    ? 'bg-[oklch(99%_0.004_28)] border-[oklch(52%_0.16_28)] '
-                                                    : 'bg-[oklch(98%_0.006_28)] border-[oklch(85%_0.012_28)] opacity-60'
+                                                    ? 'bg-[var(--color-paper)] border-[var(--brand-plum)] '
+                                                    : 'bg-[var(--color-paper)] border-[var(--color-rule)] opacity-60'
                                             }`}
                                         >
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                                    <span className="text-[11px] px-1 py-0.2 rounded-xs bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] truncate max-w-[100px]">
+                                                    <span className="text-[11px] px-1 py-0.2 rounded-xs bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)] truncate max-w-[100px]">
                                                         {item.menu_categories?.name || 'Category'}
                                                     </span>
                                                     {isEligible && (
-                                                        <span className="text-[11px] font-bold px-1 py-0.2 rounded-xs bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]">
+                                                        <span className="text-[11px] font-bold px-1 py-0.2 rounded-xs bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)]">
                                                             10+1
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="font-bold text-[13px] text-[oklch(18%_0.012_28)] truncate">{item.name}</p>
-                                                <p className="text-[13px] text-[oklch(55%_0.010_28)] tabular-nums">฿{parseFloat(item.price || 0).toLocaleString()}</p>
+                                                <p className="font-bold text-[13px] text-[var(--color-ink)] truncate">{item.name}</p>
+                                                <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">฿{parseFloat(item.price || 0).toLocaleString()}</p>
                                             </div>
 
                                             <button
@@ -421,8 +421,8 @@ export default function DrinkStampManager() {
                                                 onClick={() => toggleItemEligibility(item)}
                                                 className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-colors cursor-pointer shrink-0 border ${
                                                     isEligible
-                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)] '
-                                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                        ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)] '
+                                                        : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                                                 }`}
                                             >
                                                 {isEligible ? 'ON' : 'OFF'}

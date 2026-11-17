@@ -61,62 +61,62 @@ export default function TransactionHistory({ onClose }) {
     }, [state.tx, filter, search]);
 
     return createPortal(
-        <div className="fixed inset-0 z-[60] bg-[oklch(18%_0.012_28/0.45)] flex justify-end" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] bg-[oklch(21.78%_0_0/0.45)] flex justify-end" onClick={onClose}>
             <div role="dialog" aria-modal="true" aria-labelledby="tx-history-title" onClick={e => e.stopPropagation()}
-                className="w-full sm:max-w-lg h-full flex flex-col bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-sans">
-                <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                className="w-full sm:max-w-lg h-full flex flex-col bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] font-sans">
+                <header className="shrink-0 grid grid-cols-[1fr_auto] border-b border-[var(--color-rule)] divide-x divide-[var(--color-rule)]">
                     <div className="px-4 py-3 min-w-0">
                         <h2 id="tx-history-title" className="font-bold text-xl leading-7">ประวัติความเคลื่อนไหว</h2>
-                        <p className="text-[12px] leading-5 text-[oklch(42%_0.010_28)]">ดูรายตัวย้อนหลัง 30 วัน กดชื่อในหน้า Stock Recon</p>
+                        <p className="text-[12px] leading-5 text-[var(--color-muted)]">ดูรายตัวย้อนหลัง 30 วัน กดชื่อในหน้า Stock Recon</p>
                     </div>
-                    <button type="button" onClick={onClose} className="px-4 font-bold text-[14px] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer">
+                    <button type="button" onClick={onClose} className="px-4 font-bold text-[14px] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)] cursor-pointer">
                         ปิด
                     </button>
                 </header>
 
-                <div className="shrink-0 grid grid-cols-4 border-b border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]" role="tablist" aria-label="ชนิด">
+                <div className="shrink-0 grid grid-cols-4 border-b border-[var(--color-rule)] divide-x divide-[var(--color-rule)]" role="tablist" aria-label="ชนิด">
                     {FILTERS.map(f => (
                         <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} onClick={() => setFilter(f.key)}
-                            className={`py-2.5 px-1 text-[14px] leading-5 font-bold cursor-pointer ${filter === f.key ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'}`}>
+                            className={`py-2.5 px-1 text-[14px] leading-5 font-bold cursor-pointer ${filter === f.key ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-muted)] hover:bg-[var(--color-paper-2)]'}`}>
                             {f.label}
                         </button>
                     ))}
                 </div>
-                <label className="shrink-0 block border-b border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.004_28)]">
+                <label className="shrink-0 block border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
                     <span className="sr-only">ค้นหาวัตถุดิบ</span>
                     <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาวัตถุดิบ"
-                        className="w-full px-4 py-2.5 text-[14px] leading-6 bg-transparent outline-none focus:bg-[oklch(98%_0.004_28)]" />
+                        className="w-full px-4 py-2.5 text-[14px] leading-6 bg-transparent outline-none focus:bg-[var(--color-paper)]" />
                 </label>
 
                 <div className="flex-1 min-h-0 overflow-y-auto">
                     {state.loading ? (
-                        <p className="p-6 text-[14px] text-[oklch(55%_0.010_28)]">กำลังโหลด...</p>
+                        <p className="p-6 text-[14px] text-[var(--color-neutral)]">กำลังโหลด...</p>
                     ) : state.error ? (
-                        <p className="p-6 text-[14px] text-[oklch(52%_0.16_28)]">โหลดไม่สำเร็จ: {state.error.message}</p>
+                        <p className="p-6 text-[14px] text-[var(--error-red)]">โหลดไม่สำเร็จ: {state.error.message}</p>
                     ) : days.length === 0 ? (
-                        <p className="p-6 text-[14px] leading-6 text-[oklch(42%_0.010_28)]">ไม่มีรายการ</p>
+                        <p className="p-6 text-[14px] leading-6 text-[var(--color-muted)]">ไม่มีรายการ</p>
                     ) : days.map(([day, rows]) => (
-                        <section key={day} className="border-b border-[oklch(85%_0.012_28)]" aria-label={dayLabel(day)}>
-                            <div className="sticky top-0 px-4 py-1.5 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)]">
+                        <section key={day} className="border-b border-[var(--color-rule)]" aria-label={dayLabel(day)}>
+                            <div className="sticky top-0 px-4 py-1.5 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)]">
                                 <span className="font-bold text-[14px] leading-5">{dayLabel(day)}</span>
                             </div>
-                            <ul className="divide-y divide-[oklch(90%_0.008_28)] bg-[oklch(99%_0.004_28)]">
+                            <ul className="divide-y divide-[var(--color-paper-3)] bg-[var(--color-paper)]">
                                 {rows.map(t => {
                                     const change = Number(t.quantity_change) || 0;
                                     const sub = [reasonLabel(t), t.performed_by, t.note].filter(Boolean).join(' · ');
                                     return (
                                         <li key={t.id} className="grid grid-cols-[3rem_1fr_auto] gap-x-3 px-4 py-2 items-baseline">
-                                            <span className="tabular-nums text-[12px] text-[oklch(55%_0.010_28)]">{timeOf(t.created_at)}</span>
+                                            <span className="tabular-nums text-[12px] text-[var(--color-neutral)]">{timeOf(t.created_at)}</span>
                                             <span className="min-w-0">
                                                 <span className="block font-bold text-[14px] leading-6 break-words">{t.stock_items?.name || 'ไม่ทราบชื่อ'}</span>
-                                                <span className="block text-[12px] leading-5 text-[oklch(55%_0.010_28)] break-words">{sub}</span>
+                                                <span className="block text-[12px] leading-5 text-[var(--color-neutral)] break-words">{sub}</span>
                                             </span>
                                             <span className="text-right tabular-nums">
                                                 <span className="block text-[14px] font-bold">
-                                                    {signed(change)} <span className="font-sans font-normal text-[12px] text-[oklch(55%_0.010_28)]">{displayUnit(t.stock_items?.unit)}</span>
+                                                    {signed(change)} <span className="font-sans font-normal text-[12px] text-[var(--color-neutral)]">{displayUnit(t.stock_items?.unit)}</span>
                                                 </span>
                                                 {t.balance_after !== null && t.balance_after !== undefined && (
-                                                    <span className={`block text-[12px] ${Number(t.balance_after) <= 0 ? 'font-bold text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                                    <span className={`block text-[12px] ${Number(t.balance_after) <= 0 ? 'font-bold text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'}`}>
                                                         {Number(t.balance_after) <= 0 ? 'หมดแล้ว' : `เหลือ ${qty(t.balance_after)}`}
                                                     </span>
                                                 )}

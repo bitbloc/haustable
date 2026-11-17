@@ -554,7 +554,7 @@ export default function ManualBookingModal({
                                         onClick={() => setServiceTime(t)}
                                         className={`px-2 py-1 border text-xs font-bold tabular-nums cursor-pointer transition-colors ${
                                             serviceTime === t
-                                                ? 'bg-[var(--color-accent)] text-[oklch(97%_0.008_28)] border-[var(--color-accent)]'
+                                                ? 'bg-[var(--color-accent)] text-[var(--color-paper)] border-[var(--color-accent)]'
                                                 : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
                                         }`}
                                     >
@@ -585,7 +585,7 @@ export default function ManualBookingModal({
                                     ))}
                                 </select>
                                 {tableConflict && (
-                                    <div className="mt-1.5 p-2 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-bold">
+                                    <div className="mt-1.5 p-2 bg-[var(--color-paper-2)] border border-[var(--brand-plum)] text-[var(--brand-plum)] text-xs font-bold">
                                         ⚠️ {tableConflict.message}
                                     </div>
                                 )}

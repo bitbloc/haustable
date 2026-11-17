@@ -313,17 +313,17 @@ export default function TaxSettingsTab({
     return (
         <div className="space-y-8 text-xs">
             {/* VAT Transition Master Control (Switching between Non-VAT and VAT 7%) */}
-            <div className={`border rounded-2xl p-5 sm:p-6 transition-all ${isVatOn ? 'bg-amber-50/70 border-amber-300' : 'bg-[oklch(99%_0.004_28)] border-[#D1D1CD]'}`}>
+            <div className={`border rounded-2xl p-5 sm:p-6 transition-all ${isVatOn ? 'bg-amber-50/70 border-amber-300' : 'bg-[var(--color-paper)] border-[#D1D1CD]'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl tabular-nums font-bold text-sm ${isVatOn ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'}`}>
+                        <div className={`p-2.5 rounded-xl tabular-nums font-bold text-sm ${isVatOn ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' : 'bg-[var(--color-ink)] text-[var(--color-paper)]'}`}>
                             {isVatOn ? 'VAT 7%' : 'ไม่จด VAT'}
                         </div>
                         <div>
-                            <h3 className="font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)]">
+                            <h3 className="font-bold text-sm sm:text-base text-[var(--color-ink)]">
                                 สถานะการจดทะเบียนภาษีมูลค่าเพิ่ม
                             </h3>
-                            <p className="text-[13px] text-[oklch(42%_0.010_28)] mt-0.5">
+                            <p className="text-[13px] text-[var(--color-muted)] mt-0.5">
                                 {isVatOn 
                                     ? 'กำลังใช้งานโหมด: จดทะเบียนภาษีมูลค่าเพิ่ม 7% (ออกใบกำกับภาษีเต็มรูปแบบ และจัดทำรายงานภาษีขาย ภ.พ.30)' 
                                     : '• กำลังใช้งานโหมด: ยังไม่จดทะเบียนภาษีมูลค่าเพิ่ม (ออกใบเสร็จรับเงินทางการ ไม่คิด VAT 7% พร้อมสวิตช์เปิด VAT ได้ทันทีในปีหน้า)'}
@@ -335,7 +335,7 @@ export default function TaxSettingsTab({
                     <button
                         type="button"
                         onClick={() => handleSettingChange('tax_is_vat_registered', isVatOn ? 'false' : 'true')}
-                        className={`px-4 py-2 rounded-xl tabular-nums font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md ${isVatOn ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(90%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-zinc-300'}`}
+                        className={`px-4 py-2 rounded-xl tabular-nums font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md ${isVatOn ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' : 'bg-[var(--color-paper-3)] text-[var(--color-ink)] hover:bg-zinc-300'}`}
                     >
                         {isVatOn ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                         <span>{isVatOn ? 'เปิดใช้งาน VAT 7% แล้ว' : 'สถานะปัจจุบัน: ยังไม่จด VAT'}</span>
@@ -344,14 +344,14 @@ export default function TaxSettingsTab({
             </div>
 
             {/* Enterprise Tax Profile Card */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-5">
-                <div className="flex items-center gap-2.5 border-b border-[oklch(90%_0.008_28)] pb-3">
-                    <Building2 size={18} className="text-[oklch(52%_0.16_28)]" />
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-5">
+                <div className="flex items-center gap-2.5 border-b border-[var(--color-paper-3)] pb-3">
+                    <Building2 size={18} className="text-[var(--brand-plum)]" />
                     <div>
-                        <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
+                        <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)]  ">
                             ข้อมูลผู้ประกอบการ / ร้านค้า
                         </h3>
-                        <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                        <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                             ข้อมูลส่วนนี้จะถูกพิมพ์ลงบนหัวเอกสารใบเสร็จรับเงิน และใบกำกับภาษีเต็มรูปแบบทุกฉบับ
                         </p>
                     </div>
@@ -359,7 +359,7 @@ export default function TaxSettingsTab({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             ชื่อนิติบุคคล / ชื่อร้านค้า (ภาษาไทย) *
                         </label>
                         <input
@@ -367,12 +367,12 @@ export default function TaxSettingsTab({
                             value={settings.tax_company_name}
                             onChange={(e) => handleSettingChange('tax_company_name', e.target.value)}
                             placeholder="เช่น บริษัท อินเดอะเฮ้าส์ จำกัด"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             Company Name (English)
                         </label>
                         <input
@@ -380,14 +380,14 @@ export default function TaxSettingsTab({
                             value={settings.tax_company_name_en}
                             onChange={(e) => handleSettingChange('tax_company_name_en', e.target.value)}
                             placeholder="เช่น IN THE HAUS CO., LTD."
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     {/* Tax ID */}
                     <div>
                         <div className="flex justify-between items-center mb-1">
-                            <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] ">
+                            <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] ">
                                 เลขประจำตัวผู้เสียภาษี 13 หลัก
                             </label>
                             {settings.tax_id && (
@@ -402,20 +402,20 @@ export default function TaxSettingsTab({
                             onChange={(e) => handleSettingChange('tax_id', e.target.value)}
                             placeholder="01055xxxxxxxx หรือ เลขบัตรประชาชน"
                             maxLength={17}
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     {/* Branch */}
                     <div className="flex gap-2 items-end">
                         <div className="flex-1">
-                            <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                            <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                 สถานประกอบการ
                             </label>
                             <select
                                 value={settings.tax_branch_type}
                                 onChange={(e) => handleSettingChange('tax_branch_type', e.target.value)}
-                                className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
+                                className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-[var(--color-paper)]"
                             >
                                 <option value="head_office">สำนักงานใหญ่</option>
                                 <option value="branch">สาขา</option>
@@ -423,7 +423,7 @@ export default function TaxSettingsTab({
                         </div>
                         {settings.tax_branch_type === 'branch' && (
                             <div className="w-28">
-                                <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                     รหัสสาขา 5 หลัก
                                 </label>
                                 <input
@@ -432,7 +432,7 @@ export default function TaxSettingsTab({
                                     onChange={(e) => handleSettingChange('tax_branch_code', e.target.value)}
                                     placeholder="00001"
                                     maxLength={5}
-                                    className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs text-center focus:border-zinc-900 focus:outline-none"
+                                    className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs text-center focus:border-zinc-900 focus:outline-none"
                                 />
                             </div>
                         )}
@@ -440,7 +440,7 @@ export default function TaxSettingsTab({
 
                     {/* Registered Address */}
                     <div className="sm:col-span-2">
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             ที่อยู่จดทะเบียนตาม ภ.พ.20 / ทะเบียนพาณิชย์
                         </label>
                         <textarea
@@ -448,13 +448,13 @@ export default function TaxSettingsTab({
                             onChange={(e) => handleSettingChange('tax_address', e.target.value)}
                             placeholder="เลขที่ อาคาร ซอย ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
                             rows={2}
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs leading-relaxed focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs leading-relaxed focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     {/* Phone & Email */}
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             เบอร์โทรศัพท์สำหรับเอกสาร
                         </label>
                         <input
@@ -462,12 +462,12 @@ export default function TaxSettingsTab({
                             value={settings.tax_phone}
                             onChange={(e) => handleSettingChange('tax_phone', e.target.value)}
                             placeholder="08X-XXX-XXXX"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             อีเมลฝ่ายบัญชี / ใบกำกับภาษี
                         </label>
                         <input
@@ -475,21 +475,21 @@ export default function TaxSettingsTab({
                             value={settings.tax_email}
                             onChange={(e) => handleSettingChange('tax_email', e.target.value)}
                             placeholder="accounting@inthehaus.com"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
                 </div>
             </div>
 
             {/* Individual Taxpayer & Revenue Dept Form 161 Metadata Card */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-5">
-                <div className="flex items-center gap-2.5 border-b border-[oklch(90%_0.008_28)] pb-3">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-5">
+                <div className="flex items-center gap-2.5 border-b border-[var(--color-paper-3)] pb-3">
                     <ShieldCheck size={18} className="text-emerald-700" />
                     <div>
-                        <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
+                        <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)]  ">
                             ข้อมูลรายงานเงินสด รับ-จ่าย บุคคลธรรมดา (ม.161 &amp; Excel Template)
                         </h3>
-                        <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                        <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                             ข้อมูลสำหรับพิมพ์ลงหัวรายงานเงินสด รับ - จ่าย และส่งออก Excel ตามแบบฟอร์มกรมสรรพากร
                         </p>
                     </div>
@@ -497,7 +497,7 @@ export default function TaxSettingsTab({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             ชื่อผู้ประกอบกิจการ (บุคคลธรรมดา) *
                         </label>
                         <input
@@ -505,12 +505,12 @@ export default function TaxSettingsTab({
                             value={settings.tax_proprietor_name}
                             onChange={(e) => handleSettingChange('tax_proprietor_name', e.target.value)}
                             placeholder="เช่น นายธนภัทร บุญเจริญ"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             เลขประจำตัวประชาชน (13 หลัก) *
                         </label>
                         <input
@@ -519,12 +519,12 @@ export default function TaxSettingsTab({
                             onChange={(e) => handleSettingChange('tax_citizen_id', e.target.value)}
                             placeholder="1120100144907"
                             maxLength={17}
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
 
                     <div className="sm:col-span-2">
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             ชื่อสถานประกอบการ
                         </label>
                         <input
@@ -532,24 +532,24 @@ export default function TaxSettingsTab({
                             value={settings.tax_establishment_name}
                             onChange={(e) => handleSettingChange('tax_establishment_name', e.target.value)}
                             placeholder="เช่น ร้านในบ้าน นครพนม"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
                 </div>
             </div>
 
             {/* Document Formatting & Calculation Rules */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 border-b border-[oklch(90%_0.008_28)] pb-3">
-                    <FileText size={18} className="text-[oklch(42%_0.010_28)]" />
-                    <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="flex items-center gap-2 border-b border-[var(--color-paper-3)] pb-3">
+                    <FileText size={18} className="text-[var(--color-muted)]" />
+                    <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)]  ">
                         การกำหนดรหัสเอกสาร & การคำนวณภาษี
                     </h3>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             คำนำหน้าใบเสร็จรับเงิน
                         </label>
                         <input
@@ -557,13 +557,13 @@ export default function TaxSettingsTab({
                             value={settings.tax_receipt_prefix}
                             onChange={(e) => handleSettingChange('tax_receipt_prefix', e.target.value)}
                             placeholder="REC"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
-                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">ตัวอย่าง: REC-202608-0001</span>
+                        <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 block">ตัวอย่าง: REC-202608-0001</span>
                     </div>
 
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             คำนำหน้าใบกำกับภาษี
                         </label>
                         <input
@@ -571,24 +571,24 @@ export default function TaxSettingsTab({
                             value={settings.tax_invoice_prefix}
                             onChange={(e) => handleSettingChange('tax_invoice_prefix', e.target.value)}
                             placeholder="INV"
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
-                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">ตัวอย่าง: INV-202608-0001</span>
+                        <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 block">ตัวอย่าง: INV-202608-0001</span>
                     </div>
 
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             รูปแบบการคิด VAT ในเมนู (เมื่อเปิด VAT)
                         </label>
                         <select
                             value={settings.tax_vat_model}
                             onChange={(e) => handleSettingChange('tax_vat_model', e.target.value)}
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-[var(--color-paper)]"
                         >
                             <option value="inclusive">รวมภาษีในราคาแล้ว</option>
                             <option value="exclusive">ยังไม่รวมภาษี (บวกเพิ่ม 7%)</option>
                         </select>
-                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-0.5 block">ร้านอาหารส่วนใหญ่ใช้แบบรวมภาษีในราคา</span>
+                        <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-0.5 block">ร้านอาหารส่วนใหญ่ใช้แบบรวมภาษีในราคา</span>
                     </div>
                 </div>
 
@@ -597,7 +597,7 @@ export default function TaxSettingsTab({
                         type="button"
                         disabled={saving}
                         onClick={handleSaveSettings}
-                        className="px-6 py-2.5 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-md disabled:opacity-50"
+                        className="px-6 py-2.5 bg-[#1A1A1A] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-md disabled:opacity-50"
                     >
                         <Save size={15} />
                         <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
@@ -606,17 +606,17 @@ export default function TaxSettingsTab({
             </div>
 
             {/* Digital Signature & Official Stamp Manager */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[oklch(90%_0.008_28)] pb-3">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-paper-3)] pb-3">
                     <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg">
+                        <div className="p-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] rounded-lg">
                             <PenTool size={18} />
                         </div>
                         <div>
-                            <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)] flex items-center gap-2">
+                            <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)] flex items-center gap-2">
                                 ระบบลายเซ็นดิจิทัล &amp; ตรายางประจำร้าน
                             </h3>
-                            <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                            <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                                 เพิ่มลายเซ็นผู้มีอำนาจลงนาม เพื่อพิมพ์ลงในช่องผู้รับเงินของใบเสร็จรับเงินและใบกำกับภาษีอัตโนมัติ
                             </p>
                         </div>
@@ -629,7 +629,7 @@ export default function TaxSettingsTab({
                         className={`px-3 py-1.5 rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
                             settings.tax_signature_enabled === 'true'
                                 ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)]'
+                                : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)]'
                         }`}
                     >
                         {settings.tax_signature_enabled === 'true' ? <ToggleRight size={18} className="text-emerald-700" /> : <ToggleLeft size={18} />}
@@ -641,7 +641,7 @@ export default function TaxSettingsTab({
                     {/* Left Column: Signer Information Form (5 cols) */}
                     <div className="lg:col-span-5 space-y-4">
                         <div>
-                            <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                            <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                 ชื่อผู้มีอำนาจลงนาม / ผู้รับเงิน *
                             </label>
                             <input
@@ -649,12 +649,12 @@ export default function TaxSettingsTab({
                                 value={settings.tax_signature_name}
                                 onChange={(e) => handleSettingChange('tax_signature_name', e.target.value)}
                                 placeholder="เช่น นาย ธนวัฒน์ หรือ ผู้มีอำนาจลงนาม"
-                                className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
+                                className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
                             />
                         </div>
 
                         <div>
-                            <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                            <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                 ตำแหน่งผู้ลงนาม
                             </label>
                             <input
@@ -662,26 +662,26 @@ export default function TaxSettingsTab({
                                 value={settings.tax_signature_position}
                                 onChange={(e) => handleSettingChange('tax_signature_position', e.target.value)}
                                 placeholder="เช่น ผู้จัดการร้าน / กรรมการผู้จัดการ"
-                                className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs focus:border-zinc-900 focus:outline-none"
+                                className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs focus:border-zinc-900 focus:outline-none"
                             />
                         </div>
 
                         {/* Signature Status & Quick Actions */}
-                        <div className="p-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(90%_0.008_28)] rounded-xl space-y-2">
+                        <div className="p-3.5 bg-[var(--color-paper)] border border-[var(--color-paper-3)] rounded-xl space-y-2">
                             <div className="flex items-center justify-between text-xs">
-                                <span className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] ">สถานะลายเซ็นปัจจุบัน:</span>
+                                <span className="tabular-nums font-bold text-xs text-[var(--color-neutral)] ">สถานะลายเซ็นปัจจุบัน:</span>
                                 {settings.tax_signature_image ? (
                                     <span className="tabular-nums font-bold text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
                                         <Check size={11} /> มีลายเซ็นในระบบแล้ว
                                     </span>
                                 ) : (
-                                    <span className="tabular-nums text-xs text-[oklch(50%_0.010_28)]">ยังไม่มีลายเซ็น</span>
+                                    <span className="tabular-nums text-xs text-[var(--color-neutral)]">ยังไม่มีลายเซ็น</span>
                                 )}
                             </div>
 
                             {settings.tax_signature_image && (
                                 <div className="flex items-center justify-between pt-1">
-                                    <span className="text-xs text-[oklch(42%_0.010_28)]">จัดการไฟล์ลายเซ็น:</span>
+                                    <span className="text-xs text-[var(--color-muted)]">จัดการไฟล์ลายเซ็น:</span>
                                     <button
                                         type="button"
                                         onClick={removeSignatureImage}
@@ -699,7 +699,7 @@ export default function TaxSettingsTab({
                                 type="button"
                                 disabled={saving}
                                 onClick={handleSaveSettings}
-                                className="w-full py-2.5 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                                className="w-full py-2.5 bg-[#1A1A1A] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-lg tabular-nums font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                             >
                                 <Save size={14} />
                                 <span>บันทึกข้อมูลลายเซ็น &amp; การตั้งค่า</span>
@@ -710,14 +710,14 @@ export default function TaxSettingsTab({
                     {/* Right Column: Signature Creator (Canvas / Upload) & Live Preview (7 cols) */}
                     <div className="lg:col-span-7 space-y-4">
                         {/* Mode Selector */}
-                        <div className="flex border border-[oklch(85%_0.012_28)] rounded-lg p-1 bg-[oklch(94%_0.010_28)] text-xs tabular-nums font-bold">
+                        <div className="flex border border-[var(--color-rule)] rounded-lg p-1 bg-[var(--color-paper-2)] text-xs tabular-nums font-bold">
                             <button
                                 type="button"
                                 onClick={() => setSignatureMode('draw')}
                                 className={`flex-1 py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                                     signatureMode === 'draw'
-                                        ? 'bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] '
-                                        : 'text-[oklch(50%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-[var(--color-paper)] text-[var(--color-ink)] '
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                             >
                                 <PenTool size={13} />
@@ -728,8 +728,8 @@ export default function TaxSettingsTab({
                                 onClick={() => setSignatureMode('upload')}
                                 className={`flex-1 py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                                     signatureMode === 'upload'
-                                        ? 'bg-[oklch(99%_0.004_28)] text-[oklch(18%_0.012_28)] '
-                                        : 'text-[oklch(50%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        ? 'bg-[var(--color-paper)] text-[var(--color-ink)] '
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                 }`}
                             >
                                 <Upload size={13} />
@@ -739,13 +739,13 @@ export default function TaxSettingsTab({
 
                         {/* 1. Interactive Drawing Canvas Mode */}
                         {signatureMode === 'draw' && (
-                            <div className="border border-[oklch(85%_0.012_28)] rounded-xl p-3 bg-[oklch(99%_0.004_28)] space-y-2.5">
-                                <div className="flex items-center justify-between text-xs text-[oklch(50%_0.010_28)] tabular-nums">
+                            <div className="border border-[var(--color-rule)] rounded-xl p-3 bg-[var(--color-paper)] space-y-2.5">
+                                <div className="flex items-center justify-between text-xs text-[var(--color-neutral)] tabular-nums">
                                     <span>ใช้นิ้วมือ, เมาส์ หรือปากกาสไตลัสเซ็นชื่อลงในกรอบ:</span>
-                                    <span className="text-[oklch(50%_0.010_28)] text-xs">ความหนาเส้น 2.5px คมชัด</span>
+                                    <span className="text-[var(--color-neutral)] text-xs">ความหนาเส้น 2.5px คมชัด</span>
                                 </div>
 
-                                <div className="relative border-2 border-dashed border-[oklch(85%_0.012_28)] rounded-lg bg-zinc-50/50 overflow-hidden flex items-center justify-center touch-none">
+                                <div className="relative border-2 border-dashed border-[var(--color-rule)] rounded-lg bg-zinc-50/50 overflow-hidden flex items-center justify-center touch-none">
                                     <canvas
                                         ref={canvasRef}
                                         width={480}
@@ -760,7 +760,7 @@ export default function TaxSettingsTab({
                                         className="w-full h-36 cursor-crosshair bg-transparent"
                                     />
                                     {/* Baseline guide line */}
-                                    <div className="absolute bottom-7 left-8 right-8 border-b border-[oklch(90%_0.008_28)] pointer-events-none text-xs tabular-nums text-[oklch(50%_0.010_28)] flex justify-between">
+                                    <div className="absolute bottom-7 left-8 right-8 border-b border-[var(--color-paper-3)] pointer-events-none text-xs tabular-nums text-[var(--color-neutral)] flex justify-between">
                                         <span>เส้นฐานลายเซ็น</span>
                                         <span>IN THE HAUS</span>
                                     </div>
@@ -770,7 +770,7 @@ export default function TaxSettingsTab({
                                     <button
                                         type="button"
                                         onClick={clearCanvas}
-                                        className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] rounded-lg tabular-nums text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        className="px-3 py-1.5 border border-[var(--color-rule)] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)] rounded-lg tabular-nums text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
                                         <RotateCcw size={13} />
                                         <span>ล้างผ้าใบ</span>
@@ -779,7 +779,7 @@ export default function TaxSettingsTab({
                                     <button
                                         type="button"
                                         onClick={saveCanvasSignature}
-                                        className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
+                                        className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-[var(--color-paper)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                                     >
                                         <Check size={14} />
                                         <span>นำลายเซ็นที่วาดไปใช้งาน</span>
@@ -790,13 +790,13 @@ export default function TaxSettingsTab({
 
                         {/* 2. File Upload Mode */}
                         {signatureMode === 'upload' && (
-                            <div className="border border-[oklch(85%_0.012_28)] rounded-xl p-4 bg-[oklch(99%_0.004_28)] space-y-3">
-                                <label className="border-2 border-dashed border-[oklch(85%_0.012_28)] hover:border-zinc-500 rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer bg-zinc-50/50 hover:bg-[oklch(97%_0.008_28)] transition-colors block text-center">
-                                    <ImageIcon size={28} className="text-[oklch(50%_0.010_28)]" />
-                                    <div className="tabular-nums font-bold text-xs text-[oklch(18%_0.012_28)]">
+                            <div className="border border-[var(--color-rule)] rounded-xl p-4 bg-[var(--color-paper)] space-y-3">
+                                <label className="border-2 border-dashed border-[var(--color-rule)] hover:border-zinc-500 rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer bg-zinc-50/50 hover:bg-[var(--color-paper)] transition-colors block text-center">
+                                    <ImageIcon size={28} className="text-[var(--color-neutral)]" />
+                                    <div className="tabular-nums font-bold text-xs text-[var(--color-ink)]">
                                         คลิกเพื่อเลือกไฟล์รูปลายเซ็น หรือรูปตรายาง
                                     </div>
-                                    <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                                         รองรับไฟล์ .PNG (แนะนำพื้นหลังโปร่งใส Transparent), .JPG, .SVG (ขนาดไม่เกิน 5MB)
                                     </p>
                                     <input
@@ -810,13 +810,13 @@ export default function TaxSettingsTab({
                         )}
 
                         {/* Live Document Preview Box */}
-                        <div className="border border-[oklch(85%_0.012_28)] rounded-xl p-4 bg-[oklch(97%_0.008_28)] space-y-2">
-                            <div className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] flex items-center justify-between">
+                        <div className="border border-[var(--color-rule)] rounded-xl p-4 bg-[var(--color-paper)] space-y-2">
+                            <div className="tabular-nums font-bold text-xs text-[var(--color-neutral)] flex items-center justify-between">
                                 <span>ตัวอย่างการแสดงผลบนเอกสารจริง</span>
-                                <span className="text-xs text-[oklch(50%_0.010_28)]">มาตรา 86/4 &amp; 105</span>
+                                <span className="text-xs text-[var(--color-neutral)]">มาตรา 86/4 &amp; 105</span>
                             </div>
 
-                            <div className="bg-[oklch(99%_0.004_28)] border border-zinc-900 p-4 max-w-sm mx-auto text-center tabular-nums text-xs space-y-1 ">
+                            <div className="bg-[var(--color-paper)] border border-zinc-900 p-4 max-w-sm mx-auto text-center tabular-nums text-xs space-y-1 ">
                                 {/* Signature line container with overlay */}
                                 <div className="relative w-48 mx-auto h-16 flex items-end justify-center mb-1">
                                     {settings.tax_signature_image && settings.tax_signature_enabled === 'true' ? (
@@ -826,22 +826,22 @@ export default function TaxSettingsTab({
                                             className="max-h-14 max-w-full object-contain filter drop-shadow-xs"
                                         />
                                     ) : (
-                                        <div className="text-xs text-[oklch(50%_0.010_28)] italic pb-1">
+                                        <div className="text-xs text-[var(--color-neutral)] italic pb-1">
                                             {settings.tax_signature_enabled === 'false' ? '(ปิดการแสดงลายเซ็น)' : '(ยังไม่ได้ใส่ลายเซ็น)'}
                                         </div>
                                     )}
                                     <div className="absolute bottom-0 left-0 right-0 border-b border-zinc-900"></div>
                                 </div>
 
-                                <div className="font-bold text-[oklch(18%_0.012_28)] text-xs">
+                                <div className="font-bold text-[var(--color-ink)] text-xs">
                                     ( {settings.tax_signature_name || 'ผู้มีอำนาจลงนาม'} )
                                 </div>
                                 {settings.tax_signature_position && (
-                                    <div className="text-xs text-[oklch(42%_0.010_28)] font-sans">
+                                    <div className="text-xs text-[var(--color-muted)] font-sans">
                                         ตำแหน่ง: {settings.tax_signature_position}
                                     </div>
                                 )}
-                                <div className="text-xs text-[oklch(50%_0.010_28)]">
+                                <div className="text-xs text-[var(--color-neutral)]">
                                     วันที่ / Date: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
                             </div>
@@ -851,16 +851,16 @@ export default function TaxSettingsTab({
             </div>
 
             {/* Google Gemini Vision AI OCR Engine Setup */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2.5 border-b border-[oklch(90%_0.008_28)] pb-3">
-                    <div className="p-1.5 bg-gradient-to-tr from-amber-500 to-orange-500 text-[oklch(97%_0.008_28)] rounded-lg">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="flex items-center gap-2.5 border-b border-[var(--color-paper-3)] pb-3">
+                    <div className="p-1.5 bg-gradient-to-tr from-amber-500 to-orange-500 text-[var(--color-paper)] rounded-lg">
                         <Bot size={18} />
                     </div>
                     <div>
-                        <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)] flex items-center gap-2">
+                        <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)] flex items-center gap-2">
                             Google Gemini Vision AI (ระบบ AI สแกนบิลและแยกหมวดหมู่อัตโนมัติ)
                         </h3>
-                        <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                        <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                             ใช้พลัง AI ของ Google ช่วยอ่านยอดรวม, วันที่, ชื่อร้าน, เลข 13 หลัก และแยกหมวดหมู่ Makro/ค่าน้ำไฟ/ค่าน้ำมัน ทันทีที่ถ่ายรูป
                         </p>
                     </div>
@@ -868,7 +868,7 @@ export default function TaxSettingsTab({
 
                 <div className="space-y-3">
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             Google Gemini API Key
                         </label>
                         <div className="relative">
@@ -877,28 +877,28 @@ export default function TaxSettingsTab({
                                 value={settings.gemini_api_key}
                                 onChange={(e) => handleSettingChange('gemini_api_key', e.target.value)}
                                 placeholder="AIzaSy..."
-                                className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
+                                className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                             />
                         </div>
-                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-1 block">
+                        <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-1 block">
                             สมัครและรับ API Key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
                         </span>
                     </div>
 
                     <div>
-                        <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                        <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                             โมเดล Gemini AI (Default Model)
                         </label>
                         <select
                             value={settings.gemini_model}
                             onChange={(e) => handleSettingChange('gemini_model', e.target.value)}
-                            className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none bg-[oklch(99%_0.004_28)]"
+                            className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none bg-[var(--color-paper)]"
                         >
                             {GEMINI_SUPPORTED_MODELS.map(m => (
                                 <option key={m.id} value={m.id}>{m.label}</option>
                             ))}
                         </select>
-                        <span className="text-xs text-[oklch(50%_0.010_28)] tabular-nums mt-1 block">
+                        <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-1 block">
                             * หากโมเดลที่เลือกไม่พร้อมใช้งาน ระบบจะสลับไปยังโมเดลอื่นโดยอัตโนมัติ (Fallback Cascade: Gemini 4 Argon &rarr; Gemini 3.7 Flash &rarr; 2.5 Flash &rarr; 2.0 Flash)
                         </span>
                     </div>
@@ -908,7 +908,7 @@ export default function TaxSettingsTab({
                             type="button"
                             disabled={saving}
                             onClick={handleSaveSettings}
-                            className="px-5 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                            className="px-5 py-2 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                         >
                             <Save size={14} />
                             <span>บันทึก Gemini API Key</span>
@@ -918,15 +918,15 @@ export default function TaxSettingsTab({
             </div>
 
             {/* Corporate Customer Directory (สมุดรายชื่อลูกค้าภาษี/บริษัทคู่ค้า) */}
-            <div className="bg-[oklch(99%_0.004_28)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[oklch(90%_0.008_28)] pb-3">
+            <div className="bg-[var(--color-paper)] border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-paper-3)] pb-3">
                     <div className="flex items-center gap-2">
-                        <Users size={18} className="text-[oklch(42%_0.010_28)]" />
+                        <Users size={18} className="text-[var(--color-muted)]" />
                         <div>
-                            <h3 className="tabular-nums font-bold text-sm text-[oklch(18%_0.012_28)]  ">
+                            <h3 className="tabular-nums font-bold text-sm text-[var(--color-ink)]  ">
                                 สมุดรายชื่อลูกค้าประจำสำหรับออกบิล
                             </h3>
-                            <p className="text-[13px] text-[oklch(50%_0.010_28)] tabular-nums">
+                            <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
                                 บันทึกข้อมูลบริษัทคู่ค้า / ลูกค้าประจำ เพื่อเลือกดึงข้อมูลมาออกเอกสารได้ใน 1 คลิก
                             </p>
                         </div>
@@ -934,13 +934,13 @@ export default function TaxSettingsTab({
 
                     <div className="flex items-center gap-2">
                         <div className="relative">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(50%_0.010_28)]" />
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" />
                             <input
                                 type="text"
                                 placeholder="ค้นหาชื่อบริษัท / Tax ID..."
                                 value={customerSearch}
                                 onChange={(e) => setCustomerSearch(e.target.value)}
-                                className="pl-8 pr-3 py-1.5 border border-[oklch(85%_0.012_28)] rounded-lg text-xs tabular-nums w-44 sm:w-56 focus:border-zinc-900 focus:outline-none"
+                                className="pl-8 pr-3 py-1.5 border border-[var(--color-rule)] rounded-lg text-xs tabular-nums w-44 sm:w-56 focus:border-zinc-900 focus:outline-none"
                             />
                         </div>
 
@@ -950,7 +950,7 @@ export default function TaxSettingsTab({
                                 setEditingCustomer(null);
                                 setShowCustomerModal(true);
                             }}
-                            className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-3 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-lg tabular-nums font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                             <Plus size={14} />
                             <span>เพิ่มลูกค้า</span>
@@ -961,7 +961,7 @@ export default function TaxSettingsTab({
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-[13px]">
                         <thead>
-                            <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] tabular-nums text-xs text-[oklch(42%_0.010_28)]">
+                            <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] tabular-nums text-xs text-[var(--color-muted)]">
                                 <th className="p-3">ชื่อบริษัท / ลูกค้า</th>
                                 <th className="p-3 w-36">เลขประจำตัวผู้เสียภาษี</th>
                                 <th className="p-3 w-32">สาขา</th>
@@ -970,13 +970,13 @@ export default function TaxSettingsTab({
                                 <th className="p-3 text-center w-20">จัดการ</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                        <tbody className="divide-y divide-[var(--color-paper-3)]">
                             {filteredCustomers.map((c, idx) => (
-                                <tr key={c.id || idx} className="hover:bg-[oklch(97%_0.008_28)] transition-colors">
-                                    <td className="p-3 font-semibold text-[oklch(18%_0.012_28)]">{c.company_name}</td>
+                                <tr key={c.id || idx} className="hover:bg-[var(--color-paper)] transition-colors">
+                                    <td className="p-3 font-semibold text-[var(--color-ink)]">{c.company_name}</td>
                                     <td className="p-3 tabular-nums">{formatTaxId(c.tax_id)}</td>
                                     <td className="p-3 tabular-nums">{formatBranch(c.branch_type, c.branch_code)}</td>
-                                    <td className="p-3 text-[oklch(42%_0.010_28)] max-w-xs truncate" title={c.address}>{c.address}</td>
+                                    <td className="p-3 text-[var(--color-muted)] max-w-xs truncate" title={c.address}>{c.address}</td>
                                     <td className="p-3 tabular-nums">{c.phone || '-'}</td>
                                     <td className="p-3 text-center">
                                         <div className="flex items-center justify-center gap-1">
@@ -985,14 +985,14 @@ export default function TaxSettingsTab({
                                                     setEditingCustomer(c);
                                                     setShowCustomerModal(true);
                                                 }}
-                                                className="p-1 text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                                                className="p-1 text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                                                 title="แก้ไข"
                                             >
                                                 <Edit2 size={14} />
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteCustomer(c.id, c.company_name)}
-                                                className="p-1 text-[oklch(50%_0.010_28)] hover:text-red-600 transition-colors cursor-pointer"
+                                                className="p-1 text-[var(--color-neutral)] hover:text-red-600 transition-colors cursor-pointer"
                                                 title="ลบ"
                                             >
                                                 <Trash2 size={14} />
@@ -1004,7 +1004,7 @@ export default function TaxSettingsTab({
 
                             {filteredCustomers.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center text-[oklch(50%_0.010_28)] tabular-nums">
+                                    <td colSpan={6} className="p-8 text-center text-[var(--color-neutral)] tabular-nums">
                                         ยังไม่มีข้อมูลลูกค้าในสมุดรายชื่อ
                                     </td>
                                 </tr>
@@ -1018,28 +1018,28 @@ export default function TaxSettingsTab({
             {showCustomerModal && (
                 <div className="fixed inset-0 z-[170] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-[#ECECE9] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-[#D1D1CD] font-sans text-xs">
-                        <div className="bg-[#1A1A1A] text-[oklch(97%_0.008_28)] p-4 flex items-center justify-between">
+                        <div className="bg-[#1A1A1A] text-[var(--color-paper)] p-4 flex items-center justify-between">
                             <h3 className="tabular-nums font-bold text-sm ">
                                 {editingCustomer ? 'แก้ไขข้อมูลลูกค้า' : 'เพิ่มลูกค้าใหม่ในสมุดรายชื่อ'}
                             </h3>
-                            <button onClick={() => setShowCustomerModal(false)} className="p-1 text-[oklch(97%_0.008_28)] hover:bg-white/10 rounded cursor-pointer">
+                            <button onClick={() => setShowCustomerModal(false)} className="p-1 text-[var(--color-paper)] hover:bg-white/10 rounded cursor-pointer">
                                 <Trash2 size={16} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSaveCustomer} className="p-5 space-y-3.5 bg-[oklch(99%_0.004_28)]">
+                        <form onSubmit={handleSaveCustomer} className="p-5 space-y-3.5 bg-[var(--color-paper)]">
                             <div>
-                                <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                     ประเภทลูกค้า
                                 </label>
-                                <select name="customer_type" defaultValue={editingCustomer?.customer_type || 'company'} className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs">
+                                <select name="customer_type" defaultValue={editingCustomer?.customer_type || 'company'} className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs">
                                     <option value="company">นิติบุคคล (บริษัท / หจก.)</option>
                                     <option value="individual">บุคคลธรรมดา</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                     ชื่อบริษัท / ลูกค้า *
                                 </label>
                                 <input
@@ -1048,12 +1048,12 @@ export default function TaxSettingsTab({
                                     defaultValue={editingCustomer?.company_name || ''}
                                     placeholder="เช่น บริษัท ทดสอบ จำกัด"
                                     required
-                                    className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold"
+                                    className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs font-semibold"
                                 />
                             </div>
 
                             <div>
-                                <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                     เลขประจำตัวผู้เสียภาษี 13 หลัก
                                 </label>
                                 <input
@@ -1062,22 +1062,22 @@ export default function TaxSettingsTab({
                                     defaultValue={editingCustomer?.tax_id || ''}
                                     placeholder="01055xxxxxxxx"
                                     maxLength={13}
-                                    className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs"
+                                    className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                         สถานประกอบการ
                                     </label>
-                                    <select name="branch_type" defaultValue={editingCustomer?.branch_type || 'head_office'} className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs">
+                                    <select name="branch_type" defaultValue={editingCustomer?.branch_type || 'head_office'} className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs">
                                         <option value="head_office">สำนักงานใหญ่</option>
                                         <option value="branch">สาขา</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                         รหัสสาขา
                                     </label>
                                     <input
@@ -1086,44 +1086,44 @@ export default function TaxSettingsTab({
                                         defaultValue={editingCustomer?.branch_code || '00000'}
                                         placeholder="00000"
                                         maxLength={5}
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs text-center"
+                                        className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs text-center"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                     ที่อยู่จดทะเบียนตาม ภ.พ.20
                                 </label>
                                 <textarea
                                     name="address"
                                     defaultValue={editingCustomer?.address || ''}
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg text-xs"
+                                    className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg text-xs"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                         เบอร์โทรศัพท์
                                     </label>
                                     <input
                                         type="text"
                                         name="phone"
                                         defaultValue={editingCustomer?.phone || ''}
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs"
+                                        className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs"
                                     />
                                 </div>
                                 <div>
-                                    <label className="tabular-nums font-bold text-xs text-[oklch(50%_0.010_28)] block mb-1">
+                                    <label className="tabular-nums font-bold text-xs text-[var(--color-neutral)] block mb-1">
                                         อีเมล
                                     </label>
                                     <input
                                         type="email"
                                         name="email"
                                         defaultValue={editingCustomer?.email || ''}
-                                        className="w-full px-3 py-2 border border-[oklch(85%_0.012_28)] rounded-lg tabular-nums text-xs"
+                                        className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs"
                                     />
                                 </div>
                             </div>
@@ -1132,13 +1132,13 @@ export default function TaxSettingsTab({
                                 <button
                                     type="button"
                                     onClick={() => setShowCustomerModal(false)}
-                                    className="px-4 py-2 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] rounded-lg tabular-nums font-bold text-xs"
+                                    className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-muted)] rounded-lg tabular-nums font-bold text-xs"
                                 >
                                     ยกเลิก
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2 bg-[#1A1A1A] hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-lg tabular-nums font-bold text-xs"
+                                    className="px-5 py-2 bg-[#1A1A1A] hover:bg-[var(--color-ink)] text-[var(--color-paper)] rounded-lg tabular-nums font-bold text-xs"
                                 >
                                     บันทึกข้อมูล
                                 </button>

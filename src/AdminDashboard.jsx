@@ -656,17 +656,17 @@ export default function AdminDashboard() {
                 {/* Title row: the screen's name, the shift status as its one line of data, the day's controls */}
                 {(() => {
                     const isToday = selectedDate === getThaiDate()
-                    const strong = 'font-medium text-[oklch(18%_0.012_28)]'
-                    const dateChip = (active) => `h-8 px-3 rounded-md text-[13px] cursor-pointer transition-colors whitespace-nowrap ${active ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-medium border border-[oklch(85%_0.012_28)]' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] border border-transparent'}`
-                    const ghostBtn = 'h-10 px-3 rounded-lg border border-[oklch(85%_0.012_28)] text-[13px] font-medium text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:translate-y-px'
+                    const strong = 'font-medium text-[var(--color-ink)]'
+                    const dateChip = (active) => `h-8 px-3 rounded-md text-[13px] cursor-pointer transition-colors whitespace-nowrap ${active ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-medium border border-[var(--color-rule)]' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] border border-transparent'}`
+                    const ghostBtn = 'h-10 px-3 rounded-lg border border-[var(--color-rule)] text-[13px] font-medium text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:translate-y-px'
                     return (
                         <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mb-6">
                             <div className="min-w-0">
-                                <h1 className="text-2xl font-semibold leading-9 text-[oklch(18%_0.012_28)]">
+                                <h1 className="text-2xl font-semibold leading-9 text-[var(--color-ink)]">
                                     ภาพรวมหน้าร้าน
                                 </h1>
-                                <p className="mt-1 text-sm leading-6 text-[oklch(42%_0.010_28)] flex items-start gap-2">
-                                    <span className={`mt-2 w-2 h-2 rounded-full shrink-0 ${isToday && isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(70%_0.010_28)]'}`} />
+                                <p className="mt-1 text-sm leading-6 text-[var(--color-muted)] flex items-start gap-2">
+                                    <span className={`mt-2 w-2 h-2 rounded-full shrink-0 ${isToday && isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(70%_0.01_348.33)]'}`} />
                                     <span>
                                         {!isToday ? (
                                             latestClosedShift ? (
@@ -686,13 +686,13 @@ export default function AdminDashboard() {
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap">
-                                <div className="flex items-center gap-1 h-10 px-1 rounded-lg border border-[oklch(85%_0.012_28)] w-full sm:w-auto min-w-0">
+                                <div className="flex items-center gap-1 h-10 px-1 rounded-lg border border-[var(--color-rule)] w-full sm:w-auto min-w-0">
                                     <input
                                         type="date"
                                         value={selectedDate}
                                         onChange={(e) => handleDateChange(e.target.value)}
                                         aria-label="เลือกวันที่"
-                                        className="bg-transparent border-none text-[oklch(18%_0.012_28)] text-[13px] tabular-nums px-2 focus:outline-none cursor-pointer min-w-0 flex-1"
+                                        className="bg-transparent border-none text-[var(--color-ink)] text-[13px] tabular-nums px-2 focus:outline-none cursor-pointer min-w-0 flex-1"
                                     />
                                     <button type="button" onClick={() => handleDateChange(getThaiDate())} className={dateChip(isToday)}>
                                         วันนี้
@@ -706,10 +706,10 @@ export default function AdminDashboard() {
                                     <button
                                         type="button"
                                         onClick={() => setSoundMuted(!soundMuted)}
-                                        className={`${ghostBtn} ${soundMuted ? 'text-[oklch(42%_0.010_28)]' : ''}`}
+                                        className={`${ghostBtn} ${soundMuted ? 'text-[var(--color-muted)]' : ''}`}
                                         title={soundMuted ? 'เปิดเสียงแจ้งเตือนคำขอรอตรวจ' : 'ปิดเสียงแจ้งเตือนคำขอรอตรวจ'}
                                     >
-                                        <span className={`w-2 h-2 rounded-full ${soundMuted ? 'bg-[oklch(70%_0.010_28)]' : 'bg-[oklch(52%_0.16_28)]'}`} />
+                                        <span className={`w-2 h-2 rounded-full ${soundMuted ? 'bg-[oklch(70%_0.01_348.33)]' : 'bg-[var(--brand-plum)]'}`} />
                                         <span>{soundMuted ? 'เสียงปิด' : 'เสียงเปิด'}</span>
                                     </button>
                                 )}
@@ -739,7 +739,7 @@ export default function AdminDashboard() {
                 })()}
 
                 {/* Mode switch: as wide as its two options, on a full-width hairline */}
-                <div className="flex gap-6 border-b border-[oklch(88%_0.012_28)] mb-6" role="tablist" aria-label="โหมดภาพรวม">
+                <div className="flex gap-6 border-b border-[var(--color-paper-3)] mb-6" role="tablist" aria-label="โหมดภาพรวม">
                     {[
                         { key: 'simplified', label: 'Live Now', sub: 'โต๊ะสดหน้าร้าน' },
                         { key: 'pro', label: 'Pro Analytics', sub: 'ภาพรวมและเชิงลึก' }
@@ -752,14 +752,14 @@ export default function AdminDashboard() {
                                 role="tab"
                                 aria-selected={on}
                                 onClick={() => handleSetOverviewMode(m.key)}
-                                className={`relative h-11 text-sm cursor-pointer transition-colors whitespace-nowrap ${on ? 'text-[oklch(18%_0.012_28)] font-medium' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                className={`relative h-11 text-sm cursor-pointer transition-colors whitespace-nowrap ${on ? 'text-[var(--color-ink)] font-medium' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <span>{m.label}</span>
-                                <span className="hidden sm:inline text-[oklch(50%_0.010_28)] font-normal"> · {m.sub}</span>
+                                <span className="hidden sm:inline text-[var(--color-neutral)] font-normal"> · {m.sub}</span>
                                 {on && (
                                     <motion.span
                                         layoutId="overview-mode-underline"
-                                        className="absolute left-0 right-0 -bottom-px h-0.5 bg-[oklch(18%_0.012_28)]"
+                                        className="absolute left-0 right-0 -bottom-px h-0.5 bg-[var(--color-ink)]"
                                         transition={{ type: 'spring', stiffness: 520, damping: 42, mass: 0.6 }}
                                     />
                                 )}
@@ -852,7 +852,7 @@ export default function AdminDashboard() {
                         <OwnerPosBroadcastBar />
 
                         {/* 4. Segmented Filter Tabs (Clean Bento Pill Bar) */}
-                        <div className="flex gap-6 overflow-x-auto border-b border-[oklch(88%_0.012_28)] text-sm no-scrollbar">
+                        <div className="flex gap-6 overflow-x-auto border-b border-[var(--color-paper-3)] text-sm no-scrollbar">
                             {[
                                 { key: 'bills', label: 'บิลทั้งหมด', count: dailyBookings.length },
                                 { key: 'shifts', label: 'กะเงินสด (Shifts)', count: shifts.length },
@@ -868,12 +868,12 @@ export default function AdminDashboard() {
                                         onClick={() => startSwitch(() => setActiveTab(tab.key))}
                                         className={`h-11 -mb-px border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                                             isActive
-                                                ? 'border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] font-medium'
-                                                : 'border-transparent text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                                ? 'border-[var(--color-ink)] text-[var(--color-ink)] font-medium'
+                                                : 'border-transparent text-[var(--color-muted)] hover:text-[var(--color-ink)]'
                                         }`}
                                     >
                                         <span>{tab.label}</span>
-                                        <span className={`text-xs tabular-nums ${isActive ? 'text-[oklch(42%_0.010_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                        <span className={`text-xs tabular-nums ${isActive ? 'text-[var(--color-muted)]' : 'text-[var(--color-neutral)]'}`}>
                                             {tab.count}
                                         </span>
                                     </button>

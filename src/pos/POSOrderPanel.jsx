@@ -1182,7 +1182,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     <div className="flex items-center gap-2">
                         <h3 className="font-mono font-bold text-xs tracking-wider uppercase">Order Details</h3>
                         {booking && (
-                            <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-1.5 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20">
+                            <span className="font-mono text-[10px] font-bold text-[var(--brand-plum)] bg-[var(--brand-plum)]/10 px-1.5 py-0.5 rounded border border-[var(--brand-plum)]/20">
                                 #{getShortBookingId(booking)}
                             </span>
                         )}
@@ -1237,7 +1237,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     <button
                         type="button"
                         onClick={() => setShowEmergencyModal(true)}
-                        className="text-[10px] font-bold bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-2xs font-mono uppercase"
+                        className="text-[10px] font-bold bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] border border-[var(--color-ink)] px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-2xs font-mono uppercase"
                         title="เพิ่มเมนูพิเศษและกำหนดราคาเอง"
                     >
                         <Plus size={12} />
@@ -1389,17 +1389,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         {/* Row 1: Identity & Quick Open */}
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
-                                <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate uppercase leading-[1.6]">
+                                <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] shrink-0 animate-pulse" />
+                                <span className="text-xs font-bold text-[var(--color-ink)] truncate uppercase leading-[1.6]">
                                     {currentMemberProfile?.display_name || 'Anonymous User'}
                                 </span>
                                 {currentMemberProfile?.current_tier && (
-                                    <span className="px-1.5 py-0.2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[8px] font-mono font-bold rounded uppercase shrink-0">
+                                    <span className="px-1.5 py-0.2 bg-[var(--color-ink)] text-[var(--color-paper)] text-[8px] font-mono font-bold rounded uppercase shrink-0">
                                         {currentMemberProfile.current_tier}
                                     </span>
                                 )}
                                 {currentMemberProfile?.phone_number && (
-                                    <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] shrink-0 hidden sm:inline">
+                                    <span className="text-[9px] font-mono text-[var(--color-neutral)] shrink-0 hidden sm:inline">
                                         · 📞 {currentMemberProfile.phone_number}
                                     </span>
                                 )}
@@ -1409,7 +1409,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         startEditingProfile(currentMemberProfile);
                                         setActiveModal('crm');
                                     }}
-                                    className="p-1 hover:bg-[#EAEAE7] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] rounded transition-colors cursor-pointer shrink-0"
+                                    className="p-1 hover:bg-[#EAEAE7] text-[var(--color-neutral)] hover:text-[var(--color-ink)] rounded transition-colors cursor-pointer shrink-0"
                                     title="Edit customer details / แก้ไขข้อมูลลูกค้า"
                                 >
                                     <Edit size={11} />
@@ -1418,7 +1418,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <button
                                 type="button"
                                 onClick={() => setActiveModal('crm')}
-                                className="text-[9.5px] font-mono font-bold text-[oklch(52%_0.16_28)] hover:text-black px-2 py-0.5 bg-white hover:bg-[#EAEAE7] border border-[#D1D1CD] rounded transition-all cursor-pointer touch-manipulation shrink-0"
+                                className="text-[9.5px] font-mono font-bold text-[var(--brand-plum)] hover:text-black px-2 py-0.5 bg-white hover:bg-[#EAEAE7] border border-[#D1D1CD] rounded transition-all cursor-pointer touch-manipulation shrink-0"
                             >
                                 จัดการ CRM
                             </button>
@@ -1429,7 +1429,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             {/* Coins block */}
                             <div className="flex items-center gap-1 shrink-0">
                                 <Coins size={11} className="text-amber-500 shrink-0" />
-                                <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                <span className="font-bold text-[var(--brand-plum)]">
                                     {Math.floor(memberMetrics.memberCoins).toLocaleString()}
                                 </span>
                                 <span className="text-[8.5px] text-neutral-400">pts</span>
@@ -1439,15 +1439,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                             {/* Stamps block */}
                             <div className="flex items-center gap-1 min-w-[70px] shrink-0">
-                                <Coffee size={11} className="text-[oklch(52%_0.16_28)] shrink-0" />
-                                <span className="text-[10px] font-bold text-[oklch(18%_0.012_28)]">{memberMetrics.memberStamps}/10</span>
+                                <Coffee size={11} className="text-[var(--brand-plum)] shrink-0" />
+                                <span className="text-[10px] font-bold text-[var(--color-ink)]">{memberMetrics.memberStamps}/10</span>
                                 <div className="flex items-center gap-0.5 ml-0.5">
                                     {STAMP_PUNCHCARD_SLOTS.map((idx) => (
                                         <span 
                                             key={idx} 
                                             className={`w-1 h-1.5 rounded-xs transition-all ${
                                                 idx < memberMetrics.memberStamps 
-                                                    ? 'bg-[oklch(52%_0.16_28)]' 
+                                                    ? 'bg-[var(--brand-plum)]' 
                                                     : 'bg-[#E5E5E2]'
                                             }`}
                                         />
@@ -1539,7 +1539,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <button
                                 type="button"
                                 onClick={onOpenMenu}
-                                className="bg-lime hover:bg-lime-press text-charcoal px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                                className="bg-action hover:bg-action-hover text-cream px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
                             >
                                 <Plus size={14} />
                                 <span>สั่งอาหาร / คีย์รายการ</span>
@@ -1631,7 +1631,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         return next;
                                     });
                                 }}
-                                className={`w-8 h-4 rounded-full transition-colors relative flex items-center cursor-pointer touch-manipulation ${includeTax ? 'bg-[oklch(52%_0.16_28)]' : 'bg-black/20'}`}
+                                className={`w-8 h-4 rounded-full transition-colors relative flex items-center cursor-pointer touch-manipulation ${includeTax ? 'bg-[var(--brand-plum)]' : 'bg-black/20'}`}
                             >
                                 <div className={`absolute w-3 h-3 bg-white rounded-full transition-transform ${includeTax ? 'translate-x-4' : 'translate-x-0.5'}`} />
                             </button>
@@ -1755,7 +1755,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 }
                                             }
                                         }}
-                                        className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black border border-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                        className="w-full bg-[var(--color-ink)] hover:bg-black border border-[var(--color-ink)] text-[var(--color-paper)] py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
                                     >
                                         <Check size={16} /> ปิดบิล (Complete)
                                     </button>
@@ -1763,7 +1763,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     <button
                                         type="button"
                                         onClick={onClear}
-                                        className="w-full bg-[oklch(94%_0.010_28)] hover:bg-[oklch(88%_0.015_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] py-3.5 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                        className="w-full bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] py-3.5 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
                                     >
                                         <Check size={16} /> เสร็จสิ้น (Close)
                                     </button>
@@ -1806,7 +1806,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             setCashStep('input');
                                             setActiveModal('checkout');
                                         }}
-                                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] border border-[oklch(42%_0.16_28)] text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                        className="w-full bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] border border-[var(--brand-plum)] text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
                                     >
                                         <CreditCard size={16} /> Pay / Checkout ฿{remainingDue.toLocaleString()}
                                     </button>
@@ -2576,32 +2576,32 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     >
                         <div 
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col text-[oklch(18%_0.012_28)] animate-in zoom-in-95 duration-150"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col text-[var(--color-ink)] animate-in zoom-in-95 duration-150"
                         >
                             {/* Modal Header (Tabular Division) */}
-                            <div className="p-4 flex justify-between items-center bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
+                            <div className="p-4 flex justify-between items-center bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                 <div>
-                                    <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-[oklch(18%_0.012_28)]">CHECKOUT · ปิดบิล</h3>
-                                    <p className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">เลือกช่องทางชำระเงินและปิดบิล</p>
+                                    <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-[var(--color-ink)]">CHECKOUT · ปิดบิล</h3>
+                                    <p className="text-[11px] text-[var(--color-muted)] mt-0.5">เลือกช่องทางชำระเงินและปิดบิล</p>
                                 </div>
                                 <button 
                                     onClick={() => setActiveModal(null)} 
-                                    className="px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white rounded transition-colors cursor-pointer"
+                                    className="px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-ink)] hover:text-white rounded transition-colors cursor-pointer"
                                 >
                                     ESC
                                 </button>
                             </div>
                             
-                            <div className="p-4 space-y-3 bg-[oklch(97%_0.008_28)]">
+                            <div className="p-4 space-y-3 bg-[var(--color-paper)]">
                                 {/* Segmented Method Switcher (Zero-Icon Pure Typography) */}
-                                <div className="grid grid-cols-2 p-1 bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)]">
+                                <div className="grid grid-cols-2 p-1 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)]">
                                     <button 
                                         type="button"
                                         onClick={() => {
                                             setPaymentMethod('cash');
                                             setCashStep('input');
                                         }}
-                                        className={`py-2 rounded font-mono text-xs uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${paymentMethod === 'cash' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-medium'}`}
+                                        className={`py-2 rounded font-mono text-xs uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${paymentMethod === 'cash' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold shadow-xs' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] font-medium'}`}
                                     >
                                         CASH · เงินสด
                                     </button>
@@ -2610,16 +2610,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         onClick={() => {
                                             setPaymentMethod('qr');
                                         }}
-                                        className={`py-2 rounded font-mono text-xs uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${paymentMethod === 'qr' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-medium'}`}
+                                        className={`py-2 rounded font-mono text-xs uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${paymentMethod === 'qr' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold shadow-xs' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] font-medium'}`}
                                     >
                                         QR PROMPTPAY · สแกน
                                     </button>
                                 </div>
 
                                 {/* Total Amount Display Box */}
-                                <div className="text-center bg-[oklch(94%_0.010_28)] py-3 px-4 rounded-lg border border-[oklch(85%_0.012_28)]">
-                                    <p className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-widest mb-0.5">NET TOTAL · ยอดชำระสุทธิ</p>
-                                    <p className="text-3xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{Math.ceil(total).toLocaleString()}</p>
+                                <div className="text-center bg-[var(--color-paper-2)] py-3 px-4 rounded-lg border border-[var(--color-rule)]">
+                                    <p className="text-[10px] font-mono font-bold text-[var(--color-muted)] uppercase tracking-widest mb-0.5">NET TOTAL · ยอดชำระสุทธิ</p>
+                                    <p className="text-3xl font-mono font-bold text-[var(--brand-plum)]">฿{Math.ceil(total).toLocaleString()}</p>
                                 </div>
 
                                 {/* --- CASH FLOW --- */}
@@ -2652,14 +2652,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         return (
                                             <div className="space-y-2.5 animate-in fade-in duration-150">
                                                 <div className="flex items-center justify-between">
-                                                    <p className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                                    <p className="text-[10px] font-mono font-bold text-[var(--color-muted)] uppercase tracking-wider">
                                                         CASH RECEIVED · ระบุยอดเงินสดที่รับมา
                                                     </p>
                                                     {cashReceivedInput && (
                                                         <button
                                                             type="button"
                                                             onClick={() => setCashReceivedInput('')}
-                                                            className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline uppercase tracking-wider cursor-pointer"
+                                                            className="text-[10px] font-mono font-bold text-[var(--brand-plum)] hover:underline uppercase tracking-wider cursor-pointer"
                                                         >
                                                             CLEAR
                                                         </button>
@@ -2667,7 +2667,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 </div>
 
                                                 <div className="relative">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-mono font-bold text-[oklch(42%_0.010_28)]">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-mono font-bold text-[var(--color-muted)]">
                                                         ฿
                                                     </span>
                                                     <input
@@ -2676,13 +2676,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         readOnly
                                                         placeholder={`เช่น ${Math.ceil(ceilTotal / 100) * 100}`}
                                                         value={cashReceivedInput ? Number(cashReceivedInput).toLocaleString() : ''}
-                                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg pl-10 pr-4 py-2.5 text-2xl font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(52%_0.16_28)] h-12 placeholder:text-[oklch(70%_0.010_28)] text-right"
+                                                        className="w-full bg-white border border-[var(--color-rule)] rounded-lg pl-10 pr-4 py-2.5 text-2xl font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--brand-plum)] h-12 placeholder:text-[oklch(70%_0.01_348.33)] text-right"
                                                     />
                                                 </div>
 
                                                 {/* Single Clean Row of 4 Fast Presets (Pure Typography) */}
                                                 <div className="space-y-1">
-                                                    <p className="text-[9px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                                    <p className="text-[9px] font-mono font-bold text-[var(--color-muted)] uppercase tracking-wider">
                                                         QUICK TENDER · ปุ่มลัดข้ามไปสรุปเงินทอน
                                                     </p>
                                                     <div className="grid grid-cols-4 gap-1.5">
@@ -2692,7 +2692,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 setCashReceivedInput(String(ceilTotal));
                                                                 setCashStep('change');
                                                             }}
-                                                            className="py-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white rounded-lg font-mono font-bold text-xs text-[oklch(52%_0.16_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
+                                                            className="py-2.5 bg-[var(--color-paper)] border border-[var(--brand-plum)] hover:bg-[var(--brand-plum)] hover:text-white rounded-lg font-mono font-bold text-xs text-[var(--brand-plum)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                                                         >
                                                             <span className="text-[9px] uppercase tracking-wider opacity-80">EXACT</span>
                                                             <span>฿{ceilTotal.toLocaleString()}</span>
@@ -2706,9 +2706,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                     setCashReceivedInput(String(amt));
                                                                     setCashStep('change');
                                                                 }}
-                                                                className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
+                                                                className="py-2.5 bg-white border border-[var(--color-rule)] hover:border-[var(--color-ink)] rounded-lg font-mono font-bold text-xs text-[var(--color-ink)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                                                             >
-                                                                <span className="text-[9px] text-[oklch(42%_0.010_28)] uppercase">NOTE</span>
+                                                                <span className="text-[9px] text-[var(--color-muted)] uppercase">NOTE</span>
                                                                 <span>฿{amt.toLocaleString()}</span>
                                                             </button>
                                                         ))}
@@ -2721,9 +2721,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                     setCashReceivedInput(String(amt));
                                                                     setCashStep('change');
                                                                 }}
-                                                                className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
+                                                                className="py-2.5 bg-white border border-[var(--color-rule)] hover:border-[var(--color-ink)] rounded-lg font-mono font-bold text-xs text-[var(--color-ink)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                                                             >
-                                                                <span className="text-[9px] text-[oklch(42%_0.010_28)] uppercase">NOTE</span>
+                                                                <span className="text-[9px] text-[var(--color-muted)] uppercase">NOTE</span>
                                                                 <span>฿{amt.toLocaleString()}</span>
                                                             </button>
                                                         ))}
@@ -2763,10 +2763,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 }}
                                                                 className={`py-3 rounded-lg font-mono font-bold text-sm transition-all duration-100 cursor-pointer shadow-2xs active:scale-95 touch-manipulation select-none flex items-center justify-center ${
                                                                     isAction
-                                                                        ? 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white'
+                                                                        ? 'bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--brand-plum)] hover:bg-[var(--brand-plum)] hover:text-white'
                                                                         : isAdd
-                                                                        ? 'bg-[oklch(94%_0.010_28)] border border-[oklch(45%_0.08_140)] text-[oklch(45%_0.08_140)] hover:bg-[oklch(45%_0.08_140)] hover:text-white'
-                                                                        : 'bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                                        ? 'bg-[var(--color-paper-2)] border border-[oklch(45%_0.08_140)] text-[oklch(45%_0.08_140)] hover:bg-[oklch(45%_0.08_140)] hover:text-white'
+                                                                        : 'bg-white border border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-ink)]'
                                                                 }`}
                                                             >
                                                                 {key === 'DEL' ? '⌫' : key}
@@ -2777,11 +2777,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                                                 {/* Shortfall Alert */}
                                                 {isShort && (
-                                                    <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(52%_0.16_28)] rounded-lg p-2.5 text-[oklch(18%_0.012_28)] animate-in fade-in duration-150 flex items-center justify-between font-mono">
-                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                                    <div className="bg-[var(--color-paper-2)] border border-[var(--brand-plum)] rounded-lg p-2.5 text-[var(--color-ink)] animate-in fade-in duration-150 flex items-center justify-between font-mono">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                                             SHORT BY · ยังขาดอีก
                                                         </span>
-                                                        <span className="text-base font-bold text-[oklch(52%_0.16_28)]">
+                                                        <span className="text-base font-bold text-[var(--brand-plum)]">
                                                             ฿{(ceilTotal - cashRecvNum).toLocaleString()}
                                                         </span>
                                                     </div>
@@ -2793,20 +2793,20 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     // CASH STEP 2: Change Due Screen (Hero Rams Element)
                                     return (
                                         <div className="space-y-3 animate-in zoom-in-95 duration-150">
-                                            <div className="flex items-center justify-between px-3 py-2 bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)] text-xs font-mono text-[oklch(42%_0.010_28)]">
-                                                <span>RECEIVED: <strong className="text-[oklch(18%_0.012_28)]">฿{cashRecvNum.toLocaleString()}</strong></span>
-                                                <span>BILL: <strong className="text-[oklch(18%_0.012_28)]">฿{ceilTotal.toLocaleString()}</strong></span>
+                                            <div className="flex items-center justify-between px-3 py-2 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)] text-xs font-mono text-[var(--color-muted)]">
+                                                <span>RECEIVED: <strong className="text-[var(--color-ink)]">฿{cashRecvNum.toLocaleString()}</strong></span>
+                                                <span>BILL: <strong className="text-[var(--color-ink)]">฿{ceilTotal.toLocaleString()}</strong></span>
                                             </div>
 
                                             {/* Hero Change Due Box */}
-                                            <div className="bg-[oklch(94%_0.010_28)] border-2 border-[oklch(45%_0.08_140)] rounded-xl p-5 text-center shadow-xs">
+                                            <div className="bg-[var(--color-paper-2)] border-2 border-[oklch(45%_0.08_140)] rounded-xl p-5 text-center shadow-xs">
                                                 <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(45%_0.08_140)] block">
                                                     CHANGE DUE · เงินทอนลูกค้า
                                                 </span>
-                                                <p className="text-5xl font-mono font-bold text-[oklch(18%_0.012_28)] tracking-tight my-2">
+                                                <p className="text-5xl font-mono font-bold text-[var(--color-ink)] tracking-tight my-2">
                                                     ฿{changeDue.toLocaleString()}
                                                 </p>
-                                                <span className="text-[11px] text-[oklch(42%_0.010_28)] font-sans">
+                                                <span className="text-[11px] text-[var(--color-muted)] font-sans">
                                                     {changeDue > 0 ? 'โปรดคืนเงินทอนให้ลูกค้าและกดปิดบิล' : 'รับเงินสดพอดี'}
                                                 </span>
                                             </div>
@@ -2815,7 +2815,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             <button
                                                 type="button"
                                                 onClick={() => setCashStep('input')}
-                                                className="w-full py-1.5 text-xs font-mono font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] uppercase tracking-wider transition-colors text-center cursor-pointer"
+                                                className="w-full py-1.5 text-xs font-mono font-bold text-[var(--color-muted)] hover:text-[var(--color-ink)] uppercase tracking-wider transition-colors text-center cursor-pointer"
                                             >
                                                 [ EDIT TENDER · แก้ไขยอดเงินรับ ]
                                             </button>
@@ -2826,14 +2826,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 {/* --- QR FLOW --- */}
                                 {paymentMethod === 'qr' && (
                                     <div className="space-y-2.5 animate-in fade-in duration-150">
-                                        <div className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-center space-y-1">
-                                            <p className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                        <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-center space-y-1">
+                                            <p className="text-xs font-mono font-bold text-[var(--color-ink)] uppercase tracking-wider">
                                                 PROMPTPAY READY · พร้อมรับชำระ
                                             </p>
-                                            <p className="text-[11px] font-bold text-[oklch(52%_0.16_28)]">
+                                            <p className="text-[11px] font-bold text-[var(--brand-plum)]">
                                                 ชื่อบัญชี: {storePromptpayName || 'ธัญญธร ศรีวิเศษ'}
                                             </p>
-                                            <p className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                                            <p className="text-[10px] font-mono text-[var(--color-muted)]">
                                                 พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId || '0614232455')}
                                             </p>
                                         </div>
@@ -2854,7 +2854,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     });
                                                 }
                                             }}
-                                            className="w-full bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] py-2.5 rounded-lg transition-colors shadow-2xs font-mono font-bold text-xs uppercase tracking-wider cursor-pointer"
+                                            className="w-full bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2.5 rounded-lg transition-colors shadow-2xs font-mono font-bold text-xs uppercase tracking-wider cursor-pointer"
                                         >
                                             PRINT BILL & QR · พิมพ์ใบแจ้งยอด
                                         </button>
@@ -2863,7 +2863,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             </div>
 
                             {/* Modal Action Footer (Stark CTAs) */}
-                            <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                            <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)]">
                                 {/* Cash Step 1 Button */}
                                 {paymentMethod === 'cash' && cashStep === 'input' && (() => {
                                     const ceilTotal = Math.ceil(total);
@@ -2874,7 +2874,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             type="button"
                                             disabled={!isReady}
                                             onClick={() => setCashStep('change')}
-                                            className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                            className="w-full bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                         >
                                             NEXT · คำนวณเงินทอน
                                         </button>
@@ -2943,7 +2943,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 setActiveModal(null);
                                             }}
                                             disabled={settlingPayment}
-                                            className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                                            className="w-full bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                                         >
                                             SETTLE CASH & PRINT · ปิดบิลเงินสด
                                         </button>
@@ -2993,7 +2993,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             setActiveModal(null);
                                         }}
                                         disabled={settlingPayment}
-                                            className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                                            className="w-full bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                                     >
                                         CONFIRM QR & SETTLE · ยืนยันชำระ QR
                                     </button>
@@ -3093,7 +3093,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */}
             {qtyAdjustModalData && createPortal(
                 <div className="fixed inset-0 bg-black/65 z-[9999] flex items-center justify-center p-4 select-none font-sans">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl text-[var(--color-ink)]">
                         {(() => {
                             const { item: modalItem, initialQty, targetQty, removalReason } = qtyAdjustModalData;
                             const delta = targetQty - initialQty;
@@ -3109,21 +3109,21 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             return (
                                 <>
                                     {/* Structural Tabular Header */}
-                                    <div className="shrink-0 p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-center justify-between">
+                                    <div className="shrink-0 p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex items-center justify-between">
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider ${
                                                     isAdding
                                                         ? 'bg-[oklch(45%_0.08_140)] text-white'
-                                                        : 'bg-[oklch(52%_0.16_28)] text-white'
+                                                        : 'bg-[var(--brand-plum)] text-white'
                                                 }`}>
                                                     {isAdding ? 'ADD ORDER · สั่งเพิ่ม' : (isVoidingAll ? 'VOID ITEM · ยกเลิกรายการ' : 'REDUCE QTY · ลดจำนวน')}
                                                 </span>
-                                                <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                                <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase">
                                                     AUTO PRINT SLIP
                                                 </span>
                                             </div>
-                                            <h3 className="text-sm font-bold text-[oklch(18%_0.012_28)] mt-1">
+                                            <h3 className="text-sm font-bold text-[var(--color-ink)] mt-1">
                                                 ยืนยันการปรับจำนวนและพิมพ์ใบแจ้งครัว/บาร์
                                             </h3>
                                         </div>
@@ -3131,7 +3131,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             type="button"
                                             disabled={isConfirmingQtyPrint}
                                             onClick={() => setQtyAdjustModalData(null)}
-                                            className="w-8 h-8 rounded-xs bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-mono font-bold cursor-pointer"
+                                            className="w-8 h-8 rounded-xs bg-[var(--color-paper)] border border-[var(--color-rule)] flex items-center justify-center text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-mono font-bold cursor-pointer"
                                         >
                                             ✕
                                         </button>
@@ -3140,27 +3140,27 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     {/* Body (scrolls on short screens; header and actions stay visible) */}
                                     <div className="min-h-0 overflow-y-auto p-5 flex flex-col gap-4">
                                         {/* Item Card */}
-                                        <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3.5 rounded-xs flex items-start justify-between gap-3">
+                                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded-xs flex items-start justify-between gap-3">
                                             <div className="min-w-0 flex-1">
-                                                <div className="font-bold text-base text-[oklch(18%_0.012_28)] uppercase leading-snug">
+                                                <div className="font-bold text-base text-[var(--color-ink)] uppercase leading-snug">
                                                     {modalItem.name}
                                                 </div>
                                                 {opts.length > 0 && (
-                                                    <div className="text-xs font-mono text-[oklch(55%_0.010_28)] mt-1">
+                                                    <div className="text-xs font-mono text-[var(--color-neutral)] mt-1">
                                                         {opts.join(', ')}
                                                     </div>
                                                 )}
                                                 {modalItem.item_note && (
-                                                    <div className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] mt-1">
+                                                    <div className="text-xs font-mono font-bold text-[var(--brand-plum)] mt-1">
                                                         Note: {modalItem.item_note}
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="text-right shrink-0 font-mono">
-                                                <div className="text-xs font-bold text-[oklch(52%_0.16_28)]">
+                                                <div className="text-xs font-bold text-[var(--brand-plum)]">
                                                     ฿{Number(modalItem.price || 0).toLocaleString()} / ชิ้น
                                                 </div>
-                                                <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                                <div className="text-[10px] text-[var(--color-neutral)] mt-0.5">
                                                     จำนวนเดิม: {initialQty}
                                                 </div>
                                             </div>
@@ -3168,7 +3168,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                                         {/* Quantity Stepper Control */}
                                         <div className="flex flex-col items-center gap-2 py-1">
-                                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-neutral)]">
                                                 ปรับจำนวนใหม่ที่ต้องการ (NEW QUANTITY)
                                             </span>
                                             <div className="flex items-center gap-4">
@@ -3176,15 +3176,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     type="button"
                                                     disabled={isConfirmingQtyPrint || targetQty <= 0}
                                                     onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, targetQty: Math.max(0, prev.targetQty - 1) } : null)}
-                                                    className="w-12 h-12 rounded-xs bg-[oklch(94%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] disabled:opacity-40 border border-[oklch(85%_0.012_28)] text-xl font-mono font-bold flex items-center justify-center cursor-pointer touch-manipulation"
+                                                    className="w-12 h-12 rounded-xs bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] disabled:opacity-40 border border-[var(--color-rule)] text-xl font-mono font-bold flex items-center justify-center cursor-pointer touch-manipulation"
                                                 >
                                                     -
                                                 </button>
-                                                <div className="min-w-[110px] h-12 bg-white border-2 border-[oklch(18%_0.012_28)] rounded-xs flex flex-col items-center justify-center px-3 font-mono">
-                                                    <span className="text-2xl font-black leading-none text-[oklch(18%_0.012_28)]">
+                                                <div className="min-w-[110px] h-12 bg-white border-2 border-[var(--color-ink)] rounded-xs flex flex-col items-center justify-center px-3 font-mono">
+                                                    <span className="text-2xl font-black leading-none text-[var(--color-ink)]">
                                                         {targetQty}
                                                     </span>
-                                                    <span className="text-[9px] font-bold text-[oklch(55%_0.010_28)] uppercase mt-0.5">
+                                                    <span className="text-[9px] font-bold text-[var(--color-neutral)] uppercase mt-0.5">
                                                         (เดิม {initialQty})
                                                     </span>
                                                 </div>
@@ -3192,7 +3192,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     type="button"
                                                     disabled={isConfirmingQtyPrint || isReward}
                                                     onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, targetQty: prev.targetQty + 1 } : null)}
-                                                    className="w-12 h-12 rounded-xs bg-[oklch(94%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] disabled:opacity-40 border border-[oklch(85%_0.012_28)] text-xl font-mono font-bold flex items-center justify-center cursor-pointer touch-manipulation"
+                                                    className="w-12 h-12 rounded-xs bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] disabled:opacity-40 border border-[var(--color-rule)] text-xl font-mono font-bold flex items-center justify-center cursor-pointer touch-manipulation"
                                                 >
                                                     +
                                                 </button>
@@ -3203,7 +3203,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     type="button"
                                                     disabled={isConfirmingQtyPrint}
                                                     onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, targetQty: 0 } : null)}
-                                                    className="mt-1 text-[11px] font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline cursor-pointer py-1 px-2"
+                                                    className="mt-1 text-[11px] font-mono font-bold text-[var(--brand-plum)] hover:underline cursor-pointer py-1 px-2"
                                                 >
                                                     [ ลบรายการนี้ออกทั้งหมด (เหลือ 0) ]
                                                 </button>
@@ -3212,7 +3212,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                                         {needsRemovalReason && (
                                             <div>
-                                                <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1.5">
+                                                <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1.5">
                                                     ส่งเข้าครัว / บาร์แล้ว รายการที่เอาออก
                                                 </span>
                                                 <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="เหตุผลที่เอาออก">
@@ -3228,12 +3228,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 onClick={() => setQtyAdjustModalData(prev => prev ? { ...prev, removalReason: r.key } : null)}
                                                                 className={`min-h-[52px] px-3 py-2 rounded-xs border text-left cursor-pointer touch-manipulation transition-colors duration-150 ${
                                                                     selected
-                                                                        ? 'bg-[oklch(18%_0.012_28)] border-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                                        : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                                        ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]'
+                                                                        : 'bg-white border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-ink)]'
                                                                 }`}
                                                             >
                                                                 <span className="block text-sm font-bold leading-snug">{r.label}</span>
-                                                                <span className={`block text-[11px] leading-snug mt-0.5 ${selected ? 'text-[oklch(85%_0.012_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>{r.hint}</span>
+                                                                <span className={`block text-[11px] leading-snug mt-0.5 ${selected ? 'text-[var(--color-rule)]' : 'text-[var(--color-neutral)]'}`}>{r.hint}</span>
                                                             </button>
                                                         );
                                                     })}
@@ -3244,10 +3244,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         {/* Print Action Preview Banner */}
                                         <div className={`p-3 rounded-xs border font-mono text-xs flex items-center justify-between ${
                                             delta === 0
-                                                ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]'
+                                                ? 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-neutral)]'
                                                 : isAdding
                                                 ? 'bg-[oklch(45%_0.08_140)]/10 border-[oklch(45%_0.08_140)] text-[oklch(30%_0.08_140)]'
-                                                : 'bg-[oklch(52%_0.16_28)]/10 border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]'
+                                                : 'bg-[var(--brand-plum)]/10 border-[var(--brand-plum)] text-[var(--brand-plum)]'
                                         }`}>
                                             <span className="font-bold uppercase">
                                                 {delta === 0
@@ -3265,12 +3265,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     </div>
 
                                     {/* Footer Actions */}
-                                    <div className="shrink-0 p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex gap-3">
+                                    <div className="shrink-0 p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex gap-3">
                                         <button
                                             type="button"
                                             disabled={isConfirmingQtyPrint}
                                             onClick={() => setQtyAdjustModalData(null)}
-                                            className="flex-1 min-h-[44px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] py-2.5 rounded-xs font-mono text-xs font-bold uppercase cursor-pointer touch-manipulation"
+                                            className="flex-1 min-h-[44px] bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-muted)] hover:text-[var(--color-ink)] py-2.5 rounded-xs font-mono text-xs font-bold uppercase cursor-pointer touch-manipulation"
                                         >
                                             ยกเลิก (Cancel)
                                         </button>
@@ -3296,8 +3296,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             }}
                                             className={`flex-1 min-h-[44px] py-2.5 px-3 rounded-xs font-mono text-xs font-bold uppercase tracking-wider text-white cursor-pointer touch-manipulation disabled:opacity-40 disabled:cursor-not-allowed ${
                                                 isAdding
-                                                    ? 'bg-[oklch(18%_0.012_28)] hover:bg-black'
-                                                    : 'bg-[oklch(52%_0.16_28)] hover:opacity-95'
+                                                    ? 'bg-[var(--color-ink)] hover:bg-black'
+                                                    : 'bg-[var(--brand-plum)] hover:opacity-95'
                                             }`}
                                         >
                                             {isConfirmingQtyPrint
@@ -3358,9 +3358,9 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
         >
             <div className="flex-1 min-w-0 mr-3">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    <h5 className="font-bold text-sm leading-[1.6] text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
+                    <h5 className="font-bold text-sm leading-[1.6] text-[var(--color-ink)] uppercase truncate">{item.name}</h5>
                     {isCustomEmergency && (
-                        <span className="text-[9px] font-mono font-bold bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 px-1 py-0.2 rounded shrink-0">
+                        <span className="text-[9px] font-mono font-bold bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] border border-[var(--brand-plum)]/30 px-1 py-0.2 rounded shrink-0">
                             [เมนูเพิ่มเติม]
                         </span>
                     )}
@@ -3385,7 +3385,7 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                 )}
                 
                     <div className="flex items-center gap-2 mt-1">
-                        <p className="text-xs text-[oklch(52%_0.16_28)] font-mono font-bold">฿{item.price}</p>
+                        <p className="text-xs text-[var(--brand-plum)] font-mono font-bold">฿{item.price}</p>
                         
                         {/* Only allow adding notes to new (unsubmitted) items */}
                         {!item.db_id && (

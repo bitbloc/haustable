@@ -450,7 +450,7 @@ export default function ExpensesTab({
                                     <span className="text-xs text-[var(--color-muted)] truncate" title={cat.label}>
                                         {cat.label}
                                     </span>
-                                    <span className={`font-bold mt-1 ${val > 0 ? 'text-[var(--color-ink)]' : 'text-[oklch(50%_0.010_28)]'}`}>
+                                    <span className={`font-bold mt-1 ${val > 0 ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
                                         ฿{val.toLocaleString('en-US', { minimumFractionDigits: 0 })}
                                     </span>
                                 </div>
@@ -478,7 +478,7 @@ export default function ExpensesTab({
                         <button
                             type="button"
                             onClick={() => setShowOnlyDuplicates(!showOnlyDuplicates)}
-                            className={`px-3 py-1.5 font-bold text-xs border border-amber-600 transition-colors cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-[oklch(97%_0.008_28)]' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'}`}
+                            className={`px-3 py-1.5 font-bold text-xs border border-amber-600 transition-colors cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-[var(--color-paper)]' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'}`}
                         >
                             {showOnlyDuplicates ? 'แสดงทั้งหมด' : 'ดูเฉพาะบิลที่อาจซ้ำ'}
                         </button>
@@ -532,7 +532,7 @@ export default function ExpensesTab({
                             <button
                                 type="button"
                                 onClick={() => setShowOnlyDuplicates(true)}
-                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-[oklch(97%_0.008_28)] font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
+                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-[var(--color-paper)] font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
                             >
                                 <AlertTriangle size={11} />
                                 <span>DUPLICATES ({duplicateIds.size})</span>
@@ -625,7 +625,7 @@ export default function ExpensesTab({
 
                     <button
                         onClick={() => setShowLedgerPrintView(true)}
-                        className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-600 text-[oklch(97%_0.008_28)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs rounded-xs"
+                        className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-600 text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs rounded-xs"
                         title="เปิดสมุดรายงานค่าใช้จ่ายและรายจ่ายประจำเดือน (A4 Table Print & PDF)"
                     >
                         <FileText size={13} className="text-blue-200" />
@@ -634,7 +634,7 @@ export default function ExpensesTab({
 
                     <button
                         onClick={() => setShowMonthlyExporter(true)}
-                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-[oklch(97%_0.008_28)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs rounded-xs"
+                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs rounded-xs"
                         title="เปิดระบบจัดการพิมพ์หลักฐานใบเสร็จทั้งเดือน (A4 Print / B&W Enhanced)"
                     >
                         <Printer size={13} className="text-emerald-300" />
@@ -643,7 +643,7 @@ export default function ExpensesTab({
 
                     <button
                         onClick={onOpenCreateModal}
-                        className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs "
+                        className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs "
                     >
                         <Plus size={14} />
                         <span>บันทึกค่าใช้จ่าย</span>
@@ -664,7 +664,7 @@ export default function ExpensesTab({
                             setPeriodMode('all');
                             try { localStorage.setItem('onhaus_tax_expense_period_v2', 'all'); } catch {}
                         }}
-                        className="px-3 py-1 bg-amber-900 text-[oklch(97%_0.008_28)] font-bold rounded text-xs cursor-pointer hover:bg-[oklch(18%_0.012_28)]"
+                        className="px-3 py-1 bg-amber-900 text-[var(--color-paper)] font-bold rounded text-xs cursor-pointer hover:bg-[var(--color-ink)]"
                     >
                         ดูรายการทั้งหมด &rarr;
                     </button>
@@ -744,7 +744,7 @@ export default function ExpensesTab({
                                                 {(() => {
                                                     const urls = parseReceiptUrls(exp.receipt_image_url);
                                                     if (urls.length === 0) {
-                                                        return <span className="text-[oklch(50%_0.010_28)] text-xs">-</span>;
+                                                        return <span className="text-[var(--color-neutral)] text-xs">-</span>;
                                                     }
                                                     return (
                                                         <button
@@ -754,11 +754,11 @@ export default function ExpensesTab({
                                                                 setPreviewPageIndex(0);
                                                                 setPreviewRotation(0);
                                                             }}
-                                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 bg-[oklch(99%_0.004_28)]"
+                                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 bg-[var(--color-paper)]"
                                                         >
                                                             ดูรูป
                                                             {urls.length > 1 && (
-                                                                <span className="bg-[var(--color-ink)] text-[oklch(97%_0.008_28)] text-[11px] px-1 py-0.2 rounded-xs tabular-nums">
+                                                                <span className="bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] px-1 py-0.2 rounded-xs tabular-nums">
                                                                     {urls.length}P
                                                                 </span>
                                                             )}
@@ -808,14 +808,14 @@ export default function ExpensesTab({
                     onClick={() => setPreviewImage(null)}
                 >
                     <div 
-                        className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-[oklch(18%_0.012_28)] overflow-hidden shadow-2xl"
+                        className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-[var(--color-ink)] overflow-hidden shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-3 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800">
+                        <div className="p-3 bg-[var(--color-ink)] text-[var(--color-paper)] flex justify-between items-center tabular-nums text-xs border-b border-zinc-800">
                             <div className="flex items-center gap-3">
                                 <span>ดูรูปใบเสร็จ</span>
                                 {previewUrls.length > 1 && (
-                                    <span className="bg-[oklch(18%_0.012_28)] text-emerald-400 px-2 py-0.5 text-[11px] font-bold border border-zinc-700">
+                                    <span className="bg-[var(--color-ink)] text-emerald-400 px-2 py-0.5 text-[11px] font-bold border border-zinc-700">
                                         PAGE {previewPageIndex + 1} OF {previewUrls.length}
                                     </span>
                                 )}
@@ -824,13 +824,13 @@ export default function ExpensesTab({
                                 <button
                                     type="button"
                                     onClick={() => setPreviewRotation(prev => (prev + 90) % 360)}
-                                    className="px-2 py-1 bg-[oklch(18%_0.012_28)] hover:bg-zinc-700 text-amber-300 text-xs tabular-nums font-bold flex items-center gap-1 border border-zinc-700 cursor-pointer"
+                                    className="px-2 py-1 bg-[var(--color-ink)] hover:bg-zinc-700 text-amber-300 text-xs tabular-nums font-bold flex items-center gap-1 border border-zinc-700 cursor-pointer"
                                     title="หมุน 90 องศา"
                                 >
                                     <RotateCw size={12} />
                                     <span>หมุน 90°</span>
                                 </button>
-                                <button onClick={() => setPreviewImage(null)} className="text-[oklch(97%_0.008_28)] hover:text-red-400 p-1 cursor-pointer">
+                                <button onClick={() => setPreviewImage(null)} className="text-[var(--color-paper)] hover:text-red-400 p-1 cursor-pointer">
                                     <X size={18} />
                                 </button>
                             </div>
@@ -852,7 +852,7 @@ export default function ExpensesTab({
                                         setPreviewPageIndex(prev => Math.max(0, prev - 1));
                                         setPreviewRotation(0);
                                     }}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
                                 >
                                     ◀ PREV
                                 </button>
@@ -866,7 +866,7 @@ export default function ExpensesTab({
                                         setPreviewPageIndex(prev => Math.min(previewUrls.length - 1, prev + 1));
                                         setPreviewRotation(0);
                                     }}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-[var(--color-ink)] text-[var(--color-paper)] px-3 py-2 border border-white/20 tabular-nums text-xs cursor-pointer shadow-lg"
                                 >
                                     NEXT ▶
                                 </button>
@@ -875,7 +875,7 @@ export default function ExpensesTab({
 
                         {/* Thumbnail Navigation Bar */}
                         {previewUrls.length > 1 && (
-                            <div className="p-2 bg-[oklch(18%_0.012_28)] border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
+                            <div className="p-2 bg-[var(--color-ink)] border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
                                 {previewUrls.map((url, idx) => (
                                     <button
                                         key={idx}

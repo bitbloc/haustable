@@ -123,22 +123,22 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
             onClick={onClose}
         >
             <div 
-                className="w-full max-w-lg bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[oklch(18%_0.012_28)]"
+                className="w-full max-w-lg bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[var(--color-ink)]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="px-6 py-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                <div className="px-6 py-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-[oklch(55%_0.010_28)] block">
+                        <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-[var(--color-neutral)] block">
                             [CUSTOM / EMERGENCY ITEM]
                         </span>
-                        <h2 className="text-lg font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                        <h2 className="text-lg font-bold uppercase tracking-tight text-[var(--color-ink)]">
                             เพิ่มเมนูเพิ่มเติม (กำหนดราคาเอง)
                         </h2>
                     </div>
                     <button 
                         onClick={onClose}
-                        className="px-3 py-1 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
+                        className="px-3 py-1 bg-white border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] cursor-pointer"
                     >
                         ปิด [ESC]
                     </button>
@@ -148,7 +148,7 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                 <form onSubmit={handleConfirm} className="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
                     {/* Quick Presets */}
                     <div>
-                        <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] block mb-1.5">
+                        <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)] block mb-1.5">
                             รายการด่วน (Quick Presets)
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -159,8 +159,8 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                                     onClick={() => handleApplyPreset(preset)}
                                     className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                                         name === preset.name
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
-                                            : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
+                                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                            : 'bg-white border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-neutral)]'
                                     }`}
                                 >
                                     {preset.label}
@@ -171,8 +171,8 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
 
                     {/* Menu Item Name */}
                     <div>
-                        <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] block mb-1.5">
-                            ชื่อรายการ / เมนู <span className="text-[oklch(52%_0.16_28)]">*</span>
+                        <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)] block mb-1.5">
+                            ชื่อรายการ / เมนู <span className="text-[var(--brand-plum)]">*</span>
                         </label>
                         <input 
                             ref={nameInputRef}
@@ -181,22 +181,22 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                             placeholder="เช่น ต้มยำกุ้งพิเศษ, ค่าเปิดไวน์, เบียร์สดนำเข้า..."
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full bg-white border border-[oklch(85%_0.012_28)] focus:border-[oklch(52%_0.16_28)] rounded-xl py-2.5 px-4 text-sm text-[oklch(18%_0.012_28)] placeholder-[oklch(55%_0.010_28)] outline-none font-medium transition-colors"
+                            className="w-full bg-white border border-[var(--color-rule)] focus:border-[var(--brand-plum)] rounded-xl py-2.5 px-4 text-sm text-[var(--color-ink)] placeholder-[var(--color-neutral)] outline-none font-medium transition-colors"
                         />
                     </div>
 
                     {/* Custom Price Input */}
                     <div>
                         <div className="flex justify-between items-center mb-1.5">
-                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
-                                ราคาต่อหน่วย (THB) <span className="text-[oklch(52%_0.16_28)]">*</span>
+                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">
+                                ราคาต่อหน่วย (THB) <span className="text-[var(--brand-plum)]">*</span>
                             </label>
-                            <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                            <span className="text-[10px] font-mono text-[var(--color-neutral)]">
                                 ระบุ 0 หากเป็นรายการแถมฟรี
                             </span>
                         </div>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-base text-[oklch(52%_0.16_28)]">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-base text-[var(--brand-plum)]">
                                 ฿
                             </span>
                             <input 
@@ -207,7 +207,7 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                                 placeholder="0.00"
                                 value={price}
                                 onChange={(e) => setPrice(e.target.value)}
-                                className="w-full bg-white border border-[oklch(85%_0.012_28)] focus:border-[oklch(52%_0.16_28)] rounded-xl py-2.5 pl-9 pr-4 text-lg font-mono font-bold text-[oklch(18%_0.012_28)] placeholder-[oklch(55%_0.010_28)] outline-none transition-colors"
+                                className="w-full bg-white border border-[var(--color-rule)] focus:border-[var(--brand-plum)] rounded-xl py-2.5 pl-9 pr-4 text-lg font-mono font-bold text-[var(--color-ink)] placeholder-[var(--color-neutral)] outline-none transition-colors"
                             />
                         </div>
 
@@ -218,7 +218,7 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                                     key={inc}
                                     type="button"
                                     onClick={() => handleAddPrice(inc)}
-                                    className="px-2.5 py-1 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono font-bold text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                                    className="px-2.5 py-1 bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] transition-colors cursor-pointer"
                                 >
                                     +{inc}
                                 </button>
@@ -226,7 +226,7 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                             <button
                                 type="button"
                                 onClick={() => setPrice('')}
-                                className="px-2.5 py-1 bg-white hover:bg-red-50 border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono font-bold text-red-600 transition-colors cursor-pointer"
+                                className="px-2.5 py-1 bg-white hover:bg-red-50 border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-red-600 transition-colors cursor-pointer"
                             >
                                 ล้างราคา
                             </button>
@@ -237,14 +237,14 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Quantity Counter */}
                         <div>
-                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] block mb-1.5">
+                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)] block mb-1.5">
                                 จำนวน (Quantity)
                             </label>
-                            <div className="flex items-center bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-1 gap-1">
+                            <div className="flex items-center bg-white border border-[var(--color-rule)] rounded-xl p-1 gap-1">
                                 <button
                                     type="button"
                                     onClick={() => setQuantity(prev => Math.max(1, (parseInt(prev) || 1) - 1))}
-                                    className="w-10 h-10 rounded-lg flex items-center justify-center bg-[oklch(94%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-lg cursor-pointer"
+                                    className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] text-[var(--color-ink)] font-mono font-bold text-lg cursor-pointer"
                                 >
                                     -
                                 </button>
@@ -253,12 +253,12 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                                     min="1"
                                     value={quantity}
                                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                    className="flex-1 text-center font-mono font-bold text-lg text-[oklch(18%_0.012_28)] outline-none bg-transparent"
+                                    className="flex-1 text-center font-mono font-bold text-lg text-[var(--color-ink)] outline-none bg-transparent"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setQuantity(prev => (parseInt(prev) || 1) + 1)}
-                                    className="w-10 h-10 rounded-lg flex items-center justify-center bg-[oklch(94%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-lg cursor-pointer"
+                                    className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] text-[var(--color-ink)] font-mono font-bold text-lg cursor-pointer"
                                 >
                                     +
                                 </button>
@@ -267,17 +267,17 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
 
                         {/* Order Destination Routing */}
                         <div>
-                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] block mb-1.5">
+                            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)] block mb-1.5">
                                 ปลายทางพิมพ์ใบสั่ง (Destination)
                             </label>
-                            <div className="grid grid-cols-3 gap-1 bg-[oklch(94%_0.010_28)] p-1 border border-[oklch(85%_0.012_28)] rounded-xl">
+                            <div className="grid grid-cols-3 gap-1 bg-[var(--color-paper-2)] p-1 border border-[var(--color-rule)] rounded-xl">
                                 <button
                                     type="button"
                                     onClick={() => setDestination('kitchen')}
                                     className={`py-2 px-1 rounded-lg text-xs font-mono font-bold uppercase tracking-tight transition-all cursor-pointer ${
                                         destination === 'kitchen'
-                                            ? 'bg-white text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] shadow-xs'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                            ? 'bg-white text-[var(--color-ink)] border border-[var(--color-rule)] shadow-xs'
+                                            : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                     }`}
                                 >
                                     ครัว (Food)
@@ -287,8 +287,8 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                                     onClick={() => setDestination('bar')}
                                     className={`py-2 px-1 rounded-lg text-xs font-mono font-bold uppercase tracking-tight transition-all cursor-pointer ${
                                         destination === 'bar'
-                                            ? 'bg-white text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] shadow-xs'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                            ? 'bg-white text-[var(--color-ink)] border border-[var(--color-rule)] shadow-xs'
+                                            : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                     }`}
                                 >
                                     บาร์ (Bar)
@@ -298,8 +298,8 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                                     onClick={() => setDestination('other')}
                                     className={`py-2 px-1 rounded-lg text-xs font-mono font-bold uppercase tracking-tight transition-all cursor-pointer ${
                                         destination === 'other'
-                                            ? 'bg-white text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] shadow-xs'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                            ? 'bg-white text-[var(--color-ink)] border border-[var(--color-rule)] shadow-xs'
+                                            : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                     }`}
                                 >
                                     ทั่วไป (Other)
@@ -310,7 +310,7 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
 
                     {/* Note / Special Instructions */}
                     <div>
-                        <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] block mb-1.5">
+                        <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)] block mb-1.5">
                             หมายเหตุเพิ่มเติม (Special Notes)
                         </label>
                         <input 
@@ -318,20 +318,20 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                             placeholder="เช่น หวานน้อย, ไม่ใส่ผัก, เสิร์ฟแยกจาน..."
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
-                            className="w-full bg-white border border-[oklch(85%_0.012_28)] focus:border-[oklch(52%_0.16_28)] rounded-xl py-2.5 px-4 text-sm text-[oklch(18%_0.012_28)] placeholder-[oklch(55%_0.010_28)] outline-none font-medium transition-colors"
+                            className="w-full bg-white border border-[var(--color-rule)] focus:border-[var(--brand-plum)] rounded-xl py-2.5 px-4 text-sm text-[var(--color-ink)] placeholder-[var(--color-neutral)] outline-none font-medium transition-colors"
                         />
                     </div>
 
                     {/* Total Summary Banner */}
-                    <div className="p-3.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl flex items-center justify-between">
-                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
+                    <div className="p-3.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl flex items-center justify-between">
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-muted)]">
                             คำนวณยอดรวม (Summary):
                         </span>
                         <div className="text-right">
-                            <span className="text-xs font-mono text-[oklch(55%_0.010_28)] mr-2">
+                            <span className="text-xs font-mono text-[var(--color-neutral)] mr-2">
                                 ฿{parsedPriceNum.toLocaleString()} x {quantity}
                             </span>
-                            <span className="text-base font-mono font-bold text-[oklch(52%_0.16_28)]">
+                            <span className="text-base font-mono font-bold text-[var(--brand-plum)]">
                                 ฿{totalPrice.toLocaleString()}
                             </span>
                         </div>
@@ -342,13 +342,13 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 px-4 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                            className="flex-1 py-3 px-4 bg-white hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] transition-colors cursor-pointer"
                         >
                             ยกเลิก
                         </button>
                         <button
                             type="submit"
-                            className="flex-2 py-3 px-4 bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-98"
+                            className="flex-2 py-3 px-4 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md active:scale-98"
                         >
                             + เพิ่มเมนูเพิ่มเติมลงบิล (฿{totalPrice.toLocaleString()})
                         </button>

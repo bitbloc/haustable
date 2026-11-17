@@ -33,7 +33,7 @@ const DraggableTable = ({ table, onSelect, isSelected }) => {
     };
 
     const bgColor = table.table_color || '#1A1A1A';
-    const isDark = ['#1A1A1A', '#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87', 'oklch(18% 0.012 28)', 'oklch(52% 0.16 28)'].includes(bgColor);
+    const isDark = ['#1A1A1A', '#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87', 'oklch(21.78% 0 0)', 'oklch(25.18% 0.1001 348.33)'].includes(bgColor);
     const textColor = isDark ? 'white' : 'black';
 
     return (
@@ -50,7 +50,7 @@ const DraggableTable = ({ table, onSelect, isSelected }) => {
                 table.shape === 'circle' ? 'rounded-full' : 'rounded-sm'
             } ${
                 isSelected
-                    ? 'ring-2 ring-[oklch(52%_0.16_28)] border-black scale-102 z-40 shadow-md'
+                    ? 'ring-2 ring-[var(--brand-plum)] border-black scale-102 z-40 shadow-md'
                     : 'border-black/20 hover:border-black/50 shadow-xs'
             }`}
         >
@@ -76,10 +76,10 @@ const DraggableTable = ({ table, onSelect, isSelected }) => {
 
 // Thai Modern OKLCH Palette presets for tables
 const COLOR_PRESETS = [
-    { name: 'Ink Dark', value: 'oklch(18% 0.012 28)' },
-    { name: 'Terracotta', value: 'oklch(52% 0.16 28)' },
+    { name: 'Ink Dark', value: 'oklch(21.78% 0 0)' },
+    { name: 'Terracotta', value: 'oklch(25.18% 0.1001 348.33)' },
     { name: 'Banana Olive', value: 'oklch(45% 0.08 140)' },
-    { name: 'Warm Cream', value: 'oklch(94% 0.010 28)' },
+    { name: 'Warm Cream', value: 'oklch(92.60% 0.0095 352.37)' },
     { name: 'Teak Sand', value: 'oklch(75% 0.05 60)' },
     { name: 'Deep Indigo', value: 'oklch(35% 0.12 260)' },
 ];
@@ -120,7 +120,7 @@ export default function AdminTableEditor() {
         shape: 'rect',
         width: 12,
         height: 10,
-        color: 'oklch(18% 0.012 28)',
+        color: 'oklch(21.78% 0 0)',
         rotation: 0
     });
 
@@ -241,7 +241,7 @@ export default function AdminTableEditor() {
                 pos_y: Number(t.pos_y) || 0,
                 width: Number(t.width) || 10,
                 height: Number(t.height) || 10,
-                table_color: t.table_color || 'oklch(18% 0.012 28)',
+                table_color: t.table_color || 'oklch(21.78% 0 0)',
                 rotation: Number(t.rotation) || 0,
                 image_url: t.image_url || null
             }));
@@ -592,8 +592,8 @@ export default function AdminTableEditor() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[500px] bg-[oklch(97%_0.008_28)] font-mono text-xs text-[oklch(55%_0.010_28)] gap-3">
-                <div className="w-6 h-6 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
+            <div className="flex flex-col items-center justify-center min-h-[500px] bg-[var(--color-paper)] font-mono text-xs text-[var(--color-neutral)] gap-3">
+                <div className="w-6 h-6 rounded-full border-2 border-[var(--color-rule)] border-t-[var(--color-ink)] animate-spin" />
                 <span>LOADING STUDIO WORKBENCH...</span>
             </div>
         );
@@ -601,37 +601,37 @@ export default function AdminTableEditor() {
 
     return (
         <PageTransition>
-            <div className="p-4 flex flex-col gap-4 text-[oklch(18%_0.012_28)] font-sans select-none bg-[oklch(97%_0.008_28)]">
+            <div className="p-4 flex flex-col gap-4 text-[var(--color-ink)] font-sans select-none bg-[var(--color-paper)]">
                 
                 {/* --- Workbench Toolbar --- */}
-                <div className="flex flex-wrap items-center justify-between bg-[oklch(98%_0.006_28)] p-3 rounded-sm border border-[oklch(85%_0.012_28)] shadow-xs gap-3">
+                <div className="flex flex-wrap items-center justify-between bg-[var(--color-paper)] p-3 rounded-sm border border-[var(--color-rule)] shadow-xs gap-3">
                     
                     {/* Left: Tool Toggles */}
                     <div className="flex flex-wrap items-center gap-3">
-                        <label className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] cursor-pointer bg-[oklch(94%_0.010_28)] px-3 py-2 rounded-sm border border-[oklch(85%_0.012_28)]">
+                        <label className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-muted)] cursor-pointer bg-[var(--color-paper-2)] px-3 py-2 rounded-sm border border-[var(--color-rule)]">
                             <input
                                 type="checkbox"
                                 checked={snapToGrid}
                                 onChange={e => setSnapToGrid(e.target.checked)}
-                                className="accent-[oklch(52%_0.16_28)] w-3.5 h-3.5"
+                                className="accent-[var(--brand-plum)] w-3.5 h-3.5"
                             />
                             SNAP GRID ({gridStep}%)
                         </label>
 
                         {/* Grid Resolution */}
                         {snapToGrid && (
-                            <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-[9px] font-bold uppercase">
+                            <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-sm border border-[var(--color-rule)] font-mono text-[9px] font-bold uppercase">
                                 <button
                                     type="button"
                                     onClick={() => setGridStep(1)}
-                                    className={`px-2 py-1 rounded-xs cursor-pointer ${gridStep === 1 ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(42%_0.010_28)]'}`}
+                                    className={`px-2 py-1 rounded-xs cursor-pointer ${gridStep === 1 ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-muted)]'}`}
                                 >
                                     1% FINE
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setGridStep(5)}
-                                    className={`px-2 py-1 rounded-xs cursor-pointer ${gridStep === 5 ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(42%_0.010_28)]'}`}
+                                    className={`px-2 py-1 rounded-xs cursor-pointer ${gridStep === 5 ? 'bg-[var(--color-ink)] text-white' : 'text-[var(--color-muted)]'}`}
                                 >
                                     5% COARSE
                                 </button>
@@ -640,7 +640,7 @@ export default function AdminTableEditor() {
 
                         {/* Floorplan Background schematic controls */}
                         <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
-                            <label className="bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-2 rounded-sm cursor-pointer uppercase flex items-center gap-1">
+                            <label className="bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-2 rounded-sm cursor-pointer uppercase flex items-center gap-1">
                                 <span>{uploadingBg ? 'UPLOADING...' : floorplanUrl ? 'CHANGE SCHEMATIC' : 'UPLOAD SCHEMATIC'}</span>
                                 <input
                                     type="file"
@@ -654,7 +654,7 @@ export default function AdminTableEditor() {
                                 <button
                                     type="button"
                                     onClick={handleClearFloorplanBg}
-                                    className="px-2 py-2 bg-[oklch(94%_0.010_28)] hover:bg-red-50 text-red-600 border border-[oklch(85%_0.012_28)] rounded-sm cursor-pointer uppercase"
+                                    className="px-2 py-2 bg-[var(--color-paper-2)] hover:bg-red-50 text-red-600 border border-[var(--color-rule)] rounded-sm cursor-pointer uppercase"
                                     title="Remove Background Image"
                                 >
                                     CLEAR BG
@@ -668,7 +668,7 @@ export default function AdminTableEditor() {
                         <button
                             type="button"
                             onClick={() => setBatchQrModalOpen(true)}
-                            className="bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-4 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider cursor-pointer"
+                            className="bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] px-4 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider cursor-pointer"
                         >
                             BATCH QR FLYERS ({tables.length})
                         </button>
@@ -677,7 +677,7 @@ export default function AdminTableEditor() {
                             type="button"
                             disabled={saving}
                             onClick={handleSavePositions}
-                            className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white px-5 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer"
+                            className="bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white px-5 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer"
                         >
                             {saving ? 'SAVING...' : 'SAVE LAYOUT CHANGES'}
                         </button>
@@ -688,7 +688,7 @@ export default function AdminTableEditor() {
                 <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-[600px] h-auto lg:h-[calc(100vh-250px)]">
                     
                     {/* Canvas Area */}
-                    <div className="flex-1 w-full lg:w-auto h-[500px] lg:h-auto relative overflow-hidden rounded-sm border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col shadow-inner">
+                    <div className="flex-1 w-full lg:w-auto h-[500px] lg:h-auto relative overflow-hidden rounded-sm border border-[var(--color-rule)] bg-[var(--color-paper-2)] flex flex-col shadow-inner">
                         <TransformWrapper
                             initialScale={0.85}
                             minScale={0.2}
@@ -701,17 +701,17 @@ export default function AdminTableEditor() {
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
                                     {/* Zoom controls */}
-                                    <div className="absolute top-4 right-4 z-50 flex gap-1 bg-[oklch(98%_0.006_28)]/95 border border-[oklch(85%_0.012_28)] p-1 rounded-sm shadow-xs backdrop-blur-xs font-mono text-xs font-bold">
-                                        <button onClick={() => zoomIn()} className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer" title="Zoom In">+</button>
-                                        <button onClick={() => zoomOut()} className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer" title="Zoom Out">-</button>
-                                        <button onClick={() => resetTransform()} className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer uppercase" title="Reset View">RESET</button>
+                                    <div className="absolute top-4 right-4 z-50 flex gap-1 bg-[var(--color-paper)]/95 border border-[var(--color-rule)] p-1 rounded-sm shadow-xs backdrop-blur-xs font-mono text-xs font-bold">
+                                        <button onClick={() => zoomIn()} className="px-2.5 py-1 hover:bg-[var(--color-paper-3)] rounded-sm cursor-pointer" title="Zoom In">+</button>
+                                        <button onClick={() => zoomOut()} className="px-2.5 py-1 hover:bg-[var(--color-paper-3)] rounded-sm cursor-pointer" title="Zoom Out">-</button>
+                                        <button onClick={() => resetTransform()} className="px-2.5 py-1 hover:bg-[var(--color-paper-3)] rounded-sm cursor-pointer uppercase" title="Reset View">RESET</button>
                                     </div>
 
                                     <TransformComponent wrapperClass="w-full h-full cursor-grab active:cursor-grabbing" contentClass="w-full h-full flex items-center justify-center p-20">
                                         <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
                                             <div
                                                 id="editor-canvas-area"
-                                                className="relative bg-[oklch(98%_0.006_28)] shadow-sm transition-transform origin-center border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden"
+                                                className="relative bg-[var(--color-paper)] shadow-sm transition-transform origin-center border border-[var(--color-rule)] rounded-sm overflow-hidden"
                                                 style={{
                                                     width: '1000px',
                                                     height: '750px',
@@ -723,7 +723,7 @@ export default function AdminTableEditor() {
                                                 onClick={() => setSelectedTable(null)}
                                             >
                                                 {!floorplanUrl && (
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] font-mono font-bold text-xs uppercase tracking-widest opacity-40 pointer-events-none select-none">
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-[var(--color-neutral)] font-mono font-bold text-xs uppercase tracking-widest opacity-40 pointer-events-none select-none">
                                                         <span>NO SCHEMATIC BACKGROUND IMAGE</span>
                                                         <span className="text-[9px] mt-1">CLICK 'UPLOAD SCHEMATIC' ABOVE</span>
                                                     </div>
@@ -746,23 +746,23 @@ export default function AdminTableEditor() {
                     </div>
 
                     {/* --- Sidebar Inspector --- */}
-                    <div className="lg:w-96 bg-[oklch(98%_0.006_28)] p-5 rounded-sm border border-[oklch(85%_0.012_28)] h-full flex flex-col shadow-xs overflow-y-auto">
+                    <div className="lg:w-96 bg-[var(--color-paper)] p-5 rounded-sm border border-[var(--color-rule)] h-full flex flex-col shadow-xs overflow-y-auto">
                         {selectedTable ? (
                             // Edit Mode
                             <div className="space-y-4 flex-1 flex flex-col">
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-3 shrink-0">
+                                <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-3 shrink-0">
                                     <div>
-                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                             UNIT INSPECTOR
                                         </span>
-                                        <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                        <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[var(--color-ink)]">
                                             {selectedTable.table_name}
                                         </h2>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setSelectedTable(null)}
-                                        className="text-[oklch(42%_0.010_28)] hover:text-black font-mono text-xs font-bold p-1 cursor-pointer"
+                                        className="text-[var(--color-muted)] hover:text-black font-mono text-xs font-bold p-1 cursor-pointer"
                                     >
                                         ✕ CLOSE
                                     </button>
@@ -770,21 +770,21 @@ export default function AdminTableEditor() {
 
                                 <div className="space-y-3.5 flex-1 font-mono text-xs">
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                             TABLE NAME (ชื่อโต๊ะ)
                                         </label>
                                         <input
                                             type="text"
                                             value={selectedTable.table_name}
                                             onChange={(e) => handleUpdateTable(selectedTable.id, 'table_name', e.target.value)}
-                                            className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                            className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)] font-bold"
                                         />
                                     </div>
 
                                     {/* Shape & Capacity */}
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                                 SEATS (ที่นั่ง)
                                             </label>
                                             <input
@@ -793,17 +793,17 @@ export default function AdminTableEditor() {
                                                 max="40"
                                                 value={selectedTable.capacity}
                                                 onChange={(e) => handleUpdateTable(selectedTable.id, 'capacity', parseInt(e.target.value) || 1)}
-                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)] font-bold"
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                                 SHAPE (ทรง)
                                             </label>
                                             <select
                                                 value={selectedTable.shape}
                                                 onChange={(e) => handleUpdateTable(selectedTable.id, 'shape', e.target.value)}
-                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold cursor-pointer"
+                                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)] font-bold cursor-pointer"
                                             >
                                                 <option value="rect">Rectangle</option>
                                                 <option value="circle">Circle</option>
@@ -812,9 +812,9 @@ export default function AdminTableEditor() {
                                     </div>
 
                                     {/* Table Photo (รูปถ่ายโต๊ะสำหรับแสดงตอนจอง) */}
-                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                    <div className="pt-2 border-t border-[var(--color-rule)]">
                                         <div className="flex justify-between items-center mb-1.5">
-                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)]">
                                                 TABLE PHOTO (รูปถ่ายโต๊ะ)
                                             </label>
                                             {selectedTable.image_url && (
@@ -829,7 +829,7 @@ export default function AdminTableEditor() {
                                         </div>
 
                                         {selectedTable.image_url ? (
-                                            <div className="relative group rounded-sm border border-[oklch(85%_0.012_28)] overflow-hidden bg-[oklch(94%_0.010_28)]">
+                                            <div className="relative group rounded-sm border border-[var(--color-rule)] overflow-hidden bg-[var(--color-paper-2)]">
                                                 <img
                                                     src={selectedTable.image_url}
                                                     alt={selectedTable.table_name}
@@ -849,11 +849,11 @@ export default function AdminTableEditor() {
                                                 </label>
                                             </div>
                                         ) : (
-                                            <label className="border border-dashed border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-sm p-3.5 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-center">
-                                                <span className="font-mono text-[10px] font-bold text-[oklch(18%_0.012_28)]">
+                                            <label className="border border-dashed border-[var(--color-rule)] hover:border-[var(--brand-plum)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-sm p-3.5 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-center">
+                                                <span className="font-mono text-[10px] font-bold text-[var(--color-ink)]">
                                                     {uploadingTableImg ? '[ UPLOADING... ]' : '[ + UPLOAD TABLE PHOTO ]'}
                                                 </span>
-                                                <span className="font-mono text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                                <span className="font-mono text-[8px] text-[var(--color-neutral)] uppercase tracking-wider">
                                                     PNG, JPG, WEBP (Customer Card Preview)
                                                 </span>
                                                 <input
@@ -871,7 +871,7 @@ export default function AdminTableEditor() {
 
                                     {/* Quick Size Presets */}
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                             QUICK SIZE PRESETS
                                         </label>
                                         <div className="grid grid-cols-3 gap-1.5">
@@ -885,7 +885,7 @@ export default function AdminTableEditor() {
                                                         handleUpdateTable(selectedTable.id, 'shape', preset.shape);
                                                         handleUpdateTable(selectedTable.id, 'capacity', preset.cap);
                                                     }}
-                                                    className="px-2 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[9px] font-bold text-center cursor-pointer"
+                                                    className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded-sm text-[9px] font-bold text-center cursor-pointer"
                                                 >
                                                     {preset.name}
                                                 </button>
@@ -894,37 +894,37 @@ export default function AdminTableEditor() {
                                     </div>
 
                                     {/* Width & Height Sliders */}
-                                    <div className="space-y-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
+                                    <div className="space-y-2 pt-1 border-t border-[var(--color-rule)]">
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[9px] font-bold text-[oklch(55%_0.010_28)] w-10">WIDTH</span>
+                                            <span className="text-[9px] font-bold text-[var(--color-neutral)] w-10">WIDTH</span>
                                             <input
                                                 type="range"
                                                 min="2"
                                                 max="40"
                                                 value={selectedTable.width}
                                                 onChange={(e) => handleUpdateTable(selectedTable.id, 'width', parseInt(e.target.value))}
-                                                className="flex-1 accent-[oklch(52%_0.16_28)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
+                                                className="flex-1 accent-[var(--brand-plum)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
                                             />
                                             <span className="text-[10px] font-bold w-8 text-right">{selectedTable.width}%</span>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[9px] font-bold text-[oklch(55%_0.010_28)] w-10">HEIGHT</span>
+                                            <span className="text-[9px] font-bold text-[var(--color-neutral)] w-10">HEIGHT</span>
                                             <input
                                                 type="range"
                                                 min="2"
                                                 max="40"
                                                 value={selectedTable.height}
                                                 onChange={(e) => handleUpdateTable(selectedTable.id, 'height', parseInt(e.target.value))}
-                                                className="flex-1 accent-[oklch(52%_0.16_28)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
+                                                className="flex-1 accent-[var(--brand-plum)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
                                             />
                                             <span className="text-[10px] font-bold w-8 text-right">{selectedTable.height}%</span>
                                         </div>
                                     </div>
 
                                     {/* Rotation */}
-                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                    <div className="pt-2 border-t border-[var(--color-rule)]">
                                         <div className="flex justify-between items-center mb-1">
-                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)]">
                                                 ROTATION ({selectedTable.rotation || 0}°)
                                             </label>
                                             <div className="flex gap-1">
@@ -935,8 +935,8 @@ export default function AdminTableEditor() {
                                                         onClick={() => handleUpdateTable(selectedTable.id, 'rotation', deg)}
                                                         className={`px-1.5 py-0.5 text-[8px] font-bold rounded-xs border cursor-pointer ${
                                                             selectedTable.rotation === deg
-                                                                ? 'bg-[oklch(18%_0.012_28)] text-white border-black'
-                                                                : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                                                ? 'bg-[var(--color-ink)] text-white border-black'
+                                                                : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-muted)]'
                                                         }`}
                                                     >
                                                         {deg}°
@@ -951,13 +951,13 @@ export default function AdminTableEditor() {
                                             step="5"
                                             value={selectedTable.rotation || 0}
                                             onChange={(e) => handleUpdateTable(selectedTable.id, 'rotation', parseInt(e.target.value))}
-                                            className="w-full accent-[oklch(52%_0.16_28)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
+                                            className="w-full accent-[var(--brand-plum)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
                                         />
                                     </div>
 
                                     {/* Color Theme */}
-                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)]">
-                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1.5 block">
+                                    <div className="pt-2 border-t border-[var(--color-rule)]">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1.5 block">
                                             COLOR PALETTE
                                         </label>
                                         <div className="flex flex-wrap gap-1.5">
@@ -967,7 +967,7 @@ export default function AdminTableEditor() {
                                                     type="button"
                                                     onClick={() => handleUpdateTable(selectedTable.id, 'table_color', c.value)}
                                                     className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
-                                                        selectedTable.table_color === c.value ? 'ring-2 ring-[oklch(52%_0.16_28)] scale-110 shadow-xs' : 'opacity-80'
+                                                        selectedTable.table_color === c.value ? 'ring-2 ring-[var(--brand-plum)] scale-110 shadow-xs' : 'opacity-80'
                                                     }`}
                                                     style={{ backgroundColor: c.value }}
                                                     title={c.name}
@@ -977,11 +977,11 @@ export default function AdminTableEditor() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex flex-col gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                                    <div className="pt-3 border-t border-[var(--color-rule)] flex flex-col gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
                                         <button
                                             type="button"
                                             onClick={() => setQrModalOpen(true)}
-                                            className="w-full py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                            className="w-full py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                         >
                                             PRINT QR ORDER FLYER
                                         </button>
@@ -989,7 +989,7 @@ export default function AdminTableEditor() {
                                             <button
                                                 type="button"
                                                 onClick={handleDuplicate}
-                                                className="py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                                className="py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                             >
                                                 DUPLICATE
                                             </button>
@@ -1007,18 +1007,18 @@ export default function AdminTableEditor() {
                         ) : (
                             // Add New Table Mode
                             <div className="space-y-4 flex flex-col h-full font-mono text-xs">
-                                <div className="border-b border-[oklch(85%_0.012_28)] pb-3 shrink-0">
-                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                <div className="border-b border-[var(--color-rule)] pb-3 shrink-0">
+                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                         ADD NEW ELEMENT
                                     </span>
-                                    <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                    <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[var(--color-ink)]">
                                         NEW TABLE UNIT
                                     </h2>
                                 </div>
 
                                 <div className="space-y-3 flex-1">
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                             TABLE NAME (ชื่อโต๊ะ)
                                         </label>
                                         <input
@@ -1026,13 +1026,13 @@ export default function AdminTableEditor() {
                                             placeholder="e.g. A1, VIP-1, T4"
                                             value={newTable.name}
                                             onChange={e => setNewTable({ ...newTable, name: e.target.value })}
-                                            className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                            className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)] font-bold"
                                         />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                                 SEATS (คน)
                                             </label>
                                             <input
@@ -1040,17 +1040,17 @@ export default function AdminTableEditor() {
                                                 min="1"
                                                 value={newTable.capacity}
                                                 onChange={e => setNewTable({ ...newTable, capacity: parseInt(e.target.value) || 1 })}
-                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)] font-bold"
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                                 SHAPE
                                             </label>
                                             <select
                                                 value={newTable.shape}
                                                 onChange={e => setNewTable({ ...newTable, shape: e.target.value })}
-                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold cursor-pointer"
+                                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm outline-none focus:border-[var(--brand-plum)] font-bold cursor-pointer"
                                             >
                                                 <option value="rect">Rectangle</option>
                                                 <option value="circle">Circle</option>
@@ -1060,7 +1060,7 @@ export default function AdminTableEditor() {
 
                                     {/* Presets */}
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                             SIZE PRESET
                                         </label>
                                         <div className="grid grid-cols-2 gap-1.5">
@@ -1069,7 +1069,7 @@ export default function AdminTableEditor() {
                                                     key={preset.name}
                                                     type="button"
                                                     onClick={() => setNewTable({ ...newTable, width: preset.w, height: preset.h, shape: preset.shape, capacity: preset.cap })}
-                                                    className="px-2 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[9px] font-bold text-center cursor-pointer"
+                                                    className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded-sm text-[9px] font-bold text-center cursor-pointer"
                                                 >
                                                     {preset.name}
                                                 </button>
@@ -1078,7 +1078,7 @@ export default function AdminTableEditor() {
                                     </div>
 
                                     <div>
-                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] mb-1 block">
                                             COLOR THEME
                                         </label>
                                         <div className="flex flex-wrap gap-1.5">
@@ -1088,7 +1088,7 @@ export default function AdminTableEditor() {
                                                     type="button"
                                                     onClick={() => setNewTable({ ...newTable, color: c.value })}
                                                     className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
-                                                        newTable.color === c.value ? 'ring-2 ring-[oklch(52%_0.16_28)] scale-110 shadow-xs' : 'opacity-80'
+                                                        newTable.color === c.value ? 'ring-2 ring-[var(--brand-plum)] scale-110 shadow-xs' : 'opacity-80'
                                                     }`}
                                                     style={{ backgroundColor: c.value }}
                                                 />
@@ -1099,7 +1099,7 @@ export default function AdminTableEditor() {
                                     <button
                                         type="button"
                                         onClick={handleAddTable}
-                                        className="w-full py-3 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-colors mt-4 cursor-pointer"
+                                        className="w-full py-3 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-colors mt-4 cursor-pointer"
                                     >
                                         + CREATE TABLE UNIT
                                     </button>
@@ -1116,14 +1116,14 @@ export default function AdminTableEditor() {
                         onClick={() => setQrModalOpen(false)}
                     >
                         <div
-                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-4"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-4"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="w-full flex justify-between items-center pb-2 border-b border-[oklch(85%_0.012_28)]">
-                                <span className="font-mono font-bold text-xs uppercase tracking-wider text-[oklch(42%_0.010_28)]">
+                            <div className="w-full flex justify-between items-center pb-2 border-b border-[var(--color-rule)]">
+                                <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-muted)]">
                                     QR ORDERING FLYER
                                 </span>
-                                <button onClick={() => setQrModalOpen(false)} className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black">
+                                <button onClick={() => setQrModalOpen(false)} className="font-mono text-xs font-bold text-[var(--color-muted)] hover:text-black">
                                     ✕
                                 </button>
                             </div>
@@ -1157,14 +1157,14 @@ export default function AdminTableEditor() {
                                 <button
                                     type="button"
                                     onClick={() => handlePrintBatchSheet([selectedTable])}
-                                    className="flex-1 py-2.5 bg-[oklch(18%_0.012_28)] text-white rounded-sm hover:bg-black cursor-pointer"
+                                    className="flex-1 py-2.5 bg-[var(--color-ink)] text-white rounded-sm hover:bg-black cursor-pointer"
                                 >
                                     PRINT FLYER
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setQrModalOpen(false)}
-                                    className="px-4 py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                    className="px-4 py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                 >
                                     CLOSE
                                 </button>
@@ -1180,32 +1180,32 @@ export default function AdminTableEditor() {
                         onClick={() => setBatchQrModalOpen(false)}
                     >
                         <div
-                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+                            className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="flex justify-between items-center pb-3 border-b border-[oklch(85%_0.012_28)] shrink-0">
+                            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-rule)] shrink-0">
                                 <div>
-                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brand-plum)]">
                                         BATCH QR STUDIO
                                     </span>
-                                    <h3 className="font-mono text-xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                    <h3 className="font-mono text-xl font-bold uppercase tracking-tight text-[var(--color-ink)]">
                                         Print All Store QR Flyers
                                     </h3>
                                 </div>
-                                <button onClick={() => setBatchQrModalOpen(false)} className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black">
+                                <button onClick={() => setBatchQrModalOpen(false)} className="font-mono text-xs font-bold text-[var(--color-muted)] hover:text-black">
                                     ✕
                                 </button>
                             </div>
 
                             {/* Table Checkbox Selection */}
                             <div className="my-4 flex-1 overflow-y-auto pr-1 space-y-3 font-mono text-xs">
-                                <div className="flex justify-between items-center text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold">
+                                <div className="flex justify-between items-center text-[10px] text-[var(--color-neutral)] uppercase font-bold">
                                     <span>SELECT TABLES TO PRINT ({selectedBatchTableIds.length}/{tables.length})</span>
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedBatchTableIds(tables.map(t => t.id))}
-                                            className="text-[oklch(52%_0.16_28)] hover:underline cursor-pointer"
+                                            className="text-[var(--brand-plum)] hover:underline cursor-pointer"
                                         >
                                             SELECT ALL
                                         </button>
@@ -1228,8 +1228,8 @@ export default function AdminTableEditor() {
                                                 key={t.id}
                                                 className={`p-2.5 rounded-sm border flex items-center gap-2 cursor-pointer transition-all ${
                                                     isChecked
-                                                        ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] font-bold'
-                                                        : 'bg-[oklch(98%_0.006_28)] border-[oklch(85%_0.012_28)] opacity-60'
+                                                        ? 'bg-[var(--color-paper-2)] border-[var(--brand-plum)] text-[var(--color-ink)] font-bold'
+                                                        : 'bg-[var(--color-paper)] border-[var(--color-rule)] opacity-60'
                                                 }`}
                                             >
                                                 <input
@@ -1242,7 +1242,7 @@ export default function AdminTableEditor() {
                                                             setSelectedBatchTableIds(selectedBatchTableIds.filter(id => id !== t.id));
                                                         }
                                                     }}
-                                                    className="accent-[oklch(52%_0.16_28)]"
+                                                    className="accent-[var(--brand-plum)]"
                                                 />
                                                 <span className="truncate">{t.table_name}</span>
                                             </label>
@@ -1252,7 +1252,7 @@ export default function AdminTableEditor() {
                             </div>
 
                             {/* Batch Print Actions */}
-                            <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2 font-mono text-[10px] font-bold uppercase tracking-wider shrink-0">
+                            <div className="pt-3 border-t border-[var(--color-rule)] flex gap-2 font-mono text-[10px] font-bold uppercase tracking-wider shrink-0">
                                 <button
                                     type="button"
                                     disabled={selectedBatchTableIds.length === 0}
@@ -1260,14 +1260,14 @@ export default function AdminTableEditor() {
                                         const tablesToPrint = tables.filter(t => selectedBatchTableIds.includes(t.id));
                                         handlePrintBatchSheet(tablesToPrint);
                                     }}
-                                    className="flex-1 py-3 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-sm cursor-pointer disabled:opacity-40"
+                                    className="flex-1 py-3 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-white rounded-sm cursor-pointer disabled:opacity-40"
                                 >
                                     PRINT {selectedBatchTableIds.length} QR CARDS (A4 GRID SHEET)
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setBatchQrModalOpen(false)}
-                                    className="px-5 py-3 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                    className="px-5 py-3 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm cursor-pointer"
                                 >
                                     CANCEL
                                 </button>

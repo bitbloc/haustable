@@ -421,7 +421,7 @@ export function useOrderSubmission() {
 
                     if (lineUserId) {
                         const origin = getAppOrigin()
-                        const shopLogoUrl = `${origin}/logo.png`
+                        const shopLogoUrl = `${origin}/logo-inbaan.png` // LINE message to the customer: the square plum ในบ้าน mark
                         
                         const itemsSummary = orderItemsPayload && orderItemsPayload.length > 0
                             ? orderItemsPayload.map(i => `${i.quantity || i.qty || 1}x ${i.name || i.custom_name || 'Item'}`).join(', ') 

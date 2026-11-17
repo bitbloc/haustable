@@ -184,7 +184,7 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                     <div className="flex justify-between items-start w-full">
                                         <div className="flex gap-2 items-center flex-wrap">
                                             {order.order_type === 'hausmade_pickup' || order.booking_type === 'hausmade' ? (
-                                                <span className="bg-[oklch(52%_0.16_28)] text-white border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-widest uppercase">
+                                                <span className="bg-[var(--brand-plum)] text-white border border-[var(--brand-plum)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-widest uppercase">
                                                     [ HAUSMADE ]
                                                 </span>
                                             ) : isOnline ? (
@@ -205,7 +205,7 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                                     [ PAID ]
                                                 </span>
                                             ) : (order.staff_remark || '').includes('[PAY_AT_STORE]') ? (
-                                                <span className="bg-[oklch(52%_0.16_28)] text-white border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-wider uppercase">
+                                                <span className="bg-[var(--brand-plum)] text-white border border-[var(--brand-plum)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-wider uppercase">
                                                     [ จ่ายที่ร้าน · ฿{Number(order.total_amount || 0).toLocaleString()} ]
                                                 </span>
                                             ) : null}

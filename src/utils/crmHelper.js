@@ -25,7 +25,7 @@ export const DEFAULT_CRM_TIERS = [
         tagline: '"พื้นที่ที่เราเริ่มรู้จักกัน" — ทุกคนเริ่มต้นจากพื้นที่เดียวกัน',
         condition_text: 'สมัครสมาชิกและมียอดใช้จ่ายสะสม 12 เดือนแรกเริ่ม (0 – 3,999 บาท)',
         badge_theme: 'bronze',
-        color_accent: 'oklch(52% 0.16 28)',
+        color_accent: 'oklch(25.18% 0.1001 348.33)',
         card_bg: 'bg-[#F2F2EC] border-[#B8B8B2] text-[#1A1A1A]',
         card_badge: 'bg-zinc-200/70 text-zinc-800 border-zinc-300'
     },
@@ -91,7 +91,7 @@ export function parseTiersConfig(rawConfig) {
         tagline: tier.tagline || '',
         condition_text: tier.condition_text || `มียอดใช้จ่ายสะสม ${Number(tier.min_spend || 0).toLocaleString()} บาทขึ้นไป`,
         badge_theme: tier.badge_theme || (index === 0 ? 'bronze' : index === 1 ? 'silver' : 'gold'),
-        color_accent: tier.color_accent || 'oklch(52% 0.16 28)',
+        color_accent: tier.color_accent || 'oklch(25.18% 0.1001 348.33)',
         card_bg: tier.card_bg || (index === 0 ? 'bg-[#F2F2EC] border-[#B8B8B2] text-[#1A1A1A]' : index === 1 ? 'bg-[#2E3138] border-[#A0AEC0] text-slate-100' : 'bg-[#12141a] border-[#D4AF37] text-white'),
         card_badge: tier.card_badge || (index === 0 ? 'bg-zinc-200/70 text-zinc-800 border-zinc-300' : index === 1 ? 'bg-slate-700/60 text-slate-200 border-slate-500/40' : 'bg-[#D4AF37]/15 text-[#D4AF37] border-[#D4AF37]/40')
     }));

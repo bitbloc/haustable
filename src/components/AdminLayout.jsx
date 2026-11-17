@@ -334,8 +334,8 @@ export default function AdminLayout() {
 
     if (authStatus === 'loading') {
         return (
-            <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] flex flex-col items-center justify-center text-[13px] gap-3">
-                <div className="w-5 h-5 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
+            <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-muted)] flex flex-col items-center justify-center text-[13px] gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-[var(--color-rule)] border-t-[var(--color-ink)] animate-spin" />
                 <span>กำลังเปิด Backoffice</span>
             </div>
         )
@@ -343,14 +343,14 @@ export default function AdminLayout() {
 
     if (authStatus === 'error') {
         return (
-            <div className="min-h-screen bg-[oklch(97%_0.008_28)] flex items-center justify-center p-6">
+            <div className="min-h-screen bg-[var(--color-paper)] flex items-center justify-center p-6">
                 <div className="max-w-sm space-y-3 text-center">
-                    <h1 className="text-lg font-semibold text-[oklch(18%_0.012_28)]">เชื่อมต่อ Backoffice ไม่สำเร็จ</h1>
-                    <p className="text-sm leading-6 text-[oklch(42%_0.010_28)]">ตรวจสิทธิ์ผู้ใช้ไม่ได้ในตอนนี้ อาจเป็นเพราะอินเทอร์เน็ตหรือเซิร์ฟเวอร์ช้า คุณยังล็อกอินอยู่</p>
+                    <h1 className="text-lg font-semibold text-[var(--color-ink)]">เชื่อมต่อ Backoffice ไม่สำเร็จ</h1>
+                    <p className="text-sm leading-6 text-[var(--color-muted)]">ตรวจสิทธิ์ผู้ใช้ไม่ได้ในตอนนี้ อาจเป็นเพราะอินเทอร์เน็ตหรือเซิร์ฟเวอร์ช้า คุณยังล็อกอินอยู่</p>
                     <button
                         type="button"
                         onClick={() => { setAuthStatus('loading'); setAuthAttempt((n) => n + 1) }}
-                        className="h-10 px-4 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-sm font-medium cursor-pointer"
+                        className="h-10 px-4 rounded-lg bg-[var(--color-ink)] text-[var(--color-paper)] text-sm font-medium cursor-pointer"
                     >
                         ลองอีกครั้ง
                     </button>
@@ -364,9 +364,9 @@ export default function AdminLayout() {
 
     const brand = (
         <Link to="/admin" className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.png" alt="" className="w-7 h-7 object-contain shrink-0" />
+            {/* The ในบ้าน wordmark is the shop name, so it replaces the square mark + "In The Haus" text */}
+            <img src="/logo-inbaan-wordmark-plum-96.png" alt="ในบ้าน In the haus" width="51" height="28" className="h-7 w-auto object-contain shrink-0" />
             <span className="min-w-0 leading-tight">
-                <span className="block text-sm font-semibold text-[var(--ram-ink)] truncate">In The Haus</span>
                 <span className="block text-[11px] text-[var(--ram-ink-muted)]">Backoffice</span>
             </span>
         </Link>
@@ -421,7 +421,7 @@ export default function AdminLayout() {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.18 }}
                             onClick={() => setSidebarOpen(false)}
-                            className="admin-scrim fixed inset-0 bg-[oklch(18%_0.012_28)]/40 z-50 lg:hidden"
+                            className="admin-scrim fixed inset-0 bg-[var(--color-ink)]/40 z-50 lg:hidden"
                         />
                         <motion.aside
                             initial={{ x: '-100%' }}
@@ -447,7 +447,7 @@ export default function AdminLayout() {
             <aside className={`admin-sidebar hidden lg:flex flex-col gap-4 fixed h-full z-30 ${isCollapsed ? 'is-collapsed' : ''}`}>
                 <div className={`flex items-center gap-2 ${isCollapsed ? 'flex-col' : 'justify-between'}`}>
                     {isCollapsed
-                        ? <Link to="/admin" aria-label="In The Haus Backoffice"><img src="/logo.png" alt="" className="w-7 h-7 object-contain" /></Link>
+                        ? <Link to="/admin" aria-label="In The Haus Backoffice"><img src="/logo-inbaan-wordmark-plum-96.png" alt="" width="48" height="26" className="w-12 h-7 object-contain" /></Link>
                         : brand}
                     <button
                         type="button"
@@ -502,7 +502,7 @@ export default function AdminLayout() {
                     ) : (
                         <div className="border border-dashed border-[var(--ram-rule)] rounded-lg p-8 md:p-12 max-w-lg mx-auto my-12 space-y-3">
                             <h1 className="text-lg font-semibold text-[var(--ram-ink)]">หน้านี้จำกัดสิทธิ์</h1>
-                            <p className="text-sm text-[oklch(42%_0.010_28)] leading-relaxed">
+                            <p className="text-sm text-[var(--color-muted)] leading-relaxed">
                                 หมวดนี้เปิดให้เฉพาะ Owner หรือผู้ที่ได้รับอนุญาต บัญชีของคุณ ({userRoleDisplay}) ยังไม่มีสิทธิ์เข้าถึง
                             </p>
                             <Link to={firstAllowedPath} className="admin-link-btn is-primary">

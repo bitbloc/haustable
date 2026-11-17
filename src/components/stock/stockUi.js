@@ -1,21 +1,21 @@
 // Shared look for the stock screens (adjust, receive, count): Thai Modern tokens, hairline
 // borders, ink primary actions, large touch targets for use on the shop floor.
-export const INK = 'text-[oklch(18%_0.012_28)]';
-export const MUTED = 'text-[oklch(42%_0.010_28)]';
-export const NEUTRAL = 'text-[oklch(55%_0.010_28)]';
-export const ACCENT = 'text-[oklch(52%_0.16_28)]';
-export const RULE = 'border-[oklch(85%_0.012_28)]';
-export const PAPER = 'bg-[oklch(99%_0.004_28)]';
-export const PAPER2 = 'bg-[oklch(94%_0.010_28)]';
+export const INK = 'text-[var(--color-ink)]';
+export const MUTED = 'text-[var(--color-muted)]';
+export const NEUTRAL = 'text-[var(--color-neutral)]';
+export const ACCENT = 'text-[var(--brand-plum)]';
+export const RULE = 'border-[var(--color-rule)]';
+export const PAPER = 'bg-[var(--color-paper)]';
+export const PAPER2 = 'bg-[var(--color-paper-2)]';
 
 export const label = `block text-xs font-medium ${MUTED} mb-1.5`;
-export const input = `w-full h-11 px-3 rounded-md border ${RULE} ${PAPER} ${INK} text-base outline-none transition-colors focus:border-[oklch(18%_0.012_28)]`;
+export const input = `w-full h-11 px-3 rounded-md border ${RULE} ${PAPER} ${INK} text-base outline-none transition-colors focus:border-[var(--color-ink)]`;
 export const chip = (active) => `h-10 px-3 rounded-md border text-sm transition-colors ${active
-    ? 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-semibold'
-    : `${RULE} ${MUTED} hover:border-[oklch(18%_0.012_28)] hover:text-[oklch(18%_0.012_28)]`}`;
-export const primaryBtn = 'w-full h-12 rounded-md bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-base font-semibold transition-[background-color,opacity,transform] hover:bg-[oklch(25%_0.012_28)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
-export const ghostBtn = `h-9 px-3 rounded-md border ${RULE} text-sm ${MUTED} hover:border-[oklch(18%_0.012_28)] hover:text-[oklch(18%_0.012_28)] transition-colors`;
-export const stepBtn = `w-12 h-12 shrink-0 rounded-md border ${RULE} ${PAPER} text-xl ${INK} flex items-center justify-center transition-[background-color,transform] hover:bg-[oklch(94%_0.010_28)] active:scale-95`;
+    ? 'border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold'
+    : `${RULE} ${MUTED} hover:border-[var(--color-ink)] hover:text-[var(--color-ink)]`}`;
+export const primaryBtn = 'w-full h-12 rounded-md bg-[var(--color-ink)] text-[var(--color-paper)] text-base font-semibold transition-[background-color,opacity,transform] hover:bg-[var(--color-ink)] active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed';
+export const ghostBtn = `h-9 px-3 rounded-md border ${RULE} text-sm ${MUTED} hover:border-[var(--color-ink)] hover:text-[var(--color-ink)] transition-colors`;
+export const stepBtn = `w-12 h-12 shrink-0 rounded-md border ${RULE} ${PAPER} text-xl ${INK} flex items-center justify-center transition-[background-color,transform] hover:bg-[var(--color-paper-2)] active:scale-95`;
 
 // Quiet motion: short, eased, no bounce. Respect reduced motion at the call site.
 export const EASE = [0.16, 1, 0.3, 1];

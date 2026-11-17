@@ -379,7 +379,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                     const isInner = tierName.toLowerCase().includes('inner') || tierName.toLowerCase().includes('gold') || tierName.toLowerCase().includes('vip');
                                                     const isPeople = tierName.toLowerCase().includes('people') || tierName.toLowerCase().includes('silver');
 
-                                                    let tierStyle = 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/30';
+                                                    let tierStyle = 'bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] border-[var(--brand-plum)]/30';
                                                     if (isInner) {
                                                         tierStyle = 'bg-amber-500/15 text-amber-700 border-amber-500/30 font-extrabold';
                                                     } else if (isPeople) {
@@ -413,7 +413,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-4 text-right font-mono font-bold text-xs text-[oklch(52%_0.16_28)]">
+                                            <td className="py-3 px-4 text-right font-mono font-bold text-xs text-[var(--brand-plum)]">
                                                 {Number(m.xhaus_balance || 0).toFixed(0)}
                                             </td>
                                         </tr>
@@ -464,7 +464,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                         const isInner = tierName.toLowerCase().includes('inner') || tierName.toLowerCase().includes('gold') || tierName.toLowerCase().includes('vip');
                                         const isPeople = tierName.toLowerCase().includes('people') || tierName.toLowerCase().includes('silver');
 
-                                        let tierStyle = 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/30';
+                                        let tierStyle = 'bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] border-[var(--brand-plum)]/30';
                                         if (isInner) {
                                             tierStyle = 'bg-amber-500/15 text-amber-700 border-amber-500/30 font-extrabold';
                                         } else if (isPeople) {
@@ -488,7 +488,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                         <p className="font-mono text-[7px] text-[#767673] uppercase font-bold tracking-wider">Visits</p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="font-mono font-bold text-sm text-[oklch(52%_0.16_28)]">{Number(selectedMember.xhaus_balance || 0).toFixed(0)}</p>
+                                        <p className="font-mono font-bold text-sm text-[var(--brand-plum)]">{Number(selectedMember.xhaus_balance || 0).toFixed(0)}</p>
                                         <p className="font-mono text-[7px] text-[#767673] uppercase font-bold tracking-wider">xhaus</p>
                                     </div>
                                     <div className="text-center">
@@ -506,7 +506,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                         <div className="w-full mt-3 pt-3 border-t border-[#ECECE9]">
                                             <div className="flex justify-between items-center mb-1.5">
                                                 <span className="font-mono text-[8px] font-bold text-[#767673] uppercase tracking-wider flex items-center gap-1">
-                                                    <Coffee size={10} className="text-[oklch(52%_0.16_28)]" /> Drink Stamps (10+1)
+                                                    <Coffee size={10} className="text-[var(--brand-plum)]" /> Drink Stamps (10+1)
                                                 </span>
                                                 <span className="font-mono text-[9px] font-bold text-[#1A1A1A]">{stamps} / {maxStamps}</span>
                                             </div>
@@ -515,7 +515,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                     <div
                                                         key={i}
                                                         className={`flex-1 h-2 rounded-full transition-all ${
-                                                            i < stamps ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[#E0E0DC]'
+                                                            i < stamps ? 'bg-[var(--brand-plum)]' : 'bg-[#E0E0DC]'
                                                         }`}
                                                     />
                                                 ))}
@@ -533,9 +533,9 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                     <button
                                         type="button"
                                         onClick={() => onAttachToOrder(selectedMember)}
-                                        className="w-full mt-3 bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                                        className="w-full mt-3 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
                                     >
-                                        <ShoppingBag size={14} className="text-[oklch(52%_0.16_28)]" /> ผูกสมาชิก & สั่งซื้อ
+                                        <ShoppingBag size={14} className="text-[var(--brand-plum)]" /> ผูกสมาชิก & สั่งซื้อ
                                     </button>
                                 )}
                             </div>
