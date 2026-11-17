@@ -71,11 +71,12 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 | **lime on cream** | **1.31:1, never** |
 
 ### 3. Type
-- **SOV_monomon**: headlines only (page and section titles, hero lines). Self-hosted subset `public/fonts/sov-monomon-*.woff2`, the only preloaded font. It has one weight (400): never ask for bold (the `@font-face` covers 100-900 so the browser never fakes a bold).
+- **SOV_monomon**: headlines only (page and section titles, hero lines). Self-hosted subset `public/fonts/sov-monomon-*.woff2`; the only font the React app preloads. It has one weight (400): never ask for bold (the `@font-face` covers 100-900 so the browser never fakes a bold).
 - **IBM Plex Sans Thai**: all readable Thai and body text, buttons, item names. Self-hosted woff2, split into Thai and Latin subsets per weight in use.
 - **DM Mono** (400, 500): Latin labels and numbers: prices, times, totals, counts, codes. Self-hosted woff2.
 - No other families in product UI (no Geist, Switzer, Cabinet Grotesk, Inter, Space Mono, Instrument Serif). Bergen Mono is not used anywhere.
 - Every webfont uses `font-display: swap`. Hero / LCP content never waits on a webfont.
+- `/link` (the ads page) preloads no font: its `@font-face` rules live in `public/fonts/link-fonts.css`, linked without blocking, so font files start after the first paint. Measured 2026-11-17 (Lighthouse mobile, 3 runs): inline `@font-face` moved FCP from ~1.0s to ~1.8s, and a SOV_monomon preload alone cost ~200ms of LCP by competing with the LCP photo.
 
 ### 4. Sizes
 - Body text at least 16px, POS included.

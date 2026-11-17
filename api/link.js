@@ -685,9 +685,10 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
     <link rel="ard" href="/.well-known/ard.json" type="application/json">
 
-    <!-- Fonts: self-hosted woff2 (public/fonts), font-display: swap, so text paints at once in the fallback.
-         Only the headline face is preloaded; body and numbers load on use, by unicode-range. -->
-    <link rel="preload" href="/fonts/sov-monomon-thai-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Fonts: self-hosted woff2 (public/fonts/link-fonts.css), font-display: swap. The stylesheet is non-blocking,
+         so the first paint uses fallback fonts and the font files never compete with the LCP photo. -->
+    <link rel="stylesheet" href="/fonts/link-fonts.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/fonts/link-fonts.css"></noscript>
 
     <script>
         // Language: ?lang=th|en|zh|lo, else the visitor's saved choice, else a phone whose first
@@ -715,20 +716,6 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         })();
     </script>
     <style>
-        /* SOV_monomon: headlines only. One weight; the range stops the browser from faking a bold. */
-        @font-face { font-family: "SOV_monomon"; src: url("/fonts/sov-monomon-thai-latin.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; unicode-range: U+0020-007E, U+00A0, U+00B7, U+0E01-0E5B, U+2013-2014, U+2018-201D, U+2026, U+25CC; }
-        /* IBM Plex Sans Thai: body. Thai and Latin are separate files; a page only fetches what it shows. */
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-400-thai.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-400-latin.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-500-thai.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-500-latin.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-600-thai.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-600-latin.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-700-thai.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
-        @font-face { font-family: "IBM Plex Sans Thai"; src: url("/fonts/ibm-plex-sans-thai-700-latin.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-        /* DM Mono: Latin labels and numbers (prices, times). Medium also serves 600/700 so nothing is faux-bold. */
-        @font-face { font-family: "DM Mono"; src: url("/fonts/dm-mono-400-latin.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
-        @font-face { font-family: "DM Mono"; src: url("/fonts/dm-mono-500-latin.woff2") format("woff2"); font-weight: 500 900; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
         /* Hallmark · macrostructure: Catalogue · tone: Thai twist modern · anchor hue: 348 plum
          * theme: brand v2 (.agents/AGENTS.md) · cream #F6F2EA · plum #41032A · lime #D0E020 (one primary action) · SOV_monomon / IBM Plex Sans Thai / DM Mono
          * axes: light / grotesk-sans / warm · nav: tabular tab strip · footer: Ft4 dense colophon · sticky: C4 tabular bar · enrichment: none
