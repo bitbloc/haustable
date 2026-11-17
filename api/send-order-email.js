@@ -4,6 +4,18 @@
  * when a new HAUSMADE order (Shipping or Pickup) is placed.
  */
 
+import { buildOrderFlexMessage } from './_orderFlex.js'
+
+// selected_options arrives as a string, an array of strings/objects, or an object of groups
+function optionsText(sel) {
+    if (!sel) return ''
+    const label = (o) => (typeof o === 'string' ? o : o && (o.name || o.choice_name || o.value || o.label)) || ''
+    if (typeof sel === 'string') return sel
+    if (Array.isArray(sel)) return sel.map(label).filter(Boolean).join(', ')
+    if (typeof sel === 'object') return Object.values(sel).flat().map(label).filter(Boolean).join(', ')
+    return ''
+}
+
 const DEFAULT_TARGET_EMAIL = 'Rithawat@gmail.com'
 const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_123456789' // Uses RESEND_API_KEY if configured in Vercel
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN
@@ -381,17 +393,52 @@ ${slipFullUrl ? `\n🧾 สลิปชำระเงิน: ${slipFullUrl}` : 
             console.error('[send-order-email] LINE_CHANNEL_ACCESS_TOKEN is not configured')
         } else if (LINE_GROUP_ID) {
             try {
-                const lineResp = await fetch('https://api.line.me/v2/bot/message/push', {
+                const pushLine = (message) => fetch('https://api.line.me/v2/bot/message/push', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`
                     },
-                    body: JSON.stringify({
-                        to: LINE_GROUP_ID,
-                        messages: [{ type: 'text', text: notificationMessage }]
-                    })
+                    body: JSON.stringify({ to: LINE_GROUP_ID, messages: [message] })
                 })
+
+                // Flex card first; if LINE rejects the card itself (400), send the plain text instead
+                let flexMessage = null
+                try {
+                    flexMessage = buildOrderFlexMessage({
+                        kind: isHausmade ? (isShipping ? 'hausmade_shipping' : 'hausmade_pickup')
+                            : isFoodPickup ? 'pickup' : isDineIn ? 'dine_in' : 'other',
+                        shortId,
+                        customerName,
+                        customerPhone,
+                        when: orderData.booking_time,
+                        pax: isDineIn ? orderData.pax : null,
+                        shippingAddress,
+                        note: customerNote,
+                        items: resolvedItems.map((item, idx) => ({
+                            name: item.name || item.custom_name || item.menu_item_name || item.item_name || item.menu_items?.name || `สินค้า #${idx + 1}`,
+                            qty: Number(item.quantity || item.qty || 1),
+                            unitPrice: Number(item.price_at_time ?? item.price ?? 0),
+                            options: optionsText(item.selected_options),
+                        })),
+                        total: totalAmount,
+                        discount: discountAmount,
+                        shippingFee,
+                        deposit: Number(orderData.deposit_amount || 0),
+                        adminUrl,
+                        trackingUrl,
+                        slipUrl: slipFullUrl,
+                        altText: `${orderCategoryName} #${shortId} · ${customerName} · ฿${totalAmount.toLocaleString()}`,
+                    })
+                } catch (fErr) {
+                    console.warn('[send-order-email] Could not build Flex card, sending text:', fErr)
+                }
+
+                let lineResp = await pushLine(flexMessage || { type: 'text', text: notificationMessage })
+                if (!lineResp.ok && flexMessage && lineResp.status === 400) {
+                    console.warn('[send-order-email] LINE rejected the Flex card, sending text:', await lineResp.text())
+                    lineResp = await pushLine({ type: 'text', text: notificationMessage })
+                }
                 if (lineResp.ok) {
                     lineSent = true
                 } else {
