@@ -34,6 +34,12 @@ function readOnlyPreviewFetch(input, init = {}) {
     return fetch(input, init)
   }
 
+  // Signing in (password grant, token refresh) is a POST but touches no shop data. Without it the
+  // preview could only show pages that need no account, so /admin was unreachable.
+  if (method === 'POST' && /\/auth\/v1\/token(\?|$)/.test(url)) {
+    return fetch(input, init)
+  }
+
   console.warn(`[POS READ-ONLY PREVIEW] Blocked ${method} ${url.replace(supabaseUrl, '')}`)
   window.__posPreviewBlockedWrites = (window.__posPreviewBlockedWrites || 0) + 1
   return Promise.resolve(new Response(
