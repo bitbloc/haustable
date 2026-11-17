@@ -38,7 +38,14 @@ Committed values to remove (all four places hold a live key):
 | `api/send-order-email.js:9` | `process.env.LINE_CHANNEL_ACCESS_TOKEN \|\| '<token>'` | env only |
 | `supabase/functions/send-line-notify/index.ts:4` | literal token | `Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN')` |
 | `api/verify-slip.js:1` | `DEFAULT_EASYSLIP_KEY` fallback | request key, else `process.env.EASYSLIP_API_KEY` |
-| `supabase/functions/verify-payment-slip/index.ts:8` | `DEFAULT_EASYSLIP_KEY` fallback | request key, else `app_settings.easyslip_api_key`, else `Deno.env.get('EASYSLIP_API_KEY')` (keep the existing order of precedence) |
+| `supabase/functions/verify-payment-slip/index.ts:8` | `DEFAULT_EASYSLIP_KEY` fallback | unchanged precedence: a non-empty `app_settings.easyslip_api_key` wins, else the request key, else `Deno.env.get('EASYSLIP_API_KEY')` |
+
+Found during implementation: the same EasySlip key is also compiled into the browser bundle
+(`src/utils/slipVerificationHelper.js`, sent with every slip check), used as a default in
+`src/AdminSettings.jsx` and `GeneralBookingSettingsTab.jsx`, and seeded by migration
+`20260901000000`; the LINE token is also in `scratch/sql_archive/update_line_token.sql`. All
+are removed (A1b). After that the browser sends a key only when the back-office setting holds
+one; otherwise the server resolves it.
 
 Failing loudly:
 
