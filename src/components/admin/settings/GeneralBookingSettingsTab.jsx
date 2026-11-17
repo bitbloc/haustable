@@ -573,8 +573,8 @@ export default function GeneralBookingSettingsTab({
                             <span>เชื่อมต่อ EasySlip สำเร็จ (App: {easySlipQuota.application?.name || 'haustable'})</span>
                         </div>
                         <div className="flex items-center gap-3 text-emerald-900">
-                            <span>โควต้าคงเหลือ: <strong className="text-emerald-700">{easySlipQuota.quota?.remaining ?? 50} / {easySlipQuota.quota?.max ?? 50}</strong></span>
-                            <span>แพ็กเกจ: <strong className="text-emerald-700">{easySlipQuota.product?.name || 'Tester'}</strong></span>
+                            <span>โควต้าคงเหลือ: <strong className="text-emerald-700">{(easySlipQuota.application?.quota ?? easySlipQuota.quota)?.remaining ?? "–"} / {(easySlipQuota.application?.quota ?? easySlipQuota.quota)?.max ?? "–"}</strong></span>
+                            <span>แพ็กเกจ: <strong className="text-emerald-700">{easySlipQuota.product?.name || '–'}</strong></span>
                         </div>
                     </div>
                 )}
