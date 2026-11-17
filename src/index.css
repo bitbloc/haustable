@@ -19,16 +19,16 @@
 
 @theme {
   --color-sage: #BFCBC2;
-  /* Brand v2 (.agents/AGENTS.md): utilities bg-plum / bg-lime / text-error ... */
+  /* Brand v2 (.agents/AGENTS.md): utilities bg-plum / bg-charcoal / text-error ... */
   --color-plum: oklch(25.18% 0.1001 348.33);       /* #41032A */
   --color-plum-2: oklch(33.03% 0.0965 348.04);     /* #571C3E */
-  --color-lime: oklch(86.55% 0.1900 114.95);       /* #D0E020, one primary action, charcoal text */
-  --color-lime-press: oklch(80.01% 0.1802 115.06); /* #BBCA08 */
+  --color-action: oklch(21.78% 0 0);               /* primary action fill = charcoal, cream text */
+  --color-action-hover: oklch(26.96% 0.0069 345.80);
   --color-charcoal: oklch(21.78% 0 0);             /* #1A1A1A */
   --color-cream: oklch(96.20% 0.0115 84.58);       /* #F6F2EA */
   --color-error: oklch(50.03% 0.1821 29.51);       /* #B42318, errors / destructive only */
   /* Older names, now the brand (was neon #DFFF00 and greys) */
-  --color-primary: oklch(86.55% 0.1900 114.95);    /* lime */
+  --color-primary: oklch(21.78% 0 0);              /* primary action = charcoal */
   --color-dark: oklch(21.78% 0 0);                 /* charcoal */
   --color-surface: oklch(96.20% 0.0115 84.58);     /* cream (no pure white) */
 
@@ -37,7 +37,7 @@
   --color-paper: oklch(96.20% 0.0115 84.58);       /* #F6F2EA cards */
   --color-ink: oklch(21.78% 0 0);                  /* #1A1A1A */
   --color-subInk: oklch(48.01% 0.0120 345.78);     /* #635B5F, 5.27:1 on canvas */
-  --color-brand: oklch(86.55% 0.1900 114.95);      /* lime */
+  --color-brand: oklch(21.78% 0 0);                /* primary action = charcoal (was lime) */
 
   /* Font utilities. Tailwind v4 ignores tailwind.config.js (no @config), so
      font-sans / font-mono / font-display must be set here or they fall back to
@@ -74,8 +74,10 @@
   --brand-plum-2: oklch(33.03% 0.0965 348.04);      /* #571C3E */
   --brand-plum-3: oklch(41.92% 0.0851 347.97);      /* #6E3855 hover on plum, not text */
   --on-plum-2: oklch(79.98% 0.0348 349.28);         /* #D0B5C1 secondary text on plum */
-  --accent-lime: oklch(86.55% 0.1900 114.95);       /* #D0E020 ONE primary action, charcoal text, never on cream as text */
-  --accent-lime-press: oklch(80.01% 0.1802 115.06); /* #BBCA08 */
+  /* Primary action: charcoal fill, cream text (lime retired 2026-11-17: too loud) */
+  --action-primary: var(--charcoal);
+  --action-primary-hover: oklch(26.96% 0.0069 345.80);
+  --on-action: oklch(96.20% 0.0115 84.58);
   --charcoal: oklch(21.78% 0 0);                    /* #1A1A1A */
   --charcoal-2: oklch(26.96% 0.0069 345.80);        /* #292527 */
   --charcoal-3: oklch(33.10% 0.0078 351.28);        /* #393436 */
@@ -118,7 +120,7 @@
   --color-hallmark-rule: oklch(85% 0.008 100);        /* Border line */
   
   /* Brand & Status Accents */
-  --color-brand: var(--accent-lime);                  /* was HAUS yellow-green #DFFF00 */
+  --color-brand: var(--action-primary);               /* primary action fill (charcoal, cream text) */
   --color-accent-red: var(--error-red);               /* was #FF453A; errors only */
   --color-accent-green: oklch(64% 0.22 140);           /* Line / Delivery green #06C755 */
   --color-accent-blue: oklch(52% 0.16 250);            /* Q&A / Maps blue */
@@ -139,8 +141,8 @@
   --color-neutral: var(--dark-muted);
   --color-muted: var(--dark-muted);
   --color-ink: var(--cream);
-  --color-accent: var(--accent-lime);   /* on charcoal lime passes (11.91:1); charcoal text on lime */
-  --color-focus: var(--accent-lime);
+  --color-accent: var(--cream);         /* on the dark theme the accent is cream (15.59:1) */
+  --color-focus: var(--cream);
   color-scheme: dark;
 }
 

@@ -1539,7 +1539,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <button
                                 type="button"
                                 onClick={onOpenMenu}
-                                className="bg-lime hover:bg-lime-press text-charcoal px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                                className="bg-action hover:bg-action-hover text-cream px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
                             >
                                 <Plus size={14} />
                                 <span>สั่งอาหาร / คีย์รายการ</span>

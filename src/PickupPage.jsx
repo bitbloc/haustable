@@ -588,7 +588,7 @@ export default function PickupPage() {
                                                     <span className="font-mono font-bold text-2xl leading-none">฿{cartTotal}</span>
                                                 </div>
                                             </div>
-                                            <button onClick={() => setStep(2)} className="bg-brand text-ink border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper transition-all active:scale-95">
+                                            <button onClick={() => setStep(2)} className="bg-brand text-cream border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper hover:text-ink transition-all active:scale-95">
                                                 {t('next')} <ArrowRight size={18} />
                                             </button>
                                         </div>
@@ -1077,7 +1077,7 @@ export default function PickupPage() {
                                 <button
                                     onClick={handleSubmit}
                                     disabled={submitting || !isContactValid || !isAgreed || !pickupTime || (!isPayAtStore && ((finalTotal > 0 && !slipFile) || isVerifyingSlip || (easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback)))}
-                                    className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-bold text-lg hover:bg-paper disabled:bg-canvas disabled:text-subInk disabled:border-[var(--color-rule)] disabled:cursor-not-allowed transition-all mt-4 font-mono uppercase tracking-widest flex items-center justify-center gap-2"
+                                    className="w-full bg-brand text-cream border border-ink py-4 rounded-none font-bold text-lg hover:bg-paper hover:text-ink disabled:bg-canvas disabled:text-subInk disabled:border-[var(--color-rule)] disabled:cursor-not-allowed transition-all mt-4 font-mono uppercase tracking-widest flex items-center justify-center gap-2"
                                 >
                                     {submitting ? t('processing') : `${t('confirmOrder')} ${finalTotal}.-`}
                                 </button>

@@ -149,7 +149,7 @@ export default function SlipPreviewModal({ isOpen, onClose, data, optionMap }) {
                                 <button 
                                     onClick={handleSave}
                                     disabled={generating}
-                                    className="w-full py-3.5 bg-[var(--color-brand)] hover:bg-[oklch(82%_0.18_100)] text-[var(--color-ink)] font-mono font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border border-[var(--color-ink)] shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+                                    className="w-full py-3.5 bg-[var(--color-brand)] hover:bg-[var(--action-primary-hover)] text-[var(--on-action)] font-mono font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border border-[var(--color-ink)] shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
                                 >
                                     {generating ? (
                                         <div className="w-4 h-4 border-2 border-[var(--color-ink)] border-t-transparent rounded-full animate-spin"/>

@@ -907,7 +907,7 @@ export default function BookingCheckout() {
             <button
                 onClick={handleSubmit}
                 disabled={submitting || !isContactValid || !isAgreed || (!isFreeBooking && (!slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)))}
-                className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-mono font-bold text-lg uppercase tracking-widest mt-4 hover:bg-paper disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
+                className="w-full bg-brand text-cream border border-ink py-4 rounded-none font-mono font-bold text-lg uppercase tracking-widest mt-4 hover:bg-paper hover:text-ink disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
             >
                 {submitting ? t('processing') : t('confirmBooking')}
             </button>

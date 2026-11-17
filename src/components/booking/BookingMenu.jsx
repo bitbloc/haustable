@@ -154,7 +154,7 @@ export default function BookingMenu() {
                                     {/* Right: Action */}
                                     <button
                                         onClick={handleNext}
-                                        className="bg-brand text-ink border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper transition-all active:scale-95 uppercase tracking-widest font-mono cursor-pointer"
+                                        className="bg-brand text-cream border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper hover:text-ink transition-all active:scale-95 uppercase tracking-widest font-mono cursor-pointer"
                                     >
                                         {t('next')} <ArrowRight size={18} />
                                     </button>

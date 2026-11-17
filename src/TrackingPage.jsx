@@ -518,7 +518,7 @@ export default function TrackingPage() {
                       disabled={!canSaveSlip || isCancelled}
                       className={`w-full py-3 px-3 border border-[var(--color-rule)] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                           canSaveSlip && !isCancelled
-                              ? 'bg-[var(--color-brand)] hover:bg-[oklch(82%_0.18_100)] text-[var(--color-ink)] border-[var(--color-ink)]'
+                              ? 'bg-[var(--color-brand)] hover:bg-[var(--action-primary-hover)] text-[var(--on-action)] border-[var(--color-ink)]'
                               : 'bg-[var(--color-paper)] text-[var(--color-muted)] cursor-not-allowed opacity-60'
                       }`}
                   >

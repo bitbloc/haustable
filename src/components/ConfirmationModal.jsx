@@ -42,7 +42,7 @@ export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, m
                         </button>
                         <button 
                             onClick={() => { onConfirm(); onClose(); }}
-                            className={`py-3 rounded-xl font-bold text-sm transition-colors shadow-lg ${isDangerous ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-brand hover:bg-brandDark text-ink'}`}
+                            className={`py-3 rounded-xl font-bold text-sm transition-colors shadow-lg ${isDangerous ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-brand hover:bg-action-hover text-cream'}`}
                         >
                             {confirmText}
                         </button>

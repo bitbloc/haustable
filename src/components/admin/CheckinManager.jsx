@@ -807,7 +807,7 @@ const decodeHTMLEntities = (text) => {
                             type="button"
                             onClick={handleQuickAdd}
                             disabled={quickAddLoading}
-                            className="bg-brand text-[var(--color-ink)] border border-brand hover:opacity-95 font-bold text-xs py-2 px-6 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
+                            className="bg-brand text-cream border border-brand hover:opacity-95 font-bold text-xs py-2 px-6 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
                         >
                             {quickAddLoading ? (
                                 <>
@@ -1069,7 +1069,7 @@ const decodeHTMLEntities = (text) => {
                             <button
                                 type="submit"
                                 disabled={actionLoading || uploadingImage}
-                                className="bg-brand text-[var(--color-ink)] font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-1.5 transition-all hover:opacity-95 disabled:opacity-50 cursor-pointer border border-brand"
+                                className="bg-brand text-cream font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-1.5 transition-all hover:opacity-95 disabled:opacity-50 cursor-pointer border border-brand"
                             >
                                 {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                                 บันทึกข้อมูล
