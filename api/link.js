@@ -91,6 +91,10 @@ const DEFAULT_SETTINGS = {
     link_hide_categories: "Hausmade."
 }
 
+// Share card (LINE / Facebook / X): a real 1200x630 file. public/og-link.jpg is a stand-in cropped from the
+// hero photo until the designed artwork replaces it (same path, so no code change is needed).
+const OG_IMAGE_URL = 'https://haustable.vercel.app/og-link.jpg'
+
 const HEAT_LABELS = ['ไม่เผ็ด', 'เผ็ดน้อย', 'เผ็ดกลาง', 'เผ็ดมาก']
 
 function parseSpiceMap(str) {
@@ -645,7 +649,7 @@ function generateStandaloneLandingHtml(data) {
     <title>${shopName} | อาหารใต้รสชัด ริมโขง นครพนม</title>
     <meta name="description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · มีที่จอดรถสะดวก">
     <link rel="canonical" href="https://haustable.vercel.app/link">
-    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="apple-touch-icon" href="/pwa-icon.png">
     <meta name="theme-color" content="#181815">
 
@@ -654,15 +658,16 @@ function generateStandaloneLandingHtml(data) {
     <meta property="og:url" content="https://haustable.vercel.app/link">
     <meta property="og:title" content="${shopName} | อาหารใต้รสชัด ริมโขง">
     <meta property="og:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม จองโต๊ะ & สอบถาม : 098-528-4217">
-    <meta property="og:image" content="${sig1Img}">
+    <meta property="og:image" content="${OG_IMAGE_URL}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="อาหารใต้ของร้านในบ้าน นครพนม">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${shopName} | อาหารใต้รสชัด ริมโขง">
     <meta name="twitter:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม">
-    <meta name="twitter:image" content="${sig1Img}">
+    <meta name="twitter:image" content="${OG_IMAGE_URL}">
 
     <!-- Preconnect + LCP image preload (same srcset/sizes as the visible <img>, so it is never fetched twice) -->
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
