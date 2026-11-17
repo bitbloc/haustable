@@ -1074,7 +1074,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
             if (error) throw error;
             if (rescale.quantity !== null) {
-                const moved = await postStockMovement({ itemId: id, mode: 'set', quantity: rescale.quantity, reason: STOCK_REASONS.ADJUST, performedBy: 'System (unit change)', note: rescale.note });
+                const moved = await postStockMovement({ itemId: id, mode: 'set', quantity: rescale.quantity, reason: STOCK_REASONS.OPENING, performedBy: 'System (unit change)', note: rescale.note });
                 if (moved.ok) { newFormData.current_quantity = rescale.quantity; toast.info(rescale.note, { duration: 8000 }); }
                 else toast.error('เปลี่ยนหน่วยแล้ว แต่แปลงยอดคงเหลือไม่สำเร็จ ตรวจนับใหม่อีกครั้ง');
             }
