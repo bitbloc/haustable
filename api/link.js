@@ -895,9 +895,12 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         @media (min-width: 540px) {
             .sets-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-6); align-items: start; }
             .sets-head > :not(.sets-mark) { grid-column: 1; justify-self: start; }
-            .sets-mark { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); padding-top: var(--space-1); text-align: right; }
-            .sets-mark-en { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 500; letter-spacing: 0.24em; margin-right: -0.24em; color: var(--on-plum-2); line-height: 1; }
-            .sets-mark-th { font-family: var(--font-display); font-size: 48px; line-height: 1.2; color: var(--color-paper); }
+            /* Two rows on the headline's own line grid (SOV_monomon 36px, line-height 1.3), so THAI sits on the
+               baseline of "เพิ่งมาครั้งแรก?" and รสใต้ on the baseline of "เลือกชุดตามจำนวนคน". */
+            .sets-mark { display: block; grid-column: 2; grid-row: 1; text-align: right; font-family: var(--font-display); font-size: 36px; line-height: 1.3; }
+            .sets-mark-row { display: block; }
+            .sets-mark-en { display: inline-block; font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 500; line-height: 1; letter-spacing: 0.2em; color: var(--on-plum-2); padding: var(--space-1) calc(var(--space-3) - 0.2em) var(--space-1) var(--space-3); border: 1.5px solid currentColor; border-radius: 999px; }
+            .sets-mark-th { color: var(--color-paper); }
         }
         .sets-title { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
         .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-md); font-weight: 500; color: var(--color-on-ink-2); }
@@ -1246,7 +1249,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                 <h2 class="sets-title" id="sets-title">${tt('<span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span>', '<span class="nb">First time here?</span> <span class="nb">Pick a set for your group</span>')}</h2>
                 <p class="sets-walkin">${tt('ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ', 'No booking needed · walk in anytime · parking')}</p>
                 <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">${tt(`หรือดูเมนูทั้งหมด ${menuItems.length} รายการ`, `Or see the full menu · ${menuItems.length} items`, `或查看完整菜单 · ${menuItems.length} 项`, `ຫຼື ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)} <span class="arrow">↓</span></a>
-                <div class="sets-mark" aria-hidden="true"><span class="sets-mark-en">THAI</span><span class="sets-mark-th">รสใต้</span></div>
+                <div class="sets-mark" aria-hidden="true"><span class="sets-mark-row"><span class="sets-mark-en">THAI</span></span><span class="sets-mark-row"><span class="sets-mark-th">รสใต้</span></span></div>
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
