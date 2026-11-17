@@ -744,8 +744,10 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             --brand-plum-2: oklch(33.03% 0.0965 348.04);    /* #571C3E */
             --brand-plum-3: oklch(41.92% 0.0851 347.97);    /* #6E3855 */
             --on-plum-2: oklch(79.98% 0.0348 349.28);       /* #D0B5C1 */
-            --accent-lime: oklch(86.55% 0.1900 114.95);     /* #D0E020, one primary action, charcoal text */
-            --accent-lime-press: oklch(80.01% 0.1802 115.06); /* #BBCA08 */
+            /* Primary action: charcoal with cream text (lime retired 2026-11-17: too loud) */
+            --action-primary: oklch(21.78% 0 0);            /* #1A1A1A */
+            --action-primary-hover: oklch(26.96% 0.0069 345.80); /* #292527 */
+            --on-action: oklch(96.20% 0.0115 84.58);        /* #F6F2EA, 15.59:1 */
             --charcoal: oklch(21.78% 0 0);                  /* #1A1A1A */
             --cream: oklch(96.20% 0.0115 84.58);            /* #F6F2EA */
             --error-red: oklch(50.03% 0.1821 29.51);        /* #B42318, errors only */
@@ -775,8 +777,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             --color-accent-2-wash: oklch(95% 0.025 140);
             --color-focus: var(--brand-plum);
             /* Primary action */
-            --color-signal: var(--accent-lime);
-            --color-signal-2: var(--accent-lime-press);
+            --color-signal: var(--action-primary);
+            --color-signal-2: var(--action-primary-hover);
             /* LINE buttons are secondary actions: plum like the others (owner, 2026-11-17), cream text 14.79:1 */
             --color-line: var(--brand-plum);
             --color-line-2: var(--brand-plum-2);
@@ -808,8 +810,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         img { display: block; max-width: 100%; height: auto; }
         a, button, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-        /* On plum surfaces a plum ring would vanish: lime there (11.3:1 on plum) */
-        :is(.marquee, .loc-hero, .sets, .row-link.ink, .full-menu-btn, .loc-map-btn, .lang-cell) :focus-visible, :is(.row-link.ink, .full-menu-btn, .loc-map-btn, .lang-cell):focus-visible { outline-color: var(--accent-lime); }
+        /* On plum surfaces a plum ring would vanish: cream there (14.79:1 on plum) */
+        :is(.marquee, .loc-hero, .sets, .row-link.ink, .full-menu-btn, .loc-map-btn) :focus-visible, :is(.row-link.ink, .full-menu-btn, .loc-map-btn):focus-visible { outline-color: var(--color-paper); }
         .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
         .arrow { font-family: var(--font-mono); }
         .nb { white-space: nowrap; }
@@ -846,7 +848,9 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .lang-cell { min-height: 48px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
         .lang-cell + .lang-cell { border-left: 1px solid var(--color-rule); }
         .lang-cell:hover { color: var(--color-ink); }
-        html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--brand-plum); color: var(--color-paper); }
+        /* Active language: a tab mark (plum text + 3px plum underline) on the cream row. A plum-filled cell joined the
+           plum banner above and read as a bite out of the row. */
+        html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--color-paper); color: var(--brand-plum); box-shadow: inset 0 -3px 0 var(--brand-plum); }
         /* Masthead: brand cell | live status cell */
         .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
         .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
@@ -879,12 +883,22 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .loc-hero[hidden] { display: none; }
         .loc-hero-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; }
         .loc-hero-sub { font-size: var(--text-sm); font-weight: 500; }
-        .loc-hero-btn { margin-top: var(--space-1); min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--accent-lime); color: var(--color-ink); font-size: var(--text-lg); font-weight: 600; border-radius: var(--radius); }
+        .loc-hero-btn { margin-top: var(--space-1); min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--action-primary); color: var(--on-action); font-size: var(--text-lg); font-weight: 600; border-radius: var(--radius); }
 
         /* First-time set chooser: the page's one dark field, so the first decision is read first.
          * Inside it the starter set is a light card with a large photo; the other sets are dark tiles. */
         .sets { background: var(--color-field); color: var(--color-paper); padding-bottom: var(--space-2); }
         .sets-head { padding: var(--space-6) var(--space-4) var(--space-5); }
+        /* Wide screens: a typographic mark fills the empty right column of the set block head, on the same grid
+           (24px gutter, top aligned with the headline). Phones keep the headline full width, no mark. */
+        .sets-mark { display: none; }
+        @media (min-width: 540px) {
+            .sets-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-6); align-items: start; }
+            .sets-head > :not(.sets-mark) { grid-column: 1; justify-self: start; }
+            .sets-mark { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); padding-top: var(--space-1); text-align: right; }
+            .sets-mark-en { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 500; letter-spacing: 0.24em; margin-right: -0.24em; color: var(--on-plum-2); line-height: 1; }
+            .sets-mark-th { font-family: var(--font-display); font-size: 48px; line-height: 1.2; color: var(--color-paper); }
+        }
         .sets-title { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
         .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-md); font-weight: 500; color: var(--color-on-ink-2); }
         .sets-menu-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: var(--space-1); font-size: var(--text-md); font-weight: 600; color: var(--color-paper); text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 4px; transition: text-decoration-color var(--dur) var(--ease-out); }
@@ -922,7 +936,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .set-btn { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 700; white-space: nowrap; border-radius: var(--radius); background: var(--color-field-2); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
         .set-btn:hover { background: var(--color-field-3); }
         .set-btn:active { transform: scale(0.98); }
-        .set-btn.primary { background: var(--color-signal); color: var(--color-ink); }
+        .set-btn.primary { background: var(--color-signal); color: var(--on-action); }
         .set-btn.primary:hover { background: var(--color-signal-2); }
         .set-more { padding: var(--space-4) var(--space-4) var(--space-3); font-size: var(--text-sm); color: var(--color-on-ink-2); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-3); }
         .set-more a { color: var(--color-paper); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
@@ -1082,11 +1096,11 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .sticky-btn { min-height: var(--bar-h); padding: var(--space-2) var(--space-3); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: var(--text-md); font-weight: 600; line-height: 1.25; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .sticky-btn + .sticky-btn { border-left: 1px solid var(--color-rule); }
         .sticky-btn:hover { background: var(--color-paper-2); }
-        .sticky-btn.map { background: var(--accent-lime); color: var(--color-ink); }
-        .sticky-btn.map:hover { background: var(--accent-lime-press); }
+        .sticky-btn.map { background: var(--action-primary); color: var(--on-action); }
+        .sticky-btn.map:hover { background: var(--action-primary-hover); }
         .sticky-btn.line { background: var(--color-line); color: var(--color-paper); }
         .sticky-btn.line:hover { background: var(--color-line-2); }
-        .sticky-sub { font-size: 12px; font-weight: 400; color: var(--color-muted); white-space: normal; line-height: 1.3; }
+        .sticky-sub { font-size: 12px; font-weight: 400; color: oklch(77.97% 0.0133 345.58); /* dark-muted, 8.63:1 on charcoal */ white-space: normal; line-height: 1.3; }
 
         /* Modals */
         .modal { display: none; position: fixed; inset: 0; z-index: var(--z-modal); background: var(--color-scrim); align-items: center; justify-content: center; padding: var(--space-4); }
@@ -1232,6 +1246,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                 <h2 class="sets-title" id="sets-title">${tt('<span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span>', '<span class="nb">First time here?</span> <span class="nb">Pick a set for your group</span>')}</h2>
                 <p class="sets-walkin">${tt('ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ', 'No booking needed · walk in anytime · parking')}</p>
                 <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">${tt(`หรือดูเมนูทั้งหมด ${menuItems.length} รายการ`, `Or see the full menu · ${menuItems.length} items`, `或查看完整菜单 · ${menuItems.length} 项`, `ຫຼື ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)} <span class="arrow">↓</span></a>
+                <div class="sets-mark" aria-hidden="true"><span class="sets-mark-en">THAI</span><span class="sets-mark-th">รสใต้</span></div>
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
