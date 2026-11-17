@@ -971,7 +971,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .item-row.zoomable { cursor: zoom-in; }
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: var(--text-md); font-weight: 600; line-height: 1.45; }
-        .item-name-th { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-neutral); }
+        .item-name-th { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-label); }
         .item-desc { font-size: var(--text-sm); color: var(--color-muted); margin-top: 2px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
         .modifier-tag { display: inline-block; font-size: var(--text-xs); font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--color-rule); border-radius: var(--radius); background: var(--color-paper-2); margin-bottom: 2px; }
         .item-price { font-size: var(--text-md); font-weight: 600; margin-top: var(--space-1); }
@@ -1038,7 +1038,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .footer-brand { font-size: var(--text-md); font-weight: 700; }
         .footer-sub { font-size: var(--text-sm); color: var(--color-muted); }
         .footer-seo { font-size: var(--text-xs); line-height: 1.7; color: var(--color-muted); max-width: 46ch; }
-        .footer-copy { font-family: var(--font-mono); font-size: 11px; color: var(--color-neutral); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
+        .footer-copy { font-family: var(--font-mono); font-size: 11px; color: var(--color-label); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
 
         /* C4 sticky bar: full-width tabular cells */
         .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); background: var(--color-paper); border-top: 1px solid var(--color-ink); padding-bottom: env(safe-area-inset-bottom); }
