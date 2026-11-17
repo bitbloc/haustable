@@ -886,7 +886,8 @@ function generateStandaloneLandingHtml(data) {
         .set-more a:hover { text-decoration-color: var(--color-paper); }
         @media (min-width: 480px) { .sets-title { font-size: 36px; } }
         @media (prefers-reduced-motion: no-preference) {
-            .set-panel:not([hidden]) { animation: set-in 240ms var(--ease-out); }
+            /* Only when the guest switches tabs: the first paint (and the LCP photo inside it) is never faded in */
+            .set-panel.entering:not([hidden]) { animation: set-in 240ms var(--ease-out); }
             @keyframes set-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         }
 
@@ -1492,7 +1493,10 @@ function generateStandaloneLandingHtml(data) {
             let found = false;
             starterCard.querySelectorAll('.set-panel').forEach(function(p) {
                 const on = p.dataset.group === key;
+                const wasHidden = p.hidden;
                 p.hidden = !on;
+                p.classList.remove('entering');
+                if (on && wasHidden && !silent) { void p.offsetWidth; p.classList.add('entering'); }
                 if (on) found = true;
             });
             if (!found) return;
