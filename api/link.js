@@ -825,7 +825,7 @@ function generateStandaloneLandingHtml(data) {
         .fact-val { font-size: var(--text-md); font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: var(--space-2); }
         .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--color-accent-2); }
         .dot.closed { background: var(--color-neutral); }
-        .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
+        .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-ink); line-height: 1.4; }
         .loc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
         .loc-map-btn { flex-shrink: 0; min-height: 48px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .loc-map-btn:hover { background: var(--color-ink-2); }
@@ -986,7 +986,7 @@ function generateStandaloneLandingHtml(data) {
         .hours-fact { gap: var(--space-1); padding-top: var(--space-4); padding-bottom: var(--space-4); }
         .hours-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
         .hours-main { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
-        .hours-note { font-size: var(--text-md); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
+        .hours-note { font-size: var(--text-md); font-weight: 600; color: var(--color-ink); line-height: 1.4; }
         .hours-state { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
         .hours-state::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); }
         .hours-state.closed { color: var(--color-muted); }
@@ -1000,18 +1000,20 @@ function generateStandaloneLandingHtml(data) {
         .hg-time { font-size: clamp(36px, 10.5vw, 52px); font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--color-ink); }
         .hours-line { position: relative; height: 14px; }
         .hours-line::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-rule); }
-        .hl-fill { position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-ink); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1); }
-        .hl-last { position: absolute; top: 3px; left: calc(var(--l, 0) * 100%); width: 2px; height: 8px; margin-left: -1px; background: var(--color-accent); }
-        .hl-now { position: absolute; inset: 0; transform: translateX(calc(var(--p, 0) * 100%)); transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1); opacity: 0; }
+        .hl-fill { position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--color-ink); transform-origin: left center; transform: scaleX(var(--p, 0)); transition: transform 180ms var(--ease-out); }
+        .hl-last { position: absolute; top: 3px; left: calc(var(--l, 0) * 100%); width: 2px; height: 8px; margin-left: -1px; background: var(--color-muted); }
+        .hl-now { position: absolute; inset: 0; transform: translateX(calc(var(--p, 0) * 100%)); transition: transform 180ms var(--ease-out); opacity: 0; }
         .hl-now > span { position: absolute; left: -1px; top: 0; width: 2px; height: 14px; background: var(--color-ink); }
         .hours-line.live .hl-now { opacity: 1; }
         .hours-line.closed .hl-fill, .hours-line.closed .hl-now { opacity: 0; }
         .hours-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px var(--space-2); margin-top: var(--space-2); font-size: var(--text-md); color: var(--color-muted); line-height: 1.4; }
         .hc-time { display: inline-flex; align-items: flex-end; font-size: 22px; font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; }
         .hc-d { display: inline-block; height: 1em; overflow: hidden; }
-        .hc-strip { display: flex; flex-direction: column; transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .hc-strip { display: flex; flex-direction: column; transition: transform 180ms var(--ease-out); }
         .hc-strip > span { display: block; height: 1em; line-height: 1; text-align: center; }
         .hc-sep { padding: 0 1px; transform: translateY(-0.04em); }
+        .hours-count[hidden] { display: none; }
+        .hc-unit { font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
         .hc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
         /* Galleries */
@@ -1251,6 +1253,7 @@ function generateStandaloneLandingHtml(data) {
                 <span class="hours-count" id="hours-count" hidden>
                     <span class="hc-label"></span>
                     <span class="hc-time" aria-hidden="true"></span>
+                    <span class="hc-unit" aria-hidden="true" hidden></span>
                     <span class="hc-sr" role="status"></span>
                 </span>
             </div>
@@ -1645,7 +1648,7 @@ function generateStandaloneLandingHtml(data) {
                 const hoursLine = document.getElementById('status-hours');
                 if (!isOpen && hoursLine) hoursLine.innerHTML = TT('เปิด ' + m[1] + ':' + m[2] + ' น.', 'Opens ' + m[1] + ':' + m[2], m[1] + ':' + m[2] + ' 开门', 'ເປີດ ' + m[1] + ':' + m[2]);
 
-                // Last-order countdown: last 2 hours before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
+                // Last-order note: last hour before "ปิดรับออเดอร์ HH:MM" (older "ครัวปิด" text still parsed), then "kitchen closed"
                 const k = (el.dataset.hours || '').match(/(?:ปิดรับออเดอร์|ครัวปิด)\\s*(\\d{1,2})[:.](\\d{2})/);
                 const note = document.getElementById('kitchen-note');
                 if (isOpen && k && note) {
@@ -1653,7 +1656,7 @@ function generateStandaloneLandingHtml(data) {
                     if (kitchen < open) kitchen += 24 * 60;
                     const nowAdj = now < open ? now + 24 * 60 : now;
                     const left = kitchen - nowAdj;
-                    if (left > 0 && left <= 120) {
+                    if (left > 0 && left <= 60) {
                         const h = Math.floor(left / 60), mm = left % 60;
                         // Each phrase stays on one line ("เหลืออีก 21 นาที" never splits)
                         note.innerHTML = TT('<span class="nb">ปิดรับออเดอร์ ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>',
@@ -1674,9 +1677,11 @@ function generateStandaloneLandingHtml(data) {
         }
         updateOpenStatus();
 
-        // ─── LIVE COUNTDOWN in the hours card: last order / closing / opening, to the second ───
-        // Plain DOM + CSS transforms (no library), ticks once a second on the second boundary,
-        // sleeps while the tab is hidden. Each digit is a 0-9 strip that slides into place.
+        // ─── LIVE COUNTDOWN in the hours card: last order / closing / opening ───
+        // Shown only when the next change is an hour away or less: minutes only ("38 นาที"), seconds
+        // join in the last 10 minutes. A ticker hours out reads as urgency that isn't there.
+        // Plain DOM + CSS transforms (no library), ticks on the second boundary, sleeps while the tab is hidden.
+        // Each digit is a 0-9 strip that slides into place.
         (function() {
             const box = document.getElementById('hours-count');
             const src = document.getElementById('open-status');
@@ -1688,6 +1693,10 @@ function generateStandaloneLandingHtml(data) {
             const labelEl = box.querySelector('.hc-label');
             const timeEl = box.querySelector('.hc-time');
             const srEl = box.querySelector('.hc-sr');
+            const unitEl = box.querySelector('.hc-unit');
+            if (unitEl) unitEl.innerHTML = TT('นาที', 'min', '分钟', 'ນາທີ');
+            const SHOW_WITHIN = 3600;
+            const SECONDS_WITHIN = 600;
             const DAY = 86400;
             const open = (Number(hm[1]) * 60 + Number(hm[2])) * 60;
             let close = (Number(hm[3]) * 60 + Number(hm[4])) * 60;
@@ -1782,10 +1791,13 @@ function generateStandaloneLandingHtml(data) {
                     labelEl.innerHTML = TT(LABELS[kind][0], LABELS[kind][1]);
                     if (changed) updateOpenStatus();
                 }
-                const h = Math.floor(s.left / 3600);
-                const m = Math.floor((s.left % 3600) / 60);
+                drawLine(s);
+                if (s.left > SHOW_WITHIN) { box.hidden = true; return; }
+                const m = Math.floor(s.left / 60);
                 const sec = s.left % 60;
-                const str = (h ? h + ':' + pad(m) : String(m)) + ':' + pad(sec);
+                const minutesOnly = s.left > SECONDS_WITHIN;
+                const str = minutesOnly ? String(Math.ceil(s.left / 60)) : m + ':' + pad(sec);
+                if (unitEl) unitEl.hidden = !minutesOnly;
                 if (str.replace(/\\d/g, '0') !== shape) build(str);
                 else {
                     let i = 0;
@@ -1794,10 +1806,9 @@ function generateStandaloneLandingHtml(data) {
                 // Screen readers hear the minute, not every second
                 if (sec === 0 || !srEl.textContent) srEl.textContent = spoken(s.left);
                 box.hidden = false;
-                drawLine(s);
             }
 
-            // Timeline on the card's bottom divider. First paint starts at 0 and draws out to now.
+            // Timeline on the card's bottom divider
             const line = document.getElementById('hours-line');
             let lineShown = false;
             if (line && last !== null && last > open && last < close) line.style.setProperty('--l', String((last - open) / (close - open)));
@@ -1807,9 +1818,13 @@ function generateStandaloneLandingHtml(data) {
                 line.classList.toggle('closed', s.kind === 'open');
                 const p = s.kind === 'open' ? 0 : s.p;
                 if (!lineShown) {
+                    // First paint stays still: place the marker without a transition
                     lineShown = true;
+                    line.querySelectorAll('.hl-fill, .hl-now').forEach(function(el) { el.style.transition = 'none'; });
+                    line.style.setProperty('--p', String(p));
                     line.classList.add('live');
-                    requestAnimationFrame(function() { requestAnimationFrame(function() { line.style.setProperty('--p', String(p)); }); });
+                    void line.offsetWidth;
+                    line.querySelectorAll('.hl-fill, .hl-now').forEach(function(el) { el.style.transition = ''; });
                     return;
                 }
                 line.style.setProperty('--p', String(p));
