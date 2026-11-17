@@ -38,7 +38,7 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 - **Secondary actions** are plum fills (cream text) or 1px outlines (charcoal or plum). Never a second lime.
 - **Red** only for errors and destructive actions. Required-field marks, prices, spice and "last order" notes are plum or charcoal.
 - **No pure white or black** except charcoal `#1A1A1A`, which is part of the brand.
-- **Third-party marks** keep their own colour where people look for it (LINE green, TrueMoney orange, Facebook blue), only on that service's own button.
+- **Third-party buttons** follow the brand: LINE chat buttons are plum secondaries like the rest (owner decision 2026-11-17), the label says "LINE". Only a payment method's own selector keeps its mark colour (e.g. TrueMoney orange) so people can find it.
 - **`hausmade.*` namespace** (`--hausmade-orange #FF5A00`, `--hausmade-blue #0047AB`, `--hausmade-green #32CD32`, `--hausmade-dark #2A2A2A`) is ONLY for HAUSMADE products and loyalty / KEYTAG surfaces, never general UI.
 
 **Contrast (WCAG 2.x, computed from the hex values; every text pair must be at least 4.5:1)**

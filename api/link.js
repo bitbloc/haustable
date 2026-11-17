@@ -777,9 +777,9 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             /* Primary action */
             --color-signal: var(--accent-lime);
             --color-signal-2: var(--accent-lime-press);
-            /* LINE green, darkened from 53% so paper text clears 4.5:1 (was 4.49); hover stays one step darker */
-            --color-line: oklch(50% 0.14 152);
-            --color-line-2: oklch(45% 0.13 152);
+            /* LINE buttons are secondary actions: plum like the others (owner, 2026-11-17), cream text 14.79:1 */
+            --color-line: var(--brand-plum);
+            --color-line-2: var(--brand-plum-2);
             --color-scrim: oklch(16% 0.02 348 / 0.9);
             --color-scrim-soft: oklch(16% 0.02 348 / 0);
 
