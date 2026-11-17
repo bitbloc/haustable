@@ -6,14 +6,10 @@ import { LanguageProvider } from './context/LanguageContext.jsx'
 import { Capacitor } from '@capacitor/core'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { logger } from './utils/logger.js'
-import { initWmaNativeBridge } from './utils/wmaNativeBridge.js'
 import { nextChunkReload, isChunkLoadError } from './utils/chunkReload.js'
 
 // Initialize local crash reporting and debug logs
 logger.init();
-
-// Initialize native WMA thermal printer socket bridge (temporarily disabled per user request)
-// initWmaNativeBridge();
 
 // Notify Capgo that the app is ready (to prevent rollback on update)
 if (Capacitor.isNativePlatform()) {

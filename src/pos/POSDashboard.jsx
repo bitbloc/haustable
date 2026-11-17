@@ -37,10 +37,11 @@ import {
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
 import { printStaffRemovalSlips } from '../utils/staffRemovalSlips';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip, prewarmPrintOptionMap } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, autoPrintQROrderDetailed, silentPrintSlip, getShortBookingId, printSplitQrSlip, printSplitRoundReceipt, prewarmPrintOptionMap } from '../utils/printerHelper';
 import { fetchOpenTableStaffCalls, clearTableStaffCalls } from '../utils/tableStaffCalls';
 import { filterLocallyUnprinted, addLocallyPrintedIds, carryOverLocallyPrinted, pruneLocalPrintTracker, isDbPrinted, claimItemsForPrint, markItemsPrinted, releasePrintClaim } from '../utils/printClaim';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
+import { guardReservationCheckIn } from '../utils/reservationCheckIn';
 import { getBookingHoldMinutes, isHoldExpired, isAdvanceUnseatedReservation, isPayAtStoreOrder, isCallConfirmOrder, refundBookingLoyaltyIfNeeded, formatPosDateTime } from '../utils/availabilityUtils';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
@@ -161,6 +162,9 @@ export default function POSDashboard() {
     activeBookingRef.current = activeBooking;
     const tableSelectRequestIdRef = useRef(0);
     const handleSelectTableRef = useRef(null);
+    const splitSubmittingRef = useRef(false);
+    const [splitNetTotal, setSplitNetTotal] = useState(null);
+    const [splitPointsEstimate, setSplitPointsEstimate] = useState(0);
     useEffect(() => {
         activeBookingRef.current = activeBooking;
     }, [activeBooking]);
@@ -1686,29 +1690,6 @@ export default function POSDashboard() {
         };
         window.addEventListener('pos-menu-updated', handlePosMenuUpdated);
 
-        // Global native WMA / LINE MAN bridge order listener
-        const handleWmaOrderGlobal = (event) => {
-            const b = event.detail?.booking;
-            if (b) {
-                const eventKey = getCanonicalOrderAlertKey(b.id) || `order_${b.short_id || Date.now()}`;
-                if (checkEventDeduplication(eventKey, 5000)) {
-                    const dt = formatPosDateTime(b.booking_time || b.created_at || new Date());
-                    playOrderAlert(eventKey, 1200, 3.4);
-                    toast.custom((t) => renderPosToast(t, {
-                        badge: 'LINE MAN / WMA · ออเดอร์เข้าใหม่',
-                        title: `LINE MAN #${getShortBookingId(b)} สั่งอาหารเข้ามาแล้ว`,
-                        subtitle: `เวลา: ${dt.shortText} · แตะเพื่อเปิดดู`,
-                        dot: 'emerald',
-                        onClick: () => setView('online_hub')
-                    }), { id: eventKey, duration: 10000 });
-                    setShowPendingModal(true);
-                    checkPendingOrders();
-                    triggerDebouncedRefresh();
-                }
-            }
-        };
-        window.addEventListener('wma_order_received', handleWmaOrderGlobal);
-
         return () => {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             if (autoPrintDebounceTimersRef.current) {
@@ -1724,7 +1705,6 @@ export default function POSDashboard() {
             window.removeEventListener('pageshow', handleForegroundWakeup);
             window.removeEventListener('online', handleOnlineStatus);
             window.removeEventListener('pos-menu-updated', handlePosMenuUpdated);
-            window.removeEventListener('wma_order_received', handleWmaOrderGlobal);
             if (cleanupPrinterSync) cleanupPrinterSync();
         };
     }, [requestWakeLock, triggerDebouncedRefresh]);
@@ -3132,6 +3112,17 @@ export default function POSDashboard() {
         if (!reservation?.id || isSeatingReservation || seatingReservationRef.current) return;
         seatingReservationRef.current = true;
         setIsSeatingReservation(true);
+        // Never seat a reservation early by accident, and never onto a table someone is sitting at
+        const allowed = await guardReservationCheckIn(reservation, {
+            tableName: table?.table_name,
+            tableId: table?.id ?? reservation.table_id,
+            onBlocked: (msg) => toast.error(msg)
+        });
+        if (!allowed) {
+            seatingReservationRef.current = false;
+            setIsSeatingReservation(false);
+            return;
+        }
         const toastId = toast.loading(`กำลังเช็คอินลูกค้าโต๊ะ ${table.table_name}...`);
         try {
             let updatedBooking = reservation;
@@ -4000,6 +3991,129 @@ export default function POSDashboard() {
         }
     }, [activeBooking, selectedTable, attachedMemberCrm, createWalkIn]);
 
+    // Drink stamps (10 free 1) for a closed bill: shared by normal checkout and split payment
+    const awardDrinkStampsForBooking = async (profileId, bookingId, useFreeDrinkQuota = false, fallbackItems = []) => {
+        if (!profileId) return;
+            try {
+                // Fetch dbOrderItems for accurate eligibility check
+                const { data: dbOrderItems } = await supabase
+                    .from('order_items')
+                    .select('quantity, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
+                    .eq('booking_id', bookingId);
+
+                const itemsToCheck = dbOrderItems && dbOrderItems.length > 0 ? dbOrderItems : fallbackItems;
+
+                let eligibleDrinkCount = itemsToCheck.reduce((sum, item) => {
+                    // Reward items (free items) do not earn stamps
+                    if (!item || item.is_reward) return sum;
+
+                    const menuItem = item.menu_items || item;
+                    let isEligible = false;
+
+                    // Priority 1: Direct item-level eligibility from DB
+                    if (typeof menuItem.is_drink_stamp_eligible === 'boolean') {
+                        isEligible = menuItem.is_drink_stamp_eligible;
+                    } else if (typeof item.is_drink_stamp_eligible === 'boolean') {
+                        isEligible = item.is_drink_stamp_eligible;
+                    }
+                    // Priority 2: Category-level eligibility from DB
+                    else if (typeof menuItem.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                        isEligible = menuItem.menu_categories.is_drink_stamp_eligible;
+                    } else if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                        isEligible = item.menu_categories.is_drink_stamp_eligible;
+                    }
+
+                    return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
+                }, 0);
+
+                if (useFreeDrinkQuota && eligibleDrinkCount > 0) {
+                    eligibleDrinkCount = Math.max(0, eligibleDrinkCount - 1);
+                }
+
+                if (eligibleDrinkCount > 0 || useFreeDrinkQuota) {
+                    // Execute SECURITY DEFINER RPC process_drink_stamps
+                    const { data: rpcRes, error: rpcErr } = await supabase.rpc('process_drink_stamps', {
+                        p_user_id: profileId,
+                        p_stamp_count: eligibleDrinkCount,
+                        p_quota_used: useFreeDrinkQuota ? 1 : 0
+                    });
+
+                    if (!rpcErr && rpcRes && rpcRes.length > 0) {
+                        if (eligibleDrinkCount > 0) {
+                            toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว (รวม ${rpcRes[0].new_stamp_count}/10)`);
+                        }
+                        if (useFreeDrinkQuota) {
+                            toast.success(`🎉 ใช้สิทธิ์เครื่องดื่มฟรี 1 แก้วเรียบร้อยแล้ว`);
+                        }
+                    } else {
+                        // Fallback direct profile update if RPC fails
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('drink_stamp_count, free_drink_quota, total_drinks_purchased')
+                            .eq('id', profileId)
+                            .maybeSingle();
+
+                        if (profile) {
+                            const currentStamps = profile.drink_stamp_count || 0;
+                            const currentQuota = profile.free_drink_quota || 0;
+                            const currentTotal = profile.total_drinks_purchased || 0;
+
+                            const totalStamps = currentStamps + eligibleDrinkCount;
+                            const earnedNewQuota = Math.floor(totalStamps / 10);
+                            const newStampCount = totalStamps % 10;
+                            const newQuota = Math.max(0, currentQuota - (useFreeDrinkQuota ? 1 : 0) + earnedNewQuota);
+                            const newTotalPurchased = currentTotal + eligibleDrinkCount;
+
+                            await supabase
+                                .from('profiles')
+                                .update({
+                                    drink_stamp_count: newStampCount,
+                                    free_drink_quota: newQuota,
+                                    total_drinks_purchased: newTotalPurchased
+                                })
+                                .eq('id', profileId);
+
+                            if (eligibleDrinkCount > 0) {
+                                toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว`);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error updating drink stamps on checkout:", err);
+                // Queue stamp update for offline sync
+                try {
+                    let offlineEligibleCount = fallbackItems.reduce((sum, item) => {
+                        if (!item || item.is_reward) return sum;
+                        const menuItem = item.menu_items || item;
+                        let isEligible = false;
+                        if (typeof menuItem.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = menuItem.is_drink_stamp_eligible;
+                        } else if (typeof item.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = item.is_drink_stamp_eligible;
+                        } else if (typeof menuItem.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = menuItem.menu_categories.is_drink_stamp_eligible;
+                        } else if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = item.menu_categories.is_drink_stamp_eligible;
+                        }
+                        return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
+                    }, 0);
+                    if (useFreeDrinkQuota && offlineEligibleCount > 0) {
+                        offlineEligibleCount = Math.max(0, offlineEligibleCount - 1);
+                    }
+                    if (offlineEligibleCount > 0 || useFreeDrinkQuota) {
+                        addToOfflineQueue('drink_stamp_update', {
+                            profileId,
+                            eligibleDrinkCount: offlineEligibleCount,
+                            useFreeDrinkQuota
+                        });
+                    }
+                } catch (queueErr) {
+                    console.error("Failed to queue drink stamp update:", queueErr);
+                }
+            }
+    };
+
     const handleCheckout = async (
         paymentMethod, 
         includeTax, 
@@ -4014,8 +4128,9 @@ export default function POSDashboard() {
         cashReceived = 0,
         changeDue = 0
     ) => {
-        if (submittingOrderRef.current || isSubmittingOrder) return;
-        if (currentOrder.items.length === 0) return;
+        // Returns true only when the bill is really closed; the payment modal waits for this.
+        if (submittingOrderRef.current || isSubmittingOrder) return false;
+        if (currentOrder.items.length === 0) return false;
         submittingOrderRef.current = true;
         setIsSubmittingOrder(true);
         try {
@@ -4029,7 +4144,7 @@ export default function POSDashboard() {
             const newBooking = selectedTable 
                 ? await createWalkIn(selectedTable, null, memberIdToPass)
                 : await createWalkInPickup(pickupNote, memberIdToPass);
-            if (!newBooking) return;
+            if (!newBooking) return false;
             bookingId = newBooking.id;
             currentBooking = newBooking;
         }
@@ -4045,7 +4160,7 @@ export default function POSDashboard() {
         const newItems = currentOrder.items.filter(i => !i.db_id);
         if (newItems.length > 0) {
             const result = await submitOrderItems(bookingId, newItems);
-            if (!result) return;
+            if (!result) return false;
             if (typeof result === 'string') {
                 bookingId = result;
             }
@@ -4119,125 +4234,7 @@ export default function POSDashboard() {
         if (success) {
             // Process Automatic Drink Stamps 10 Free 1 for Attached Member Profile
             if (fallbackProfileId) {
-                const profileId = fallbackProfileId;
-                try {
-                    // Fetch dbOrderItems for accurate eligibility check
-                    const { data: dbOrderItems } = await supabase
-                        .from('order_items')
-                        .select('quantity, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
-                        .eq('booking_id', bookingId);
-
-                    const itemsToCheck = dbOrderItems && dbOrderItems.length > 0 ? dbOrderItems : currentOrder.items;
-
-                    let eligibleDrinkCount = itemsToCheck.reduce((sum, item) => {
-                        // Reward items (free items) do not earn stamps
-                        if (!item || item.is_reward) return sum;
-
-                        const menuItem = item.menu_items || item;
-                        let isEligible = false;
-
-                        // Priority 1: Direct item-level eligibility from DB
-                        if (typeof menuItem.is_drink_stamp_eligible === 'boolean') {
-                            isEligible = menuItem.is_drink_stamp_eligible;
-                        } else if (typeof item.is_drink_stamp_eligible === 'boolean') {
-                            isEligible = item.is_drink_stamp_eligible;
-                        }
-                        // Priority 2: Category-level eligibility from DB
-                        else if (typeof menuItem.menu_categories?.is_drink_stamp_eligible === 'boolean') {
-                            isEligible = menuItem.menu_categories.is_drink_stamp_eligible;
-                        } else if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
-                            isEligible = item.menu_categories.is_drink_stamp_eligible;
-                        }
-
-                        return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
-                    }, 0);
-
-                    if (useFreeDrinkQuota && eligibleDrinkCount > 0) {
-                        eligibleDrinkCount = Math.max(0, eligibleDrinkCount - 1);
-                    }
-
-                    if (eligibleDrinkCount > 0 || useFreeDrinkQuota) {
-                        // Execute SECURITY DEFINER RPC process_drink_stamps
-                        const { data: rpcRes, error: rpcErr } = await supabase.rpc('process_drink_stamps', {
-                            p_user_id: profileId,
-                            p_stamp_count: eligibleDrinkCount,
-                            p_quota_used: useFreeDrinkQuota ? 1 : 0
-                        });
-
-                        if (!rpcErr && rpcRes && rpcRes.length > 0) {
-                            if (eligibleDrinkCount > 0) {
-                                toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว (รวม ${rpcRes[0].new_stamp_count}/10)`);
-                            }
-                            if (useFreeDrinkQuota) {
-                                toast.success(`🎉 ใช้สิทธิ์เครื่องดื่มฟรี 1 แก้วเรียบร้อยแล้ว`);
-                            }
-                        } else {
-                            // Fallback direct profile update if RPC fails
-                            const { data: profile } = await supabase
-                                .from('profiles')
-                                .select('drink_stamp_count, free_drink_quota, total_drinks_purchased')
-                                .eq('id', profileId)
-                                .maybeSingle();
-
-                            if (profile) {
-                                const currentStamps = profile.drink_stamp_count || 0;
-                                const currentQuota = profile.free_drink_quota || 0;
-                                const currentTotal = profile.total_drinks_purchased || 0;
-
-                                const totalStamps = currentStamps + eligibleDrinkCount;
-                                const earnedNewQuota = Math.floor(totalStamps / 10);
-                                const newStampCount = totalStamps % 10;
-                                const newQuota = Math.max(0, currentQuota - (useFreeDrinkQuota ? 1 : 0) + earnedNewQuota);
-                                const newTotalPurchased = currentTotal + eligibleDrinkCount;
-
-                                await supabase
-                                    .from('profiles')
-                                    .update({
-                                        drink_stamp_count: newStampCount,
-                                        free_drink_quota: newQuota,
-                                        total_drinks_purchased: newTotalPurchased
-                                    })
-                                    .eq('id', profileId);
-
-                                if (eligibleDrinkCount > 0) {
-                                    toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว`);
-                                }
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error updating drink stamps on checkout:", err);
-                    // Queue stamp update for offline sync
-                    try {
-                        let offlineEligibleCount = currentOrder.items.reduce((sum, item) => {
-                            if (!item || item.is_reward) return sum;
-                            const menuItem = item.menu_items || item;
-                            let isEligible = false;
-                            if (typeof menuItem.is_drink_stamp_eligible === 'boolean') {
-                                isEligible = menuItem.is_drink_stamp_eligible;
-                            } else if (typeof item.is_drink_stamp_eligible === 'boolean') {
-                                isEligible = item.is_drink_stamp_eligible;
-                            } else if (typeof menuItem.menu_categories?.is_drink_stamp_eligible === 'boolean') {
-                                isEligible = menuItem.menu_categories.is_drink_stamp_eligible;
-                            } else if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
-                                isEligible = item.menu_categories.is_drink_stamp_eligible;
-                            }
-                            return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
-                        }, 0);
-                        if (useFreeDrinkQuota && offlineEligibleCount > 0) {
-                            offlineEligibleCount = Math.max(0, offlineEligibleCount - 1);
-                        }
-                        if (offlineEligibleCount > 0 || useFreeDrinkQuota) {
-                            addToOfflineQueue('drink_stamp_update', {
-                                profileId,
-                                eligibleDrinkCount: offlineEligibleCount,
-                                useFreeDrinkQuota
-                            });
-                        }
-                    } catch (queueErr) {
-                        console.error("Failed to queue drink stamp update:", queueErr);
-                    }
-                }
+                await awardDrinkStampsForBooking(fallbackProfileId, bookingId, useFreeDrinkQuota, currentOrder.items);
             }
 
             localStorage.removeItem('pos_active_table_id');
@@ -4310,6 +4307,7 @@ export default function POSDashboard() {
             triggerDebouncedRefresh();
             setView('tables');
         }
+        return Boolean(success);
         } finally {
             submittingOrderRef.current = false;
             setIsSubmittingOrder(false);
@@ -4841,12 +4839,24 @@ export default function POSDashboard() {
         }
     };
 
+    // Returns true only when the round is saved; the split modal resets/advances only then.
     const handleExecuteSplitPayment = async (splitPayload) => {
         if (!activeBooking) {
             console.warn("[Split Payment] No active booking to settle");
             toast.error("ไม่พบบิลที่เปิดอยู่สำหรับแบ่งชำระ");
-            return;
+            return false;
         }
+        // A double tap must never save (and count in the shift) the same round twice
+        if (splitSubmittingRef.current) return false;
+        splitSubmittingRef.current = true;
+        try {
+            return await executeSplitPaymentRound(splitPayload);
+        } finally {
+            splitSubmittingRef.current = false;
+        }
+    };
+
+    const executeSplitPaymentRound = async (splitPayload) => {
         const {
             splitMode = 'EQUAL',
             splitTotal = 0,
@@ -4874,21 +4884,40 @@ export default function POSDashboard() {
             method: paymentMethod,
             mode: splitMode,
             percent: splitMeta.selectedPercent || null,
+            people: splitMode === 'EQUAL' ? (splitMeta.totalPeople || null) : null,
             payer: attachedMember?.display_name || attachedMember?.phone_number || null,
             time: new Date().toISOString()
         });
         const allSplitRoundsAfter = getBookingSplitRounds({ staff_remark: updatedParentRemark });
         const totalSplitPaidAfter = (allSplitRoundsAfter || []).reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
         const depositPaidOnBill = activeBooking?.deposit_amount ? Math.ceil(parseFloat(activeBooking.deposit_amount) || 0) : 0;
-        const resolvedFullBillTotal = Math.max(
-            Number(splitMeta.fullOrderTotal) || 0,
-            Number(activeBooking?.total_amount) || 0,
-            totalSplitPaidAfter + depositPaidOnBill + Math.max(0, Number(remainingBalanceAfter) || 0)
-        );
+        const paidPlusRemaining = totalSplitPaidAfter + depositPaidOnBill + Math.max(0, Number(remainingBalanceAfter) || 0);
+        // Cash payer mid-split gets a paper receipt for their round (QR payers already have the QR slip)
+        const printPartialCashReceipt = () => {
+            if (paymentMethod !== 'cash' || isFullySettled) return;
+            printSplitRoundReceipt(activeBooking, {
+                tableName: activeBooking?.tables_layout?.table_name || selectedTable?.table_name,
+                roundNumber: roundNum,
+                splitAmount: splitTotal,
+                paymentMethod,
+                cashReceived,
+                changeDue,
+                remainingBalanceAfterSplit: remainingBalanceAfter,
+                fullOrderTotal: splitMeta.fullOrderTotal,
+                payerName: attachedMember?.display_name || null
+            }).catch(err => {
+                console.warn('[Split] Round receipt print failed:', err);
+                toast.error('พิมพ์ใบรับเงินรอบนี้ไม่สำเร็จ (บันทึกการชำระแล้ว)');
+            });
+        };
+
+        const resolvedFullBillTotal = (Number(splitMeta.fullOrderTotal) || 0) > 0
+            ? Math.max(Number(splitMeta.fullOrderTotal), paidPlusRemaining)
+            : Math.max(Number(activeBooking?.total_amount) || 0, paidPlusRemaining);
 
         // 1. OFFLINE HANDLING
         if (!isOnline()) {
-            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const cachedBookings = posCache.getBookings() || [];
             const updatedBookings = cachedBookings.map(b => {
                 if (b.id === activeBooking.id) {
                     return {
@@ -4900,7 +4929,7 @@ export default function POSDashboard() {
                 }
                 return b;
             }).filter(b => isFullySettled ? b.id !== activeBooking.id : true);
-            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
+            posCache.setBookings(updatedBookings);
 
             addToOfflineQueue('split_payment', {
                 bookingId: activeBooking.id,
@@ -4922,6 +4951,7 @@ export default function POSDashboard() {
             recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
 
             toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายก้อนที่ ${roundNum} (฿${splitTotal.toLocaleString()}) สำเร็จ!`, { id: toastId });
+            printPartialCashReceipt();
             
             if (isFullySettled) {
                 const cleanedParentRemark = updatedParentRemark
@@ -4958,14 +4988,12 @@ export default function POSDashboard() {
                 activeBookingRef.current = nextBooking;
             }
             setRefreshKey(prev => prev + 1);
-            return;
+            return true;
         }
 
         // 2. ONLINE SUPABASE HANDLING: SINGLE BILL GUARANTEE (NO SUB-BOOKINGS)
+        // The shift is recorded only after the bill update succeeds, so a failed save + retry never counts twice.
         try {
-            // Record shift transaction against this bill
-            recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
-
             if (isFullySettled) {
                 const cleanedParentRemark = updatedParentRemark
                     .replace(/\[CALL_BILL\]/gi, '')
@@ -4991,6 +5019,32 @@ export default function POSDashboard() {
                     .eq('id', activeBooking.id);
 
                 if (completeErr) throw completeErr;
+                recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
+
+                // XHAUS points + drink stamps, once per bill (the RPC pays a bill only once and caps the
+                // amount by the member's tier). Goes to the bill's member, else the last payer attached.
+                const splitMemberId = activeBooking.user_id || activeBooking.profiles?.id || attachedMemberCrm?.id || attachedMember?.id || null;
+                if (splitMemberId) {
+                    const billTotalForPoints = resolvedFullBillTotal > 0 ? resolvedFullBillTotal : (Number(activeBooking.total_amount) || 0);
+                    const requestedPoints = splitPointsEstimate > 0 ? splitPointsEstimate : billTotalForPoints;
+                    const settledBookingId = activeBooking.id;
+                    const itemsForStamps = currentOrder.items;
+                    (async () => {
+                        try {
+                            const { error: ptsErr } = await supabase.rpc('process_checkout_xhaus', {
+                                p_booking_id: settledBookingId,
+                                p_xhaus_earned: requestedPoints,
+                                p_xhaus_redeemed: 0,
+                                p_xhaus_discount: 0,
+                                p_user_id: splitMemberId
+                            });
+                            if (ptsErr) console.warn('[Split] XHAUS points not awarded:', ptsErr);
+                        } catch (e) {
+                            console.warn('[Split] XHAUS points call failed:', e);
+                        }
+                        await awardDrinkStampsForBooking(splitMemberId, settledBookingId, false, itemsForStamps);
+                    })();
+                }
 
                 toast.success(`🎉 ชำระครบถ้วน ปิดบิลเรียบร้อยแล้ว! (ก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()})`, { id: toastId });
                 setShowSplitModal(false);
@@ -5035,6 +5089,8 @@ export default function POSDashboard() {
                     .eq('id', activeBooking.id);
                 
                 if (updateErr) throw updateErr;
+                recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
+                printPartialCashReceipt();
 
                 toast.success(`บันทึกชำระก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
                 
@@ -5045,10 +5101,12 @@ export default function POSDashboard() {
             }
 
             setRefreshKey(prev => prev + 1);
+            return true;
         } catch (err) {
             console.error("Split payment failed:", err);
             const errDetail = err?.message ? ` (${err.message})` : '';
             toast.error(`บันทึกแบ่งจ่ายไม่สำเร็จ${errDetail} กรุณาลองใหม่อีกครั้ง`, { id: toastId });
+            return false;
         }
     };
 
@@ -5216,7 +5274,11 @@ export default function POSDashboard() {
                 setIsSubmittingOrder(false);
             }
         },
-        onOpenSplitPayment: (tax) => {
+        onOpenSplitPayment: (tax, panelNetTotal, panelPoints) => {
+            setSplitPointsEstimate(Number(panelPoints) || 0);
+            // The order panel's net total already has every discount (member, promo, manual, xhaus,
+            // rewards, free drink); the split modal must charge exactly that, not the raw item sum.
+            setSplitNetTotal(Number.isFinite(panelNetTotal) ? panelNetTotal : null);
             const defaultVat = (() => {
                 try {
                     const cached = localStorage.getItem('pos_default_vat_enabled');
@@ -5369,7 +5431,7 @@ export default function POSDashboard() {
     const stableOnRemoveRewardItem = useCallback((...args) => dashboardActionsRef.current.onRemoveRewardItem(...args), []);
     const stableOnAddEmergencyItem = useCallback((...args) => dashboardActionsRef.current.onAddEmergencyItem(...args), []);
     const stableOnAcceptOrder = useCallback(() => dashboardActionsRef.current.onAcceptOrder(), []);
-    const stableOnOpenSplitPayment = useCallback((tax) => dashboardActionsRef.current.onOpenSplitPayment(tax), []);
+    const stableOnOpenSplitPayment = useCallback((tax, net, pts) => dashboardActionsRef.current.onOpenSplitPayment(tax, net, pts), []);
     const stableOnMoveTable = useCallback(() => dashboardActionsRef.current.onMoveTable(), []);
     const stableOnMergeBill = useCallback(() => dashboardActionsRef.current.onMergeBill(), []);
     const stableOnAttachCustomer = useCallback((m) => dashboardActionsRef.current.onAttachCustomer(m), []);
@@ -6482,6 +6544,9 @@ export default function POSDashboard() {
                             order={currentOrder}
                             activeBooking={activeBooking}
                             includeTax={splitIncludeTax}
+                            netTotalOverride={splitNetTotal}
+                            onSendToKitchen={() => handleSaveAndOpenSlip('kitchen')}
+                            isSendingToKitchen={isSubmittingOrder}
                             onClose={() => setShowSplitModal(false)}
                             onConfirmSplit={handleExecuteSplitPayment}
                             onPrintSplitQr={handlePrintSplitQr}

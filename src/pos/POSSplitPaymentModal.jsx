@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     X, Plus, Minus, Check, Users, Receipt, DollarSign, 
-    CreditCard, QrCode, Banknote, Sparkles, Phone, UserCheck, 
+    QrCode, Banknote, Sparkles, Phone, UserCheck, 
     RefreshCw, ChevronRight, AlertCircle, ArrowRight, Percent, History,
     Printer
 } from 'lucide-react';
@@ -23,6 +23,9 @@ export default function POSSplitPaymentModal({
     order,
     activeBooking,
     includeTax,
+    netTotalOverride = null,
+    onSendToKitchen = null,
+    isSendingToKitchen = false,
     storePromptpayId: propPromptpayId,
     onClose,
     onConfirmSplit,
@@ -112,8 +115,8 @@ export default function POSSplitPaymentModal({
 
     // Comprehensive multi-round balance calculation
     const splitBalance = useMemo(() => {
-        return calculateSplitBalance(activeBooking, orderItems, effectiveIncludeTax);
-    }, [activeBooking, orderItems, effectiveIncludeTax]);
+        return calculateSplitBalance(activeBooking, orderItems, effectiveIncludeTax, netTotalOverride);
+    }, [activeBooking, orderItems, effectiveIncludeTax, netTotalOverride]);
 
     const { 
         fullOrderTotal, 
@@ -138,22 +141,40 @@ export default function POSSplitPaymentModal({
     const itemsTax = effectiveIncludeTax ? Math.ceil((itemsSubtotal * 7) / 100) : 0;
     const itemsTotal = Math.ceil(itemsSubtotal + itemsTax);
 
-    // Mode 2: Equal Split Calculation (Based on remaining balance to guarantee settling)
+    // Mode 2: Equal Split. People who already paid an EQUAL round keep what they paid; the remaining
+    // balance is shared only among the people still to pay, so the last person always settles the bill.
+    // (Dividing the shrinking balance by everyone again left a 4th round on a 3-way split.)
+    const equalPaidRounds = useMemo(() => (previousRounds || []).filter(r => r.mode === 'EQUAL'), [previousRounds]);
+    const equalPaidCount = equalPaidRounds.length;
+
+    // Reopening the modal mid-split resumes at the next unpaid person with the original head count
+    const resumedEqualRef = useRef(false);
+    useEffect(() => {
+        if (resumedEqualRef.current || equalPaidCount === 0) return;
+        resumedEqualRef.current = true;
+        const people = equalPaidRounds[equalPaidRounds.length - 1]?.people;
+        const count = Math.max(equalPaidCount + 1, parseInt(people) || 0, 2);
+        setSplitMode('EQUAL');
+        setNumPeople(count);
+        setCurrentPersonIndex(Math.min(equalPaidCount, count - 1));
+    }, [equalPaidCount, equalPaidRounds]);
+
     const equalSharesArray = useMemo(() => {
-        const targetTotal = remainingBalance > 0 ? remainingBalance : fullOrderTotal;
         const count = Math.max(1, parseInt(numPeople) || 1);
-        const baseShare = Math.floor(targetTotal / count);
-        const remainder = targetTotal % count;
-        
-        // Distribute remainder 1 baht to the first 'remainder' people
+        const paid = Math.min(equalPaidCount, count);
+        const peopleLeft = Math.max(1, count - paid);
+        const targetTotal = Math.max(0, remainingBalance);
+        const baseShare = Math.floor(targetTotal / peopleLeft);
+        const remainder = targetTotal - baseShare * peopleLeft;
         const shares = [];
         for (let i = 0; i < count; i++) {
-            shares.push(baseShare + (i < remainder ? 1 : 0));
+            if (i < paid) shares.push({ amount: equalPaidRounds[i]?.amount || 0, paid: true });
+            else shares.push({ amount: baseShare + ((i - paid) < remainder ? 1 : 0), paid: false });
         }
         return shares;
-    }, [remainingBalance, fullOrderTotal, numPeople]);
+    }, [remainingBalance, numPeople, equalPaidCount, equalPaidRounds]);
 
-    const currentEqualAmount = equalSharesArray[currentPersonIndex] || 0;
+    const currentEqualAmount = equalSharesArray[currentPersonIndex]?.paid ? 0 : (equalSharesArray[currentPersonIndex]?.amount || 0);
 
     // Mode 3: Percentage Calculation
     const activePercentValue = useMemo(() => {
@@ -171,7 +192,8 @@ export default function POSSplitPaymentModal({
     }, [activePercentValue, percentBasis, fullOrderTotal, remainingBalance]);
 
     // Mode 4: Custom Amount Calculation
-    const customAmountVal = parseFloat(customAmountInput) || 0;
+    // Whole baht, never more than what is still owed on the bill
+    const customAmountVal = Math.max(0, Math.min(remainingBalance, Math.round(parseFloat(customAmountInput) || 0)));
 
     // Active Split Amount based on current mode
     const currentSplitAmount = useMemo(() => {
@@ -357,7 +379,21 @@ export default function POSSplitPaymentModal({
     };
 
     // Confirm Split Payment Execution
-    const handleConfirm = () => {
+    const [savingRound, setSavingRound] = useState(false);
+
+    // Closing mid-split is allowed (paid rounds are saved), but make the open balance explicit
+    const handleRequestClose = () => {
+        if (savingRound) return;
+        if (alreadyPaid > 0 && remainingBalance > 0) {
+            const ok = typeof window !== 'undefined'
+                ? window.confirm(`บิลนี้ยังค้างชำระ ฿${remainingBalance.toLocaleString()} (จ่ายแล้ว ฿${alreadyPaid.toLocaleString()})\nปิดหน้าต่างแบ่งจ่ายตอนนี้? ยอดที่จ่ายแล้วถูกบันทึกไว้`)
+                : true;
+            if (!ok) return;
+        }
+        onClose?.();
+    };
+    const handleConfirm = async () => {
+        if (savingRound) return;
         if (hasUnsentItems) {
             toast.error("มีรายการยังไม่ส่งครัว กรุณาส่งครัวก่อนแบ่งชำระครับ");
             return;
@@ -379,19 +415,11 @@ export default function POSSplitPaymentModal({
         const cashRecvNum = parseFloat(cashReceived) || 0;
         const changeVal = paymentMethod === 'cash' ? Math.max(0, cashRecvNum - currentSplitAmount) : 0;
 
-        // Broadcast success to CFD
-        broadcastToCFD({
-            type: 'SPLIT_SUCCESS',
-            payload: {
-                splitTotal: currentSplitAmount,
-                remainingBalance: remainingBalanceAfterSplit,
-                paymentMethod,
-                memberProfile: attachedSplitMember
-            }
-        });
-
-        // Trigger parent split confirmation with rich round metadata
-        onConfirmSplit({
+        // Trigger parent split confirmation with rich round metadata; wait for the save
+        setSavingRound(true);
+        let saved = false;
+        try {
+        saved = await onConfirmSplit({
             splitMode,
             splitTotal: currentSplitAmount,
             paymentMethod,
@@ -410,13 +438,30 @@ export default function POSSplitPaymentModal({
                 alreadyPaidAmount: alreadyPaid
             }
         });
+        } finally {
+            setSavingRound(false);
+        }
+        // Parent returns false when the save failed: keep everything as it was so staff can retry
+        if (saved === false) return;
 
-        // Reset inputs for next chunk if balance remains
+        // Broadcast success to CFD only once the round is really saved
+        broadcastToCFD({
+            type: 'SPLIT_SUCCESS',
+            payload: {
+                splitTotal: currentSplitAmount,
+                remainingBalance: remainingBalanceAfterSplit,
+                paymentMethod,
+                memberProfile: attachedSplitMember
+            }
+        });
+
+        // Reset inputs for next chunk if balance remains (next payer starts clean)
         if (remainingBalanceAfterSplit > 0) {
             setCustomAmountInput('');
             setCashReceived('');
+            setAttachedSplitMember(null);
             if (splitMode === 'EQUAL') {
-                setCurrentPersonIndex(prev => Math.min(numPeople - 1, prev + 1));
+                setCurrentPersonIndex(Math.min(numPeople - 1, equalPaidCount + 1));
             }
         }
     };
@@ -469,8 +514,8 @@ export default function POSSplitPaymentModal({
                         </button>
                     )}
 
-                    <button 
-                        onClick={onClose}
+                    <button
+                        onClick={handleRequestClose}
                         className="w-7 h-7 rounded-full bg-white border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] transition-all cursor-pointer"
                     >
                         <X size={15} />
@@ -519,7 +564,17 @@ export default function POSSplitPaymentModal({
             {hasUnsentItems && (
                 <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 font-bold flex items-center gap-2 shrink-0">
                     <AlertCircle size={14} className="text-amber-600 shrink-0" />
-                    <span>มีรายการยังไม่ส่งครัว! กรุณากดส่งครัวให้เรียบร้อยก่อนทำการแบ่งจ่ายครับ</span>
+                    <span className="flex-1">มีรายการยังไม่ส่งครัว ต้องส่งครัวก่อนแบ่งจ่าย</span>
+                    {onSendToKitchen && (
+                        <button
+                            type="button"
+                            disabled={isSendingToKitchen}
+                            onClick={onSendToKitchen}
+                            className="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                        >
+                            {isSendingToKitchen ? 'กำลังส่ง...' : 'ส่งครัวตอนนี้'}
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -580,11 +635,12 @@ export default function POSSplitPaymentModal({
                                     <button
                                         key={num}
                                         type="button"
+                                        disabled={num <= equalPaidCount}
                                         onClick={() => {
                                             setNumPeople(num);
-                                            setCurrentPersonIndex(0);
+                                            setCurrentPersonIndex(Math.min(equalPaidCount, num - 1));
                                         }}
-                                        className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                                        className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex flex-col items-center gap-0.5 ${
                                             numPeople === num 
                                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm' 
                                                 : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
@@ -592,7 +648,7 @@ export default function POSSplitPaymentModal({
                                     >
                                         <span>{num} ท่าน</span>
                                         <span className="text-[9px] opacity-75 font-normal">
-                                            ฿{Math.ceil(remainingBalance / num).toLocaleString()}
+                                            ฿{Math.ceil(remainingBalance / Math.max(1, num - Math.min(equalPaidCount, num - 1))).toLocaleString()}
                                         </span>
                                     </button>
                                 ))}
@@ -611,19 +667,23 @@ export default function POSSplitPaymentModal({
                             </div>
 
                             <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                                {equalSharesArray.map((shareAmt, idx) => (
+                                {equalSharesArray.map((share, idx) => (
                                     <button
                                         key={idx}
                                         type="button"
+                                        disabled={share.paid}
                                         onClick={() => setCurrentPersonIndex(idx)}
-                                        className={`p-2 rounded-lg border text-center font-mono text-xs font-bold transition-all cursor-pointer ${
-                                            currentPersonIndex === idx
+                                        className={`p-2 rounded-lg border text-center font-mono text-xs font-bold transition-all cursor-pointer disabled:cursor-default ${
+                                            share.paid
+                                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] line-through'
+                                                : currentPersonIndex === idx
                                                 ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
                                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-white'
                                         }`}
                                     >
                                         <div className="text-[9px] opacity-80 uppercase">คนที่ {idx + 1}</div>
-                                        <div className="text-xs font-black mt-0.5">฿{shareAmt.toLocaleString()}</div>
+                                        <div className="text-xs font-black mt-0.5">฿{share.amount.toLocaleString()}</div>
+                                        {share.paid && <div className="text-[9px] no-underline">จ่ายแล้ว</div>}
                                     </button>
                                 ))}
                             </div>
@@ -811,7 +871,7 @@ export default function POSSplitPaymentModal({
                                 >
                                     <span className="flex items-center gap-1.5">
                                         <Phone size={12} />
-                                        <span>สะสมแต้ม XHAUS สำหรับผู้จ่ายรอบนี้ (ระบุเบอร์)</span>
+                                        <span>ผูกสมาชิก XHAUS (รับแต้มเมื่อจ่ายครบบิล)</span>
                                     </span>
                                     <Plus size={13} />
                                 </button>
@@ -921,19 +981,7 @@ export default function POSSplitPaymentModal({
                         <Banknote size={13} />
                         <span>CASH (เงินสด)</span>
                     </button>
-
-                    <button 
-                        type="button"
-                        onClick={() => setPaymentMethod('credit')}
-                        className={`flex-1 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                            paymentMethod === 'credit' 
-                                ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs font-black' 
-                                : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                        }`}
-                    >
-                        <CreditCard size={13} />
-                        <span>บัตรเครดิต</span>
-                    </button>
+                    {/* No card terminal at the shop: cash and PromptPay only, same as normal checkout */}
                 </div>
 
                 {/* PromptPay QR Sub-panel: Simplified without redundant cashier screen QR */}
@@ -1032,17 +1080,11 @@ export default function POSSplitPaymentModal({
                     </div>
                 )}
 
-                {/* Credit Card Sub-panel */}
-                {paymentMethod === 'credit' && (
-                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 font-mono text-xs text-[oklch(55%_0.010_28)] text-center animate-in fade-in duration-100">
-                        <span>ชำระผ่านเครื่องรูดบัตร (EDC) เรียบร้อยแล้วกดบันทึกชำระด้านล่าง</span>
-                    </div>
-                )}
 
                 {/* 5. Main Action Confirmation Button */}
                 <button
                     type="button"
-                    disabled={hasUnsentItems || currentSplitAmount <= 0}
+                    disabled={savingRound || hasUnsentItems || currentSplitAmount <= 0}
                     onClick={handleConfirm}
                     className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] border border-[oklch(42%_0.16_28)] text-white py-3.5 rounded-xl text-sm font-mono font-bold uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md cursor-pointer h-12 flex items-center justify-center gap-2 active:scale-[0.99]"
                 >

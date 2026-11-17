@@ -7,6 +7,7 @@ import { recordShiftTransaction } from '../utils/shiftHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { isAdvanceUnseatedReservation } from '../utils/availabilityUtils';
+import { pickActiveTableSession } from '../utils/tableTransferHelper';
 import { extractCarryOverTags } from '../utils/splitPaymentHelper';
 import { addLocallyPrintedIds, markItemsPrinted } from '../utils/printClaim';
 
@@ -66,6 +67,21 @@ function isBookingSessionActive(b, startOfToday, endOfToday, now) {
     return false;
 }
 
+/**
+ * True when an error means the request never reached the database (offline, DNS, timeout),
+ * as opposed to the database answering with a refusal (PostgREST/Postgres error code).
+ */
+export function isNetworkError(err) {
+    if (!err) return false;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+    const msg = String(err.message || err).toLowerCase();
+    if (err.name === 'TypeError' && /fetch|network|load failed/.test(msg)) return true;
+    if (/failed to fetch|networkerror|network request failed|load failed|timeout|timed out|err_internet|err_network|err_connection/.test(msg)) return true;
+    // A Postgres / PostgREST answer carries a code (e.g. 42501, 23514, PGRST204): the server was reached
+    if (err.code && String(err.code).length > 0) return false;
+    return false;
+}
+
 export function usePOSOrder() {
     const [loading, setLoading] = useState(false);
     const walkInInFlightPromisesRef = useRef(new Map());
@@ -79,11 +95,11 @@ export function usePOSOrder() {
         if (!isOnline()) {
             console.log('[Offline Mode] Fetching active booking from local cache for table:', tableId);
             const bookings = posCache.getBookings();
-            // Prioritize seated dining sessions first
-            const seated = bookings.find(b => String(b.table_id) === String(tableId) && b.status === 'seated' && isBookingSessionActive(b, startOfToday, endOfToday, now));
-            if (seated) return seated;
-            const otherActive = bookings.find(b => String(b.table_id) === String(tableId) && isBookingSessionActive(b, startOfToday, endOfToday, now));
-            return otherActive || null;
+            return pickActiveTableSession(
+                bookings.filter(b => String(b.table_id) === String(tableId)),
+                now,
+                b => isBookingSessionActive(b, startOfToday, endOfToday, now)
+            );
         }
 
         try {
@@ -103,9 +119,8 @@ export function usePOSOrder() {
 
             const validCandidates = (candidates || []).filter(b => isBookingSessionActive(b, startOfToday, endOfToday, now));
             
-            // Absolute Priority: Seated in-store session always takes precedence over any other status
-            const seatedBooking = validCandidates.find(b => b.status === 'seated');
-            const data = seatedBooking || validCandidates.find(b => b.status === 'pending') || validCandidates[0] || null;
+            // A session already in progress beats one booked for later, then seated beats pending
+            const data = pickActiveTableSession(validCandidates, now, () => true);
 
             if (data) {
                 // Self-healing: if booking is already seated, strip any lingering GPS approval markers
@@ -132,9 +147,11 @@ export function usePOSOrder() {
         } catch (err) {
             console.error('Network error fetching booking, fallback to cache:', err);
             const bookings = posCache.getBookings();
-            const seated = bookings.find(b => String(b.table_id) === String(tableId) && b.status === 'seated' && isBookingSessionActive(b, startOfToday, endOfToday, now));
-            if (seated) return seated;
-            return bookings.find(b => String(b.table_id) === String(tableId) && isBookingSessionActive(b, startOfToday, endOfToday, now)) || null;
+            return pickActiveTableSession(
+                bookings.filter(b => String(b.table_id) === String(tableId)),
+                now,
+                b => isBookingSessionActive(b, startOfToday, endOfToday, now)
+            );
         }
     }, []);
 
@@ -864,8 +881,16 @@ export function usePOSOrder() {
             toast.success('Order completed successfully');
             return true;
         } catch (err) {
-            console.error('Failed to complete checkout online, queueing offline checkout:', err);
-            
+            // Only a lost connection may fall back to the offline queue. A database refusal (permission,
+            // constraint, bad column) would fail again on every sync and must not count money in the shift.
+            if (!isNetworkError(err)) {
+                console.error('Checkout rejected by the database (not queued):', err);
+                setLoading(false);
+                toast.error(`ปิดบิลไม่สำเร็จ: ${err?.message || 'ฐานข้อมูลไม่รับข้อมูล'} (ยังไม่ได้บันทึกการชำระ)`);
+                return false;
+            }
+            console.error('Network lost during checkout, queueing offline checkout:', err);
+
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
@@ -879,7 +904,15 @@ export function usePOSOrder() {
                         xhaus_discount: xhausDiscount,
                         xhaus_reward_id: rewardId,
                         user_id: profileId || b.user_id,
-                        staff_remark: `Paid by ${paymentMethod.toUpperCase()}` 
+                        cash_received: numCashRecv > 0 ? numCashRecv : null,
+                        cash_change: numCashRecv > 0 ? numChangeDue : null,
+                        staff_remark: (() => {
+                            const tags = extractCarryOverTags(b.staff_remark);
+                            const base = rewardCode
+                                ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
+                                : `Paid by ${paymentMethod.toUpperCase()}${cashTag}`;
+                            return tags ? `${base} ${tags}`.trim() : base;
+                        })()
                     };
                 }
                 return b;
@@ -896,7 +929,9 @@ export function usePOSOrder() {
                 xhausDiscount,
                 rewardCode,
                 rewardId,
-                profileId
+                profileId,
+                cashReceived: numCashRecv,
+                changeDue: numChangeDue
             });
             recordShiftTransaction(bookingId, actualShiftAmount, paymentMethod);
 

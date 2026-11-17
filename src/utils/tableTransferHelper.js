@@ -428,5 +428,22 @@ export function isTableSessionActive(b, startOfToday, endOfToday, now = new Date
     return false;
 }
 
+/**
+ * Picks the one dining session a table should show when several are active at once.
+ * A session that has already started beats one booked for later (e.g. a reservation that was
+ * checked in hours early), then seated beats pending, then the most recently started wins.
+ * @param {Object[]} bookings - bookings already narrowed to one table
+ * @param {Date} [now]
+ * @param {(b: Object) => boolean} [isActive] - defaults to isTableSessionActive
+ */
+export function pickActiveTableSession(bookings, now = new Date(), isActive = (b) => isTableSessionActive(b, null, null, now)) {
+    const active = (bookings || []).filter(isActive);
+    if (active.length <= 1) return active[0] || null;
+    const startMs = (b) => new Date(b.booking_time || b.created_at || 0).getTime() || 0;
+    const graceMs = 15 * 60 * 1000;
+    const rank = (b) => (startMs(b) <= now.getTime() + graceMs ? 2 : 0) + (b.status === 'seated' ? 1 : 0);
+    return [...active].sort((a, b) => rank(b) - rank(a) || startMs(b) - startMs(a))[0];
+}
+
 
 

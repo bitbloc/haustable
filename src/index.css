@@ -620,3 +620,17 @@ input[type="range"]::-moz-range-thumb {
 .pos-container .text-xs        { font-size: calc(0.75rem * var(--pos-text-scale, 1)); }
 .pos-container .text-sm        { font-size: calc(0.875rem * var(--pos-text-scale, 1)); }
 .pos-container .text-base      { font-size: calc(1rem * var(--pos-text-scale, 1)); }
+
+/* ------------------------------------------------------------------
+   Thai marks vs `truncate` (2026-11-17)
+   Tailwind's .truncate sets overflow:hidden on both axes. IBM Plex Sans
+   Thai glyphs are ~1.65em tall while text-sm/text-xs line boxes are
+   ~1.43em, so upper vowels and tone marks (e.g. ค์ in "สตางค์") were
+   shaved off. Clip only the inline axis: the ellipsis still works and
+   marks may paint above/below the line box. Unlayered, so it beats the
+   utility layer; browsers without overflow:clip keep overflow:hidden.
+   ------------------------------------------------------------------ */
+.truncate {
+  overflow-x: clip;
+  overflow-y: visible;
+}

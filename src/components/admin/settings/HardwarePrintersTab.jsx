@@ -6,7 +6,6 @@ import { BleClient } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
 import { Printer as CapgoPrinter } from '@capgo/capacitor-printer';
 import { printToBluetoothDirect, encodeShiftReportData, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from '../../../utils/printerHelper';
-import { simulateWmaOrder } from '../../../utils/wmaNativeBridge';
 import { getAudioVolume, setAudioVolume, isAudioMuted, setAudioMuted, toggleAudioMute, testPlayAlertSound, unlockAudioEngine } from '../../../utils/audioHelper';
 
 const ASCII_ART_PRESETS = [
@@ -746,65 +745,6 @@ export default function HardwarePrintersTab({
                         >
                             <Play size={13} className={isTestingAudio ? 'animate-spin' : 'text-[var(--color-accent)]'} />
                             <span>{isTestingAudio ? 'กำลังทดสอบเสียง...' : 'ทดสอบเล่นเสียงแจ้งเตือน (Test Sound)'}</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Wongnai Merchant App (WMA) Virtual ESC/POS Printer Bridge Card */}
-            <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-6 rounded-2xl space-y-4">
-                <div className="flex flex-wrap justify-between items-center border-b border-[var(--color-rule)] pb-3 gap-2">
-                    <div>
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
-                            Wongnai Merchant App (WMA) ESC/POS Bridge & Interceptor
-                        </h2>
-                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-0.5">
-                            พอร์ตจำลองเครื่องพิมพ์เสมือน (Port 9100) เพื่อดักจับออเดอร์ LINE MAN เข้า POS อัตโนมัติ
-                        </p>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink)] " />
-                        PORT 9100 LISTENING
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2 bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
-                        <h3 className="font-mono font-bold uppercase text-[11px] text-[var(--color-ink)]">
-                            การตั้งค่าในแอป Wongnai Merchant App (WMA)
-                        </h3>
-                        <ol className="space-y-1 text-[11px] font-mono text-[var(--color-muted)] list-decimal list-inside leading-relaxed">
-                            <li>เปิดแอป WMA &gt; ไปที่ ตั้งค่า &gt; เครื่องพิมพ์</li>
-                            <li>กด เพิ่มเครื่องพิมพ์ &gt; เลือก LAN / Wi-Fi (IP Printer)</li>
-                            <li>ใส่ IP: 127.0.0.1 และ Port: 9100</li>
-                            <li>เลือกรุ่น ทั่วไป / ESC/POS (80mm)</li>
-                            <li>เปิด “พิมพ์อัตโนมัติเมื่อมีออเดอร์ใหม่” แล้วกดบันทึก</li>
-                        </ol>
-                    </div>
-
-                    <div className="space-y-2 bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] flex flex-col justify-between">
-                        <div>
-                            <h3 className="font-mono font-bold uppercase text-[11px] text-[var(--color-ink)]">
-                                ตรวจสอบและทดสอบการรับออเดอร์ (Diagnostic Test)
-                            </h3>
-                            <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-1 leading-relaxed">
-                                กดปุ่มด้านล่างเพื่อจำลองส่งออเดอร์ LINE MAN เข้าสู่ระบบ POS เพื่อทดสอบการแจ้งเตือน
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                try {
-                                    await simulateWmaOrder();
-                                    toast.success('ยิงออเดอร์จำลอง LINE MAN สำเร็จ');
-                                } catch (e) {
-                                    toast.error('ทดสอบไม่สำเร็จ: ' + (e.message || 'Error'));
-                                }
-                            }}
-                            className="w-full py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(18%_0.012_28)] text-[var(--color-paper)] rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer "
-                        >
-                            ทดสอบยิงออเดอร์จำลอง LINE MAN (Simulate Test)
                         </button>
                     </div>
                 </div>
