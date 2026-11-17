@@ -83,6 +83,7 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 ### 5. Motion
 - 120-180ms, `transform` and `opacity` only (never height, margin or layout properties).
 - No bounce or overshoot. Nothing loops (no pulsing, no ticking every second unless it is the last minutes of a real countdown).
+- **One exception: the customer display background** (`src/pos/CfdMotif.jsx`, owner decision 2026-11-17). On idle, Southern-Thai words ("หรอย", "จังฮู้", "จริตจัด", "ใต้ชัดๆ") ride four thin plum lines around the ในบ้าน wordmark; in use, one small dot rides each line behind the cards. It loops slowly (13-23 s per pass), moves only by CSS `transform` keyframes so the compositor runs it (measured ~0% main thread with the CPU throttled 6x; SVG `animateMotion` was ~35%), and rests still under `prefers-reduced-motion`. No shadows, filters or icons on the riders. Nowhere else loops.
 - Always honour `prefers-reduced-motion: reduce` (no motion, instant state changes).
 - The first paint is never animated.
 
