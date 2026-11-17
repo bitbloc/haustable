@@ -104,10 +104,10 @@ export default function CRMCheckoutPrivileges({
         <div className="space-y-3 font-sans">
             {/* Header Tag */}
             <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-1.5">
-                <span className="font-mono text-[10px] font-bold text-[var(--color-neutral)] uppercase tracking-wider">
+                <span className="font-mono text-sm font-bold text-[var(--color-neutral)] uppercase tracking-wider">
                     สิทธิประโยชน์สมาชิก CRM (Loyalty Privileges)
                 </span>
-                <span className="font-mono text-[10px] text-[var(--brand-plum)] font-bold">
+                <span className="font-mono text-sm text-[var(--brand-plum)] font-bold">
                     🪙 {memberBalance.toFixed(0)} xhaus | ☕ {currentStamps}/10
                 </span>
             </div>
@@ -116,14 +116,14 @@ export default function CRMCheckoutPrivileges({
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-3.5 rounded-rams space-y-2.5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] flex items-center justify-center font-bold text-xs">
+                        <div className="w-6 h-6 rounded-full bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] flex items-center justify-center font-bold text-sm">
                             <Coffee size={13} />
                         </div>
                         <div>
-                            <span className="font-mono text-[9px] font-bold text-[oklch(45%_0.08_140)] uppercase tracking-wider block">
+                            <span className="font-mono text-sm font-bold text-[oklch(45%_0.08_140)] uppercase tracking-wider block">
                                 [ 10 FREE 1 // แก้วฟรีสะสม ]
                             </span>
-                            <span className="text-xs font-bold text-[var(--color-ink)]">
+                            <span className="text-sm font-bold text-[var(--color-ink)]">
                                 {availableFreeDrinks > 0 
                                     ? `มีสิทธิ์เครื่องดื่มฟรี ${availableFreeDrinks} แก้ว` 
                                     : `สะสมแสตมป์เครื่องดื่ม (${currentStamps}/10)`
@@ -133,7 +133,7 @@ export default function CRMCheckoutPrivileges({
                     </div>
 
                     {availableFreeDrinks > 0 && (
-                        <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-white text-[9px] font-mono font-bold rounded-rams uppercase">
+                        <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-white text-sm font-mono font-bold rounded-rams uppercase">
                             พร้อมใช้งาน
                         </span>
                     )}
@@ -143,19 +143,19 @@ export default function CRMCheckoutPrivileges({
                     <div className="bg-white/90 border border-[var(--color-rule)] p-3 rounded-rams flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                         <div className="space-y-0.5">
                             {useFreeDrinkQuota ? (
-                                <p className="text-xs font-bold text-emerald-800 font-mono flex items-center gap-1.5">
+                                <p className="text-sm font-bold text-emerald-800 font-mono flex items-center gap-1.5">
                                     <Check size={14} className="text-emerald-700" />
                                     <span>ใช้สิทธิ์เครื่องดื่มฟรี 1 แก้ว (-฿{freeDrinkValue}.-)</span>
                                 </p>
                             ) : (
-                                <p className="text-xs text-[var(--color-muted)]">
+                                <p className="text-sm text-[var(--color-muted)]">
                                     {hasEligibleDrinks 
                                         ? `กดใช้สิทธิ์เพื่อลดราคาเครื่องดื่มที่ร่วมรายการ (-฿${freeDrinkValue}.-)`
                                         : 'เลือกเครื่องดื่มในเมนู (เช่น กาแฟ ชา โซดา) เพื่อใช้สิทธิ์'
                                     }
                                 </p>
                             )}
-                            <p className="text-[10px] text-[var(--color-neutral)] font-mono">
+                            <p className="text-sm text-[var(--color-neutral)] font-mono">
                                 * โควตาแก้วฟรีสะสมคงเหลือ: {availableFreeDrinks} สิทธิ์
                             </p>
                         </div>
@@ -165,7 +165,7 @@ export default function CRMCheckoutPrivileges({
                                 <button
                                     type="button"
                                     onClick={() => onToggleFreeDrink?.(false)}
-                                    className="w-full sm:w-auto px-3.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-mono text-xs font-bold rounded-rams cursor-pointer transition-colors"
+                                    className="w-full sm:w-auto px-3.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-mono text-sm font-bold rounded-rams cursor-pointer transition-colors"
                                 >
                                     ยกเลิก
                                 </button>
@@ -174,7 +174,7 @@ export default function CRMCheckoutPrivileges({
                                     type="button"
                                     onClick={() => onToggleFreeDrink?.(true)}
                                     disabled={!hasEligibleDrinks}
-                                    className="w-full sm:w-auto px-4 py-1.5 bg-[var(--color-ink)] hover:bg-black text-white font-mono text-xs font-bold rounded-rams disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 shadow-2xs"
+                                    className="w-full sm:w-auto px-4 py-1.5 bg-[var(--color-ink)] hover:bg-black text-white font-mono text-sm font-bold rounded-rams disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 shadow-2xs"
                                 >
                                     ใช้สิทธิ์แก้วฟรี
                                 </button>
@@ -190,7 +190,7 @@ export default function CRMCheckoutPrivileges({
                                 return (
                                     <div
                                         key={idx}
-                                        className={`w-6 h-6 rounded-rams flex items-center justify-center font-mono text-[10px] font-bold border transition-all ${
+                                        className={`w-6 h-6 rounded-rams flex items-center justify-center font-mono text-sm font-bold border transition-all ${
                                             isStamped
                                                 ? 'bg-[var(--color-ink)] text-white border-black shadow-2xs'
                                                 : 'bg-white border-[var(--color-rule)] text-[var(--color-neutral)]'
@@ -201,11 +201,11 @@ export default function CRMCheckoutPrivileges({
                                     </div>
                                 )
                             })}
-                            <span className="font-mono text-xs font-bold text-[var(--color-ink)] pl-1.5">
+                            <span className="font-mono text-sm font-bold text-[var(--color-ink)] pl-1.5">
                                 {currentStamps}/10
                             </span>
                         </div>
-                        <p className="text-[10px] text-[var(--color-neutral)] font-mono">
+                        <p className="text-sm text-[var(--color-neutral)] font-mono">
                             สะสมอีก {10 - currentStamps} แก้ว เพื่อรับสิทธิ์เครื่องดื่มฟรี 1 แก้ว
                         </p>
                     </div>
@@ -216,19 +216,19 @@ export default function CRMCheckoutPrivileges({
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-3.5 rounded-rams space-y-2.5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[var(--brand-plum)]/15 text-[var(--brand-plum)] flex items-center justify-center font-bold text-xs">
+                        <div className="w-6 h-6 rounded-full bg-[var(--brand-plum)]/15 text-[var(--brand-plum)] flex items-center justify-center font-bold text-sm">
                             <Coins size={13} />
                         </div>
                         <div>
-                            <span className="font-mono text-[9px] font-bold text-[var(--brand-plum)] uppercase tracking-wider block">
+                            <span className="font-mono text-sm font-bold text-[var(--brand-plum)] uppercase tracking-wider block">
                                 [ XHAUS COINS // แลกแต้มส่วนลด ]
                             </span>
-                            <span className="text-xs font-bold text-[var(--color-ink)]">
+                            <span className="text-sm font-bold text-[var(--color-ink)]">
                                 1 xhaus = ฿{redeemRate.toFixed(2).replace(/\.00$/, '')} (ขั้นต่ำ {minRedeem.toFixed(0)} xhaus)
                             </span>
                         </div>
                     </div>
-                    <span className="font-mono text-xs font-bold text-[var(--brand-plum)]">
+                    <span className="font-mono text-sm font-bold text-[var(--brand-plum)]">
                         🪙 {memberBalance.toFixed(0)} pts
                     </span>
                 </div>
@@ -236,17 +236,17 @@ export default function CRMCheckoutPrivileges({
                 {xhausToRedeem > 0 ? (
                     <div className="bg-white/90 border border-amber-300 p-3 rounded-rams flex items-center justify-between gap-2">
                         <div>
-                            <p className="text-xs font-bold text-amber-950 font-mono">
+                            <p className="text-sm font-bold text-amber-950 font-mono">
                                 แลกใช้ {xhausToRedeem} xhaus (-฿{effectiveXhausDiscount.toLocaleString()}.-)
                             </p>
-                            <p className="text-[10px] text-amber-800/80 font-mono">
+                            <p className="text-sm text-amber-800/80 font-mono">
                                 แต้มคงเหลือหลังหัก: {(memberBalance - xhausToRedeem).toFixed(0)} xhaus
                             </p>
                         </div>
                         <button
                             type="button"
                             onClick={() => onCancelXhaus?.()}
-                            className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-mono text-xs font-bold rounded-rams cursor-pointer transition-colors"
+                            className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-mono text-sm font-bold rounded-rams cursor-pointer transition-colors"
                         >
                             ยกเลิก
                         </button>
@@ -254,11 +254,11 @@ export default function CRMCheckoutPrivileges({
                 ) : (
                     <div>
                         {memberBalance < minRedeem ? (
-                            <p className="text-[11px] text-[var(--color-neutral)] font-mono py-1">
+                            <p className="text-sm text-[var(--color-neutral)] font-mono py-1">
                                 * ต้องสะสมครบ {minRedeem.toFixed(0)} xhaus เพื่อเริ่มแลกส่วนลด (ปัจจุบันมี {memberBalance.toFixed(0)} xhaus)
                             </p>
                         ) : maxCoinsAllowed < minRedeem ? (
-                            <p className="text-[11px] text-[var(--color-neutral)] font-mono py-1">
+                            <p className="text-sm text-[var(--color-neutral)] font-mono py-1">
                                 * ยอดบิลปัจจุบันสามารถแลกได้ไม่เกิน {maxCoinsAllowed.toFixed(0)} xhaus (ขั้นต่ำ {minRedeem.toFixed(0)} xhaus)
                             </p>
                         ) : (
@@ -274,12 +274,12 @@ export default function CRMCheckoutPrivileges({
                                             setInputError(null)
                                         }}
                                         placeholder={`เช่น ${minRedeem}`}
-                                        className="flex-1 bg-white border border-[var(--color-rule)] rounded-rams px-3 py-2 text-sm font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] transition-colors"
+                                        className="flex-1 bg-white border border-[var(--color-rule)] rounded-rams px-3 py-2 text-base font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] transition-colors"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleQuickMax}
-                                        className="px-2.5 py-2 bg-canvas hover:bg-paper border border-[var(--color-rule)] text-[var(--color-ink)] font-mono text-[11px] font-bold rounded-rams transition-colors shrink-0"
+                                        className="px-2.5 py-2 bg-canvas hover:bg-paper border border-[var(--color-rule)] text-[var(--color-ink)] font-mono text-sm font-bold rounded-rams transition-colors shrink-0"
                                         title={`แลกสูงสุด ${maxCoinsAllowed} xhaus`}
                                     >
                                         แลกเต็ม {maxCoinsAllowed.toFixed(0)}
@@ -288,19 +288,19 @@ export default function CRMCheckoutPrivileges({
                                         type="button"
                                         onClick={handleApplyCoins}
                                         disabled={!redeemInput}
-                                        className="px-4 py-2 bg-[var(--color-ink)] hover:bg-black text-white font-mono text-xs font-bold rounded-rams disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 shadow-2xs shrink-0"
+                                        className="px-4 py-2 bg-[var(--color-ink)] hover:bg-black text-white font-mono text-sm font-bold rounded-rams disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 shadow-2xs shrink-0"
                                     >
                                         ใช้แต้ม
                                     </button>
                                 </div>
 
                                 {inputError && (
-                                    <p className="text-error text-xs font-mono font-bold flex items-center gap-1">
+                                    <p className="text-error text-sm font-mono font-bold flex items-center gap-1">
                                         <AlertCircle size={12} /> {inputError}
                                     </p>
                                 )}
 
-                                <div className="flex justify-between items-center text-[10px] text-[var(--color-neutral)] font-mono pt-0.5">
+                                <div className="flex justify-between items-center text-sm text-[var(--color-neutral)] font-mono pt-0.5">
                                     <span>จำกัดไม่เกิน {maxRedeemPercent}% ของบิล</span>
                                     <span>แลกได้สูงสุด: {maxCoinsAllowed.toFixed(0)} xhaus (ลด ฿{(maxCoinsAllowed * redeemRate).toLocaleString()}.-)</span>
                                 </div>

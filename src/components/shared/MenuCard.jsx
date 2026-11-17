@@ -57,7 +57,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-subInk">
-                            <span className="text-xs font-mono uppercase">No Image</span>
+                            <span className="text-sm">ไม่มีรูป</span>
                         </div>
                     )}
 
@@ -71,7 +71,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
                     <div className="absolute inset-0 cursor-pointer" onClick={(e) => onAdd(item)}></div>
 
                     {item.is_recommended && (
-                        <div className="absolute top-2 left-2 bg-plum text-cream border border-plum text-xs font-bold px-2 py-0.5 rounded-none z-10 leading-normal">
+                        <div className="absolute top-2 left-2 bg-plum text-cream border border-plum text-sm font-bold px-2 py-0.5 rounded-none z-10 leading-normal">
                             {t ? t('recommendedShort') : 'แนะนำ'}
                         </div>
                     )}
@@ -104,13 +104,14 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
             {/* Content */}
             <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
-                    <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-ink truncate leading-snug">{item.name}</h3>
+                    <div className="flex justify-between items-start min-w-0">
+                        {/* leading-normal: truncate is overflow:hidden, tighter leading clips Thai tone marks */}
+                        <h3 className="flex-1 min-w-0 font-bold text-ink truncate leading-normal">{item.name}</h3>
                     </div>
-                    {item.description && <p className="text-xs text-subInk line-clamp-2 mt-1">{item.description}</p>}
+                    {item.description && <p className="text-sm text-subInk line-clamp-2 leading-relaxed mt-1">{item.description}</p>}
                 </div>
 
-                <div className="flex items-end justify-between mt-2">
+                <div className="flex flex-wrap items-end justify-between gap-2 mt-2">
                     <span className="font-mono font-bold text-lg text-ink">{item.price}.-</span>
 
                     {hasOptions ? (
@@ -138,7 +139,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
 
                             <button
                                 onClick={createRipple}
-                                className="relative overflow-hidden bg-ink text-paper h-8 pl-3 pr-3 rounded-none border border-[var(--color-rule)] text-xs font-mono font-bold active:scale-95 transition-all duration-300 flex items-center gap-0 group-hover:pr-4 hover:bg-paper hover:text-ink hover:border-ink z-10 uppercase"
+                                className="relative overflow-hidden bg-ink text-paper h-12 min-w-12 justify-center pl-3 pr-3 rounded-none border border-[var(--color-rule)] text-sm font-mono font-bold active:scale-95 transition-all duration-300 flex items-center gap-0 group-hover:pr-4 hover:bg-paper hover:text-ink hover:border-ink z-10 uppercase"
                                 style={{ maxWidth: '100%' }}
                             >
                                 <Plus size={16} className="shrink-0" />
@@ -149,14 +150,14 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
                         </div>
                     ) : (
                         qty === 0 ? (
-                            <button onClick={() => onAdd(item)} className="bg-canvas text-ink border border-[var(--color-rule)] w-8 h-8 rounded-none flex items-center justify-center hover:bg-paper hover:border-ink transition-colors active:scale-90">
+                            <button onClick={() => onAdd(item)} aria-label="เพิ่ม" className="bg-canvas text-ink border border-[var(--color-rule)] w-12 h-12 rounded-none flex items-center justify-center hover:bg-paper hover:border-ink transition-colors active:scale-90">
                                 <Plus size={16} />
                             </button>
                         ) : (
-                            <div className="flex items-center gap-2 bg-ink text-paper rounded-none border border-ink px-2 py-1">
-                                <button onClick={(e) => { e.stopPropagation(); onRemove(item); }} className="w-6 h-6 flex items-center justify-center active:scale-90"><Minus size={14} /></button>
-                                <span className="font-bold font-mono text-xs w-2 text-center">{qty}</span>
-                                <button onClick={(e) => { e.stopPropagation(); onAdd(item); }} className="w-6 h-6 flex items-center justify-center active:scale-90"><Plus size={14} /></button>
+                            <div className="flex items-center gap-1 bg-ink text-paper rounded-none border border-ink">
+                                <button onClick={(e) => { e.stopPropagation(); onRemove(item); }} aria-label="ลด" className="w-12 h-12 flex items-center justify-center active:scale-90"><Minus size={14} /></button>
+                                <span className="font-bold font-mono text-base min-w-4 text-center">{qty}</span>
+                                <button onClick={(e) => { e.stopPropagation(); onAdd(item); }} aria-label="เพิ่ม" className="w-12 h-12 flex items-center justify-center active:scale-90"><Plus size={14} /></button>
                             </div>
                         )
                     )}

@@ -484,7 +484,10 @@ export default function PickupPage() {
                     navigate('/', { replace: true })
                 }
             } else {
-                setSubmitError(result.error || 'ส่งออเดอร์ไม่สำเร็จ กรุณาลองใหม่')
+                // Our own checks explain themselves in Thai; a raw server message does not help a customer
+                setSubmitError(/[฀-๿]/.test(result.error || '')
+                    ? result.error
+                    : 'ส่งออเดอร์ไม่สำเร็จ กรุณาลองใหม่ หรือโทร 098-528-4217')
                 toast.error('ส่งออเดอร์ไม่สำเร็จ')
             }
         } catch (err) {
@@ -587,7 +590,7 @@ export default function PickupPage() {
                                     <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} transition={{ type: "tween", duration: 0.3, ease: "easeOut" }} className="fixed bottom-0 left-0 right-0 bg-paper/90 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50">
                                         <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
                                             <div className="flex flex-col">
-                                                <div className="text-xs font-mono text-subInk uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
+                                                <div className="text-sm font-mono text-subInk uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
                                                 <div className="flex items-end gap-2">
                                                     <span className="font-mono text-sm bg-ink text-paper px-2 py-0.5 border border-[var(--color-rule)]">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
                                                     <span className="font-mono font-bold text-2xl leading-none">฿{cartTotal}</span>
@@ -619,17 +622,17 @@ export default function PickupPage() {
 
                             <div className="space-y-4 pb-20">
                                 <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-mono font-bold text-subInk uppercase">
+                                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                                        <h3 className="text-sm font-mono font-bold text-subInk uppercase whitespace-nowrap">
                                             {t('contactInfo')} <span className="text-[var(--color-accent)]">*</span>
                                         </h3>
-                                        <span className={`text-[10px] font-mono font-bold ${isContactValid ? 'text-[var(--color-accent-2)]' : 'text-[var(--color-accent)]'}`}>
-                                            {isContactValid ? '✓ ข้อมูลครบถ้วน' : '* บังคับกรอกชื่อและเบอร์โทร'}
+                                        <span className={`text-sm font-mono font-bold whitespace-nowrap ${isContactValid ? 'text-[var(--color-accent-2)]' : 'text-[var(--color-accent)]'}`}>
+                                            {isContactValid ? '✓ ข้อมูลครบถ้วน' : 'ต้องกรอกชื่อและเบอร์โทร'}
                                         </span>
                                     </div>
                                     <div className="space-y-3">
                                         <div>
-                                            <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                                            <label className="text-sm font-mono text-subInk font-bold block mb-1">
                                                 {t('yourName')} <span className="text-[var(--color-accent)]">*</span>
                                             </label>
                                             <input 
@@ -637,12 +640,12 @@ export default function PickupPage() {
                                                 placeholder={t('yourName') + ' (เช่น คุณสมชาย)'} 
                                                 value={contactName} 
                                                 onChange={e => setContactName(e.target.value)} 
-                                                className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-sans focus:border-ink outline-none transition-colors" 
+                                                className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-base font-sans focus:border-ink outline-none transition-colors" 
                                                 required
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                                            <label className="text-sm font-mono text-subInk font-bold block mb-1">
                                                 {t('phoneNumber')} <span className="text-[var(--color-accent)]">* (9-10 หลัก)</span>
                                             </label>
                                             <input 
@@ -650,11 +653,11 @@ export default function PickupPage() {
                                                 placeholder={t('phoneNumber') + ' (เช่น 0812345678)'} 
                                                 value={contactPhone} 
                                                 onChange={e => setContactPhone(e.target.value)} 
-                                                className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-mono focus:border-ink outline-none transition-colors" 
+                                                className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-base font-mono focus:border-ink outline-none transition-colors" 
                                                 required
                                             />
                                             {contactPhone && contactPhone.replace(/\D/g, '').length > 0 && contactPhone.replace(/\D/g, '').length < 9 && (
-                                                <p className="text-[10px] text-amber-700 font-mono mt-1">
+                                                <p className="text-sm text-amber-700 font-mono mt-1">
                                                     * เบอร์โทรศัพท์ต้องมีอย่างน้อย 9-10 หลัก (ปัจจุบัน {contactPhone.replace(/\D/g, '').length} หลัก)
                                                 </p>
                                             )}
@@ -663,8 +666,8 @@ export default function PickupPage() {
                                 </div>
 
                                 <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
-                                    <label className="text-xs font-mono text-subInk uppercase block mb-3">{t('specialRequest')}</label>
-                                    <textarea value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} placeholder={t('specialRequestPlaceholder')} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none resize-none text-sm transition-colors" rows={2} />
+                                    <label className="text-sm font-mono text-subInk uppercase block mb-3">{t('specialRequest')}</label>
+                                    <textarea value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} placeholder={t('specialRequestPlaceholder')} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none resize-none text-base transition-colors" rows={2} />
                                 </div>
 
                                 {/* Pickup Time Dropdown */}
@@ -708,40 +711,40 @@ export default function PickupPage() {
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--brand-plum)]/30 p-4 rounded-rams space-y-3">
                                         <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2.5">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 rounded-full bg-[var(--brand-plum)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                                                <div className="w-7 h-7 rounded-full bg-[var(--brand-plum)] text-white flex items-center justify-center font-bold text-sm shadow-xs">
                                                     <Crown size={14} />
                                                 </div>
                                                 <div>
-                                                    <span className="font-bold text-xs text-[var(--color-ink)] block">คุณ {memberProfile.display_name}</span>
-                                                    <span className="text-[9px] font-mono text-[var(--color-neutral)]">สิทธิประโยชน์สมาชิก CRM</span>
+                                                    <span className="font-bold text-sm text-[var(--color-ink)] block">คุณ {memberProfile.display_name}</span>
+                                                    <span className="text-sm font-mono text-[var(--color-neutral)]">สิทธิประโยชน์สมาชิก CRM</span>
                                                 </div>
                                             </div>
-                                            <span className="px-2.5 py-1 bg-[var(--brand-plum)] text-white text-[9px] font-mono font-bold rounded-rams uppercase tracking-wider">
+                                            <span className="px-2.5 py-1 bg-[var(--brand-plum)] text-white text-sm font-mono font-bold rounded-rams uppercase tracking-wider">
                                                 {tierDetails.current_tier} ({tierDetails.multiplier}x)
                                             </span>
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-2 text-center font-mono">
                                             <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
-                                                <span className="text-[8px] text-[var(--color-neutral)] uppercase block">xhaus Balance</span>
-                                                <span className="text-xs font-bold text-[var(--brand-plum)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
+                                                <span className="text-sm text-[var(--color-neutral)] uppercase block">xhaus Balance</span>
+                                                <span className="text-sm font-bold text-[var(--brand-plum)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
                                             </div>
                                             <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
-                                                <span className="text-[8px] text-[var(--color-neutral)] uppercase block">Drink Stamps</span>
-                                                <span className="text-xs font-bold text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
+                                                <span className="text-sm text-[var(--color-neutral)] uppercase block">Drink Stamps</span>
+                                                <span className="text-sm font-bold text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
                                             </div>
                                             <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
-                                                <span className="text-[8px] text-[var(--color-neutral)] uppercase block">Earn Points</span>
-                                                <span className="text-xs font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
+                                                <span className="text-sm text-[var(--color-neutral)] uppercase block">Earn Points</span>
+                                                <span className="text-sm font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
                                             </div>
                                         </div>
 
                                         {availableFreeDrinks > 0 && (
-                                            <div className="bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/30 px-3 py-1.5 rounded-rams flex items-center justify-between text-xs font-mono">
+                                            <div className="bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/30 px-3 py-1.5 rounded-rams flex items-center justify-between text-sm font-mono">
                                                 <span className="text-[oklch(45%_0.08_140)] font-bold">
                                                     ☕ สะสมครบแล้ว! มีสิทธิ์แก้วฟรี {availableFreeDrinks} แก้ว
                                                 </span>
-                                                <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                                <span className="text-sm text-[oklch(45%_0.08_140)] font-bold">
                                                     {useFreeDrinkQuota ? 'กำลังใช้งาน ✓' : 'กดใช้สิทธิ์ที่สรุปรายการ'}
                                                 </span>
                                             </div>
@@ -750,13 +753,13 @@ export default function PickupPage() {
                                 )}
 
                                 <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
-                                    <h3 className="text-xs font-mono text-subInk uppercase mb-3">{t('orderSummary')}</h3>
+                                    <h3 className="text-sm font-mono text-subInk uppercase mb-3">{t('orderSummary')}</h3>
                                     {cart.map((item, index) => (
                                         <div key={index} className="flex justify-between text-sm mb-3 border-b border-[var(--color-rule)] pb-2 last:border-0 last:pb-0">
                                             <div>
-                                                <div className="text-ink font-bold">{item.name} <span className="text-subInk text-xs font-mono">x{item.qty}</span></div>
-                                                {item.optionsSummary?.map((opt, i) => <div key={i} className="text-xs font-mono text-subInk">+ {opt.name} ({opt.price})</div>)}
-                                                {item.specialRequest && <div className="text-xs font-mono text-[var(--brand-plum)]">{t('note')}: {item.specialRequest}</div>}
+                                                <div className="text-ink font-bold">{item.name} <span className="text-subInk text-sm font-mono">x{item.qty}</span></div>
+                                                {item.optionsSummary?.map((opt, i) => <div key={i} className="text-sm font-mono text-subInk">+ {opt.name} ({opt.price})</div>)}
+                                                {item.specialRequest && <div className="text-sm font-mono text-[var(--brand-plum)]">{t('note')}: {item.specialRequest}</div>}
                                             </div>
                                             <span className="font-bold font-mono text-ink">{item.totalPricePerUnit * item.qty}.-</span>
                                         </div>
@@ -788,35 +791,35 @@ export default function PickupPage() {
                                             <div className="flex gap-2">
                                                 <input 
                                                     type="text" 
-                                                    placeholder="Promo Code" 
+                                                    placeholder="โค้ดส่วนลด" 
                                                     value={promoCode}
                                                     onChange={e => setPromoCode(e.target.value.toUpperCase())}
                                                     disabled={!!appliedPromo}
-                                                    className="flex-1 bg-canvas border border-[var(--color-rule)] rounded-none px-3 py-2 text-sm font-mono font-bold uppercase placeholder:normal-case outline-none focus:border-ink disabled:bg-[var(--color-rule)] disabled:text-subInk"
+                                                    className="flex-1 min-w-0 min-h-12 bg-canvas border border-[var(--color-rule)] rounded-none px-3 py-2 text-base font-mono font-bold uppercase placeholder:normal-case outline-none focus:border-ink disabled:bg-[var(--color-rule)] disabled:text-subInk"
                                                 />
                                                 {appliedPromo ? (
-                                                    <button onClick={removePromo} className="bg-canvas text-error px-3 py-2 rounded-none font-mono font-bold text-xs border border-[var(--color-rule)] hover:bg-error hover:text-paper">
-                                                        Remove
+                                                    <button onClick={removePromo} className="min-h-12 bg-canvas text-error px-3 rounded-none font-bold text-sm border border-[var(--color-rule)] hover:bg-error hover:text-paper">
+                                                        ยกเลิก
                                                     </button>
                                                 ) : (
                                                     <button 
                                                         onClick={handleApplyCode} 
                                                         disabled={!promoCode || isValidating}
-                                                        className="bg-ink text-paper px-4 py-2 rounded-none font-mono font-bold text-xs disabled:opacity-50"
+                                                        className="min-h-12 bg-ink text-paper px-4 rounded-none font-bold text-sm disabled:opacity-50"
                                                     >
-                                                        {isValidating ? '...' : 'Apply'}
+                                                        {isValidating ? '...' : 'ใช้โค้ด'}
                                                     </button>
                                                 )}
                                             </div>
                                              {/* Error Message */}
                                             {promoError && (
-                                                <p className="text-error text-xs font-mono font-bold flex items-center gap-1 mt-1">
+                                                <p className="text-error text-sm font-mono font-bold flex items-center gap-1 mt-1">
                                                     <AlertCircle size={12} /> {promoError}
                                                 </p>
                                             )}
                                             {/* Valid Message */}
                                             {appliedPromo && (
-                                                <div className="flex items-center gap-2 text-ink text-xs font-mono font-bold bg-[var(--color-rule)] p-2 rounded-none mt-2">
+                                                <div className="flex items-center gap-2 text-ink text-sm font-mono font-bold bg-[var(--color-rule)] p-2 rounded-none mt-2">
                                                     <Tag size={12} /> Code {appliedPromo.code} applied!
                                                 </div>
                                             )}
@@ -826,7 +829,7 @@ export default function PickupPage() {
                                             <div className="flex justify-between font-mono text-sm text-ink font-bold">
                                                 <span>
                                                     {t('discount')}
-                                                    {appliedPromo.discountType === 'percent' && <span className="ml-2 text-xs bg-[var(--color-rule)] px-1.5 py-0.5 align-middle">{appliedPromo.discountValue}%</span>}
+                                                    {appliedPromo.discountType === 'percent' && <span className="ml-2 text-sm bg-[var(--color-rule)] px-1.5 py-0.5 align-middle">{appliedPromo.discountValue}%</span>}
                                                 </span>
                                                 <span>- {promoDiscount}.-</span>
                                             </div>
@@ -856,8 +859,8 @@ export default function PickupPage() {
                                 {/* PAYMENT METHODS SELECTOR & QR (Dieter Rams Tabular Layout) */}
                                 <div className="bg-paper p-6 rounded-rams border border-[var(--color-rule)] space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-mono font-bold text-subInk uppercase">ชำระเงิน</h3>
-                                        <span className="text-[10px] font-mono bg-ink text-paper px-2 py-0.5 rounded-none font-bold">฿{finalTotal}.-</span>
+                                        <h3 className="text-sm font-mono font-bold text-subInk uppercase">ชำระเงิน</h3>
+                                        <span className="text-sm font-mono bg-ink text-paper px-2 py-0.5 rounded-none font-bold">฿{finalTotal}.-</span>
                                     </div>
 
                                     {/* Pay now vs pay at store */}
@@ -869,7 +872,7 @@ export default function PickupPage() {
                                                 className={`py-3 px-3 text-left transition-all ${payTiming === 'now' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
                                             >
                                                 <span className="block text-sm font-bold leading-snug">โอนจ่ายตอนนี้</span>
-                                                <span className="block text-[11px] leading-snug opacity-80 mt-1">แนบสลิป ร้านเริ่มทำทันที</span>
+                                                <span className="block text-sm leading-snug opacity-80 mt-1">แนบสลิป ร้านเริ่มทำทันที</span>
                                             </button>
                                             <button
                                                 type="button"
@@ -877,7 +880,7 @@ export default function PickupPage() {
                                                 className={`py-3 px-3 text-left transition-all border-l border-[var(--color-rule)] ${payTiming === 'store' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
                                             >
                                                 <span className="block text-sm font-bold leading-snug">จ่ายที่ร้านตอนรับ</span>
-                                                <span className="block text-[11px] leading-snug opacity-80 mt-1">ร้านโทรยืนยันก่อนเริ่มทำ</span>
+                                                <span className="block text-sm leading-snug opacity-80 mt-1">ร้านโทรยืนยันก่อนเริ่มทำ</span>
                                             </button>
                                         </div>
                                     )}
@@ -891,10 +894,10 @@ export default function PickupPage() {
                                                     <>พนักงานจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ตามเบอร์โทรศัพท์ที่ระบุก่อนเริ่มทำอาหาร</>
                                                 )}
                                             </p>
-                                            <p className="text-xs font-mono font-bold text-[var(--color-accent)]">
+                                            <p className="text-sm font-mono font-bold text-[var(--color-accent)]">
                                                 * ต้องได้รับการยืนยันจากทางร้านก่อนเริ่มทำอาหารเสมอ หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ <a href="tel:0985284217" className="underline">098-528-4217</a>
                                             </p>
-                                            <p className="text-subInk text-xs">
+                                            <p className="text-subInk text-sm">
                                                 ชำระ <strong className="font-mono text-ink">฿{finalTotal}.-</strong> ที่หน้าร้านตอนมารับ <span className="whitespace-nowrap">(เงินสด / สแกนจ่าย)</span> • หากติดต่อไม่ได้ ร้านขอสงวนสิทธิ์<span className="whitespace-nowrap">ยกเลิกออเดอร์</span>
                                             </p>
                                         </div>
@@ -907,7 +910,7 @@ export default function PickupPage() {
                                                 setPaymentMethod('promptpay');
                                                 if (slipFile) handleSlipFileChange(slipFile);
                                             }}
-                                            className={`py-2.5 px-3 flex items-center justify-center gap-2 text-xs font-mono font-bold transition-all ${paymentMethod === 'promptpay' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
+                                            className={`min-h-12 px-3 flex items-center justify-center gap-2 text-sm font-mono font-bold transition-all ${paymentMethod === 'promptpay' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
                                         >
                                             <QrCode size={14} />
                                             <span>พร้อมเพย์ QR</span>
@@ -918,7 +921,7 @@ export default function PickupPage() {
                                                 setPaymentMethod('truewallet');
                                                 if (slipFile) handleSlipFileChange(slipFile);
                                             }}
-                                            className={`py-2.5 px-3 flex items-center justify-center gap-2 text-xs font-mono font-bold transition-all border-l border-[var(--color-rule)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-subInk hover:text-ink'}`}
+                                            className={`min-h-12 px-3 flex items-center justify-center gap-2 text-sm font-mono font-bold transition-all border-l border-[var(--color-rule)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-subInk hover:text-ink'}`}
                                         >
                                             <Wallet size={14} />
                                             <span>TrueMoney</span>
@@ -940,7 +943,7 @@ export default function PickupPage() {
                                                     />
                                                 </div>
 
-                                                <div className="space-y-1.5 font-mono text-xs">
+                                                <div className="space-y-1.5 font-mono text-sm">
                                                     {promptpayName && (
                                                         <div className="flex justify-between items-center text-subInk">
                                                             <span>ชื่อบัญชี:</span>
@@ -955,7 +958,7 @@ export default function PickupPage() {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => copyToClipboard(promptpayId, 'promptpay')}
-                                                                    className="p-1 text-subInk hover:text-ink hover:bg-paper rounded transition-colors"
+                                                                    className="w-12 h-12 -my-3 -mr-3 flex items-center justify-center text-subInk hover:text-ink hover:bg-paper rounded transition-colors" aria-label="คัดลอก"
                                                                     title="คัดลอก"
                                                                 >
                                                                     {copiedField === 'promptpay' ? <CheckIcon size={12} className="text-emerald-600" /> : <Copy size={12} />}
@@ -971,11 +974,11 @@ export default function PickupPage() {
                                                     {(truewalletQrUrl || qrCodeUrl) ? (
                                                         <img src={truewalletQrUrl || qrCodeUrl} alt="TrueMoney QR" className="w-44 h-44 object-contain cursor-zoom-in" onClick={() => setSelectedModalImage({ type: 'image', url: truewalletQrUrl || qrCodeUrl, title: 'TrueMoney QR' })} />
                                                     ) : (
-                                                        <div className="w-44 h-44 flex items-center justify-center text-subInk font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
+                                                        <div className="w-44 h-44 flex items-center justify-center text-subInk font-mono text-sm">กำลังโหลด QR TrueMoney...</div>
                                                     )}
                                                 </div>
 
-                                                <div className="space-y-1.5 font-mono text-xs">
+                                                <div className="space-y-1.5 font-mono text-sm">
                                                     {truewalletName && (
                                                         <div className="flex justify-between items-center text-subInk">
                                                             <span>ชื่อบัญชี TrueMoney:</span>
@@ -990,7 +993,7 @@ export default function PickupPage() {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => copyToClipboard(truewalletPhone, 'truewallet')}
-                                                                    className="p-1 text-subInk hover:text-ink hover:bg-paper rounded transition-colors"
+                                                                    className="w-12 h-12 -my-3 -mr-3 flex items-center justify-center text-subInk hover:text-ink hover:bg-paper rounded transition-colors" aria-label="คัดลอก"
                                                                     title="คัดลอก"
                                                                 >
                                                                     {copiedField === 'truewallet' ? <CheckIcon size={12} className="text-emerald-600" /> : <Copy size={12} />}
@@ -998,13 +1001,13 @@ export default function PickupPage() {
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <p className="text-[11px] text-subInk font-mono">สามารถสแกน QR ผ่านแอป TrueMoney Wallet ได้ทันที</p>
+                                                        <p className="text-sm text-subInk font-mono">สามารถสแกน QR ผ่านแอป TrueMoney Wallet ได้ทันที</p>
                                                     )}
                                                 </div>
                                             </div>
                                         )}
 
-                                        <p className="text-[10px] text-subInk font-mono border-t border-[var(--color-rule)] pt-2 leading-relaxed">
+                                        <p className="text-base text-subInk font-mono border-t border-[var(--color-rule)] pt-2 leading-relaxed">
                                             • ต้องโอนชำระเงินเต็มจำนวน <strong>฿{finalTotal}.-</strong> เท่านั้น<br />
                                             • ระบบจะตรวจสลิปอัตโนมัติทันทีที่อัปโหลด
                                         </p>
@@ -1012,7 +1015,7 @@ export default function PickupPage() {
 
                                     {/* SLIP UPLOAD & AUTO-VERIFICATION STATUS */}
                                     <div className="space-y-2.5 pt-2 border-t border-[var(--color-rule)]">
-                                        <label className="block text-xs font-mono font-bold text-subInk uppercase">
+                                        <label className="block text-sm font-mono font-bold text-subInk uppercase">
                                             {t('uploadSlip')} (หลักฐานการโอน)
                                         </label>
 
@@ -1024,33 +1027,33 @@ export default function PickupPage() {
                                                     handleSlipFileChange(e.target.files[0]);
                                                 }
                                             }}
-                                            className="block w-full text-xs text-subInk file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer font-mono"
+                                            className="block w-full text-base text-subInk file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer font-mono"
                                         />
 
                                         {/* Verification Status Card */}
                                         {isVerifyingSlip && (
-                                            <div className="bg-canvas border border-[var(--color-rule)] p-3 rounded-rams flex items-center gap-2.5 text-xs font-mono text-subInk animate-pulse">
+                                            <div className="bg-canvas border border-[var(--color-rule)] p-3 rounded-rams flex items-center gap-2.5 text-sm font-mono text-subInk animate-pulse">
                                                 <RefreshCw size={15} className="animate-spin text-ink shrink-0" />
                                                 <span>กำลังตรวจสอบสลิปอัตโนมัติผ่าน EasySlip...</span>
                                             </div>
                                         )}
 
                                         {slipVerifyResult?.verified && (
-                                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-rams space-y-1 text-xs font-mono">
+                                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-rams space-y-1 text-sm font-mono">
                                                 <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
                                                     <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
                                                     <span>สลิปผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓</span>
                                                 </div>
-                                                <div className="text-[11px] text-emerald-900/90 pl-5 space-y-0.5">
+                                                <div className="text-sm text-emerald-900/90 pl-5 space-y-0.5">
                                                     <p>ผู้โอน: <strong>{typeof slipVerifyResult.senderName === 'object' ? (slipVerifyResult.senderName?.th || slipVerifyResult.senderName?.en || 'ไม่ระบุ') : (slipVerifyResult.senderName || 'ไม่ระบุ')}</strong></p>
                                                     <p>ยอดโอน: <strong>฿{typeof slipVerifyResult.amountInSlip === 'number' ? slipVerifyResult.amountInSlip : Number(slipVerifyResult.amountInSlip || 0)}.-</strong> ({typeof slipVerifyResult.bankName === 'object' ? (slipVerifyResult.bankName?.th || slipVerifyResult.bankName?.en || 'ธนาคาร') : (slipVerifyResult.bankName || 'ธนาคาร')})</p>
-                                                    {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
+                                                    {slipVerifyResult.transRef && <p className="text-sm text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
                                                 </div>
                                             </div>
                                         )}
 
                                         {slipVerifyError && (
-                                            <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-rams space-y-2 text-xs font-mono">
+                                            <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-rams space-y-2 text-sm font-mono">
                                                 <div className="flex items-start gap-1.5 text-amber-900 font-bold">
                                                     <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
                                                     <span>{slipVerifyError}</span>
@@ -1060,14 +1063,14 @@ export default function PickupPage() {
                                                         <button
                                                             type="button"
                                                             onClick={() => setAllowManualFallback(true)}
-                                                            className="text-[11px] font-bold text-ink underline hover:opacity-75 cursor-pointer"
+                                                            className="text-sm font-bold text-ink underline hover:opacity-75 cursor-pointer"
                                                         >
                                                             ส่งสลิปนี้ให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง (Manual Review)
                                                         </button>
                                                     </div>
                                                 )}
                                                 {allowManualFallback && (
-                                                    <p className="text-[10px] text-amber-800 pl-5">
+                                                    <p className="text-sm text-amber-800 pl-5">
                                                         ✓ เปิดโหมดส่งให้เจ้าหน้าที่ตรวจสอบแล้ว คุณสามารถกดสั่งอาหารได้
                                                     </p>
                                                 )}
@@ -1114,7 +1117,7 @@ export default function PickupPage() {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-full flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
-                            <span className="font-bold text-xs font-mono uppercase text-ink">{selectedModalImage.title}</span>
+                            <span className="font-bold text-sm font-mono uppercase text-ink">{selectedModalImage.title}</span>
                             <button 
                                 onClick={() => setSelectedModalImage(null)}
                                 className="p-1 rounded-md hover:bg-paper text-subInk hover:text-ink transition-colors cursor-pointer"
@@ -1130,12 +1133,12 @@ export default function PickupPage() {
                             )}
                         </div>
                         <div className="text-center font-mono space-y-1">
-                            <span className="text-xs font-bold text-ink">ยอดชำระ: ฿{finalTotal}.-</span>
-                            <p className="text-[10px] text-subInk">บันทึกรูปหรือสแกนผ่านแอปธนาคารได้ทันที</p>
+                            <span className="text-sm font-bold text-ink">ยอดชำระ: ฿{finalTotal}.-</span>
+                            <p className="text-sm text-subInk">บันทึกรูปหรือสแกนผ่านแอปธนาคารได้ทันที</p>
                         </div>
                         <button 
                             onClick={() => setSelectedModalImage(null)}
-                            className="w-full py-2.5 bg-ink text-paper text-xs font-mono font-bold rounded-rams hover:bg-subInk transition-colors cursor-pointer"
+                            className="w-full py-2.5 bg-ink text-paper text-sm font-mono font-bold rounded-rams hover:bg-subInk transition-colors cursor-pointer"
                         >
                             ปิดหน้าต่าง
                         </button>

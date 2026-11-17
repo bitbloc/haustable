@@ -52,7 +52,7 @@ function BookingModeChoice({ onChoose, holdMinutes, pax }) {
                         className="group text-left p-4 flex items-center justify-between gap-4 hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink transition-colors cursor-pointer"
                     >
                         <div className="flex flex-col gap-1 min-w-0">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-subInk">{opt.tag}</span>
+                            <span className="font-mono text-sm font-bold uppercase tracking-wider text-subInk">{opt.tag}</span>
                             <span className="text-base font-bold text-ink leading-snug">{opt.title}</span>
                             <ul className="text-sm text-subInk leading-relaxed">
                                 {opt.lines.map((l) => <li key={l}>{l}</li>)}

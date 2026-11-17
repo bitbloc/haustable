@@ -348,7 +348,10 @@ export default function BookingCheckout() {
                     window.location.replace('/')
                 }
             } else {
-                setFormError(result.error || 'ส่งการจองไม่สำเร็จ กรุณาลองใหม่')
+                // Our own checks explain themselves in Thai; a raw server message does not help a customer
+                setFormError(/[฀-๿]/.test(result.error || '')
+                    ? result.error
+                    : 'ส่งการจองไม่สำเร็จ กรุณาลองใหม่ หรือโทร 098-528-4217')
                 toast.error('ส่งการจองไม่สำเร็จ')
             }
         } catch (err) {
@@ -366,40 +369,40 @@ export default function BookingCheckout() {
                 <div className="bg-[var(--color-paper-2)] border border-[var(--brand-plum)]/30 p-4 rounded-rams space-y-3">
                     <div className="flex justify-between items-center border-b border-[var(--color-rule)] pb-2.5">
                         <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-[var(--brand-plum)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                            <div className="w-7 h-7 rounded-full bg-[var(--brand-plum)] text-white flex items-center justify-center font-bold text-sm shadow-xs">
                                 <Crown size={14} />
                             </div>
                             <div>
-                                <span className="font-bold text-xs text-[var(--color-ink)] block">คุณ {memberProfile.display_name}</span>
-                                <span className="text-[9px] font-mono text-[var(--color-neutral)]">สิทธิประโยชน์สมาชิก CRM</span>
+                                <span className="font-bold text-sm text-[var(--color-ink)] block">คุณ {memberProfile.display_name}</span>
+                                <span className="text-sm font-mono text-[var(--color-neutral)]">สิทธิประโยชน์สมาชิก CRM</span>
                             </div>
                         </div>
-                        <span className="px-2.5 py-1 bg-[var(--brand-plum)] text-white text-[9px] font-mono font-bold rounded-rams uppercase tracking-wider">
+                        <span className="px-2.5 py-1 bg-[var(--brand-plum)] text-white text-sm font-mono font-bold rounded-rams uppercase tracking-wider">
                             {tierDetails.current_tier} ({tierDetails.multiplier}x)
                         </span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-center font-mono">
                         <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
-                            <span className="text-[8px] text-[var(--color-neutral)] uppercase block">xhaus Balance</span>
-                            <span className="text-xs font-bold text-[var(--brand-plum)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
+                            <span className="text-sm text-[var(--color-neutral)] uppercase block">xhaus Balance</span>
+                            <span className="text-sm font-bold text-[var(--brand-plum)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
                         </div>
                         <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
-                            <span className="text-[8px] text-[var(--color-neutral)] uppercase block">Drink Stamps</span>
-                            <span className="text-xs font-bold text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
+                            <span className="text-sm text-[var(--color-neutral)] uppercase block">Drink Stamps</span>
+                            <span className="text-sm font-bold text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
                         </div>
                         <div className="bg-white/80 border border-[var(--color-rule)] p-2 rounded-rams">
-                            <span className="text-[8px] text-[var(--color-neutral)] uppercase block">Earn Points</span>
-                            <span className="text-xs font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
+                            <span className="text-sm text-[var(--color-neutral)] uppercase block">Earn Points</span>
+                            <span className="text-sm font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
                         </div>
                     </div>
 
                     {availableFreeDrinks > 0 && (
-                        <div className="bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/30 px-3 py-1.5 rounded-rams flex items-center justify-between text-xs font-mono">
+                        <div className="bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/30 px-3 py-1.5 rounded-rams flex items-center justify-between text-sm font-mono">
                             <span className="text-[oklch(45%_0.08_140)] font-bold">
                                 ☕ สะสมครบแล้ว! มีสิทธิ์แก้วฟรี {availableFreeDrinks} แก้ว
                             </span>
-                            <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                            <span className="text-sm text-[oklch(45%_0.08_140)] font-bold">
                                 {useFreeDrinkQuota ? 'กำลังใช้งาน ✓' : 'กดใช้สิทธิ์ที่หัวข้อชำระเงิน'}
                             </span>
                         </div>
@@ -408,7 +411,7 @@ export default function BookingCheckout() {
             )}
 
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
-                <h3 className="text-xs font-mono font-bold text-subInk uppercase mb-3">{t('bookingSummary')}</h3>
+                <h3 className="text-sm font-mono font-bold text-subInk uppercase mb-3">{t('bookingSummary')}</h3>
                 <div className="space-y-2 mb-4 text-sm font-mono border-b border-[var(--color-rule)] pb-4">
                     <div className="flex justify-between">
                         <span className="text-subInk">{t('date')}</span>
@@ -432,15 +435,15 @@ export default function BookingCheckout() {
                         {cart.map((item, index) => (
                             <div key={index} className="flex justify-between text-sm mb-3 border-b border-[var(--color-rule)] pb-2 last:border-0 last:pb-0">
                                 <div>
-                                    <div className="text-ink font-bold font-sans">{item.name} <span className="text-subInk text-xs font-mono">x{item.qty}</span></div>
-                                    {item.optionsSummary?.map((opt, i) => <div key={i} className="text-xs font-mono text-subInk">+ {opt.name}</div>)}
+                                    <div className="text-ink font-bold font-sans">{item.name} <span className="text-subInk text-sm font-mono">x{item.qty}</span></div>
+                                    {item.optionsSummary?.map((opt, i) => <div key={i} className="text-sm font-mono text-subInk">+ {opt.name}</div>)}
                                 </div>
                                 <span className="font-bold font-mono text-ink">{((item.totalPricePerUnit || item.price) * item.qty)}.-</span>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div className="flex items-center justify-between text-xs font-mono text-subInk">
+                    <div className="flex items-center justify-between text-sm font-mono text-subInk">
                         <span>รายการอาหาร: จองเฉพาะโต๊ะ (สั่งอาหารที่ร้าน)</span>
                         {typeof setCheckoutMode === 'function' && !isFreeBooking && (
                             <button
@@ -456,17 +459,17 @@ export default function BookingCheckout() {
             </div>
 
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-mono font-bold text-subInk uppercase">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <h3 className="text-sm font-mono font-bold text-subInk uppercase whitespace-nowrap">
                         1. {t('contactInfo')} <span className="text-[var(--color-accent)]">*</span>
                     </h3>
-                    <span className={`text-[10px] font-mono font-bold ${isContactValid ? 'text-[var(--color-accent-2)]' : 'text-[var(--color-accent)]'}`}>
-                        {isContactValid ? '✓ ข้อมูลครบถ้วน' : '* บังคับกรอกชื่อและเบอร์โทร'}
+                    <span className={`text-sm font-mono font-bold whitespace-nowrap ${isContactValid ? 'text-[var(--color-accent-2)]' : 'text-[var(--color-accent)]'}`}>
+                        {isContactValid ? '✓ ข้อมูลครบถ้วน' : 'ต้องกรอกชื่อและเบอร์โทร'}
                     </span>
                 </div>
                 <div className="space-y-3">
                     <div>
-                        <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                        <label className="text-sm font-mono text-subInk font-bold block mb-1">
                             {t('yourName')} <span className="text-[var(--color-accent)]">*</span>
                         </label>
                         <input 
@@ -478,12 +481,12 @@ export default function BookingCheckout() {
                                 updateForm('contactName', e.target.value)
                             }} 
                             onBlur={() => updateForm('contactName', localName.trim())}
-                            className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-sans focus:border-ink outline-none transition-colors" 
+                            className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-base font-sans focus:border-ink outline-none transition-colors" 
                             required
                         />
                     </div>
                     <div>
-                        <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                        <label className="text-sm font-mono text-subInk font-bold block mb-1">
                             {t('phoneNumber')} <span className="text-[var(--color-accent)]">* (9-10 หลัก)</span>
                         </label>
                         <input 
@@ -495,11 +498,11 @@ export default function BookingCheckout() {
                                 updateForm('contactPhone', e.target.value)
                             }} 
                             onBlur={() => updateForm('contactPhone', localPhone.trim())}
-                            className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-mono focus:border-ink outline-none transition-colors" 
+                            className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-base font-mono focus:border-ink outline-none transition-colors" 
                             required
                         />
                         {localPhone && localPhone.replace(/\D/g, '').length > 0 && localPhone.replace(/\D/g, '').length < 9 && (
-                            <p className="text-[10px] text-amber-700 font-mono mt-1">
+                            <p className="text-sm text-amber-700 font-mono mt-1">
                                 * เบอร์โทรศัพท์ต้องมีอย่างน้อย 9-10 หลัก (ปัจจุบัน {localPhone.replace(/\D/g, '').length} หลัก)
                             </p>
                         )}
@@ -511,15 +514,15 @@ export default function BookingCheckout() {
             {isFreeBooking && (
                 <div className="bg-paper p-5 border border-ink rounded-rams space-y-2">
                     <h3 className="text-sm font-bold text-ink">{t('freeBookingTitle')}</h3>
-                    <p className="text-sm text-ink leading-relaxed">
+                    <p className="text-base text-ink leading-relaxed">
                         {localPhone?.trim()
                             ? t('callConfirmNotice').replace('{phone}', localPhone.trim())
                             : 'พนักงานจะโทรยืนยันการจองตามเบอร์โทรศัพท์ที่ระบุก่อนถึงเวลานัด'}
                     </p>
-                    <p className="text-xs font-mono font-bold text-[var(--color-accent)] leading-relaxed">
+                    <p className="text-base font-mono font-bold text-[var(--color-accent)] leading-relaxed">
                         * ต้องได้รับการยืนยันจากทางร้านในการจองฟรีเสมอ หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ <a href="tel:0985284217" className="underline">098-528-4217</a>
                     </p>
-                    <p className="text-sm text-subInk leading-relaxed">
+                    <p className="text-base text-subInk leading-relaxed">
                         {t('holdNotice').replace('{n}', settings.bookingHoldMinutes || 30)}
                     </p>
                 </div>
@@ -528,8 +531,8 @@ export default function BookingCheckout() {
             {(!isFreeBooking || cart.length > 0) && (
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
-                    <h3 className="text-xs font-mono font-bold text-subInk uppercase">2. {isFreeBooking ? 'อาหารที่สั่งล่วงหน้า' : t('paymentTitle')}</h3>
-                    <span className="text-[10px] font-mono text-subInk">{isFreeBooking ? 'ชำระที่ร้าน' : 'ยอดคำนวณตามจริง'}</span>
+                    <h3 className="text-sm font-mono font-bold text-subInk uppercase">2. {isFreeBooking ? 'อาหารที่สั่งล่วงหน้า' : t('paymentTitle')}</h3>
+                    <span className="text-sm font-mono text-subInk">{isFreeBooking ? 'ชำระที่ร้าน' : 'ยอดคำนวณตามจริง'}</span>
                 </div>
 
                 {/* CRM Privileges: Free Drink & xhaus coins redemption */}
@@ -551,80 +554,80 @@ export default function BookingCheckout() {
 
                 {/* PROMO CODE */}
                 <div className="pt-1">
-                    <label className="text-[11px] font-mono text-subInk font-bold block mb-1.5">
+                    <label className="text-sm font-mono text-subInk font-bold block mb-1.5">
                         โค้ดส่วนลดโปรโมชั่น (Promo Code)
                     </label>
                     <div className="flex gap-2">
                         <input 
                             type="text" 
-                            placeholder="PROMO CODE" 
+                            placeholder="โค้ดส่วนลด" 
                             value={promoCode}
                             onChange={e => setPromoCode(e.target.value.toUpperCase())}
                             disabled={!!appliedPromo}
-                            className="flex-1 bg-transparent border border-[var(--color-rule)] px-3 py-2 text-sm font-mono uppercase outline-none focus:border-ink disabled:opacity-50"
+                            className="flex-1 min-w-0 min-h-12 bg-transparent border border-[var(--color-rule)] px-3 py-2 text-base font-mono uppercase outline-none focus:border-ink disabled:opacity-50"
                         />
                         {appliedPromo ? (
-                            <button onClick={removePromo} className="text-error px-3 py-2 font-mono text-xs border border-[var(--color-rule)] hover:bg-error hover:text-paper">Remove</button>
+                            <button onClick={removePromo} className="min-h-12 text-error px-3 text-sm font-bold border border-[var(--color-rule)] hover:bg-error hover:text-paper">ยกเลิก</button>
                         ) : (
-                            <button onClick={handleApplyCode} disabled={!promoCode || isValidating} className="bg-ink text-paper px-4 py-2 font-mono text-xs disabled:opacity-50">Apply</button>
+                            <button onClick={handleApplyCode} disabled={!promoCode || isValidating} className="min-h-12 bg-ink text-paper px-4 text-sm font-bold disabled:opacity-50">ใช้โค้ด</button>
                         )}
                     </div>
                 </div>
                 
                 {promoError && (
-                    <p className="text-error text-xs font-mono font-bold flex items-center gap-1">
+                    <p className="text-error text-sm font-mono font-bold flex items-center gap-1">
                         <AlertCircle size={12} /> {promoError}
                     </p>
                 )}
 
                 {appliedPromo && (
-                    <div className="flex items-center gap-2 text-ink text-xs font-mono font-bold bg-[var(--color-rule)] p-2 rounded-none">
+                    <div className="flex items-center gap-2 text-ink text-sm font-mono font-bold bg-[var(--color-rule)] p-2 rounded-none">
                         <Tag size={12} /> Code {appliedPromo.code} applied!
                     </div>
                 )}
 
                 <div className="space-y-2 pt-2 border-t border-[var(--color-rule)]">
-                    <div className="flex justify-between text-xs font-mono text-subInk font-bold">
+                    <div className="flex justify-between text-sm font-mono text-subInk font-bold">
                         <span>Subtotal</span>
                         <span>{cartTotal}.-</span>
                     </div>
                     
                     {appliedPromo && (
-                        <div className="flex justify-between text-xs font-mono text-ink font-bold">
+                        <div className="flex justify-between text-sm font-mono text-ink font-bold">
                             <span>
                                 Discount 
-                                {appliedPromo.discountType === 'percent' && <span className="ml-1 text-[10px] bg-[var(--color-rule)] px-1 rounded-none">{appliedPromo.discountValue}%</span>}
+                                {appliedPromo.discountType === 'percent' && <span className="ml-1 text-sm bg-[var(--color-rule)] px-1 rounded-none">{appliedPromo.discountValue}%</span>}
                             </span>
                             <span>- {promoDiscount}.-</span>
                         </div>
                     )}
 
                     {useFreeDrinkQuota && freeDrinkDiscount > 0 && (
-                        <div className="flex justify-between text-xs font-mono text-emerald-800 font-bold">
+                        <div className="flex justify-between text-sm font-mono text-emerald-800 font-bold">
                             <span>สิทธิ์แก้วฟรี (10 แถม 1)</span>
                             <span>- {freeDrinkDiscount}.-</span>
                         </div>
                     )}
 
                     {effectiveXhausDiscount > 0 && (
-                        <div className="flex justify-between text-xs font-mono text-amber-900 font-bold">
+                        <div className="flex justify-between text-sm font-mono text-amber-900 font-bold">
                             <span>ส่วนลดเหรียญ xhaus ({xhausToRedeem} pts)</span>
                             <span>- {effectiveXhausDiscount}.-</span>
                         </div>
                     )}
 
                     <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-2 mt-2">
-                         <span className="text-subInk text-xs font-mono uppercase">{t('totalPrice')} (Food)</span>
+                         <span className="text-subInk text-sm font-mono uppercase">{t('totalPrice')} (Food)</span>
                          <span className="text-xl font-bold font-mono tracking-tight text-ink">{finalTotal}.-</span>
                     </div>
 
                     {!isFreeBooking && (<>
                     <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-2 mt-2 bg-canvas p-2.5 rounded-rams border border-ink">
                          <div>
-                             <span className="text-ink text-xs font-mono font-bold block uppercase">
+                             <span className="text-ink text-sm font-mono font-bold block uppercase">
                                  {paymentPlan === 'full' ? 'Full Payment (100%)' : 'Deposit Required (50%)'}
                              </span>
-                             <span className="text-[10px] text-subInk font-mono block">
+                             <span className="text-sm text-subInk font-mono block">
                                  {paymentPlan === 'full' ? 'ยอดชำระเต็มจำนวน' : 'ยอดมัดจำ 50% ที่ต้องชำระตอนนี้'}
                              </span>
                          </div>
@@ -633,31 +636,31 @@ export default function BookingCheckout() {
 
                     {/* Payment Plan Selector (Dieter Rams Tabular Control) */}
                     <div className="pt-2">
-                        <div className="text-[11px] font-mono font-bold text-subInk uppercase mb-1.5 flex justify-between items-center">
+                        <div className="text-sm font-mono font-bold text-subInk uppercase mb-1.5 flex justify-between items-center">
                             <span>ตัวเลือกการชำระเงิน</span>
-                            <span className="text-[10px] text-ink font-mono">{paymentPlan === 'full' ? 'ชำระเต็มจำนวน' : 'มัดจำ 50%'}</span>
+                            <span className="text-sm text-ink font-mono">{paymentPlan === 'full' ? 'ชำระเต็มจำนวน' : 'มัดจำ 50%'}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 border border-[var(--color-rule)] p-1 rounded-rams bg-canvas">
                             <button
                                 type="button"
                                 onClick={() => setPaymentPlan('deposit')}
-                                className={`py-2 px-3 text-center rounded-rams transition-all font-mono text-xs cursor-pointer ${paymentPlan === 'deposit' ? 'bg-ink text-paper font-bold shadow-xs' : 'text-subInk hover:text-ink'}`}
+                                className={`py-2 px-3 text-center rounded-rams transition-all font-mono text-sm cursor-pointer ${paymentPlan === 'deposit' ? 'bg-ink text-paper font-bold shadow-xs' : 'text-subInk hover:text-ink'}`}
                             >
-                                <span className="block text-[10px] uppercase opacity-80">มัดจำ 50%</span>
+                                <span className="block text-sm uppercase opacity-80">มัดจำ 50%</span>
                                 <span className="text-sm font-bold">฿{halfDeposit}.-</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setPaymentPlan('full')}
-                                className={`py-2 px-3 text-center rounded-rams transition-all font-mono text-xs cursor-pointer ${paymentPlan === 'full' ? 'bg-ink text-paper font-bold shadow-xs' : 'text-subInk hover:text-ink'}`}
+                                className={`py-2 px-3 text-center rounded-rams transition-all font-mono text-sm cursor-pointer ${paymentPlan === 'full' ? 'bg-ink text-paper font-bold shadow-xs' : 'text-subInk hover:text-ink'}`}
                             >
-                                <span className="block text-[10px] uppercase opacity-80">จ่ายเต็มจำนวน 100%</span>
+                                <span className="block text-sm uppercase opacity-80">จ่ายเต็มจำนวน 100%</span>
                                 <span className="text-sm font-bold">฿{finalTotal}.-</span>
                             </button>
                         </div>
                     </div>
 
-                    <p className="text-[10px] text-subInk font-mono text-right mt-1">ขั้นต่ำ 150 บาท ต่อท่าน (Min Spend: {150 * pax}.-)</p>
+                    <p className="text-sm text-subInk font-mono text-right mt-1">ขั้นต่ำ 150 บาท ต่อท่าน (Min Spend: {150 * pax}.-)</p>
                     </>)}
                 </div>
 
@@ -665,8 +668,8 @@ export default function BookingCheckout() {
                 {!isFreeBooking && (
                 <div className="border-t border-[var(--color-rule)] pt-4 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-mono font-bold text-subInk uppercase">เลือกช่องทางชำระเงินมัดจำ 50%</h4>
-                        <span className="text-[10px] font-mono bg-ink text-paper px-2 py-0.5 rounded-none font-bold">ยอดมัดจำ ฿{depositAmount}.-</span>
+                        <h4 className="text-sm font-mono font-bold text-subInk uppercase">เลือกช่องทางชำระเงินมัดจำ 50%</h4>
+                        <span className="text-sm font-mono bg-ink text-paper px-2 py-0.5 rounded-none font-bold">ยอดมัดจำ ฿{depositAmount}.-</span>
                     </div>
 
                     {/* Tab Navigation */}
@@ -679,7 +682,7 @@ export default function BookingCheckout() {
                                     handleFileChange({ target: { files: [slipFile] } });
                                 }
                             }}
-                            className={`py-2.5 px-3 flex items-center justify-center gap-2 text-xs font-mono font-bold transition-all ${paymentMethod === 'promptpay' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
+                            className={`min-h-12 px-3 flex items-center justify-center gap-2 text-sm font-mono font-bold transition-all ${paymentMethod === 'promptpay' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
                         >
                             <QrCode size={14} />
                             <span>พร้อมเพย์ QR</span>
@@ -692,7 +695,7 @@ export default function BookingCheckout() {
                                     handleFileChange({ target: { files: [slipFile] } });
                                 }
                             }}
-                            className={`py-2.5 px-3 flex items-center justify-center gap-2 text-xs font-mono font-bold transition-all border-l border-[var(--color-rule)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-subInk hover:text-ink'}`}
+                            className={`min-h-12 px-3 flex items-center justify-center gap-2 text-sm font-mono font-bold transition-all border-l border-[var(--color-rule)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-subInk hover:text-ink'}`}
                         >
                             <Wallet size={14} />
                             <span>TrueMoney</span>
@@ -717,7 +720,7 @@ export default function BookingCheckout() {
                                     <p className="text-sm text-subInk">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
                                 </div>
 
-                                <div className="space-y-1.5 font-mono text-xs pt-2">
+                                <div className="space-y-1.5 font-mono text-sm pt-2">
                                     {settings.promptpayName && (
                                         <div className="flex justify-between items-center text-subInk">
                                             <span>ชื่อบัญชี:</span>
@@ -732,7 +735,7 @@ export default function BookingCheckout() {
                                                 <button
                                                     type="button"
                                                     onClick={() => copyToClipboard(settings.promptpayId, 'promptpay')}
-                                                    className="p-1 text-subInk hover:text-ink hover:bg-paper rounded transition-colors"
+                                                    className="w-12 h-12 -my-3 -mr-3 flex items-center justify-center text-subInk hover:text-ink hover:bg-paper rounded transition-colors" aria-label="คัดลอก"
                                                     title="คัดลอก"
                                                 >
                                                     {copiedField === 'promptpay' ? <CheckIcon size={12} className="text-emerald-600" /> : <Copy size={12} />}
@@ -754,15 +757,15 @@ export default function BookingCheckout() {
                                                 onClick={() => setSelectedModalImage({ type: 'image', url: settings.trueWalletQrUrl || settings.qrCodeUrl, title: 'TrueMoney QR' })}
                                             />
                                         ) : (
-                                            <div className="w-44 h-44 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
+                                            <div className="w-44 h-44 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-sm">กำลังโหลด QR TrueMoney...</div>
                                         )}
                                     </div>
                                     {(settings.trueWalletQrUrl || settings.qrCodeUrl) && (
-                                        <p className="text-[10px] text-subInk font-mono">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
+                                        <p className="text-sm text-subInk font-mono">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
                                     )}
                                 </div>
 
-                                <div className="space-y-1.5 font-mono text-xs pt-2">
+                                <div className="space-y-1.5 font-mono text-sm pt-2">
                                     {settings.trueWalletName && (
                                         <div className="flex justify-between items-center text-subInk">
                                             <span>ชื่อบัญชี TrueMoney:</span>
@@ -777,7 +780,7 @@ export default function BookingCheckout() {
                                                 <button
                                                     type="button"
                                                     onClick={() => copyToClipboard(settings.trueWalletPhone, 'truewallet')}
-                                                    className="p-1 text-subInk hover:text-ink hover:bg-paper rounded transition-colors"
+                                                    className="w-12 h-12 -my-3 -mr-3 flex items-center justify-center text-subInk hover:text-ink hover:bg-paper rounded transition-colors" aria-label="คัดลอก"
                                                     title="คัดลอก"
                                                 >
                                                     {copiedField === 'truewallet' ? <CheckIcon size={12} className="text-emerald-600" /> : <Copy size={12} />}
@@ -785,13 +788,13 @@ export default function BookingCheckout() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-[11px] text-subInk font-mono">สามารถสแกน QR ผ่านแอป TrueMoney Wallet ได้ทันที</p>
+                                        <p className="text-sm text-subInk font-mono">สามารถสแกน QR ผ่านแอป TrueMoney Wallet ได้ทันที</p>
                                     )}
                                 </div>
                             </div>
                         )}
 
-                        <p className="text-[10px] text-subInk font-mono border-t border-[var(--color-rule)] pt-2 leading-relaxed">
+                        <p className="text-base text-subInk font-mono border-t border-[var(--color-rule)] pt-2 leading-relaxed">
                             • ชำระเงินมัดจำ <strong>฿{depositAmount}.-</strong> (หักคืนให้อัตโนมัติในบิลหน้าร้าน)<br />
                             • ระบบจะตรวจสลิปมัดจำอัตโนมัติทันทีที่อัปโหลด
                         </p>
@@ -799,7 +802,7 @@ export default function BookingCheckout() {
 
                     {/* SLIP UPLOAD & AUTO-VERIFICATION STATUS */}
                     <div className="space-y-2.5 pt-2 border-t border-[var(--color-rule)]">
-                        <label className="block text-xs font-mono font-bold text-subInk uppercase">
+                        <label className="block text-sm font-mono font-bold text-subInk uppercase">
                             {t('uploadSlip')} (หลักฐานโอนเงินมัดจำ ฿{depositAmount}.-)
                         </label>
 
@@ -807,19 +810,19 @@ export default function BookingCheckout() {
                             type="file"
                             accept="image/*"
                             onChange={handleFileChange}
-                            className="block w-full text-xs text-subInk file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer font-mono"
+                            className="block w-full text-base text-subInk file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer font-mono"
                         />
 
                         {/* Verification Status Card */}
                         {isVerifyingSlip && (
-                            <div className="bg-canvas border border-[var(--color-rule)] p-3 rounded-rams flex items-center gap-2.5 text-xs font-mono text-subInk animate-pulse">
+                            <div className="bg-canvas border border-[var(--color-rule)] p-3 rounded-rams flex items-center gap-2.5 text-sm font-mono text-subInk animate-pulse">
                                 <RefreshCw size={15} className="animate-spin text-ink shrink-0" />
                                 <span>กำลังตรวจสอบสลิปอัตโนมัติผ่าน EasySlip...</span>
                             </div>
                         )}
 
                         {slipVerifyResult?.verified && (
-                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-rams space-y-1 text-xs font-mono">
+                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-rams space-y-1 text-sm font-mono">
                                 <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
                                     <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
                                     <span>
@@ -828,16 +831,16 @@ export default function BookingCheckout() {
                                             : 'สลิปมัดจำผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓'}
                                     </span>
                                 </div>
-                                <div className="text-[11px] text-emerald-900/90 pl-5 space-y-0.5">
+                                <div className="text-sm text-emerald-900/90 pl-5 space-y-0.5">
                                     <p>ผู้โอน: <strong>{typeof slipVerifyResult.senderName === 'object' ? (slipVerifyResult.senderName?.th || slipVerifyResult.senderName?.en || 'ไม่ระบุ') : (slipVerifyResult.senderName || 'ไม่ระบุ')}</strong></p>
                                     <p>ยอดโอน: <strong>฿{typeof slipVerifyResult.amountInSlip === 'number' ? slipVerifyResult.amountInSlip : Number(slipVerifyResult.amountInSlip || 0)}.-</strong> ({typeof slipVerifyResult.bankName === 'object' ? (slipVerifyResult.bankName?.th || slipVerifyResult.bankName?.en || 'ธนาคาร') : (slipVerifyResult.bankName || 'ธนาคาร')}) {slipVerifyResult.isFullPaid && <span className="text-emerald-700 font-bold ml-1">[ชำระครบ 100%]</span>}</p>
-                                    {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
+                                    {slipVerifyResult.transRef && <p className="text-sm text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
                                 </div>
                             </div>
                         )}
 
                         {slipVerifyError && (
-                            <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-rams space-y-2 text-xs font-mono">
+                            <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-rams space-y-2 text-sm font-mono">
                                 <div className="flex items-start gap-1.5 text-amber-900 font-bold">
                                     <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
                                     <span>{slipVerifyError}</span>
@@ -847,14 +850,14 @@ export default function BookingCheckout() {
                                         <button
                                             type="button"
                                             onClick={() => setAllowManualFallback(true)}
-                                            className="text-[11px] font-bold text-ink underline hover:opacity-75 cursor-pointer"
+                                            className="text-sm font-bold text-ink underline hover:opacity-75 cursor-pointer"
                                         >
                                             ส่งสลิปนี้ให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง (Manual Review)
                                         </button>
                                     </div>
                                 )}
                                 {allowManualFallback && (
-                                    <p className="text-[10px] text-amber-800 pl-5">
+                                    <p className="text-sm text-amber-800 pl-5">
                                         ✓ เปิดโหมดส่งให้เจ้าหน้าที่ตรวจสอบแล้ว คุณสามารถกดยืนยันการจองได้
                                     </p>
                                 )}
@@ -867,14 +870,14 @@ export default function BookingCheckout() {
             )}
 
             {!isFreeBooking && (
-            <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] text-ink text-xs leading-relaxed space-y-2">
+            <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] text-ink text-sm leading-relaxed space-y-2">
                 <h4 className="font-mono font-bold text-sm uppercase">📌 เงื่อนไขการจองโต๊ะ (Dine-in Conditions)</h4>
-                <ul className="text-subInk text-xs space-y-1 pl-4 list-disc font-mono">
+                <ul className="text-subInk text-sm space-y-1 pl-4 list-disc font-mono">
                     <li>สั่งอาหารขั้นต่ำ 150 บาทต่อท่าน (Min Spend 150 THB/pax)</li>
                     <li>ชำระเงินมัดจำ 50% จากยอดค่าอาหาร (หักคืนให้อัตโนมัติจากบิลหน้าร้าน)</li>
                     <li>ยกเลิกและขอคืนเงินมัดจำได้ผ่านระบบล่วงหน้าไม่น้อยกว่า 24 ชั่วโมงก่อนเวลานัดหมาย</li>
                 </ul>
-                <div className="text-[11px] font-mono text-error font-bold bg-[var(--color-rule)] p-2.5 rounded-none mt-2">
+                <div className="text-sm font-mono text-error font-bold bg-[var(--color-rule)] p-2.5 rounded-none mt-2">
                     ⚠️ หมายเหตุ: หากยกเลิกกระทันหันน้อยกว่า 24 ชั่วโมงก่อนเวลานัดหมาย ระบบจะไม่สามารถคืนเงินมัดจำได้ กรุณาติดต่อทางร้านโดยตรง
                 </div>
             </div>
@@ -922,7 +925,7 @@ export default function BookingCheckout() {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-full flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
-                            <span className="font-bold text-xs font-mono uppercase text-ink">{selectedModalImage.title}</span>
+                            <span className="font-bold text-sm font-mono uppercase text-ink">{selectedModalImage.title}</span>
                             <button 
                                 onClick={() => setSelectedModalImage(null)}
                                 className="p-1 rounded-md hover:bg-paper text-subInk hover:text-ink transition-colors cursor-pointer"
@@ -938,12 +941,12 @@ export default function BookingCheckout() {
                             )}
                         </div>
                         <div className="text-center font-mono space-y-1">
-                            <span className="text-xs font-bold text-ink">ยอดเงินมัดจำ (50%): ฿{depositAmount}.-</span>
-                            <p className="text-[10px] text-subInk">บันทึกรูปหรือสแกนผ่านแอปธนาคารได้ทันที</p>
+                            <span className="text-sm font-bold text-ink">ยอดเงินมัดจำ (50%): ฿{depositAmount}.-</span>
+                            <p className="text-sm text-subInk">บันทึกรูปหรือสแกนผ่านแอปธนาคารได้ทันที</p>
                         </div>
                         <button 
                             onClick={() => setSelectedModalImage(null)}
-                            className="w-full py-2.5 bg-ink text-paper text-xs font-mono font-bold rounded-rams hover:bg-subInk transition-colors cursor-pointer"
+                            className="w-full py-2.5 bg-ink text-paper text-sm font-mono font-bold rounded-rams hover:bg-subInk transition-colors cursor-pointer"
                         >
                             ปิดหน้าต่าง
                         </button>

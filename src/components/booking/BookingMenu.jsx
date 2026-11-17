@@ -79,7 +79,7 @@ export default function BookingMenu() {
                             placeholder={t('searchMenu')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-paper pl-9 pr-4 py-2.5 rounded-rams border border-[var(--color-rule)] focus:border-ink outline-none text-sm transition-colors"
+                            className="w-full min-h-12 bg-paper pl-9 pr-4 py-2.5 rounded-rams border border-[var(--color-rule)] focus:border-ink outline-none text-base transition-colors"
                         />
                     </div>
                     <ViewToggle mode={viewMode} setMode={setViewMode} />
