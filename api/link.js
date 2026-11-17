@@ -453,6 +453,21 @@ function resolveItemId(menuItems, ref) {
     return item ? item.id : null
 }
 
+// Full menu for the client-rendered "ดูเมนูทั้งหมด" list: only the fields that list reads, with spice levels.
+// Served from /link?part=menu so the first HTML stays small.
+function fullMenuPayload(data) {
+    const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
+    const spiceMap = parseSpiceMap(settings.link_spice_map || DEFAULT_SETTINGS.link_spice_map)
+    const pick = (o, keys) => keys.reduce((acc, k) => { if (o[k] !== null && o[k] !== undefined && o[k] !== '') acc[k] = o[k]; return acc }, {})
+    return {
+        categories: (data.categories || []).map(c => pick(c, ['id', 'name', 'name_en', 'name_zh', 'name_lo'])),
+        menuItems: (data.menuItems || []).map(i => ({
+            ...pick(i, ['id', 'name', 'name_en', 'name_zh', 'name_lo', 'price', 'description', 'description_en', 'description_zh', 'description_lo', 'image_url', 'category_id']),
+            spice: spiceRange(i.name, spiceMap, i.id)
+        }))
+    }
+}
+
 function generateStandaloneLandingHtml(data) {
     const settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
     const menuItems = data.menuItems || []
@@ -955,6 +970,8 @@ function generateStandaloneLandingHtml(data) {
         .full-menu-btn.open { background: var(--color-paper-2); color: var(--color-ink); border-bottom: 1px solid var(--color-rule); }
         .full-menu-btn.open .arrow { color: var(--color-ink); }
         .full-menu-btn.open .full-menu-sub { display: none; }
+        .full-menu-status { padding: var(--space-4); font-size: var(--text-sm); color: var(--color-muted); }
+        .full-menu-retry { min-height: 44px; margin-left: var(--space-2); padding: 0 var(--space-3); font-weight: 600; color: var(--color-ink); border: 1px solid var(--color-ink); border-radius: var(--radius); }
 
         /* Opening hours: large figures + live state, readable at a glance */
         .hours-fact { gap: var(--space-1); padding-top: var(--space-4); padding-bottom: var(--space-4); }
@@ -1316,7 +1333,6 @@ function generateStandaloneLandingHtml(data) {
 
             <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu(true)"><span><span id="full-menu-label">${tt(`ดูเมนูทั้งหมด ${menuItems.length} รายการ`, `See the full menu · ${menuItems.length} items`, `查看完整菜单 · ${menuItems.length} 项`, `ເບິ່ງເມນູທັງໝົດ ${menuItems.length} ລາຍການ`)}</span><span class="full-menu-sub">${tt('ทุกหมวด พร้อมราคาและระดับความเผ็ด', 'Every category, with prices and spice levels')}</span></span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
-            <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
 
         <!-- ─── SECTION 2: ATMOSPHERE ─── -->
@@ -1441,7 +1457,7 @@ function generateStandaloneLandingHtml(data) {
     <div id="booklet-modal" class="modal" onclick="closeBooklet(event)">
         <button class="modal-close" onclick="closeBooklet()">${tt('ปิด', 'Close')}</button>
         <div class="modal-stack" onclick="event.stopPropagation()">
-            <img id="booklet-img" class="modal-content" src="${bookletImages[0] ? optImg(bookletImages[0], 900) : ''}" alt="หน้าเมนูแบบเล่ม">
+            <img id="booklet-img" class="modal-content" alt="หน้าเมนูแบบเล่ม" decoding="async">
             <div class="booklet-nav">
                 <button onclick="prevBookletPage()">← ${tt('ก่อนหน้า', 'Prev')}</button>
                 <span id="booklet-counter" class="num">1 / ${bookletImages.length}</span>
@@ -1904,6 +1920,71 @@ function generateStandaloneLandingHtml(data) {
             window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - offset + 1, behavior: 'smooth' });
         }
 
+        // ─── FULL MENU (fetched on demand from /link?part=menu, not inlined in the page) ───
+        let fullMenuData = null;
+        let fullMenuReq = null;
+        function loadFullMenuData(fresh) {
+            if (fullMenuData && !fresh) return Promise.resolve(fullMenuData);
+            if (fullMenuReq && !fresh) return fullMenuReq;
+            fullMenuReq = fetch('/link?part=menu' + (fresh ? '&purge=1&t=' + Date.now() : ''), { cache: fresh ? 'no-store' : 'default' })
+                .then(function(r) { if (!r.ok) throw new Error('menu ' + r.status); return r.json(); })
+                .then(function(d) { fullMenuData = d; return d; })
+                .catch(function(err) { fullMenuReq = null; throw err; });
+            return fullMenuReq;
+        }
+        // Start the download once the reader scrolls near the button, so the tap itself feels instant
+        (function() {
+            const btn = document.getElementById('btn-full-menu');
+            if (!btn || !('IntersectionObserver' in window)) return;
+            const io = new IntersectionObserver(function(entries) {
+                if (!entries.some(function(en) { return en.isIntersecting; })) return;
+                io.disconnect();
+                loadFullMenuData().catch(function() {});
+            }, { rootMargin: '600px 0px' });
+            io.observe(btn);
+        })();
+        function retryFullMenu() {
+            const content = document.getElementById('full-menu-content');
+            content.innerHTML = '';
+            content.style.display = 'none';
+            toggleFullMenu();
+        }
+        function renderFullMenu(content, raw) {
+            let html = '';
+            let index = '';
+            raw.categories.forEach((cat, ci) => {
+                const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
+                if (cItems.length === 0) return;
+                const shortTh = String(cat.name || '').replace(/\s*\(.*\)\s*/, '').trim() || cat.name;
+                index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</button>';
+                html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items', cItems.length + ' 项', cItems.length + ' ລາຍການ') + '</span></div><div>';
+                cItems.forEach(item => {
+                    const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
+                    const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
+                    const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)"' : '';
+                    const descHtml = clientItemDesc(item);
+                    html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + clientItemName(item) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
+                });
+                html += '</div>';
+            });
+            content.innerHTML = (index ? '<nav class="cat-index" aria-label="หมวดเมนู">' + index + '</nav>' : '') + html;
+            // Highlight the category being read and keep its chip in view
+            if ('IntersectionObserver' in window) {
+                const nav = content.querySelector('.cat-index');
+                const catIo = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(en) {
+                        if (!en.isIntersecting || !nav) return;
+                        nav.querySelectorAll('.cat-chip').forEach(function(c) {
+                            const on = c.dataset.cat === en.target.id;
+                            c.setAttribute('aria-current', on ? 'true' : 'false');
+                            if (on) nav.scrollTo({ left: c.offsetLeft - 16, behavior: 'smooth' });
+                        });
+                    });
+                }, { rootMargin: '-110px 0px -70% 0px' });
+                content.querySelectorAll('.section-header.sub[id]').forEach(function(h) { catIo.observe(h); });
+            }
+        }
+
         function finishFullMenuClose(content) {
             clearTimeout(content._closeTimer);
             content._closing = false;
@@ -1918,42 +1999,16 @@ function generateStandaloneLandingHtml(data) {
             if (content._closing) finishFullMenuClose(content);
             if (content.style.display === 'none') {
                 if (!content.hasChildNodes()) {
-                    try {
-                        const raw = JSON.parse(document.getElementById('full-menu-data').textContent);
-                        let html = '';
-                        let index = '';
-                        raw.categories.forEach((cat, ci) => {
-                            const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
-                            if (cItems.length === 0) return;
-                            const shortTh = String(cat.name || '').replace(/\s*\(.*\)\s*/, '').trim() || cat.name;
-                            index += '<button type="button" class="cat-chip" data-cat="cat-' + ci + '" onclick="jumpToCategory(this)">' + TT(escapeClientHtml(shortTh), escapeClientHtml(cat.name_en || shortTh), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</button>';
-                            html += '<div class="section-header sub" id="cat-' + ci + '"><h3 class="section-title">' + TT(escapeClientHtml(cat.name), escapeClientHtml(cat.name_en || cat.name), cat.name_zh && escapeClientHtml(cat.name_zh), cat.name_lo && escapeClientHtml(cat.name_lo)) + '</h3><span class="section-meta">' + TT(cItems.length + ' รายการ', cItems.length + ' items', cItems.length + ' 项', cItems.length + ' ລາຍການ') + '</span></div><div>';
-                            cItems.forEach(item => {
-                                const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
-                                const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
-                                const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)"' : '';
-                                const descHtml = clientItemDesc(item);
-                                html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + clientItemName(item) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
-                            });
-                            html += '</div>';
+                    if (fullMenuData) {
+                        renderFullMenu(content, fullMenuData);
+                    } else {
+                        content.innerHTML = '<p class="full-menu-status" role="status">' + TT('กำลังโหลดเมนู…', 'Loading the menu…', '正在加载菜单…', 'ກຳລັງໂຫຼດເມນູ…') + '</p>';
+                        loadFullMenuData().then(function(d) {
+                            renderFullMenu(content, d);
+                        }).catch(function() {
+                            content.innerHTML = '<p class="full-menu-status" role="status">' + TT('โหลดเมนูไม่สำเร็จ', 'Could not load the menu', '菜单加载失败', 'ໂຫຼດເມນູບໍ່ສຳເລັດ') + ' <button type="button" class="full-menu-retry" onclick="retryFullMenu()">' + TT('ลองอีกครั้ง', 'Try again', '重试', 'ລອງໃໝ່') + '</button></p>';
                         });
-                        content.innerHTML = (index ? '<nav class="cat-index" aria-label="หมวดเมนู">' + index + '</nav>' : '') + html;
-                        // Highlight the category being read and keep its chip in view
-                        if ('IntersectionObserver' in window) {
-                            const nav = content.querySelector('.cat-index');
-                            const catIo = new IntersectionObserver(function(entries) {
-                                entries.forEach(function(en) {
-                                    if (!en.isIntersecting || !nav) return;
-                                    nav.querySelectorAll('.cat-chip').forEach(function(c) {
-                                        const on = c.dataset.cat === en.target.id;
-                                        c.setAttribute('aria-current', on ? 'true' : 'false');
-                                        if (on) nav.scrollTo({ left: c.offsetLeft - 16, behavior: 'smooth' });
-                                    });
-                                });
-                            }, { rootMargin: '-110px 0px -70% 0px' });
-                            content.querySelectorAll('.section-header.sub[id]').forEach(function(h) { catIo.observe(h); });
-                        }
-                    } catch(e) {}
+                    }
                 }
                 content.style.display = 'block';
                 content.classList.remove('opening'); void content.offsetWidth; content.classList.add('opening');
@@ -2000,6 +2055,8 @@ function generateStandaloneLandingHtml(data) {
         // ─── BOOKLET MODAL ───
         function openBooklet() {
             if (bookletPages.length === 0) return;
+            // Pages are fetched only from here: the hidden modal has no src on first load
+            updateBooklet();
             showModal(document.getElementById('booklet-modal'));
             pushModalState();
             if (window.gtag) gtag('event', 'click_booklet', { event_category: 'engagement', page_path: '/link' });
@@ -2013,8 +2070,11 @@ function generateStandaloneLandingHtml(data) {
             popModalState();
         }
         function updateBooklet() {
-            document.getElementById('booklet-img').src = bookletPages[currentBookletIdx];
+            const img = document.getElementById('booklet-img');
+            if (img.getAttribute('src') !== bookletPages[currentBookletIdx]) img.src = bookletPages[currentBookletIdx];
             document.getElementById('booklet-counter').innerText = (currentBookletIdx + 1) + ' / ' + bookletPages.length;
+            // Warm the next page so "next" turns instantly
+            if (bookletPages[currentBookletIdx + 1]) (new Image()).src = bookletPages[currentBookletIdx + 1];
         }
         function prevBookletPage() {
             if (currentBookletIdx > 0) { currentBookletIdx--; updateBooklet(); }
@@ -2208,30 +2268,14 @@ function generateStandaloneLandingHtml(data) {
                 const renderedMeta = document.querySelector('meta[name="rendered-at"]');
                 const renderedAt = renderedMeta ? parseInt(renderedMeta.getAttribute('content') || '0', 10) : 0;
                 if (lastMod && renderedAt && lastMod > renderedAt) {
-                    fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' })
-                        .then(r => r.text())
-                        .then(newHtml => {
-                            const startTag = '<script id="full-menu-data" type="application/json">';
-                            const endTag = '</' + 'script>';
-                            const sIdx = newHtml.indexOf(startTag);
-                            if (sIdx !== -1) {
-                                const eIdx = newHtml.indexOf(endTag, sIdx);
-                                if (eIdx !== -1) {
-                                    const jsonText = newHtml.substring(sIdx + startTag.length, eIdx);
-                                    const script = document.getElementById('full-menu-data');
-                                    if (script) {
-                                        script.textContent = jsonText;
-                                        const content = document.getElementById('full-menu-content');
-                                        if (content && content.style.display !== 'none') {
-                                            content.innerHTML = '';
-                                            toggleFullMenu();
-                                            toggleFullMenu();
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        .catch(() => {});
+                    loadFullMenuData(true).then(function() {
+                        const content = document.getElementById('full-menu-content');
+                        if (content && content.style.display !== 'none') {
+                            content.innerHTML = '';
+                            toggleFullMenu();
+                            toggleFullMenu();
+                        }
+                    }).catch(function() {});
                 }
             } catch(e) {}
         })();
@@ -2310,7 +2354,14 @@ export default async function handler(req, res) {
             }
         }
 
-        // 4. Generate Autonomous High-Performance Standalone HTML
+        // 4a. Full menu JSON, fetched by the page when the guest opens "ดูเมนูทั้งหมด"
+        if (parsedUrl.searchParams.get('part') === 'menu') {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8')
+            res.setHeader('Cache-Control', isPurgeRequest ? 'no-cache, no-store, must-revalidate' : 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400')
+            return res.status(200).send(JSON.stringify(fullMenuPayload(data)))
+        }
+
+        // 4b. Generate Autonomous High-Performance Standalone HTML
         const html = generateStandaloneLandingHtml(data)
 
         // 5. Edge CDN Caching Strategy:
