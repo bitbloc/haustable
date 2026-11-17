@@ -7,6 +7,9 @@ import { getStoreHours } from '../utils/storeHours';
 import { QRCodeSVG } from 'qrcode.react';
 import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../utils/printerHelper';
 
+// State changes fade in 180 ms (AGENTS.md §5): opacity only, no scale or slide
+const FADE = { duration: 0.18, ease: [0.2, 0, 0, 1] };
+
 const LINE_LIFF_MEMBER_URL = "https://liff.line.me/2008674756-hTEWodVj";
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -126,40 +129,11 @@ export default function POSCustomerDisplay() {
         };
     }, []);
 
-    // Reusable Venue Logo Component
-    const VenueLogo = ({ className = "h-10 object-contain", alt = "IN THE HAUS" }) => {
-        const [imgSrc, setImgSrc] = useState(shopLogoUrl || '/assets/logo-script.webp');
-        const [errCount, setErrCount] = useState(0);
-
-        useEffect(() => {
-            if (shopLogoUrl) {
-                setImgSrc(shopLogoUrl);
-                setErrCount(0);
-            }
-        }, [shopLogoUrl]);
-
-        const handleError = () => {
-            if (errCount === 0) {
-                setImgSrc('/assets/logo-script.webp');
-                setErrCount(1);
-            } else if (errCount === 1) {
-                setImgSrc('/assets/logo-script.png');
-                setErrCount(2);
-            } else if (errCount === 2) {
-                setImgSrc('/logo-inbaan-wordmark-plum.png');
-                setErrCount(3);
-            }
-        };
-
-        return (
-            <img
-                src={imgSrc}
-                alt={alt}
-                className={className}
-                onError={handleError}
-            />
-        );
-    };
+    // Shop mark on the customer screen: the plum ในบ้าน wordmark. The logo stored in settings is the receipt / print
+    // logo, so the screen does not use it.
+    const VenueLogo = ({ className = "h-9 w-auto object-contain", alt = "ในบ้าน In the haus" }) => (
+        <img src="/logo-inbaan-wordmark-plum.png" alt={alt} className={className} width="66" height="36" />
+    );
 
     // Helper to format image URL correctly
     const getValidImageUrl = (urlStr) => {
@@ -546,981 +520,515 @@ export default function POSCustomerDisplay() {
     }, [storePromptpayId]);
 
     // -------------------------------------------------------------
-    // RENDER 1: IDLE STANDBY (Neo-Brutalist Architectural Grid · Dieter Rams + Thai Modern)
+    // Customer-facing display, light POS theme (.agents/AGENTS.md, brand v2).
+    // Target: Sunmi D2s Plus 10.1" customer screen, 1024x600, read from about 0.5-1 m.
+    // So: cream cards on paper-2 like the POS, charcoal text, plum accents, DM Mono numbers,
+    // readable text >= 16px, amounts 40-48px, no loops or tickers, 180ms fades between states.
+    // -------------------------------------------------------------
+    const money = (n, digits = 2) => `฿${Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+    const LABEL = 'block font-mono text-xs font-medium uppercase tracking-[0.12em] text-[var(--color-neutral)]';
+    const CARD = 'bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-2xl';
+
+    // Same top strip on every state: shop mark · what this screen is about · time
+    const CfdTopBar = ({ label }) => (
+        <header className="h-14 shrink-0 flex items-stretch bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
+            <div className="flex items-center px-5 border-r border-[var(--color-rule)]">
+                <VenueLogo className="h-9 w-auto object-contain" />
+            </div>
+            <div className="flex-1 min-w-0 flex items-center px-5">
+                <span className="text-lg font-bold leading-[1.5] text-[var(--color-ink)] truncate">{label}</span>
+            </div>
+            <div className="flex items-center px-5 border-l border-[var(--color-rule)]">
+                <StandbyClock />
+            </div>
+        </header>
+    );
+
+    const MemberCard = ({ compact = false }) => {
+        const mp = orderData.memberProfile;
+        if (!mp) return null;
+        const coins = Math.max(0, parseFloat(mp.xhaus_balance ?? mp.xhaus_coins ?? mp.points_balance ?? mp.points ?? 0) || 0);
+        const stamps = parseInt(mp.drink_stamp_count || 0, 10);
+        const freeDrinks = parseInt(mp.free_drink_quota || 0, 10);
+        const tier = mp.current_tier || mp.tier || 'MEMBER';
+        return (
+            <div className={`${CARD} p-4 space-y-3`}>
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <span className="block font-mono text-xs font-medium uppercase tracking-[0.12em] text-[var(--brand-plum)]">สมาชิก In the haus</span>
+                        <span className="block text-lg font-bold leading-[1.5] text-[var(--color-ink)] truncate">{mp.display_name || mp.name || orderData.customer}</span>
+                    </div>
+                    <span className="shrink-0 font-mono text-xs font-medium uppercase px-2 py-1 rounded-md bg-[var(--brand-plum)] text-[var(--color-paper)]">{tier}</span>
+                </div>
+                {!compact && (
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-[var(--color-paper-2)] px-3 py-2">
+                            <span className={LABEL}>แต้ม XHAUS</span>
+                            <span className="block font-mono text-xl font-medium text-[var(--color-ink)]">{Math.floor(coins).toLocaleString()}</span>
+                        </div>
+                        <div className="rounded-xl bg-[var(--color-paper-2)] px-3 py-2">
+                            <span className={LABEL}>แก้วสะสม {stamps}/10</span>
+                            <div className="flex gap-1 mt-2" aria-hidden="true">
+                                {STAMP_PUNCHCARD_SLOTS.map((i) => (
+                                    <span key={i} className={`flex-1 h-2 rounded-full ${i < stamps ? 'bg-[var(--brand-plum)]' : 'bg-[var(--color-rule)]'}`} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {compact && (
+                    <p className="text-base text-[var(--color-muted)]">{Math.floor(coins).toLocaleString()} แต้ม · แก้วสะสม {stamps}/10</p>
+                )}
+                {!compact && freeDrinks > 0 && (
+                    <p className="text-base font-bold text-[var(--color-accent-2)]">สิทธิ์เครื่องดื่มฟรี {freeDrinks} แก้ว พร้อมใช้</p>
+                )}
+            </div>
+        );
+    };
+
+    // Payment card (right column of checkout / split checkout)
+    const PaymentPanel = ({ amount, allowStaticQr }) => {
+        const isCash = orderData.paymentMethod === 'cash';
+        const staticQr = allowStaticQr ? (paymentQrUrl || orderData.paymentQrUrl) : null;
+        return (
+            <div className="h-full flex flex-col items-center justify-center gap-3">
+                {isCash ? (
+                    <div className={`${CARD} w-full max-w-[360px] p-6 text-center space-y-4`}>
+                        <span className="inline-block font-mono text-sm font-medium uppercase tracking-[0.12em] px-3 py-1 rounded-md bg-[var(--color-ink)] text-[var(--color-paper)]">เงินสด · Cash</span>
+                        <div>
+                            <span className={LABEL}>ยอดที่ต้องชำระ</span>
+                            <span className="block font-mono text-[48px] leading-tight font-medium text-[var(--color-ink)]">{money(amount)}</span>
+                        </div>
+                        {orderData.cashReceived > 0 && (
+                            <div className="border-t border-[var(--color-rule)] pt-4 space-y-2">
+                                <div className="flex justify-between text-base text-[var(--color-muted)]">
+                                    <span>รับเงินสดมา</span>
+                                    <span className="font-mono">{money(orderData.cashReceived)}</span>
+                                </div>
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-lg font-bold text-[var(--color-accent-2)]">เงินทอน</span>
+                                    <span className="font-mono text-[32px] font-medium text-[var(--color-ink)]">{money(orderData.changeDue)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className={`${CARD} w-full max-w-[320px] overflow-hidden text-center`}>
+                        {/* PromptPay keeps its own blue so people recognise the payment method */}
+                        <div className="bg-[#003D7A] text-white font-mono text-sm font-medium uppercase tracking-[0.12em] py-2">PromptPay QR</div>
+                        <div className="px-5 pt-4 pb-5 flex flex-col items-center gap-3">
+                            {/* QR codes need a pure white quiet zone to scan reliably */}
+                            <div className="bg-white p-2 rounded-xl border border-[var(--color-rule)]">
+                                {qrPayload ? (
+                                    <QRCodeSVG value={qrPayload} size={196} level="M" />
+                                ) : staticQr ? (
+                                    <img src={staticQr} alt="PromptPay QR" className="w-[196px] h-[196px] object-contain" />
+                                ) : (
+                                    <div className="w-[196px] h-[196px] flex items-center justify-center text-base text-[var(--color-neutral)]">กำลังสร้าง QR…</div>
+                                )}
+                            </div>
+                            <div className="space-y-0.5">
+                                {storePromptpayName && <span className="block text-base font-bold text-[var(--color-ink)] truncate max-w-[270px]">{storePromptpayName}</span>}
+                                <span className="block font-mono text-sm text-[var(--color-muted)]">พร้อมเพย์ {formatPromptpayDisplay(storePromptpayId)}</span>
+                            </div>
+                            <span className="block font-mono text-[36px] leading-tight font-medium text-[var(--color-ink)]">{money(amount)}</span>
+                        </div>
+                    </div>
+                )}
+                <p className="text-base text-[var(--color-muted)] text-center">
+                    {isCash ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'สแกนด้วยแอปธนาคาร แล้วแสดงสลิปให้พนักงาน'}
+                </p>
+            </div>
+        );
+    };
+
+    // Helpers here are called as plain functions, not <Components/>: a component declared inside this one would
+    // remount on every parent render (the 6.5 s slideshow tick) and restart the countdown bar and the clock.
+
+    // Itemised list used by cart and checkout
+    const ItemRows = ({ items, qtyKey = 'quantity', detailed = false }) => (
+        <ul className="divide-y divide-[var(--color-rule)]">
+            {items.map((item, idx) => {
+                const qty = item[qtyKey] || item.quantity;
+                return (
+                    <li key={item.id || idx} className="flex items-start gap-3 py-3">
+                        <span className="shrink-0 min-w-[40px] h-8 px-2 rounded-lg bg-[var(--color-paper-2)] font-mono text-base font-medium text-[var(--color-ink)] flex items-center justify-center">{qty}×</span>
+                        <div className="flex-1 min-w-0">
+                            <span className="block text-lg font-bold leading-[1.5] text-[var(--color-ink)] truncate">{item.name}</span>
+                            {detailed && item.selected_options && item.selected_options.length > 0 && (
+                                <span className="block text-sm text-[var(--color-muted)] leading-[1.5]">
+                                    {item.selected_options.map(opt => (typeof opt === 'object' ? opt.name + (opt.price ? ` +฿${opt.price}` : '') : opt)).join(' · ')}
+                                </span>
+                            )}
+                            {detailed && item.item_note && (
+                                <span className="block text-sm text-[var(--brand-plum)] leading-[1.5]">โน้ต: {item.item_note}</span>
+                            )}
+                        </div>
+                        <span className="shrink-0 font-mono text-lg font-medium text-[var(--color-ink)] pt-0.5">{money((item.price || 0) * (qty || 0))}</span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+
+    const tableLabel = orderData.tableName ? `โต๊ะ ${orderData.tableName}` : 'สั่งที่เคาน์เตอร์';
+
+    // -------------------------------------------------------------
+    // IDLE: signature dish photo + member sign-up QR
     // -------------------------------------------------------------
     const renderIdleMode = () => {
         const activeSlide = slideshowImages[currentSlideIndex];
-
+        const hours = getStoreHours();
         return (
-            <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex flex-col font-sans select-none overflow-hidden">
-                
-                {/* Structural Top Masthead (1px Brutalist Cellular Division) */}
-                <header className="h-14 border-b border-[var(--color-rule)]/20 flex items-stretch bg-[var(--color-ink)] shrink-0 z-20">
-                    {/* Brand Cell */}
-                    <div className="flex items-center gap-3 px-5 border-r border-[var(--color-rule)]/20 shrink-0">
-                        <VenueLogo className="h-8 max-w-[140px] object-contain filter drop-shadow brightness-110" />
-                        <div className="h-5 w-px bg-[var(--color-rule)]/20" />
-                        <div className="flex flex-col">
-                            <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[var(--color-paper)] uppercase leading-none">
-                                IN THE HAUS
-                            </span>
-                            <span className="font-sans text-[8.5px] text-[var(--color-neutral)] tracking-wider mt-0.5">
-                                จริตจัดรสชัดเจน · นครพนม
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Ambient Marquee Ticker Cell */}
-                    <div className="flex-1 overflow-hidden flex items-center px-4 border-r border-[var(--color-rule)]/20">
-                        <div className="whitespace-nowrap font-mono text-[10px] tracking-[0.25em] text-[var(--color-neutral)] uppercase animate-marquee">
-                            IN THE HAUS · SPECIALTY COFFEE & MODERN THAI CUISINE · EST. 2024 · ARTISANAL DINING · HAUS TABLE OS · 
-                        </div>
-                    </div>
-
-                    {/* Live Clock & Terminal Beacon Cell */}
-                    <div className="flex items-center gap-4 px-5 shrink-0 bg-[var(--color-ink)]">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
-                            <span className="font-mono text-[9px] font-bold tracking-widest text-[oklch(45%_0.08_140)] uppercase">
-                                TERMINAL 01 · ONLINE
-                            </span>
-                        </div>
-                        <div className="h-5 w-px bg-[var(--color-rule)]/20" />
-                        <StandbyClock />
-                    </div>
-                </header>
-
-                {/* Main Architectural Stage (Split 55% Showcase / 45% Membership Pass) */}
-                <div className="flex-1 flex min-h-0 overflow-hidden">
-                    
-                    {/* Left Panel: Hero Menu Specimen Showcase (55% Width) */}
-                    <div className="w-[55%] h-full relative overflow-hidden bg-black border-r border-[var(--color-rule)]/20 flex flex-col justify-between">
-                        <AnimatePresence mode="wait">
-                            {activeSlide ? (
-                                <motion.div
+            <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+                {CfdTopBar({ label: 'ยินดีต้อนรับสู่ ในบ้าน นครพนม' })}
+                <div className="flex-1 min-h-0 flex">
+                    <div className="w-[55%] relative overflow-hidden bg-[var(--color-paper-3)] border-r border-[var(--color-rule)]">
+                        <AnimatePresence initial={false}>
+                            {activeSlide && (
+                                <motion.img
                                     key={currentSlideIndex}
-                                    initial={{ opacity: 0, scale: 1.05 }}
-                                    animate={{ opacity: 1, scale: 1 }}
+                                    src={activeSlide.url}
+                                    alt={activeSlide.name}
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                                    className="absolute inset-0"
-                                >
-                                    <img
-                                        src={activeSlide.url}
-                                        alt={activeSlide.name}
-                                        className="w-full h-full object-cover opacity-80"
-                                        onError={() => {
-                                            setSlideshowImages(prev => {
-                                                const next = prev.filter((_, idx) => idx !== currentSlideIndex);
-                                                return next.length > 0 ? next : LOCAL_FEATURED_ITEMS;
-                                            });
-                                            setCurrentSlideIndex(0);
-                                        }}
-                                    />
-                                    {/* Architectural Gradient Wash */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-ink)] via-[var(--color-ink)]/30 to-black/40" />
-
-                                    {/* Tabular Specimen Badge */}
-                                    <div className="absolute bottom-5 left-5 right-5 bg-[var(--color-ink)]/95 backdrop-blur-md border border-[var(--color-rule)]/30 p-4 rounded-xl shadow-2xl flex items-center justify-between">
-                                        <div className="min-w-0 pr-3">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[var(--brand-plum)] uppercase">
-                                                    SPEC // 0{((currentSlideIndex + 1) % 99)}
-                                                </span>
-                                                <span className="text-[9px] font-mono text-[var(--color-neutral)] uppercase tracking-wider">
-                                                    · {activeSlide.category || 'FEATURED'}
-                                                </span>
-                                            </div>
-                                            <h3 className="text-base lg:text-lg font-bold uppercase tracking-tight text-[var(--color-paper)] truncate">
-                                                {activeSlide.name}
-                                            </h3>
-                                        </div>
-
-                                        <div className="bg-[var(--brand-plum)] text-[var(--color-paper)] px-3 py-1.5 rounded-lg shrink-0 font-mono font-bold text-sm tracking-tight shadow-md">
-                                            ฿{parseFloat(activeSlide.price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                        </div>
-                                    </div>
-
-                                    {/* Architectural Progress Indicator & Slide Logo */}
-                                    <div className="absolute top-4 left-5 flex items-center gap-1.5 bg-[var(--color-ink)]/80 px-2.5 py-1 rounded-full border border-[var(--color-rule)]/20 backdrop-blur-xs font-mono text-[9px] text-[var(--color-paper)]">
-                                        <span className="text-[var(--brand-plum)] font-bold">{String(currentSlideIndex + 1).padStart(2, '0')}</span>
-                                        <span className="text-[var(--color-neutral)]">/</span>
-                                        <span className="text-[var(--color-neutral)]">{String(slideshowImages.length || 1).padStart(2, '0')}</span>
-                                    </div>
-
-                                    <div className="absolute top-4 right-5 z-10 opacity-90 flex items-center bg-[var(--color-ink)]/80 px-3 py-1.5 rounded-full border border-[var(--color-rule)]/20 backdrop-blur-xs">
-                                        <VenueLogo className="h-5 max-w-[100px] object-contain filter drop-shadow brightness-110" />
-                                    </div>
-                                </motion.div>
-                            ) : (
-                                <div className="h-full flex items-center justify-center font-mono text-xs tracking-widest text-[var(--color-neutral)] uppercase">
-                                    IN THE HAUS TABLE SHOWCASE
-                                </div>
+                                    transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                                    onError={() => {
+                                        setSlideshowImages(prev => {
+                                            const next = prev.filter((_, idx) => idx !== currentSlideIndex);
+                                            return next.length > 0 ? next : LOCAL_FEATURED_ITEMS;
+                                        });
+                                        setCurrentSlideIndex(0);
+                                    }}
+                                />
                             )}
                         </AnimatePresence>
+                        {activeSlide && (
+                            <div className={`absolute left-4 right-4 bottom-4 ${CARD} px-5 py-3 flex items-center justify-between gap-4`}>
+                                <div className="min-w-0">
+                                    <span className={LABEL}>เมนูแนะนำ · {String(currentSlideIndex + 1).padStart(2, '0')}/{String(slideshowImages.length || 1).padStart(2, '0')}</span>
+                                    <span className="block text-xl font-bold leading-[1.5] text-[var(--color-ink)] truncate">{activeSlide.name}</span>
+                                </div>
+                                <span className="shrink-0 font-mono text-2xl font-medium text-[var(--brand-plum)]">{money(activeSlide.price, 0)}</span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Right Panel: LINE LIFF Member QR (45% Width · Dieter Rams Minimalist Structure) */}
-                    <div className="w-[45%] h-full p-6 flex flex-col justify-between bg-[var(--color-ink)]">
-                        
-                        {/* Member Registration Minimal Enclosure */}
-                        <div className="flex-1 flex flex-col items-center justify-center">
-                            <div className="w-full max-w-[320px] bg-[var(--color-ink)] border border-[var(--color-rule)]/25 rounded-2xl p-6 flex flex-col items-center shadow-xl">
-                                
-                                <span className="font-mono text-[9px] font-bold tracking-[0.25em] text-[var(--brand-plum)] uppercase mb-4">
-                                    MEMBER REGISTRATION
-                                </span>
-
-                                {/* Clean QR Code with High Contrast Paper Enclosure */}
-                                <div className="bg-white p-4 rounded-2xl border-2 border-[var(--color-rule)] shadow-lg flex flex-col items-center">
-                                    <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={156} level="M" />
-                                    <span className="font-mono text-[8px] font-black text-[var(--color-ink)] tracking-[0.2em] uppercase mt-2">
-                                        SCAN VIA LINE
-                                    </span>
-                                </div>
-
-                                <div className="text-center mt-4 space-y-1">
-                                    <h4 className="text-base font-bold text-[var(--color-paper)] tracking-tight">
-                                        สแกนสมัครสมาชิก
-                                    </h4>
-                                    <p className="font-mono text-[10px] text-[var(--color-neutral)] uppercase tracking-wider">
-                                        LINE LIFF MEMBER PASS
-                                    </p>
-                                </div>
+                    <div className="w-[45%] flex flex-col gap-4 p-5">
+                        <div className={`${CARD} flex-1 min-h-0 flex flex-col items-center justify-center text-center px-6 py-5`}>
+                            <span className="font-mono text-xs font-medium uppercase tracking-[0.12em] text-[var(--brand-plum)]">Member · สมาชิก</span>
+                            <h2 className="mt-1 text-2xl font-bold leading-[1.5] text-[var(--color-ink)]">สแกนสมัครสมาชิก</h2>
+                            <p className="text-base leading-[1.5] text-[var(--color-muted)]">สะสมแต้มและแก้วฟรีผ่าน LINE</p>
+                            {/* QR codes need a pure white quiet zone to scan reliably */}
+                            <div className="mt-4 bg-white p-3 rounded-xl border border-[var(--color-rule)]">
+                                <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={176} level="M" />
                             </div>
                         </div>
-
-                        {/* Venue Coordinates & Operating Hours */}
-                        <div className="border-t border-[var(--color-rule)]/20 pt-3 flex items-center justify-between text-[9.5px] font-mono text-[var(--color-neutral)] uppercase tracking-wider">
-                            <div className="flex items-center gap-3">
-                                <span>WI-FI : <strong className="text-[var(--color-paper)]">IN THE HAUS 5G</strong></span>
-                                <span>·</span>
-                                <span>HOURS : <strong className="text-[var(--color-paper)]">{getStoreHours().open.replace(':', '.')} — {getStoreHours().close.replace(':', '.')}</strong></span>
+                        <div className={`${CARD} grid grid-cols-2 divide-x divide-[var(--color-rule)]`}>
+                            <div className="px-4 py-3 min-w-0">
+                                <span className={LABEL}>Wi-Fi</span>
+                                <span className="block text-base font-bold text-[var(--color-ink)] truncate">IN THE HAUS 5G</span>
                             </div>
-                            <span className="text-[var(--brand-plum)] font-bold">HAUS TABLE OS</span>
+                            <div className="px-4 py-3 min-w-0">
+                                <span className={LABEL}>เวลาเปิด</span>
+                                <span className="block font-mono text-base font-medium text-[var(--color-ink)]">{hours.open}–{hours.close}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                {/* Bottom Structural Footer Bar */}
-                <footer className="h-7 border-t border-[var(--color-rule)]/20 px-5 flex items-center justify-between text-[8.5px] font-mono text-[var(--color-neutral)] uppercase tracking-[0.2em] bg-[var(--color-ink)] shrink-0 z-20">
-                    <span>CUSTOMER FACING PRESENTATION</span>
-                    <span className="text-[var(--color-paper)] font-bold">IN THE HAUS จริตจัดรสชัดเจน · นครพนม</span>
-                    <span>TOUCHLESS VERIFICATION</span>
-                </footer>
             </div>
         );
     };
 
     // -------------------------------------------------------------
-    // RENDER 1.5: ORDER CONFIRMED MODE (New Mode · Rams Clean Ticket Confirmation)
+    // ORDER CONFIRMED: sent to kitchen / bar (5 s, then back to idle)
     // -------------------------------------------------------------
     const renderOrderConfirmedMode = () => (
-        <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
-            <motion.div
-                initial={{ scale: 0.94, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 18 }}
-                className="w-full max-w-lg bg-[var(--color-ink)] border-2 border-[var(--brand-plum)] rounded-2xl p-6 shadow-2xl space-y-4"
-            >
-                <div className="flex items-center justify-between border-b border-[var(--color-rule)]/20 pb-3">
-                    <VenueLogo className="h-7 max-w-[120px] object-contain brightness-110" />
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] bg-[var(--brand-plum)] text-[var(--color-paper)] px-2.5 py-1 rounded">
-                        ORDER RECEIVED
-                    </span>
-                </div>
-
-                <div className="space-y-1.5 py-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-[oklch(45%_0.08_140)] font-bold block">
-                        KITCHEN & BAR DISPATCH
-                    </span>
-                    <h2 className="text-2xl font-bold uppercase tracking-tight text-[var(--color-paper)]">
-                        บันทึกออเดอร์ส่งเข้าครัวแล้ว
-                    </h2>
-                    <p className="text-xs text-[var(--color-neutral)] font-sans">
-                        เชฟและบาริสต้ากำลังจัดเตรียมเมนูอย่างพิถีพิถัน
-                    </p>
-                </div>
-
-                <div className="bg-[var(--color-ink)] border border-[var(--color-rule)]/20 rounded-xl p-3.5 flex items-center justify-around font-mono">
-                    <div className="text-center">
-                        <span className="text-[8.5px] uppercase tracking-widest text-[var(--color-neutral)] block">TABLE / ORDER</span>
-                        <span className="text-base font-bold text-[var(--color-paper)]">
-                            {orderData.tableName || 'COUNTER'}
-                        </span>
-                    </div>
-                    <div className="h-7 w-px bg-[var(--color-rule)]/20" />
-                    <div className="text-center">
-                        <span className="text-[8.5px] uppercase tracking-widest text-[var(--color-neutral)] block">TOTAL ITEMS</span>
-                        <span className="text-base font-bold text-[var(--brand-plum)]">
-                            {orderData.itemCount || orderData.items?.length || 1} รายการ
-                        </span>
-                    </div>
-                    {orderData.totalAmount > 0 && (
-                        <>
-                            <div className="h-7 w-px bg-[var(--color-rule)]/20" />
-                            <div className="text-center">
-                                <span className="text-[8.5px] uppercase tracking-widest text-[var(--color-neutral)] block">SUBTOTAL</span>
-                                <span className="text-base font-bold text-[var(--color-paper)]">
-                                    ฿{orderData.totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                </span>
+        <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+            {CfdTopBar({ label: tableLabel })}
+            <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+                <div className={`${CARD} w-full max-w-[560px] p-8 text-center`}>
+                    <span className="font-mono text-sm font-medium uppercase tracking-[0.12em] text-[var(--brand-plum)]">Order received · รับออเดอร์แล้ว</span>
+                    <h1 className="mt-2 text-[32px] font-bold leading-[1.5] text-[var(--color-ink)]">ส่งออเดอร์เข้าครัวแล้ว</h1>
+                    <p className="text-lg leading-[1.5] text-[var(--color-muted)]">เชฟและบาริสต้ากำลังเตรียมให้ครับ</p>
+                    <div className={`mt-6 grid ${orderData.totalAmount > 0 ? 'grid-cols-3' : 'grid-cols-2'} border-y border-[var(--color-rule)] divide-x divide-[var(--color-rule)]`}>
+                        <div className="py-3">
+                            <span className={LABEL}>โต๊ะ</span>
+                            <span className="block text-2xl font-bold text-[var(--color-ink)]">{orderData.tableName || 'เคาน์เตอร์'}</span>
+                        </div>
+                        <div className="py-3">
+                            <span className={LABEL}>รายการ</span>
+                            <span className="block font-mono text-2xl font-medium text-[var(--color-ink)]">{orderData.itemCount || orderData.items?.length || 1}</span>
+                        </div>
+                        {orderData.totalAmount > 0 && (
+                            <div className="py-3">
+                                <span className={LABEL}>ยอดรวม</span>
+                                <span className="block font-mono text-2xl font-medium text-[var(--color-ink)]">{money(orderData.totalAmount)}</span>
                             </div>
-                        </>
-                    )}
-                </div>
-
-                {/* 5-second progress countdown bar */}
-                <div className="space-y-1">
-                    <div className="w-full bg-[var(--color-ink)] h-1 rounded-full overflow-hidden">
+                        )}
+                    </div>
+                    {/* 5 s countdown, drawn with transform so it never triggers layout */}
+                    <div className="mt-6 h-1 rounded-full bg-[var(--color-rule)] overflow-hidden" aria-hidden="true">
                         <motion.div
-                            initial={{ width: '100%' }}
-                            animate={{ width: '0%' }}
+                            className="h-full w-full bg-[var(--brand-plum)] origin-left"
+                            initial={{ scaleX: 1 }}
+                            animate={{ scaleX: 0 }}
                             transition={{ duration: 5, ease: 'linear' }}
-                            className="h-full bg-[var(--brand-plum)]"
                         />
                     </div>
-                    <span className="text-[8px] font-mono text-[var(--color-neutral)] tracking-widest uppercase">
-                        RETURNING TO STANDBY IN 5 SECONDS...
-                    </span>
+                    <span className="mt-2 block text-sm text-[var(--color-neutral)]">กลับหน้าหลักใน 5 วินาที</span>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 
     // -------------------------------------------------------------
-    // RENDER 2: CART REVIEW MODE (10.1" 1024x600 Live Order Verification)
+    // CART: live order the cashier is keying in
     // -------------------------------------------------------------
-    const renderCartMode = () => (
-        <div className="w-full h-full bg-[var(--color-paper)] text-[var(--color-ink)] flex font-sans overflow-hidden select-none">
-            
-            {/* Left Pane: Customer Greeting & Active Promo Showcase */}
-            <div className="w-5/12 h-full bg-[var(--color-paper-2)] border-r border-[var(--color-rule)] p-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2.5">
-                        <VenueLogo className="h-8 max-w-[120px] object-contain" />
-                        <div className="h-4 w-px bg-[var(--color-rule)]" />
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] truncate">
-                            {orderData.tableName ? `TABLE : ${orderData.tableName}` : 'DIRECT CHECKOUT'}
-                        </span>
+    const renderCartMode = () => {
+        const items = orderData.items || [];
+        const count = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
+        const isNamedGuest = orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer);
+        return (
+            <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+                {CfdTopBar({ label: `${tableLabel} · รายการของคุณ` })}
+                <div className="flex-1 min-h-0 flex gap-4 p-4">
+                    <div className="w-5/12 flex flex-col gap-4 min-h-0">
+                        {orderData.memberProfile ? (
+                            MemberCard({})
+                        ) : (
+                            <div className={`${CARD} p-4`}>
+                                <span className="block text-lg font-bold leading-[1.5] text-[var(--color-ink)]">{isNamedGuest ? orderData.customer : 'ตรวจสอบรายการได้ทางขวา'}</span>
+                                <p className="text-base leading-[1.5] text-[var(--color-muted)]">แจ้งเบอร์กับแคชเชียร์เพื่อสะสมแต้มสมาชิก</p>
+                            </div>
+                        )}
+                        <div className={`${CARD} mt-auto p-5 space-y-2`}>
+                            <div className="flex justify-between text-base text-[var(--color-muted)]">
+                                <span>จำนวน</span>
+                                <span className="font-mono">{count} รายการ</span>
+                            </div>
+                            {orderData.discount > 0 && (
+                                <div className="flex justify-between text-base font-bold text-[var(--color-accent-2)]">
+                                    <span>ส่วนลด</span>
+                                    <span className="font-mono">−{money(orderData.discount)}</span>
+                                </div>
+                            )}
+                            <div className="border-t border-[var(--color-rule)] pt-3">
+                                <span className="block text-lg font-bold text-[var(--color-ink)]">ยอดรวม</span>
+                                <span className="block font-mono text-[44px] leading-tight font-medium text-[var(--color-ink)]">{money(orderData.total)}</span>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Member Profile Banner if attached */}
-                    {orderData.memberProfile ? (() => {
-                        const mp = orderData.memberProfile;
-                        const coins = Math.max(0, parseFloat(mp.xhaus_balance ?? mp.xhaus_coins ?? mp.points_balance ?? mp.points ?? 0) || 0);
-                        const stamps = parseInt(mp.drink_stamp_count || 0, 10);
-                        const freeDrinks = parseInt(mp.free_drink_quota || 0, 10);
-                        const tier = mp.current_tier || mp.tier || 'HAUS COMMON';
-
-                        return (
-                            <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-2 shadow-2xs">
-                                {/* Header: Member Name & Tier */}
-                                <div className="flex items-center justify-between border-b border-[var(--color-rule)]/60 pb-1.5">
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-plum)] shrink-0 animate-pulse" />
-                                        <div className="min-w-0">
-                                            <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-[var(--brand-plum)] block">
-                                                IN THE HAUS MEMBER
-                                            </span>
-                                            <h2 className="text-sm font-bold text-[var(--color-ink)] truncate leading-[1.6] uppercase">
-                                                {mp.display_name || mp.name || orderData.customer}
-                                            </h2>
-                                        </div>
-                                    </div>
-                                    <span className="text-[8px] font-mono font-bold bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded uppercase shrink-0">
-                                        {tier}
-                                    </span>
+                    <div className={`${CARD} w-7/12 flex flex-col min-h-0 px-5`}>
+                        <div className="flex items-baseline justify-between py-3 border-b border-[var(--color-rule)]">
+                            <span className="text-lg font-bold text-[var(--color-ink)]">รายการอาหาร</span>
+                            <span className="font-mono text-sm text-[var(--color-neutral)]">{items.length} รายการ</span>
+                        </div>
+                        <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar">
+                            {items.length > 0 ? (
+                                ItemRows({ items, detailed: true })
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-lg text-[var(--color-neutral)]">กำลังเลือกรายการ…</div>
+                            )}
+                        </div>
+                        {(orderData.subtotal > 0 || orderData.tax > 0) && (
+                            <div className="py-3 border-t border-[var(--color-rule)] space-y-1">
+                                <div className="flex justify-between text-base text-[var(--color-muted)]">
+                                    <span>ยอดก่อนหักส่วนลด</span>
+                                    <span className="font-mono">{money(orderData.subtotal)}</span>
                                 </div>
-
-                                {/* Points & Stamp Card Metrics */}
-                                <div className="grid grid-cols-2 gap-1.5 font-mono">
-                                    {/* Points Box */}
-                                    <div className="bg-[var(--color-paper-2)]/80 border border-[var(--color-rule)] rounded-lg p-1.5 flex flex-col justify-between">
-                                        <span className="text-[8px] font-bold text-[var(--color-neutral)] uppercase flex items-center gap-1">
-                                            แต้ม XHAUS
-                                        </span>
-                                        <div className="mt-0.5">
-                                            <span className="text-xs font-black text-[var(--brand-plum)]">
-                                                {Math.floor(coins).toLocaleString()} pts
-                                            </span>
-                                            <span className="text-[8px] text-[var(--color-neutral)] block">
-                                                ≈ ส่วนลด ฿{Math.floor(coins).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Cup Stamps Box */}
-                                    <div className="bg-[var(--color-paper-2)]/80 border border-[var(--color-rule)] rounded-lg p-1.5 flex flex-col justify-between">
-                                        <div className="flex items-center justify-between text-[8px] font-bold text-[var(--color-neutral)] uppercase">
-                                            <span>แก้วสะสม</span>
-                                            <span>{stamps}/10</span>
-                                        </div>
-                                        <div className="flex items-center gap-0.5 mt-1">
-                                            {STAMP_PUNCHCARD_SLOTS.map((i) => (
-                                                <span
-                                                    key={i}
-                                                    className={`flex-1 h-1.5 rounded-full transition-all ${
-                                                        i < stamps 
-                                                            ? 'bg-[var(--brand-plum)]' 
-                                                            : 'bg-[var(--color-rule)]'
-                                                    }`}
-                                                />
-                                            ))}
-                                        </div>
-                                        <span className="text-[7.5px] text-[var(--color-neutral)] mt-0.5">
-                                            {stamps >= 10 ? 'ครบ 10 แก้วแล้ว!' : `อีก ${10 - stamps} แก้ว รับฟรี 1 แก้ว`}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Free Drink Alert Badge */}
-                                {freeDrinks > 0 && (
-                                    <div className="bg-[oklch(45%_0.08_140)]/15 border border-[oklch(45%_0.08_140)]/30 rounded-lg p-1.5 flex items-center justify-between text-[9px] font-mono font-bold text-[var(--color-ink)]">
-                                        <span>สิทธิ์เครื่องดื่มฟรี: {freeDrinks} แก้ว</span>
-                                        <span className="text-[8px] bg-[oklch(45%_0.08_140)] text-white px-1.5 py-0.2 rounded uppercase">
-                                            พร้อมใช้
-                                        </span>
+                                {orderData.tax > 0 && (
+                                    <div className="flex justify-between text-base text-[var(--color-muted)]">
+                                        <span>VAT 7%</span>
+                                        <span className="font-mono">{money(orderData.tax)}</span>
                                     </div>
                                 )}
                             </div>
-                        );
-                    })() : orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer) ? (
-                        <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-0.5 shadow-2xs">
-                            <span className="text-[8px] font-mono font-bold uppercase tracking-widest text-[var(--color-neutral)]">
-                                CUSTOMER
-                            </span>
-                            <h2 className="text-sm font-bold text-[var(--color-ink)] truncate">
-                                {orderData.customer}
-                            </h2>
-                            <p className="text-[10px] text-[var(--color-neutral)] font-sans pt-0.5">
-                                สั่งอาหารกับแคชเชียร์ / สามารถแจ้งเบอร์เพื่อสะสมแต้มสมาชิก XHAUS ได้
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-0.5 shadow-2xs">
-                            <h3 className="text-sm font-bold text-[var(--color-ink)]">
-                                สั่งอาหารกับแคชเชียร์
-                            </h3>
-                            <p className="text-[10px] text-[var(--color-neutral)] font-sans leading-relaxed">
-                                ตรวจสอบรายการอาหารทางด้านขวา และแจ้งสะสมแต้มสมาชิกได้ทันที
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Minimalist Summary Status */}
-                <div className="bg-white border border-[var(--color-rule)] rounded-xl p-3 space-y-1.5 shadow-xs">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-neutral)]">
-                        <span>TOTAL ITEMS</span>
-                        <span className="font-bold text-[var(--color-ink)]">
-                            {orderData.items?.reduce((sum, i) => sum + i.quantity, 0) || 0} รายการ
-                        </span>
-                    </div>
-                    {orderData.discount > 0 && (
-                        <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(45%_0.08_140)] font-bold">
-                            <span>SAVINGS / DISCOUNT</span>
-                            <span>
-                                - ฿{orderData.discount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </span>
-                        </div>
-                    )}
-                    <div className="border-t border-[var(--color-rule)] pt-1.5 flex justify-between items-end">
-                        <span className="text-xs font-sans font-bold uppercase text-[var(--color-ink)]">
-                            ยอดรวมสุทธิ
-                        </span>
-                        <span className="text-2xl font-mono font-black text-[var(--brand-plum)]">
-                            ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Pane: Live Itemized Order List */}
-            <div className="w-7/12 h-full flex flex-col justify-between p-4 bg-[var(--color-paper)] overflow-hidden">
-                <div className="pb-2 border-b border-[var(--color-rule)] flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] animate-pulse" />
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
-                            YOUR ORDER SUMMARY
-                        </h2>
-                    </div>
-                    <VenueLogo className="h-5 max-w-[90px] object-contain opacity-90" />
-                </div>
-
-                {/* Items List */}
-                <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar py-2 space-y-1.5 pr-1">
-                    <AnimatePresence>
-                        {orderData.items && orderData.items.length > 0 ? (
-                            orderData.items.map((item, idx) => (
-                                <motion.div
-                                    key={item.id || idx}
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="bg-white border border-[var(--color-rule)] rounded-lg p-2.5 flex items-center justify-between shadow-2xs"
-                                >
-                                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                                        <span className="w-6 h-6 rounded bg-[var(--brand-plum)]/10 text-[var(--brand-plum)] font-mono font-bold flex items-center justify-center text-xs shrink-0">
-                                            {item.quantity}x
-                                        </span>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-xs text-[var(--color-ink)] uppercase leading-[1.6] truncate">
-                                                    {item.name}
-                                                </h3>
-                                                {item.destination && (
-                                                    <span className="text-[8px] font-mono uppercase px-1 py-0.2 rounded bg-[var(--color-paper-2)] text-[var(--color-neutral)] shrink-0 border border-[var(--color-rule)]">
-                                                        {item.destination === 'bar' ? 'BAR' : 'KITCHEN'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {item.selected_options && item.selected_options.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {item.selected_options.map((opt, i) => (
-                                                        <span key={i} className="text-[9px] font-mono font-bold bg-[var(--color-paper-2)] text-[var(--color-neutral)] px-1.5 py-0.5 rounded border border-[var(--color-rule)]">
-                                                            {typeof opt === 'object' ? (opt.name + (opt.price ? ` +฿${opt.price}` : '')) : opt}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {item.item_note && (
-                                                <p className="text-[9px] font-sans text-[var(--brand-plum)] mt-0.5">
-                                                    โน้ต: {item.item_note}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="text-xs font-mono font-bold text-[var(--color-ink)] shrink-0">
-                                        ฿{(item.price * item.quantity).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                    </div>
-                                </motion.div>
-                            ))
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-[var(--color-neutral)] font-mono text-[11px] uppercase tracking-widest gap-2 py-8">
-                                <span>กำลังเลือกรายการอาหาร...</span>
-                            </div>
                         )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Footer Totals */}
-                <div className="pt-2 border-t border-[var(--color-rule)] space-y-0.5 shrink-0">
-                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
-                        <span>SUBTOTAL</span>
-                        <span>฿{(orderData.subtotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                     </div>
-                    {orderData.discount > 0 && (
-                        <div className="flex justify-between text-[10px] font-mono text-[oklch(45%_0.08_140)] font-bold">
-                            <span>DISCOUNT / SAVINGS</span>
-                            <span>- ฿{orderData.discount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                    )}
-                    {orderData.tax > 0 && (
-                        <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
-                            <span>VAT (7%)</span>
-                            <span>฿{orderData.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                    )}
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // -------------------------------------------------------------
-    // RENDER 3: CHECKOUT & PROMPTPAY QR MODE (10.1" 1024x600 Optimized)
+    // CHECKOUT: bill recap + how to pay
     // -------------------------------------------------------------
     const renderCheckoutMode = () => (
-        <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex font-sans overflow-hidden select-none">
-            
-            {/* Left Column: Order Bill Recap */}
-            <div className="w-1/2 h-full bg-[var(--color-paper)] text-[var(--color-ink)] border-r border-[var(--color-rule)] p-4 flex flex-col justify-between overflow-hidden">
-                <div className="flex flex-col flex-1 min-h-0">
-                    <div className="flex items-center justify-between mb-1.5 shrink-0">
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--brand-plum)]">
-                            CHECKOUT PAYMENT
-                        </span>
-                        <VenueLogo className="h-5 max-w-[90px] object-contain" />
+        <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+            {CfdTopBar({ label: `${tableLabel} · ชำระเงิน` })}
+            <div className="flex-1 min-h-0 flex gap-4 p-4">
+                <div className={`${CARD} w-1/2 flex flex-col min-h-0 px-5`}>
+                    <div className="py-3 border-b border-[var(--color-rule)]">
+                        <span className="text-lg font-bold text-[var(--color-ink)]">สรุปรายการ</span>
                     </div>
-                    <h2 className="text-lg font-bold uppercase tracking-tight mb-2 shrink-0">
-                        สรุปรายการชำระเงิน
-                    </h2>
-
-                    {orderData.memberProfile && (() => {
-                        const mp = orderData.memberProfile;
-                        const coins = Math.max(0, parseFloat(mp.xhaus_balance ?? mp.xhaus_coins ?? mp.points_balance ?? mp.points ?? 0) || 0);
-                        const stamps = parseInt(mp.drink_stamp_count || 0, 10);
-                        const tier = mp.current_tier || mp.tier || 'MEMBER';
-
-                        return (
-                            <div className="bg-[var(--brand-plum)]/10 border border-[var(--brand-plum)]/20 p-2 rounded-lg flex items-center justify-between text-[10px] font-mono mb-2 shrink-0">
-                                <div className="min-w-0 mr-2">
-                                    <span className="font-bold text-[var(--color-ink)] truncate block">
-                                        สมาชิก: {mp.display_name || mp.name || orderData.customer}
-                                    </span>
-                                    <span className="text-[8.5px] text-[var(--color-neutral)] flex items-center gap-1.5 mt-0.5">
-                                        <span>{Math.floor(coins).toLocaleString()} pts</span>
-                                        <span>·</span>
-                                        <span>{stamps}/10 แก้ว</span>
-                                    </span>
-                                </div>
-                                <span className="text-[8px] font-bold bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
-                                    {tier}
-                                </span>
-                            </div>
-                        );
-                    })()}
-
-                    <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar space-y-1 pr-1">
-                        {orderData.items?.map((item, idx) => (
-                            <div key={item.id || idx} className="flex justify-between items-center p-2 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)]">
-                                <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                                    <span className="font-mono font-bold text-[10px] bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded shrink-0">
-                                        {item.quantity}x
-                                    </span>
-                                    <span className="font-bold text-[11px] uppercase truncate">{item.name}</span>
-                                </div>
-                                <span className="font-mono font-bold text-xs shrink-0">
-                                    ฿{(item.price * item.quantity).toLocaleString()}
-                                </span>
-                            </div>
-                        ))}
+                    {orderData.memberProfile && <div className="pt-3">{MemberCard({ compact: true })}</div>}
+                    <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar">
+                        {ItemRows({ items: orderData.items || [] })}
+                    </div>
+                    <div className="py-4 border-t border-[var(--color-rule)] flex items-end justify-between gap-4">
+                        <span className="text-lg font-bold text-[var(--color-ink)]">ยอดที่ต้องชำระ</span>
+                        <span className="font-mono text-[40px] leading-tight font-medium text-[var(--color-ink)]">{money(orderData.total)}</span>
                     </div>
                 </div>
-
-                {/* Amount Due Box */}
-                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-xl space-y-1 shrink-0 mt-2">
-                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
-                        <span>PAYMENT METHOD</span>
-                        <span className="font-bold text-[var(--brand-plum)] uppercase">{orderData.paymentMethod === 'cash' ? 'เงินสด (Cash)' : 'PromptPay QR'}</span>
-                    </div>
-                    
-                    {orderData.paymentMethod === 'cash' && orderData.cashReceived > 0 && (
-                        <>
-                            <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
-                                <span>CASH RECEIVED</span>
-                                <span>฿{orderData.cashReceived.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px] font-mono font-bold text-emerald-600 border-t border-[var(--color-rule)] pt-1">
-                                <span>CHANGE DUE (เงินทอน)</span>
-                                <span>฿{(orderData.changeDue || 0).toLocaleString()}</span>
-                            </div>
-                        </>
-                    )}
-
-                    <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-1.5">
-                        <span className="text-xs font-sans font-bold uppercase text-[var(--color-ink)]">ยอดเงินที่ต้องชำระ</span>
-                        <span className="text-2xl font-mono font-black text-[var(--brand-plum)]">
-                            ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Column: PromptPay QR / Cash Status */}
-            <div className="w-1/2 h-full flex flex-col items-center justify-center p-4 bg-[var(--color-ink)] text-center">
-                {orderData.paymentMethod === 'cash' ? (
-                    <div className="bg-white text-[var(--color-ink)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl border border-white/20">
-                        <VenueLogo className="h-7 max-w-[120px] object-contain mb-3" />
-                        <div className="w-full bg-[var(--color-ink)] text-white py-1.5 font-bold text-[11px] font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
-                            <span>CASH PAYMENT / ชำระเงินสด</span>
-                        </div>
-                        <div className="w-full space-y-2.5 font-mono text-center">
-                            <div className="bg-[var(--color-paper-2)] p-3 rounded-xl border border-[var(--color-rule)]">
-                                <span className="text-[9px] text-[var(--color-neutral)] uppercase block font-bold mb-0.5">ยอดรวมชำระ</span>
-                                <span className="text-2xl font-black text-[var(--brand-plum)]">฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            {orderData.cashReceived > 0 && (
-                                <div className="space-y-1.5 pt-0.5">
-                                    <div className="flex justify-between text-[11px] font-bold text-[var(--color-ink)] px-1">
-                                        <span>รับเงินสดมา:</span>
-                                        <span>฿{orderData.cashReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs font-black text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
-                                        <span>เงินทอน (Change):</span>
-                                        <span>฿{(orderData.changeDue || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-white text-[var(--color-ink)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
-                        <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
-                        {/* PromptPay Header */}
-                        <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
-                            <span>PROMPTPAY QR PAYMENT</span>
-                        </div>
-
-                        <div className="p-1.5 bg-white border-2 border-[var(--color-rule)] rounded-xl shadow-inner mb-1.5">
-                            {qrPayload ? (
-                                <QRCodeSVG value={qrPayload} size={140} level="M" />
-                            ) : paymentQrUrl || orderData.paymentQrUrl ? (
-                                <img src={paymentQrUrl || orderData.paymentQrUrl} alt="PromptPay QR" className="w-[140px] h-[140px] object-contain" />
-                            ) : (
-                                <div className="w-[140px] h-[140px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
-                                    Generating PromptPay QR...
-                                </div>
-                            )}
-                        </div>
-
-                        {/* PromptPay Account Name & Phone/Tax ID */}
-                        <div className="w-full text-center space-y-0.5 border-t border-[var(--color-rule)]/60 pt-1.5 mb-1.5">
-                            {storePromptpayName && (
-                                <div className="text-[10px] font-bold text-[var(--color-ink)] truncate px-1">
-                                    ชื่อบัญชี: {storePromptpayName}
-                                </div>
-                            )}
-                            <div className="text-[9px] font-mono font-bold text-[var(--color-muted)] tracking-wide">
-                                พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId)}
-                            </div>
-                        </div>
-
-                        <div className="space-y-0.5 text-center">
-                            <span className="text-[7.5px] font-mono text-[var(--color-neutral)] uppercase tracking-widest block">
-                                SCAN WITH MOBILE BANKING APP
-                            </span>
-                            <p className="text-xl font-mono font-black text-[var(--brand-plum)]">
-                                ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="mt-3 flex items-center gap-2 text-[var(--color-neutral)] text-[10px] font-mono uppercase tracking-wider">
-                    <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'กรุณาแสดงสลิปการโอนเงินต่อพนักงาน'}</span>
+                <div className="w-1/2 min-h-0">
+                    {PaymentPanel({ amount: orderData.total, allowStaticQr: true })}
                 </div>
             </div>
         </div>
     );
 
     // -------------------------------------------------------------
-    // RENDER 3.5: SPLIT CHECKOUT MODE (10.1" 1024x600 Split Bill Presentation)
+    // SPLIT CHECKOUT: one portion of a shared bill
     // -------------------------------------------------------------
-    const renderSplitCheckoutMode = () => (
-        <div className="w-full h-full bg-[var(--color-ink)] text-[var(--color-paper)] flex font-sans overflow-hidden select-none">
-            {/* Left Column: Split Summary & Items/Shares */}
-            <div className="w-1/2 h-full bg-[var(--color-paper)] text-[var(--color-ink)] border-r border-[var(--color-rule)] p-4 flex flex-col justify-between overflow-hidden">
-                <div className="flex flex-col flex-1 min-h-0">
-                    <div className="flex items-center justify-between mb-1.5 shrink-0">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded">
-                                SPLIT PAYMENT
-                            </span>
-                            <span className="text-[10px] font-mono font-bold uppercase text-[var(--color-neutral)]">
-                                {orderData.tableName ? `โต๊ะ : ${orderData.tableName}` : 'WALK-IN'}
-                            </span>
+    const renderSplitCheckoutMode = () => {
+        const title = orderData.splitMode === 'ITEMS' ? 'แยกจ่ายตามรายการ' : orderData.splitMode === 'EQUAL' ? 'หารเท่ากัน' : 'แยกจ่ายตามยอด';
+        return (
+            <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+                {CfdTopBar({ label: `${tableLabel} · ${title}` })}
+                <div className="flex-1 min-h-0 flex gap-4 p-4">
+                    <div className={`${CARD} w-1/2 flex flex-col min-h-0 px-5`}>
+                        <div className="py-3 border-b border-[var(--color-rule)] flex items-baseline justify-between">
+                            <span className="text-lg font-bold text-[var(--color-ink)]">{title}</span>
+                            <span className="font-mono text-xs font-medium uppercase tracking-[0.12em] px-2 py-1 rounded-md bg-[var(--brand-plum)] text-[var(--color-paper)]">Split</span>
                         </div>
-                        <VenueLogo className="h-5 max-w-[90px] object-contain" />
-                    </div>
-
-                    <h2 className="text-lg font-bold uppercase tracking-tight mb-2 shrink-0">
-                        {orderData.splitMode === 'ITEMS' ? 'ชำระตามรายการที่เลือก' : orderData.splitMode === 'EQUAL' ? 'ชำระแบบหารเท่า' : 'ชำระตามยอดที่ระบุ'}
-                    </h2>
-
-                    {orderData.memberProfile && (
-                        <div className="bg-[var(--brand-plum)]/10 border border-[var(--brand-plum)]/20 p-2 rounded-lg flex items-center justify-between text-[11px] font-mono mb-2 shrink-0">
-                            <span className="font-bold text-[var(--color-ink)] truncate mr-2">
-                                สมาชิก: {orderData.memberProfile.display_name || orderData.memberProfile.name}
-                            </span>
-                            <span className="text-[8px] font-bold bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
-                                {orderData.memberProfile.current_tier || orderData.memberProfile.tier || 'MEMBER'}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Mode Specific Body */}
-                    {orderData.splitMode === 'ITEMS' && orderData.selectedItems && orderData.selectedItems.length > 0 ? (
-                        <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar space-y-1 pr-1">
-                            {orderData.selectedItems.map((item, idx) => (
-                                <div key={item.id || idx} className="flex justify-between items-center p-2 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule)]">
-                                    <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                                        <span className="font-mono font-bold text-[10px] bg-[var(--brand-plum)] text-white px-1.5 py-0.5 rounded shrink-0">
-                                            {item.selectedQty || item.quantity}x
-                                        </span>
-                                        <span className="font-bold text-[11px] uppercase truncate">{item.name}</span>
-                                    </div>
-                                    <span className="font-mono font-bold text-xs shrink-0">
-                                        ฿{((item.price) * (item.selectedQty || item.quantity)).toLocaleString()}
-                                    </span>
+                        {orderData.memberProfile && <div className="pt-3">{MemberCard({ compact: true })}</div>}
+                        <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar">
+                            {orderData.splitMode === 'ITEMS' && orderData.selectedItems && orderData.selectedItems.length > 0 ? (
+                                ItemRows({ items: orderData.selectedItems, qtyKey: 'selectedQty' })
+                            ) : orderData.splitMode === 'EQUAL' && orderData.equalSplitInfo ? (
+                                <div className="py-6 text-center">
+                                    <span className={LABEL}>หารเท่ากัน {orderData.equalSplitInfo.totalPeople} ท่าน</span>
+                                    <span className="block mt-1 text-2xl font-bold leading-[1.5] text-[var(--color-ink)]">ท่านที่ {orderData.equalSplitInfo.currentPerson} จาก {orderData.equalSplitInfo.totalPeople}</span>
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="py-6 text-center">
+                                    <span className={LABEL}>ชำระบางส่วนตามยอดที่ระบุ</span>
+                                </div>
+                            )}
                         </div>
-                    ) : orderData.splitMode === 'EQUAL' && orderData.equalSplitInfo ? (
-                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl p-3 space-y-1 text-center my-2 shrink-0">
-                            <span className="text-[10px] font-mono text-[var(--color-neutral)] uppercase font-bold">
-                                หารเท่ากัน {orderData.equalSplitInfo.totalPeople} ท่าน
-                            </span>
-                            <h3 className="text-base font-bold text-[var(--color-ink)]">
-                                ท่านที่ {orderData.equalSplitInfo.currentPerson} จาก {orderData.equalSplitInfo.totalPeople} ท่าน
-                            </h3>
-                            <p className="text-xs font-mono text-[var(--brand-plum)] font-bold">
-                                ยอดชำระส่วนนี้: ฿{(orderData.splitTotal || orderData.equalSplitInfo.amount || 0).toLocaleString()}
-                            </p>
+                        <div className="py-3 border-t border-[var(--color-rule)] space-y-1">
+                            <div className="flex justify-between text-base text-[var(--color-muted)]">
+                                <span>ยอดรวมทั้งโต๊ะ</span>
+                                <span className="font-mono">{money(orderData.orderTotal)}</span>
+                            </div>
+                            <div className="flex justify-between text-base text-[var(--color-muted)]">
+                                <span>คงเหลือของโต๊ะ</span>
+                                <span className="font-mono">{money(orderData.remainingBalance)}</span>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl p-3 space-y-1 text-center my-2 shrink-0">
-                            <span className="text-[10px] font-mono text-[var(--color-neutral)] uppercase font-bold">
-                                ชำระบางส่วนตามยอดเงินที่ระบุ
-                            </span>
-                            <p className="text-xl font-mono font-black text-[var(--brand-plum)]">
-                                ฿{(orderData.splitTotal || 0).toLocaleString()}
-                            </p>
+                        <div className="py-4 border-t border-[var(--color-rule)] flex items-end justify-between gap-4">
+                            <span className="text-lg font-bold text-[var(--color-ink)]">ยอดรอบนี้</span>
+                            <span className="font-mono text-[40px] leading-tight font-medium text-[var(--color-ink)]">{money(orderData.splitTotal)}</span>
                         </div>
-                    )}
-                </div>
-
-                {/* Split Totals Breakdown */}
-                <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded-xl space-y-1 shrink-0 mt-2">
-                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
-                        <span>ยอดบิลรวมทั้งโต๊ะ (TABLE TOTAL)</span>
-                        <span className="font-bold">฿{(orderData.orderTotal || 0).toLocaleString()}</span>
                     </div>
-
-                    <div className="flex justify-between text-[10px] font-mono text-[var(--color-neutral)]">
-                        <span>ยอดคงเหลือของโต๊ะ (REMAINING)</span>
-                        <span className="font-bold text-[var(--color-ink)]">฿{(orderData.remainingBalance || 0).toLocaleString()}</span>
-                    </div>
-
-                    <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-1.5">
-                        <span className="text-xs font-sans font-bold uppercase text-[var(--color-ink)]">
-                            ยอดชำระรอบนี้ (THIS PORTION)
-                        </span>
-                        <span className="text-2xl font-mono font-black text-[var(--brand-plum)]">
-                            ฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </span>
+                    <div className="w-1/2 min-h-0">
+                        {PaymentPanel({ amount: orderData.splitTotal, allowStaticQr: false })}
                     </div>
                 </div>
             </div>
+        );
+    };
 
-            {/* Right Column: PromptPay QR / Cash Status */}
-            <div className="w-1/2 h-full flex flex-col items-center justify-center p-4 bg-[var(--color-ink)] text-center">
-                {orderData.paymentMethod === 'cash' ? (
-                    <div className="bg-white text-[var(--color-ink)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl border border-white/20">
-                        <VenueLogo className="h-7 max-w-[120px] object-contain mb-3" />
-                        <div className="w-full bg-[var(--color-ink)] text-white py-1.5 font-bold text-[11px] font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
-                            <span>CASH PAYMENT / ชำระเงินสด</span>
-                        </div>
-                        <div className="w-full space-y-2.5 font-mono text-center">
-                            <div className="bg-[var(--color-paper-2)] p-3 rounded-xl border border-[var(--color-rule)]">
-                                <span className="text-[9px] text-[var(--color-neutral)] uppercase block font-bold mb-0.5">ยอดชำระรอบนี้</span>
-                                <span className="text-2xl font-black text-[var(--brand-plum)]">฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            {orderData.cashReceived > 0 && (
-                                <div className="space-y-1.5 pt-0.5">
-                                    <div className="flex justify-between text-[11px] font-bold text-[var(--color-ink)] px-1">
-                                        <span>รับเงินสดมา:</span>
-                                        <span>฿{orderData.cashReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs font-black text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
-                                        <span>เงินทอน (Change):</span>
-                                        <span>฿{(orderData.changeDue || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-white text-[var(--color-ink)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
-                        <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
-                        {/* PromptPay Header */}
-                        <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
-                            <span>SPLIT PROMPTPAY QR</span>
-                        </div>
-
-                        <div className="p-1.5 bg-white border-2 border-[var(--color-rule)] rounded-xl shadow-inner mb-1.5">
-                            {qrPayload ? (
-                                <QRCodeSVG value={qrPayload} size={140} level="M" />
-                            ) : (
-                                <div className="w-[140px] h-[140px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
-                                    Generating PromptPay QR...
-                                </div>
-                            )}
-                        </div>
-
-                        {/* PromptPay Account Name & Phone/Tax ID */}
-                        <div className="w-full text-center space-y-0.5 border-t border-[var(--color-rule)]/60 pt-1.5 mb-1.5">
-                            {storePromptpayName && (
-                                <div className="text-[10px] font-bold text-[var(--color-ink)] truncate px-1">
-                                    ชื่อบัญชี: {storePromptpayName}
-                                </div>
-                            )}
-                            <div className="text-[9px] font-mono font-bold text-[var(--color-muted)] tracking-wide">
-                                พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId)}
-                            </div>
-                        </div>
-
-                        <div className="space-y-0.5 text-center">
-                            <span className="text-[7.5px] font-mono text-[var(--color-neutral)] uppercase tracking-widest block">
-                                SCAN TO PAY THIS PORTION
-                            </span>
-                            <p className="text-xl font-mono font-black text-[var(--brand-plum)]">
-                                ฿{(orderData.splitTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="mt-3 flex items-center gap-2 text-[var(--color-neutral)] text-[10px] font-mono uppercase tracking-wider">
-                    <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'สแกน QR เพื่อชำระยอดเฉพาะส่วนนี้'}</span>
+    // Shared "done" screen for full and split payments
+    const DoneScreen = ({ kicker, title, children }) => (
+        <div className="w-full h-full bg-[var(--color-paper-2)] flex flex-col">
+            {CfdTopBar({ label: tableLabel })}
+            <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+                <div className={`${CARD} w-full max-w-[560px] p-8 text-center`}>
+                    <span className="font-mono text-sm font-medium uppercase tracking-[0.12em] text-[var(--color-accent-2)]">{kicker}</span>
+                    <h1 className="mt-2 text-[32px] font-bold leading-[1.5] text-[var(--color-ink)]">{title}</h1>
+                    {children}
                 </div>
             </div>
         </div>
     );
 
     // -------------------------------------------------------------
-    // RENDER 3.6: SPLIT SUCCESS MODE (Non-Touch Display Optimized)
+    // SPLIT SUCCESS
     // -------------------------------------------------------------
     const renderSplitSuccessMode = () => (
-        <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 15 }}
-                className="flex flex-col items-center space-y-3.5 max-w-md"
-            >
-                <VenueLogo className="h-10 max-w-[160px] object-contain brightness-200 filter drop-shadow-md mb-1" />
-
-                <div className="space-y-1">
-                    <span className="text-[9px] font-mono font-bold tracking-widest uppercase text-white/80">
-                        SPLIT PAYMENT SUCCESSFUL
-                    </span>
-                    <h1 className="text-2xl font-bold uppercase tracking-tight text-white leading-tight">
-                        ชำระส่วนนี้เรียบร้อยแล้ว
-                    </h1>
-                    <p className="text-xs font-sans text-white/90">
-                        ยอดชำระส่วนนี้: ฿{(orderData.splitTotal || 0).toLocaleString()}
-                    </p>
+        DoneScreen({ kicker: "Paid · ชำระส่วนนี้แล้ว", title: "ชำระส่วนนี้เรียบร้อยแล้ว", children: (<>
+            <p className="text-lg leading-[1.5] text-[var(--color-muted)]">ยอดส่วนนี้ <span className="font-mono">{money(orderData.splitTotal)}</span></p>
+            {orderData.remainingBalance > 0 ? (
+                <div className="mt-6 border-t border-[var(--color-rule)] pt-5">
+                    <span className={LABEL}>คงเหลือของโต๊ะ</span>
+                    <span className="block font-mono text-[44px] leading-tight font-medium text-[var(--color-ink)]">{money(orderData.remainingBalance)}</span>
+                    <p className="mt-1 text-base text-[var(--color-muted)]">เชิญท่านถัดไปชำระต่อได้เลยครับ</p>
                 </div>
-
-                {orderData.remainingBalance > 0 ? (
-                    <div className="bg-white/10 border border-white/20 p-3.5 rounded-xl w-full backdrop-blur-xs space-y-1">
-                        <span className="text-[9px] font-mono font-bold tracking-widest uppercase text-amber-300">
-                            REMAINING TABLE BALANCE
-                        </span>
-                        <p className="text-xl font-mono font-black text-white">
-                            ยอดคงเหลือโต๊ะ: ฿{orderData.remainingBalance.toLocaleString()}
-                        </p>
-                        <p className="text-[11px] text-white/80 font-sans pt-0.5">
-                            เชิญท่านถัดไปชำระต่อได้ทันทีครับ
-                        </p>
-                    </div>
-                ) : (
-                    <div className="bg-white/10 border border-white/20 p-3.5 rounded-xl w-full backdrop-blur-xs space-y-1">
-                        <p className="text-lg font-bold text-white">
-                            ชำระครบถ้วนทั้งโต๊ะแล้ว ขอบคุณครับ!
-                        </p>
-                    </div>
-                )}
-
-                <span className="text-[9px] font-mono text-white/60 tracking-widest uppercase pt-1">
-                    IN THE HAUS EXPERIENCE
-                </span>
-            </motion.div>
-        </div>
+            ) : (
+                <p className="mt-6 border-t border-[var(--color-rule)] pt-5 text-xl font-bold text-[var(--color-ink)]">ชำระครบทั้งโต๊ะแล้ว ขอบคุณครับ</p>
+            )}
+        </>) })
     );
 
     // -------------------------------------------------------------
-    // RENDER 4: PAYMENT SUCCESS (Thank You & XHAUS Points Earned)
+    // PAYMENT SUCCESS: thank you, change, points earned (6 s)
     // -------------------------------------------------------------
     const renderSuccessMode = () => (
-        <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 15 }}
-                className="flex flex-col items-center space-y-3.5 max-w-md"
-            >
-                <VenueLogo className="h-10 max-w-[160px] object-contain brightness-200 filter drop-shadow-md mb-1" />
-
-                <div className="space-y-1">
-                    <span className="text-[9px] font-mono font-bold tracking-widest uppercase text-white/80">
-                        PAYMENT SUCCESSFUL
-                    </span>
-                    <h1 className="text-2xl font-bold uppercase tracking-tight text-white leading-tight">
-                        ชำระเงินเรียบร้อยแล้ว
-                    </h1>
-                    <p className="text-xs font-sans text-white/90">
-                        ขอบคุณที่เข้ามาใช้บริการ IN THE HAUS ครับ
-                    </p>
+        DoneScreen({ kicker: "Payment successful · ชำระเงินสำเร็จ", title: "ชำระเงินเรียบร้อยแล้ว", children: (<>
+            <p className="text-lg leading-[1.5] text-[var(--color-muted)]">ขอบคุณที่มาใช้บริการ ในบ้าน ครับ</p>
+            {orderData.paymentMethod === 'cash' && orderData.changeDue > 0 && (
+                <div className="mt-6 border-t border-[var(--color-rule)] pt-5">
+                    <span className={LABEL}>เงินทอน</span>
+                    <span className="block font-mono text-[48px] leading-tight font-medium text-[var(--color-ink)]">{money(orderData.changeDue)}</span>
+                    {orderData.cashReceived > 0 && (
+                        <p className="mt-1 text-base text-[var(--color-muted)]">รับเงินสดมา <span className="font-mono">{money(orderData.cashReceived)}</span></p>
+                    )}
                 </div>
-
-                {/* Cash Change Due Box */}
-                {orderData.paymentMethod === 'cash' && orderData.changeDue > 0 && (
-                    <div className="bg-white/10 border border-white/20 p-3 rounded-xl w-full backdrop-blur-xs space-y-0.5">
-                        <span className="text-[8px] font-mono font-bold tracking-widest uppercase text-emerald-300">
-                            CHANGE DUE (เงินทอน)
-                        </span>
-                        <p className="text-xl font-mono font-black text-white">
-                            ฿{(orderData.changeDue || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </p>
-                        {orderData.cashReceived > 0 && (
-                            <p className="text-[10px] text-white/80 font-mono">
-                                รับเงินสดมา ฿{orderData.cashReceived.toLocaleString()}
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {/* XHAUS Points Earned Box */}
-                {orderData.pointsEarned > 0 && (
-                    <div className="bg-white/10 border border-white/20 p-3 rounded-xl w-full backdrop-blur-xs space-y-0.5">
-                        <span className="text-[8px] font-mono font-bold tracking-widest uppercase text-amber-300 flex items-center justify-center gap-1">
-                            XHAUS POINTS EARNED
-                        </span>
-                        <p className="text-xl font-mono font-black text-white">
-                            +{orderData.pointsEarned} POINTS
-                        </p>
-                    </div>
-                )}
-
-                <span className="text-[9px] font-mono text-white/60 tracking-widest uppercase pt-1">
-                    HAVE A WONDERFUL DAY!
-                </span>
-            </motion.div>
-        </div>
+            )}
+            {orderData.pointsEarned > 0 && (
+                <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-[var(--brand-plum)] px-4 py-2 text-base font-bold text-[var(--color-paper)]">
+                    <span className="font-mono">+{orderData.pointsEarned}</span> แต้ม XHAUS
+                </p>
+            )}
+        </>) })
     );
 
     return (
-        <div className="w-screen h-screen max-h-screen overflow-hidden bg-black font-sans relative select-none cfd-container">
+        <div className="w-screen h-screen max-h-screen overflow-hidden bg-[var(--color-paper-2)] text-[var(--color-ink)] font-sans relative select-none cfd-container">
             <AnimatePresence mode="wait">
                 {mode === 'IDLE' && (
-                    <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                    <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderIdleMode()}
                     </motion.div>
                 )}
 
                 {mode === 'ORDER_CONFIRMED' && (
-                    <motion.div key="order_confirmed" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="w-full h-full">
+                    <motion.div key="order_confirmed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderOrderConfirmedMode()}
                     </motion.div>
                 )}
 
                 {mode === 'CART' && (
-                    <motion.div key="cart" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="w-full h-full">
+                    <motion.div key="cart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderCartMode()}
                     </motion.div>
                 )}
 
                 {mode === 'CHECKOUT' && (
-                    <motion.div key="checkout" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                    <motion.div key="checkout" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderCheckoutMode()}
                     </motion.div>
                 )}
 
                 {mode === 'SPLIT_CHECKOUT' && (
-                    <motion.div key="split_checkout" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                    <motion.div key="split_checkout" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderSplitCheckoutMode()}
                     </motion.div>
                 )}
 
                 {mode === 'SPLIT_SUCCESS' && (
-                    <motion.div key="split_success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                    <motion.div key="split_success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderSplitSuccessMode()}
                     </motion.div>
                 )}
 
                 {mode === 'SUCCESS' && (
-                    <motion.div key="success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
+                    <motion.div key="success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={FADE} className="w-full h-full">
                         {renderSuccessMode()}
                     </motion.div>
                 )}
@@ -1532,25 +1040,24 @@ export default function POSCustomerDisplay() {
 const StandbyClock = React.memo(function StandbyClock() {
     const [currentTime, setCurrentTime] = useState(() => new Date());
 
+    // Minutes only: re-render on the next minute boundary, not every second
     useEffect(() => {
-        const clockTimer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-        return () => clearInterval(clockTimer);
+        let timer;
+        const schedule = () => {
+            const now = new Date();
+            timer = setTimeout(() => { setCurrentTime(new Date()); schedule(); }, 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 50);
+        };
+        schedule();
+        return () => clearTimeout(timer);
     }, []);
 
-    const timeStr = currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const dateStr = currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    const timeStr = currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = currentTime.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' });
 
     return (
-        <div className="flex flex-col text-right font-mono">
-            <span className="text-xs font-black tracking-widest text-[var(--color-paper)]">
-                {timeStr}
-            </span>
-            <span className="text-[8px] text-[var(--color-neutral)] tracking-wider">
-                {dateStr}
-            </span>
+        <div className="flex flex-col items-end leading-tight">
+            <span className="font-mono text-xl font-medium text-[var(--color-ink)]">{timeStr}</span>
+            <span className="text-sm text-[var(--color-neutral)]">{dateStr}</span>
         </div>
     );
 });
-
