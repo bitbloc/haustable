@@ -720,6 +720,8 @@ function generateStandaloneLandingHtml(data) {
             --color-paper-3: oklch(91% 0.012 28);
             --color-rule: oklch(85% 0.012 28);
             --color-neutral: oklch(55% 0.010 28);
+            /* Small labels on paper / paper-2: neutral darkened just enough for 4.5:1 (55% measures ~4.1 on paper-2) */
+            --color-label: oklch(51% 0.010 28);
             --color-muted: oklch(42% 0.010 28);
             --color-ink: oklch(18% 0.012 28);
             --color-ink-2: oklch(28% 0.012 28);
@@ -737,8 +739,9 @@ function generateStandaloneLandingHtml(data) {
             --color-focus: oklch(60% 0.15 28);
             --color-signal: oklch(93% 0.19 113);
             --color-signal-2: oklch(88% 0.19 113);
-            --color-line: oklch(53% 0.14 152);
-            --color-line-2: oklch(47% 0.13 152);
+            /* LINE green, darkened from 53% so paper text clears 4.5:1 (was 4.49); hover stays one step darker */
+            --color-line: oklch(50% 0.14 152);
+            --color-line-2: oklch(45% 0.13 152);
             --color-scrim: oklch(14% 0.010 28 / 0.9);
             --color-scrim-soft: oklch(14% 0.010 28 / 0);
 
@@ -798,7 +801,7 @@ function generateStandaloneLandingHtml(data) {
         .marquee-text { flex: 1; min-width: 0; text-align: center; text-wrap: balance; }
         /* Language cells: each language named in its own script, so a visitor who can't read Thai still finds theirs */
         .lang-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--color-ink); background: var(--color-paper); }
-        .lang-cell { min-height: 36px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .lang-cell { min-height: 48px; padding: var(--space-1) var(--space-2); font-size: var(--text-sm); font-weight: 600; line-height: 1.5; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
         .lang-cell + .lang-cell { border-left: 1px solid var(--color-rule); }
         .lang-cell:hover { color: var(--color-ink); }
         html[lang="th"] .lang-cell[data-lang="th"], html[lang="en"] .lang-cell[data-lang="en"], html[lang="zh-Hans"] .lang-cell[data-lang="zh"], html[lang="lo"] .lang-cell[data-lang="lo"] { background: var(--color-ink); color: var(--color-paper); }
@@ -818,13 +821,13 @@ function generateStandaloneLandingHtml(data) {
         .fact + .fact { border-left: 1px solid var(--color-rule); }
         .fact.full { grid-column: span 2; border-left: none; border-top: 1px solid var(--color-rule); }
         .fact.wide { grid-column: span 2; }
-        .fact-label { font-size: var(--text-xs); color: var(--color-neutral); }
+        .fact-label { font-size: var(--text-xs); color: var(--color-label); }
         .fact-val { font-size: var(--text-md); font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: var(--space-2); }
         .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--color-accent-2); }
         .dot.closed { background: var(--color-neutral); }
         .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
         .loc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-        .loc-map-btn { flex-shrink: 0; min-height: 40px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .loc-map-btn { flex-shrink: 0; min-height: 48px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
         .loc-map-btn:hover { background: var(--color-ink-2); }
         .loc-more summary { font-size: var(--text-xs); color: var(--color-muted); cursor: pointer; margin-top: var(--space-1); width: fit-content; }
         .loc-more p { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); line-height: 1.6; }
@@ -940,7 +943,7 @@ function generateStandaloneLandingHtml(data) {
         .cat-chip:active { transform: scale(0.96); }
         #full-menu-content .section-header.sub { scroll-margin-top: 104px; }
         .section-header.sub .section-title { font-size: var(--text-xl); }
-        .section-meta { font-size: var(--text-xs); color: var(--color-neutral); white-space: nowrap; }
+        .section-meta { font-size: var(--text-xs); color: var(--color-label); white-space: nowrap; }
 
         /* Signature dishes */
         .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
@@ -1265,9 +1268,9 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Tab strip -->
         <div class="tab-bar" role="tablist">
-            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')">${tt('เมนู', 'Menu')}</button>
-            <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">${tt('บรรยากาศ', 'Atmosphere')}</button>
-            <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">${tt('ติดต่อ', 'Contact')}</button>
+            <button type="button" class="tab-btn active" id="tab-btn-menu" role="tab" aria-selected="true" aria-controls="sec-menu" onclick="switchSection('menu')">${tt('เมนู', 'Menu')}</button>
+            <button type="button" class="tab-btn" id="tab-btn-vibe" role="tab" aria-selected="false" aria-controls="sec-vibe" onclick="switchSection('vibe')">${tt('บรรยากาศ', 'Atmosphere')}</button>
+            <button type="button" class="tab-btn" id="tab-btn-connect" role="tab" aria-selected="false" aria-controls="sec-connect" onclick="switchSection('connect')">${tt('ติดต่อ', 'Contact')}</button>
         </div>
 
         <!-- ─── SECTION 1: MENU ─── -->
@@ -1524,7 +1527,9 @@ function generateStandaloneLandingHtml(data) {
         function markSection(name) {
             SECTIONS.forEach(function(s) {
                 const b = document.getElementById('tab-btn-' + s);
-                if (b) b.className = 'tab-btn' + (s === name ? ' active' : '');
+                if (!b) return;
+                b.className = 'tab-btn' + (s === name ? ' active' : '');
+                b.setAttribute('aria-selected', String(s === name));
             });
             const bar = document.querySelector('.tab-bar');
             if (bar && SECTIONS.indexOf(name) !== -1) bar.style.setProperty('--tab-i', SECTIONS.indexOf(name));
