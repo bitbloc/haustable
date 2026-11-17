@@ -241,15 +241,15 @@ export default function StepTableSelection() {
         }
 
         let bgColor = isBooked 
-            ? (statusType === 'walk_in' ? 'oklch(52% 0.16 28)' : 'oklch(45% 0.18 28)') 
+            ? (statusType === 'walk_in' ? 'var(--brand-plum-2)' : 'var(--brand-plum)') // taken: plum family, not red (it is not an error) 
             : isLockedByOthers 
-                ? 'oklch(55% 0.010 28)' // Grey for temporarily locked
-                : (isSelected ? 'oklch(18% 0.012 28)' : (table.table_color || 'oklch(97% 0.008 28)'))
+                ? 'var(--color-neutral)' // Grey for temporarily locked
+                : (isSelected ? 'var(--color-ink)' : (table.table_color || 'var(--color-paper)'))
             
         let textColor = (isBooked || isSelected || isLockedByOthers || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) 
-            ? 'oklch(97% 0.008 28)' 
-            : 'oklch(18% 0.012 28)'
-        let borderColor = isSelected ? 'oklch(52% 0.16 28)' : 'oklch(85% 0.012 28)'
+            ? 'var(--color-paper)' 
+            : 'var(--color-ink)'
+        let borderColor = isSelected ? 'var(--brand-plum)' : 'var(--color-rule)'
 
         return (
             <button

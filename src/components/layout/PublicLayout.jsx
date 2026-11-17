@@ -4,7 +4,7 @@ import Header from './Header'
 
 export default function PublicLayout({ session }) {
     return (
-        <div className="flex flex-col min-h-screen bg-[#F4F4F4] font-sans text-[#111]">
+        <div className="flex flex-col min-h-screen bg-canvas font-sans text-ink">
             <Header session={session} />
 
             {/* Content */}
@@ -13,12 +13,12 @@ export default function PublicLayout({ session }) {
             </div>
 
             {/* Footer */}
-            <footer className="py-8 text-center border-t border-gray-200 bg-[#FAFAFA] mt-auto">
-                <div className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                    <p className="text-[10px] font-bold text-gray-900 uppercase tracking-[0.2em]">
-                        on haus table <span className="text-gray-400 font-normal">by in the haus</span>
+            <footer className="py-8 text-center border-t border-[var(--color-rule)] bg-paper mt-auto">
+                <div className="flex flex-col items-center gap-1">
+                    <p className="text-[10px] font-bold text-ink uppercase tracking-[0.2em]">
+                        on haus table <span className="text-subInk font-normal">by in the haus</span>
                     </p>
-                    <p className="text-[10px] text-gray-400 font-mono">
+                    <p className="text-[10px] text-subInk font-mono">
                         Last updated: {new Date().toLocaleDateString('en-GB')}
                     </p>
                 </div>

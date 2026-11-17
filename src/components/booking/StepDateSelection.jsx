@@ -75,7 +75,7 @@ export default function StepDateSelection() {
                 </div>
 
                 {/* Time */}
-                <div className={`bg-paper p-6 border border-[var(--color-rule)] rounded-rams transition-opacity duration-300 ${!date ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div aria-disabled={!date} className={`bg-paper p-6 border border-[var(--color-rule)] rounded-rams transition-opacity duration-300 ${!date ? 'pointer-events-none' : ''}`}>
                     <div className="flex justify-between items-center mb-4">
                         <label className="text-xs font-mono font-bold text-subInk uppercase">{t('timeSlot')}</label>
                         {!date && <span className="text-xs font-mono text-error font-bold">{t('selectDateFirst')}</span>}
@@ -108,7 +108,7 @@ export default function StepDateSelection() {
                 </div>
 
                 {/* Pax */}
-                <div className={`bg-paper p-6 border border-[var(--color-rule)] rounded-rams transition-opacity duration-300 ${!time ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div aria-disabled={!time} className={`bg-paper p-6 border border-[var(--color-rule)] rounded-rams transition-opacity duration-300 ${!time ? 'pointer-events-none' : ''}`}>
                     <label className="block text-xs font-mono font-bold text-subInk uppercase mb-4">{t('guests')}</label>
                     <div className="flex items-center gap-4">
                         <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 border border-[var(--color-rule)] bg-canvas flex items-center justify-center font-bold hover:bg-paper active:scale-95 transition-transform">-</button>

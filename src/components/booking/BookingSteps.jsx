@@ -24,7 +24,7 @@ export default function BookingSteps() {
     // Loading State (Global)
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#F8F8F8] p-6 flex flex-col items-center justify-center space-y-4">
+            <div className="min-h-screen bg-canvas p-6 flex flex-col items-center justify-center space-y-4">
                 <div className="w-16 h-16 bg-gray-200 rounded-full animate-pulse"></div>
                 <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
                 <div className="w-48 h-3 bg-gray-200 rounded animate-pulse"></div>

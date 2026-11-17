@@ -52,7 +52,7 @@ export default function Header({ session }) {
                                 
                                 {/* Notification Dot */}
                                 {hasActiveOrder && (
-                                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                    <span className="absolute top-0 right-0 w-3 h-3 bg-[var(--error-red)] rounded-full border-2 border-[var(--color-paper)]" />
                                 )}
                             </button>
 

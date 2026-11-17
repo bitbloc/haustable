@@ -745,7 +745,7 @@ export default function PickupPage() {
                                             <div>
                                                 <div className="text-ink font-bold">{item.name} <span className="text-subInk text-xs font-mono">x{item.qty}</span></div>
                                                 {item.optionsSummary?.map((opt, i) => <div key={i} className="text-xs font-mono text-subInk">+ {opt.name} ({opt.price})</div>)}
-                                                {item.specialRequest && <div className="text-xs font-mono text-brand">{t('note')}: {item.specialRequest}</div>}
+                                                {item.specialRequest && <div className="text-xs font-mono text-[var(--brand-plum)]">{t('note')}: {item.specialRequest}</div>}
                                             </div>
                                             <span className="font-bold font-mono text-ink">{item.totalPricePerUnit * item.qty}.-</span>
                                         </div>

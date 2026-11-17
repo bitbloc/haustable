@@ -47,7 +47,7 @@ export default function CustomCalendar({ value, onChange, blockedDates = [], isD
         return (
             <div className="grid grid-cols-7 mb-2">
                 {days.map(day => (
-                    <div key={day} className="text-center text-xs font-bold text-gray-400 uppercase py-2">
+                    <div key={day} className="text-center text-xs font-bold text-subInk uppercase py-2">
                         {day}
                     </div>
                 ))}
@@ -125,7 +125,7 @@ export default function CustomCalendar({ value, onChange, blockedDates = [], isD
             {renderHeader()}
             {renderDays()}
             {renderCells()}
-            <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-gray-400">
+            <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-subInk">
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-black"></div> Selected</div>
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-gray-200"></div> Available</div>
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-100"></div> Blocked</div>
