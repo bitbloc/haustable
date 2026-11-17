@@ -387,6 +387,7 @@
 .sc-media .sc-status--out { background: var(--sp-accent-pale); }
 .sc-name { flex: 1; padding: 8px 12px 6px; border-top: 1px solid var(--sp-rule); }
 .sc-cells { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-top: 1px solid var(--sp-rule); }
+.sc-cells--single { grid-template-columns: minmax(0, 1fr); }
 .sc-cell { display: flex; flex-direction: column; justify-content: center; min-width: 0; min-height: 52px; padding: 4px 12px; }
 .sc-cell + .sc-cell { border-left: 1px solid var(--sp-rule); }
 .sc-cell__n { font-size: 20px; line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

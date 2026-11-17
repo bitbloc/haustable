@@ -26,9 +26,9 @@ describe('What a stock card shows', () => {
         expect(stockQtyParts(item({ unit: 'kg', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 2 })).main).toBe('2');
     });
     it('adds the pieces for packs, boxes and crates used one by one', () => {
-        expect(stockQtyParts(item({ unit: 'pack', pack_unit: 'pack', usage_unit: 'pcs', conversion_factor: 110, current_quantity: 1.3 })).total).toBe('143 ชิ้น');
-        expect(stockQtyParts(item({ unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 24, current_quantity: 2 })).total).toBe('48 ขวด');
-        expect(stockQtyParts(item({ unit: 'แพ็ค', pack_unit: 'แพ็ค', usage_unit: 'glass', conversion_factor: 50, current_quantity: 15 })).total).toBe('750 แก้ว');
+        expect(stockQtyParts(item({ unit: 'pack', pack_unit: 'pack', usage_unit: 'pcs', conversion_factor: 110, current_quantity: 1.3 }))).toMatchObject({ main: '143', unit: 'ชิ้น', total: '1 แพ็ค + 33 ชิ้น' });
+        expect(stockQtyParts(item({ unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 24, current_quantity: 2 }))).toMatchObject({ main: '48', unit: 'ขวด', total: '2 ลัง' });
+        expect(stockQtyParts(item({ unit: 'แพ็ค', pack_unit: 'แพ็ค', usage_unit: 'glass', conversion_factor: 50, current_quantity: 15 }))).toMatchObject({ main: '750', unit: 'แก้ว', total: '15 แพ็ค' });
     });
     it('adds the amount inside for packs and bottles of things measured by weight or volume', () => {
         expect(stockQtyParts(item({ current_quantity: 2 })).total).toBe('1,400 มิลลิลิตร');
@@ -41,15 +41,17 @@ describe('What a stock card shows', () => {
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'bottle', conversion_factor: 1000, current_quantity: 1 })).total).toBeNull();
         expect(stockQtyParts(item({ unit: 'kg', pack_unit: 'kg', usage_unit: 'unit', conversion_factor: 1000, current_quantity: 2 })).total).toBeNull();
     });
-    it('a crate of 12 bottles with 17 left reads 1 crate + 5 bottles, never 2 crates', () => {
+    it('things used one by one lead with the pieces; the crates are a small summary', () => {
         const singha = item({ unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 12, current_quantity: 1.4167 });
-        expect(stockQtyParts(singha)).toMatchObject({ main: '1', unit: 'ลัง', open: '+ เปิดอยู่ 1 ลัง เหลือ 5 ขวด', total: '17 ขวด' });
-        expect(stockQtyParts({ ...singha, current_quantity: 0.4167 })).toMatchObject({ main: '0', total: '5 ขวด' });
-        expect(stockQtyParts({ ...singha, current_quantity: 2 })).toMatchObject({ main: '2', open: null, total: '24 ขวด' });
+        expect(stockQtyParts(singha)).toMatchObject({ main: '17', unit: 'ขวด', open: '1 ลัง + 5 ขวด', single: true });
+        expect(stockQtyParts({ ...singha, current_quantity: 0.4167 })).toMatchObject({ main: '5', open: null });
+        expect(stockQtyParts({ ...singha, current_quantity: 2 })).toMatchObject({ main: '24', open: '2 ลัง' });
+        const water = item({ unit: 'pack', pack_unit: 'pack', usage_unit: 'bottle', conversion_factor: 6, current_quantity: 5 });
+        expect(stockQtyParts(water)).toMatchObject({ main: '30', unit: 'ขวด', open: '5 แพ็ค' });
     });
     it('a rounding crumb is no opened crate, and ml stay whole', () => {
         const crate = item({ unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 12, current_quantity: 5.002 });
-        expect(stockQtyParts(crate)).toMatchObject({ main: '5', open: null, total: '60 ขวด' });
+        expect(stockQtyParts(crate)).toMatchObject({ main: '60', open: '5 ลัง' });
         expect(stockQtyParts(item({ current_quantity: 0.4757 })).open).toBe('เปิดอยู่ 1 เหลือ 333 มิลลิลิตร');
     });
     it('keeps the status on the stored quantity: an open bottle is not "out"', () => {

@@ -48,17 +48,11 @@ export function piecesPerUnit(u?: ItemUnits | null): number {
   if (!(f > 1) || !PIECE_UNITS.has(usage) || usage === unit) return 0
   return HOLDER_UNITS.has(unit) || HOLDER_UNITS.has(low(u?.pack_unit)) ? f : 0
 }
-/** An amount in its units: "1 ลัง 5 ขวด", "5 ขวด", "1.5 กก.". Always positive; the caller adds a sign. */
+/** An amount in its units: things used one by one in pieces ("17 ขวด"), else "1.5 กก.". Always positive. */
 export function amountText(n: number, u?: ItemUnits | null): string {
   const per = piecesPerUnit(u)
-  const label = esc(unitLabel((u?.unit || u?.pack_unit) ?? null))
-  if (!per) return `${qty(Math.abs(n))} ${label}`.trim()
-  const total = Math.round(Math.abs(n) * per)
-  const whole = Math.floor(total / per)
-  const pieces = total % per
-  const p = esc(unitLabel(u?.usage_unit ?? null))
-  if (!whole) return `${pieces} ${p}`
-  return pieces ? `${whole} ${label} ${pieces} ${p}` : `${whole} ${label}`
+  if (!per) return `${qty(Math.abs(n))} ${esc(unitLabel((u?.unit || u?.pack_unit) ?? null))}`.trim()
+  return `${Math.round(Math.abs(n) * per)} ${esc(unitLabel(u?.usage_unit ?? null))}`
 }
 
 export const PERCENT_LIMIT = 5

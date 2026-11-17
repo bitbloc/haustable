@@ -51,7 +51,7 @@ describe('stock closing message', () => {
 describe('amounts in crates and bottles', () => {
     it('never says 1.417 crates', () => {
         const singha = { unit: 'crate', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 12 };
-        expect(amountText(1.4167, singha)).toBe('1 ลัง 5 ขวด');
+        expect(amountText(1.4167, singha)).toBe('17 ขวด');
         expect(amountText(-0.25, singha)).toBe('3 ขวด');
         expect(amountText(1.5, { unit: 'kg' })).toBe('1.5 กก.');
     });

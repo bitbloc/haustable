@@ -140,7 +140,14 @@ export function remainingText(qty: number, units?: string | StockUnits | null): 
   const v = Math.max(0, Number(qty) || 0)
   if (v <= EPS) return 'หมด'
   const per = piecesPerUnit(item)
-  if (per) return piecesText(v, item, per) || 'หมด'
+  if (per) {
+    // Used one by one: how many bottles in all first, crates as a short summary
+    const total = Math.round(v * per)
+    if (!total) return 'หมด'
+    const { whole } = wholeAndPieces(v, per)
+    const said = piecesText(v, item, per)
+    return whole ? `${total} ${unitLabel(item.usage_unit)} (${said})` : `${total} ${unitLabel(item.usage_unit)}`
+  }
   const whole = Math.floor(v + EPS)
   const rest = v - whole
   const part = quarterText(rest)

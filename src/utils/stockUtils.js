@@ -175,6 +175,19 @@ export function stockQtyParts(item) {
     const hasTotal = factor > 1 && sound && String(item.usage_unit || '').trim().toLowerCase() !== packUnit;
     const amount = hasTotal ? roundUsage(qty * factor) : 0;
     const total = amount > 0 ? `${amount.toLocaleString('th-TH')} ${cardUnit(item.usage_unit)}` : null;
+    // Sold or used one by one (a bottle of beer, a cup): the stock is said in pieces first,
+    // "17 ขวด", with the crates beside it (owner, 2026-11-17: ตัดทะลุ shows how many bottles in all)
+    if (piecesInside && hasTotal) {
+        const pieceUnit = cardUnit(item.usage_unit);
+        // The crates are a small summary under the count: "1 ลัง + 5 ขวด", "5 แพ็ค"
+        const summary = fullUnits > 0
+            ? `${fullUnits.toLocaleString('th-TH')} ${unit}${hasOpen ? ` + ${leftInOpen.toLocaleString('th-TH')} ${pieceUnit}` : ''}`
+            : null;
+        return {
+            main: amount.toLocaleString('th-TH'), unit: pieceUnit, open: summary, openPercent: 0,
+            total: summary, totalValue: null, totalUnit: null, single: true,
+        };
+    }
     return {
         main: onShelf.toLocaleString('th-TH'), unit, open, openPercent: hasOpen ? percent : 0, total,
         totalValue: amount > 0 ? amount.toLocaleString('th-TH') : null,
