@@ -333,7 +333,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
                             const qrToPrint = (activeTab === 'billing') ? (qrCodeUrl || loadedConfig.paymentQrUrl) : null;
-                            const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
+                            const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo-inbaan-print.png`) : null;
                             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                         }
                     }
@@ -1109,7 +1109,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 } else {
                     const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                     if (rawBytes) {
-                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (receiptConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
+                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (receiptConfig.shopLogoUrl || `${window.location.origin}/logo-inbaan-print.png`) : null;
                         const qrToPrint = (activeTab === 'billing') ? (qrCodeUrl || receiptConfig.paymentQrUrl) : null;
                         await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     } else {
@@ -1491,12 +1491,12 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             <div className="text-center space-y-1 pb-3 border-b border-[var(--color-rule)]">
                                 <div className="flex justify-center mb-1.5">
                                     <img 
-                                        src={receiptShopLogoUrl || '/receipt-logo.png'} 
+                                        src={receiptShopLogoUrl || '/logo-inbaan-print.png'} 
                                         alt="Logo" 
                                         className="h-10 w-auto object-contain" 
                                         onError={(e) => {
-                                            if (e.target.src !== `${window.location.origin}/receipt-logo.png`) {
-                                                e.target.src = '/receipt-logo.png';
+                                            if (e.target.src !== `${window.location.origin}/logo-inbaan-print.png`) {
+                                                e.target.src = '/logo-inbaan-print.png';
                                             }
                                         }}
                                     />

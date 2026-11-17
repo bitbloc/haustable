@@ -364,9 +364,9 @@ export default function AdminLayout() {
 
     const brand = (
         <Link to="/admin" className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.png" alt="" className="w-7 h-7 object-contain shrink-0" />
+            {/* The ในบ้าน wordmark is the shop name, so it replaces the square mark + "In The Haus" text */}
+            <img src="/logo-inbaan-wordmark-plum-96.png" alt="ในบ้าน In the haus" width="51" height="28" className="h-7 w-auto object-contain shrink-0" />
             <span className="min-w-0 leading-tight">
-                <span className="block text-sm font-semibold text-[var(--ram-ink)] truncate">In The Haus</span>
                 <span className="block text-[11px] text-[var(--ram-ink-muted)]">Backoffice</span>
             </span>
         </Link>
@@ -447,7 +447,7 @@ export default function AdminLayout() {
             <aside className={`admin-sidebar hidden lg:flex flex-col gap-4 fixed h-full z-30 ${isCollapsed ? 'is-collapsed' : ''}`}>
                 <div className={`flex items-center gap-2 ${isCollapsed ? 'flex-col' : 'justify-between'}`}>
                     {isCollapsed
-                        ? <Link to="/admin" aria-label="In The Haus Backoffice"><img src="/logo.png" alt="" className="w-7 h-7 object-contain" /></Link>
+                        ? <Link to="/admin" aria-label="In The Haus Backoffice"><img src="/logo-inbaan-wordmark-plum-96.png" alt="" width="48" height="26" className="w-12 h-7 object-contain" /></Link>
                         : brand}
                     <button
                         type="button"

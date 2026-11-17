@@ -6564,8 +6564,9 @@ export default function POSDashboard() {
                             /* Step 1: Enter PIN Code to Identify Staff */
                             <div className="flex flex-col gap-4">
                                 <div className="text-center">
-                                    <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center rounded-full bg-[var(--color-paper)] shadow-xs border border-[var(--color-rule)]">
-                                        <img src="/logo.png" alt="In the Haus" className="w-10 h-10 object-contain" />
+                                    {/* Shop mark on the PIN card: the wordmark itself, no circle frame (same 64px row) */}
+                                    <div className="h-16 mx-auto mb-2 flex items-center justify-center">
+                                        <img src="/logo-inbaan-wordmark-plum-96.png" alt="ในบ้าน In the haus" width="88" height="48" className="h-12 w-auto object-contain" />
                                     </div>
                                     <h2 className="text-lg font-bold font-sans tracking-tight text-[var(--color-ink)]">ระบบลงชื่อเข้าเวร POS</h2>
                                     <p className="text-[10px] text-[var(--color-muted)] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>

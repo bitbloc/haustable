@@ -188,13 +188,13 @@ export default function MonthlyTaxPrintView({
                                     {/* In The Haus Logo */}
                                     <div className="shrink-0 pt-1">
                                         <img 
-                                            src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
+                                            src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo-inbaan-wordmark-charcoal.png'} 
                                             alt="IN THE HAUS" 
                                             className="w-20 h-20 object-contain object-left-top shrink-0"
                                             crossOrigin="anonymous"
                                             onError={(e) => {
-                                                if (e.target.src !== `${window.location.origin}/logo.png`) {
-                                                    e.target.src = '/logo.png';
+                                                if (e.target.src !== `${window.location.origin}/logo-inbaan-wordmark-charcoal.png`) {
+                                                    e.target.src = '/logo-inbaan-wordmark-charcoal.png';
                                                 }
                                             }}
                                         />

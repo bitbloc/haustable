@@ -146,7 +146,7 @@ export default function POSCustomerDisplay() {
                 setImgSrc('/assets/logo-script.png');
                 setErrCount(2);
             } else if (errCount === 2) {
-                setImgSrc('/logo.png');
+                setImgSrc('/logo-inbaan-wordmark-plum.png');
                 setErrCount(3);
             }
         };

@@ -277,7 +277,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                     onPointerUp={handlePointerUp}
                                 >
                                     <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'top left' }} className="transition-transform pointer-events-none">
-                                        <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
+                                        <img src={customLogo || "/logo-inbaan-print.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
                                     </div>
                                     <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded pointer-events-none">
                                         <Upload size={16} className="text-[#1A1A1A]" />
@@ -350,7 +350,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                         onPointerUp={handlePointerUp}
                                     >
                                         <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'center' }} className="transition-transform pointer-events-none">
-                                            <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
+                                            <img src={customLogo || "/logo-inbaan-print.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
                                         </div>
                                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded pointer-events-none">
                                             <Upload size={16} className="text-[#1A1A1A]" />
