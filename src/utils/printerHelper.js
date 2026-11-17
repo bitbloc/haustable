@@ -1,4 +1,6 @@
 import { logger } from './logger';
+import { normalizePromptPayId } from './promptpayId';
+import { getShortBookingId } from './bookingShortId';
 import { supabase } from '../lib/supabaseClient';
 import { getBookingPaymentBreakdown } from './shiftHelper';
 import { parseTableTransferInfo } from './tableTransferHelper';
@@ -63,32 +65,8 @@ export function isFutureDineInAppointment(booking, isPickupOrder = false, now = 
     return Number.isFinite(t) && t - now > 30 * 60 * 1000;
 }
 
-export function getShortBookingId(booking) {
-    if (!booking) return '0000';
-    if (typeof booking === 'string') {
-        const raw = booking.trim();
-        if (raw.startsWith('local')) {
-            const digits = raw.replace(/[^0-9]/g, '');
-            return digits.length >= 4 ? digits.slice(-4) : (digits || '0000');
-        }
-        const clean = raw.replace(/[^a-zA-Z0-9]/g, '');
-        return clean.length >= 4 ? clean.slice(-4).toUpperCase() : (clean.toUpperCase() || '0000');
-    }
-    if (booking.short_id) {
-        return String(booking.short_id).toUpperCase();
-    }
-    const token = booking.tracking_token || booking.trackingToken;
-    if (token) {
-        return String(token).slice(-4).toUpperCase();
-    }
-    const rawId = String(booking.id || booking.booking_id || booking.order_id || '');
-    if (rawId.startsWith('local')) {
-        const digits = rawId.replace(/[^0-9]/g, '');
-        return digits.length >= 4 ? digits.slice(-4) : (digits || '0000');
-    }
-    const cleanUuid = rawId.replace(/[^a-zA-Z0-9]/g, '');
-    return cleanUuid ? cleanUuid.slice(-4).toUpperCase() : '0000';
-}
+// Lives in ./bookingShortId so customer pages (order history) can use it without this file.
+export { getShortBookingId };
 
 export function getBookingPaymentMethod(booking) {
     if (!booking) return 'CASH';
@@ -3282,14 +3260,8 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
 /**
  * Clean & normalize Thai PromptPay identifier (Phone 10 digits, Tax/National ID 13 digits, e-Wallet 15 digits)
  */
-export function normalizePromptPayId(rawId) {
-    if (!rawId) return '0985284217';
-    let clean = String(rawId).replace(/[^0-9]/g, '');
-    if (clean.startsWith('66') && clean.length === 11) {
-        clean = '0' + clean.slice(2);
-    }
-    return clean || '0985284217';
-}
+// Lives in ./promptpayId so customer checkout can use it without this file.
+export { normalizePromptPayId };
 
 /**
  * Format PromptPay ID for user-friendly display (e.g. 098-528-4217 or 0-1055-60000-00-0)

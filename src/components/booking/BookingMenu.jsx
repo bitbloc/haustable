@@ -5,14 +5,17 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import MenuCard from '../shared/MenuCard'
 import ViewToggle from '../shared/ViewToggle'
+import RetryState from '../shared/RetryState'
 
 export default function BookingMenu() {
     const { t } = useLanguage()
     const {
         menuItems, categories, cart,
         addToCart, removeFromCart,
-        setCheckoutMode, settings, pax, isFreeBooking
+        setCheckoutMode, settings, pax, isFreeBooking,
+        menuStatus, requestMenu
     } = useBooking()
+    const [minSpendError, setMinSpendError] = useState('')
 
     const [activeCategory, setActiveCategory] = useState('All')
     const [searchTerm, setSearchTerm] = useState('')
@@ -40,10 +43,15 @@ export default function BookingMenu() {
     const handleNext = () => {
         // Pre-check Min Spend
         if (!isFreeBooking && settings.minSpend > 0 && cartTotal < (settings.minSpend * pax)) {
-            alert(`${t('minSpendError')} ${settings.minSpend}.- (${t('totalPrice')} ${settings.minSpend * pax}.-) \n${t('pleaseOrderMore')} ${(settings.minSpend * pax) - cartTotal}.-`)
+            setMinSpendError(`${t('minSpendError')} ${settings.minSpend}.- (${t('totalPrice')} ${settings.minSpend * pax}.-) \n${t('pleaseOrderMore')} ${(settings.minSpend * pax) - cartTotal}.-`)
             return
         }
+        setMinSpendError('')
         setCheckoutMode(true)
+    }
+
+    if (menuStatus === 'error') {
+        return <RetryState title="โหลดเมนูไม่สำเร็จ" onRetry={requestMenu} />
     }
 
     return (
@@ -71,7 +79,7 @@ export default function BookingMenu() {
                             placeholder={t('searchMenu')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-paper pl-9 pr-4 py-2.5 rounded-rams border border-[var(--color-rule)] focus:border-ink outline-none text-sm transition-colors"
+                            className="w-full min-h-12 bg-paper pl-9 pr-4 py-2.5 rounded-rams border border-[var(--color-rule)] focus:border-ink outline-none text-base transition-colors"
                         />
                     </div>
                     <ViewToggle mode={viewMode} setMode={setViewMode} />
@@ -80,16 +88,18 @@ export default function BookingMenu() {
                 {/* Category Tabs */}
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-2 px-2 border-b border-[var(--color-rule)]">
                     <button
+                        type="button"
                         onClick={() => setActiveCategory('All')}
-                        className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono font-bold transition-all border ${activeCategory === 'All' ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}
+                        className={`whitespace-nowrap px-4 min-h-12 rounded-none text-sm font-bold transition-colors border ${activeCategory === 'All' ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}
                     >
-                        All
+                        {t('allCategories')}
                     </button>
                     {categories.map(cat => (
                         <button
                             key={cat.id}
+                            type="button"
                             onClick={() => setActiveCategory(cat.name)}
-                            className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono font-bold transition-all border ${activeCategory === cat.name ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}
+                            className={`whitespace-nowrap px-4 min-h-12 rounded-none text-sm font-bold transition-colors border ${activeCategory === cat.name ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}
                         >
                             {cat.name}
                         </button>
@@ -113,9 +123,11 @@ export default function BookingMenu() {
                             sideDishEnabled={settings.sideDishEnabled}
                         />
                     ))}
-                    {filteredMenu.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-gray-400 text-sm flex flex-col items-center">
-                            <span className="bg-gray-200 p-3 rounded-full mb-2"><Search size={20} /></span>
+                    {menuStatus !== 'ready' && menuItems.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-subInk text-base" aria-busy="true">กำลังโหลดเมนู...</div>
+                    )}
+                    {menuStatus === 'ready' && filteredMenu.length === 0 && (
+                        <div className="col-span-full py-12 text-center text-subInk text-base">
                             {t('noMenuItems')}
                         </div>
                     )}
@@ -132,6 +144,9 @@ export default function BookingMenu() {
                         transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
                         className="fixed bottom-0 left-0 right-0 bg-paper/95 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50"
                     >
+                        {minSpendError && (
+                            <p role="alert" className="max-w-lg mx-auto mb-3 text-sm font-bold text-error leading-normal">{minSpendError}</p>
+                        )}
                         <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
                             {cart.length > 0 ? (
                                 <>

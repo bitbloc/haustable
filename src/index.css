@@ -275,6 +275,31 @@ button, a, select, input, textarea, [role="button"] {
   animation: fade-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+/* Horizontal tab rows: scroll without a scrollbar (a scrollbar appearing when the
+   categories load used to push the menu down: layout shift on /pickup) */
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Customer step change (booking / pickup). Only on a step change, never on first paint. */
+@keyframes step-enter-fwd {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes step-enter-back {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+.step-enter-fwd { animation: step-enter-fwd 160ms ease-out both; }
+.step-enter-back { animation: step-enter-back 160ms ease-out both; }
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sheet-fade { animation: sheet-fade 150ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .step-enter-fwd, .step-enter-back, .sheet-fade { animation: none; }
+}
+
 /* Glassmorphism Utilities */
 .glass {
   background: rgba(255, 255, 255, 0.7);

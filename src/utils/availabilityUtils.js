@@ -130,6 +130,21 @@ export function getBookingHoldMinutes(booking) {
 }
 
 /**
+ * Public pages do not read staff_remark (internal staff text). The only bookings that carry
+ * a [HOLD:n] tag are free online table bookings, which are exactly the rows with
+ * source 'online', booking_type 'dine_in' and no deposit, so the tag is rebuilt from
+ * those columns and isHoldExpired() keeps releasing no-show tables.
+ * @param {Object} row - booking row selected with source, booking_type, deposit_amount
+ * @param {number} holdMinutes - current booking_hold_minutes setting
+ * @returns {Object}
+ */
+export function withPublicHoldTag(row, holdMinutes = DEFAULT_HOLD_MINUTES) {
+    if (!row || row.staff_remark !== undefined) return row;
+    const isFreeOnline = row.source === 'online' && row.booking_type === 'dine_in' && Number(row.deposit_amount || 0) === 0;
+    return isFreeOnline ? { ...row, staff_remark: `[HOLD:${holdMinutes}]` } : row;
+}
+
+/**
  * True when a held booking's guest has not been seated within its hold window,
  * so the table goes back on sale.
  * @param {Object} booking

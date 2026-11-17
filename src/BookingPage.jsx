@@ -1,24 +1,23 @@
-import React from 'react'
-import { BookingProvider } from './context/BookingContext'
+import React, { useEffect } from 'react'
 import BookingSteps from './components/booking/BookingSteps'
-import { motion } from 'framer-motion'
-import { useServiceGuard } from './hooks/useServiceGuard'
-// PageTransition logic if needed, but BookingSteps handles internal animation.
-// App.jsx wraps routes in PageTransition?
+import RetryState from './components/shared/RetryState'
+import { useServiceStatus } from './hooks/useServiceGuard'
+import { useBooking } from './hooks/useBooking'
 
 export default function BookingPage() {
-    const isChecking = useServiceGuard('shop_mode_table')
+    // The open/closed check and the booking data load run side by side; step 1 renders
+    // straight away (no full-screen loader to swap out, which is what shifted the layout).
+    // Only a manual close shuts booking; same-day slots past last order are disabled in step 1
+    const { status, retry } = useServiceStatus('shop_mode_table', { cutoff: 'none' })
+    const { requestBookingData } = useBooking()
 
-    if (isChecking) {
-        return (
-            <div className="min-h-screen bg-canvas flex flex-col items-center justify-center text-ink font-mono text-xs uppercase tracking-widest gap-3 select-none">
-                <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
-                <span>CHECKING STATUS...</span>
-            </div>
-        )
+    useEffect(() => {
+        requestBookingData()
+    }, [requestBookingData])
+
+    if (status === 'error') {
+        return <RetryState title="ตรวจสอบเวลาเปิดร้านไม่สำเร็จ" onRetry={retry} />
     }
 
-    return (
-        <BookingSteps />
-    )
+    return <BookingSteps />
 }

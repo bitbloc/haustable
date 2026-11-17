@@ -14,7 +14,9 @@ import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 import { logStaffActivity } from '../../utils/auditLogger';
-import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES } from '../../utils/recipeGraph';
+import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES, usagePerStockUnit } from '../../utils/recipeGraph';
+import { rescaleForCountUnitChange } from '../../utils/stockUnitChange';
+import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
 import { unitFix } from '../../utils/recipeUnits';
 import { saveRecipeVersion } from '../../utils/recipeVersions';
@@ -1061,10 +1063,21 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const handleUpdateStock = async (id, newFormData) => {
         try {
             // Same model as the stock item form: the item is counted in its purchase unit.
-            newFormData = { ...newFormData, unit: newFormData.pack_unit };
             const before = availableItems.find(i => i.id === id);
+            // Counted in the purchase unit, unless an older item is counted in something else
+            const keepsOwnUnit = before?.unit && before.unit !== before.pack_unit && before.pack_unit === newFormData.pack_unit;
+            newFormData = { ...newFormData, unit: keepsOwnUnit ? before.unit : newFormData.pack_unit };
+            delete newFormData.current_quantity;
+            // A new counting unit re-says the stock left and the alert levels in it (17 bottles stay 17 bottles)
+            const rescale = before ? rescaleForCountUnitChange(before, newFormData, usagePerStockUnit) : { quantity: null, levels: {} };
+            Object.assign(newFormData, rescale.levels);
             const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
             if (error) throw error;
+            if (rescale.quantity !== null) {
+                const moved = await postStockMovement({ itemId: id, mode: 'set', quantity: rescale.quantity, reason: STOCK_REASONS.ADJUST, performedBy: 'System (unit change)', note: rescale.note });
+                if (moved.ok) { newFormData.current_quantity = rescale.quantity; toast.info(rescale.note, { duration: 8000 }); }
+                else toast.error('เปลี่ยนหน่วยแล้ว แต่แปลงยอดคงเหลือไม่สำเร็จ ตรวจนับใหม่อีกครั้ง');
+            }
             const oldUsage = before?.usage_unit;
             const newUsage = newFormData.usage_unit;
             const unitChanged = oldUsage && newUsage && oldUsage !== newUsage;

@@ -7,6 +7,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import { supabase } from '../../lib/supabaseClient'
 import { safeCssUrl } from '../../utils/urlHelper'
+import { isTableTooSmall } from '../../utils/tableCapacity'
 
 export default function StepTableSelection() {
     const { t } = useLanguage()
@@ -123,6 +124,11 @@ export default function StepTableSelection() {
         }
     }, [sessionId])
 
+    // A table picked for a smaller party is dropped when the party grows
+    useEffect(() => {
+        if (selectedTable && isTableTooSmall(selectedTable, pax)) selectTable(null)
+    }, [selectedTable, pax, selectTable])
+
     // Re-fetch availability when date or time changes without reconnecting WebSocket
     useEffect(() => {
         refreshAvailability()
@@ -224,6 +230,8 @@ export default function StepTableSelection() {
         const isLockedByOthers = lockedTableIds.includes(table.id) && !isBooked
         const isSelected = selectedTable?.id === table.id
         const rotation = table.rotation || 0
+        // A table that seats fewer than the party cannot be picked
+        const isTooSmall = !isBooked && !isLockedByOthers && isTableTooSmall(table, pax)
 
         // Status Logic
         let statusType = 'online'
@@ -263,6 +271,9 @@ export default function StepTableSelection() {
                     } else if (isLockedByOthers) {
                         setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `กำลังจอง... (Someone is selecting)`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
+                    } else if (isTooSmall) {
+                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: t('tableTooSmall').replace('{cap}', table.capacity).replace('{pax}', pax), loading: false })
+                        setTimeout(() => setAvailabilityTooltip(null), 2500)
                     } else {
                         selectTable(table)
                     }
@@ -270,10 +281,10 @@ export default function StepTableSelection() {
                 style={baseStyle}
                 className={`transition-all duration-200 flex flex-col items-center justify-center shadow-sm select-none
                 ${table.shape === 'circle' ? 'rounded-full' : 'rounded-md'}
-                ${isBooked || isLockedByOthers ? 'opacity-85 cursor-not-allowed contrast-100' : 'hover:scale-[1.03] active:scale-95 cursor-pointer'}
+                ${isBooked || isLockedByOthers ? 'opacity-85 cursor-not-allowed contrast-100' : isTooSmall ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.03] active:scale-95 cursor-pointer'}
                 ${isSelected ? 'z-20 ring-2 ring-[var(--brand-plum)] scale-[1.03]' : ''}
-                ${isLockedByOthers ? 'animate-pulse' : ''}
                 `}
+                aria-disabled={isBooked || isLockedByOthers || isTooSmall}
             >
                 <div 
                     className={`absolute inset-0 w-full h-full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-md'}`} 
@@ -412,9 +423,9 @@ export default function StepTableSelection() {
                                 </div>
                                 <button 
                                     onClick={nextStep} 
-                                    className="w-full mt-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] py-2 px-3 rounded-lg font-mono text-[11px] font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
+                                    className="w-full min-h-12 mt-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] px-3 rounded-none text-base font-bold transition-opacity flex items-center justify-center"
                                 >
-                                    <span>[ {t('select')} // CONFIRM TABLE ➔ ]</span>
+                                    <span>{t('confirmThisTable')}</span>
                                 </button>
                             </div>
                         </div>
@@ -442,7 +453,7 @@ export default function StepTableSelection() {
                     <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-xs text-[var(--color-muted)] font-mono font-bold whitespace-nowrap overflow-x-auto pb-0.5">
                         <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{date}</span>
                         <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{time}</span>
-                        <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
+                        <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded">{pax} {t('paxUnit')}</span>
                     </div>
 
                     {/* Status Legend */}
@@ -490,7 +501,7 @@ export default function StepTableSelection() {
                             <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[var(--color-muted)]">
                                 <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{date}</span>
                                 <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2 py-0.5 rounded">{time}</span>
-                                <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
+                                <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded">{pax} {t('paxUnit')}</span>
                             </div>
                         </div>
 
@@ -519,8 +530,10 @@ export default function StepTableSelection() {
             {/* Tooltip Popup */}
             {availabilityTooltip && (
                 <div
-                    className="fixed z-[10000] bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs px-3 py-1.5 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
-                    style={{ left: availabilityTooltip.x, top: availabilityTooltip.y }}
+                    role="status"
+                    className="fixed z-[10000] w-max max-w-[280px] bg-[var(--color-ink)] text-[var(--color-paper)] text-sm leading-normal px-3 py-2 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
+                    // Kept inside the screen: a table near the edge used to push the text off it
+                    style={{ left: Math.min(Math.max(availabilityTooltip.x, 148), window.innerWidth - 148), top: availabilityTooltip.y }}
                 >
                     {availabilityTooltip.text}
                     <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-[var(--color-ink)] rotate-45"></div>

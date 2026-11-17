@@ -1,134 +1,109 @@
 import React, { useState } from 'react'
-import {
-    format,
-    addMonths,
-    subMonths,
-    startOfMonth,
-    endOfMonth,
-    startOfWeek,
-    endOfWeek,
-    eachDayOfInterval,
-    isSameMonth,
-    isSameDay,
-    isBefore,
-    startOfDay
-} from 'date-fns'
+import { addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, addDays, format, isSameMonth, isBefore, startOfDay } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useLanguage } from '../../context/LanguageContext'
+import { bangkokNow } from '../../utils/bangkokTime'
 
+const WEEKDAYS = {
+    th: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
+    en: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+}
+const LEGEND = {
+    th: { selected: 'วันที่เลือก', available: 'จองได้', blocked: 'ปิดรับจอง', prev: 'เดือนก่อน', next: 'เดือนถัดไป' },
+    en: { selected: 'Selected', available: 'Available', blocked: 'Closed', prev: 'Previous month', next: 'Next month' }
+}
+
+// 'YYYY-MM-DD' -> local Date at midnight (no UTC shift)
+const parseDay = (s) => {
+    const [y, m, d] = s.split('-').map(Number)
+    return new Date(y, m - 1, d)
+}
+
+/**
+ * Month grid, always 6 weeks tall so switching months never moves the form below.
+ * Full-bleed on phones so each day is at least 48px wide.
+ */
 export default function CustomCalendar({ value, onChange, blockedDates = [], isDateBlocked }) {
-    const [currentMonth, setCurrentMonth] = useState(new Date())
+    const { lang } = useLanguage()
+    const l = lang === 'th' ? 'th' : 'en'
+    const todayStr = bangkokNow().dateStr
+    const today = startOfDay(parseDay(todayStr))
+    const [currentMonth, setCurrentMonth] = useState(() => (value ? parseDay(value) : today))
 
-    const renderHeader = () => {
-        return (
-            <div className="flex justify-between items-center mb-4 px-2">
+    const monthStart = startOfMonth(currentMonth)
+    const gridStart = startOfWeek(monthStart)
+    const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i))
+    const blockedSet = new Set((blockedDates || []).map(b => b.blocked_date))
+    const canGoBack = !isBefore(endOfMonth(subMonths(currentMonth, 1)), today)
+
+    const monthLabel = currentMonth.toLocaleDateString(l === 'th' ? 'th-TH' : 'en-GB', { month: 'long', year: 'numeric' })
+
+    return (
+        <div className="-mx-6 sm:mx-0 bg-paper border-y sm:border border-[var(--color-rule)] sm:rounded-rams py-3 sm:px-3">
+            <div className="flex justify-between items-center mb-2 px-1">
                 <button
+                    type="button"
                     onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    disabled={isBefore(endOfMonth(subMonths(currentMonth, 1)), startOfDay(new Date()))}
+                    disabled={!canGoBack}
+                    aria-label={LEGEND[l].prev}
+                    className="w-12 h-12 flex items-center justify-center rounded-rams hover:bg-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                    <ChevronLeft size={20} className="text-gray-600" />
+                    <ChevronLeft size={20} className="text-ink" />
                 </button>
-                <span className="text-lg font-bold text-gray-900">
-                    {format(currentMonth, 'MMMM yyyy')}
-                </span>
+                <span className="text-lg font-bold text-ink leading-normal" aria-live="polite">{monthLabel}</span>
                 <button
+                    type="button"
                     onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label={LEGEND[l].next}
+                    className="w-12 h-12 flex items-center justify-center rounded-rams hover:bg-canvas transition-colors"
                 >
-                    <ChevronRight size={20} className="text-gray-600" />
+                    <ChevronRight size={20} className="text-ink" />
                 </button>
             </div>
-        )
-    }
 
-    const renderDays = () => {
-        const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-        return (
-            <div className="grid grid-cols-7 mb-2">
-                {days.map(day => (
-                    <div key={day} className="text-center text-xs font-bold text-subInk uppercase py-2">
-                        {day}
-                    </div>
+            <div className="grid grid-cols-7" aria-hidden="true">
+                {WEEKDAYS[l].map(day => (
+                    <div key={day} className="text-center text-sm font-bold text-[var(--color-muted)] py-1 leading-normal">{day}</div>
                 ))}
             </div>
-        )
-    }
 
-    const renderCells = () => {
-        const monthStart = startOfMonth(currentMonth)
-        const monthEnd = endOfMonth(monthStart)
-        const startDate = startOfWeek(monthStart)
-        const endDate = endOfWeek(monthEnd)
+            <div className="grid grid-cols-7" role="grid">
+                {days.map((dayItem) => {
+                    const dayStr = format(dayItem, 'yyyy-MM-dd')
+                    const inMonth = isSameMonth(dayItem, monthStart)
+                    if (!inMonth) return <div key={dayStr} className="h-12" aria-hidden="true" />
 
-        const dateFormat = "d"
-        const rows = []
-        let days = []
-        let day = startDate
-        let formattedDate = ""
+                    const isBlocked = blockedSet.has(dayStr) || Boolean(isDateBlocked && isDateBlocked(dayItem))
+                    const isPast = dayStr < todayStr
+                    const isSelected = value === dayStr
+                    const isDisabled = isPast || isBlocked
 
-        const today = startOfDay(new Date())
-
-        // Generate all days for the grid
-        const allDays = eachDayOfInterval({ start: startDate, end: endDate })
-
-        return (
-            <div className="grid grid-cols-7 gap-1">
-                {allDays.map((dayItem, idx) => {
-                    formattedDate = format(dayItem, dateFormat)
-
-                    const isBlocked = (blockedDates.some(b => 
-                        b.blocked_date === format(dayItem, 'yyyy-MM-dd')
-                    )) || (isDateBlocked && isDateBlocked(dayItem))
-                    
-                    const isPast = isBefore(dayItem, today)
-                    const isSelected = value ? isSameDay(dayItem, new Date(value)) : false
-                    const isDisabled = isPast || (isBlocked && !isSelected) // Allow seeing selected even if blocked (edge case), but mainly block.
-
-                    const isCurrentMonth = isSameMonth(dayItem, monthStart)
-
-                    let cellClass = "relative h-10 w-10 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200 "
-
-                    if (!isCurrentMonth) {
-                        cellClass += "text-gray-300 "
-                    } else if (isSelected) {
-                        cellClass += "bg-black text-white shadow-md scale-105 "
-                    } else if (isBlocked) {
-                        cellClass += "bg-red-50 text-red-300 line-through cursor-not-allowed "
-                    } else if (isPast) {
-                        cellClass += "text-gray-300 cursor-not-allowed "
-                    } else {
-                        cellClass += "text-gray-700 hover:bg-gray-100 cursor-pointer hover:scale-110 "
-                    }
+                    let cls = 'relative h-12 w-full flex items-center justify-center text-base font-mono transition-colors duration-150 '
+                    if (isSelected) cls += 'bg-ink text-paper font-bold '
+                    else if (isBlocked) cls += 'text-subInk line-through cursor-not-allowed '
+                    else if (isPast) cls += 'text-subInk opacity-50 cursor-not-allowed '
+                    else cls += 'text-ink hover:bg-canvas cursor-pointer '
 
                     return (
-                        <div key={dayItem.toString()} className="flex justify-center">
-                            <button
-                                disabled={isDisabled || isBlocked} // Fully disable blocked
-                                onClick={() => !isDisabled && !isBlocked && onChange(format(dayItem, 'yyyy-MM-dd'))}
-                                className={cellClass}
-                            >
-                                {formattedDate}
-                                {isBlocked && isCurrentMonth && (
-                                    <div className="absolute -bottom-1 w-1 h-1 bg-red-400 rounded-full"></div>
-                                )}
-                            </button>
-                        </div>
+                        <button
+                            key={dayStr}
+                            type="button"
+                            disabled={isDisabled}
+                            aria-pressed={isSelected}
+                            aria-label={dayItem.toLocaleDateString(l === 'th' ? 'th-TH' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + (isBlocked ? ` (${LEGEND[l].blocked})` : '')}
+                            onClick={() => !isDisabled && onChange(dayStr)}
+                            className={cls}
+                        >
+                            {dayItem.getDate()}
+                        </button>
                     )
                 })}
             </div>
-        )
-    }
 
-    return (
-        <div className="bg-white p-4 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
-            {renderHeader()}
-            {renderDays()}
-            {renderCells()}
-            <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-subInk">
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-black"></div> Selected</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-gray-200"></div> Available</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-100"></div> Blocked</div>
+            <div className="flex items-center justify-center gap-4 mt-2 text-sm text-[var(--color-muted)] leading-normal">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 bg-ink" aria-hidden="true" />{LEGEND[l].selected}</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 border border-[var(--color-rule)] bg-paper" aria-hidden="true" />{LEGEND[l].available}</span>
+                <span className="flex items-center gap-1.5"><span className="font-mono line-through" aria-hidden="true">00</span>{LEGEND[l].blocked}</span>
             </div>
         </div>
     )

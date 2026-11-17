@@ -1,11 +1,18 @@
-import React from 'react'
+import React, { Suspense, lazy, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import BookingHeader from './BookingHeader'
-import BookingMenu from './BookingMenu'
-import BookingCheckout from './BookingCheckout'
-import OptionSelectionModal from '../shared/OptionSelectionModal'
+import { trackFunnel } from '../../utils/funnelTracking'
+
+// Menu, checkout and the option sheet load only when that view opens
+const BookingMenu = lazy(() => import('./BookingMenu'))
+const BookingCheckout = lazy(() => import('./BookingCheckout'))
+const OptionSelectionModal = lazy(() => import('../shared/OptionSelectionModal'))
+
+const ViewLoading = () => (
+    <div className="min-h-[40vh] flex items-center justify-center text-subInk text-base" aria-busy="true">กำลังโหลด...</div>
+)
 
 // Two ways to book: a free table-only booking (staff call to confirm, food ordered at the table),
 // or the prepaid path (pre-order food, pay online). Shops that require a deposit skip the choice.
@@ -45,7 +52,7 @@ function BookingModeChoice({ onChoose, holdMinutes, pax }) {
                         className="group text-left p-4 flex items-center justify-between gap-4 hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink transition-colors cursor-pointer"
                     >
                         <div className="flex flex-col gap-1 min-w-0">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-subInk">{opt.tag}</span>
+                            <span className="font-mono text-sm font-bold uppercase tracking-wider text-subInk">{opt.tag}</span>
                             <span className="text-base font-bold text-ink leading-snug">{opt.title}</span>
                             <ul className="text-sm text-subInk leading-relaxed">
                                 {opt.lines.map((l) => <li key={l}>{l}</li>)}
@@ -67,13 +74,30 @@ export default function StepFood() {
         isCheckoutMode, settings, pax,
         bookingMode, setBookingMode, isFreeBooking,
         isOptionModalOpen, selectedItemForOptions,
-        closeOptionModal, confirmOptionSelection
+        closeOptionModal, confirmOptionSelection,
+        requestMenu, setLiveScope
     } = useBooking()
 
     const offersChoice = !settings.bookingDepositRequired
     const view = offersChoice && !bookingMode
         ? 'choice'
         : (isFreeBooking || isCheckoutMode ? 'checkout' : 'menu')
+
+    // Funnel + data per view: the menu (~340 KB) and its realtime channel only for the prepaid menu
+    useEffect(() => {
+        trackFunnel(view === 'choice' ? 'booking_step_mode' : view === 'menu' ? 'booking_step_menu' : 'booking_step_checkout', {
+            booking_mode: isFreeBooking ? 'free' : 'prepaid'
+        })
+    }, [view, isFreeBooking])
+
+    useEffect(() => {
+        if (view === 'menu') {
+            requestMenu()
+            setLiveScope('menu')
+        } else {
+            setLiveScope(null)
+        }
+    }, [view, requestMenu, setLiveScope])
 
     return (
         <div className="h-full flex flex-col">
@@ -89,17 +113,19 @@ export default function StepFood() {
                     pax={pax}
                 />
             )}
-            {view === 'menu' && <BookingMenu />}
-            {view === 'checkout' && <BookingCheckout />}
+            <Suspense fallback={<ViewLoading />}>
+                {view === 'menu' && <BookingMenu />}
+                {view === 'checkout' && <BookingCheckout />}
 
-            {/* Option Modal */}
-            {isOptionModalOpen && selectedItemForOptions && (
-                <OptionSelectionModal
-                    item={selectedItemForOptions}
-                    onClose={closeOptionModal}
-                    onConfirm={confirmOptionSelection}
-                />
-            )}
+                {/* Option Modal */}
+                {isOptionModalOpen && selectedItemForOptions && (
+                    <OptionSelectionModal
+                        item={selectedItemForOptions}
+                        onClose={closeOptionModal}
+                        onConfirm={confirmOptionSelection}
+                    />
+                )}
+            </Suspense>
         </div>
     )
 }

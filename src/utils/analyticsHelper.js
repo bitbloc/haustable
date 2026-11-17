@@ -362,8 +362,13 @@ export const trackCompletion = (eventName, params = {}, timeoutMs = 1500) => {
             logAdEvent(eventName, params);
 
             window.dataLayer = window.dataLayer || [];
+            // Same ad attribution as the funnel step events, so a completion maps to its campaign
+            const utm = getStoredUtmParams();
+            const attribution = {};
+            ATTR_FIELDS.forEach((k) => { if (utm[k]) attribution[k] = utm[k]; });
             window.dataLayer.push({
                 event: eventName,
+                ...attribution,
                 ...params,
                 eventCallback: finish,
                 eventTimeout: timeoutMs

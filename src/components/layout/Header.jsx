@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { Suspense, lazy, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, ClipboardList } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
@@ -6,7 +6,8 @@ import { supabase } from '../../lib/supabaseClient'
 import { useUserHistory } from '../../hooks/useUserHistory'
 import LanguageToggle from './LanguageToggle'
 import ViewToggle from './ViewToggle' // NEW
-import HistoryModal from '../history/HistoryModal'
+// Order history (and its animation library) loads only when a signed-in customer opens it
+const HistoryModal = lazy(() => import('../history/HistoryModal'))
 
 export default function Header({ session }) {
     const { lang, t } = useLanguage();
@@ -97,11 +98,15 @@ export default function Header({ session }) {
             </nav>
 
             {/* History Modal */}
-            <HistoryModal 
-                isOpen={isHistoryOpen} 
-                onClose={() => setIsHistoryOpen(false)} 
-                history={history}
-            />
+            {isHistoryOpen && (
+                <Suspense fallback={null}>
+                    <HistoryModal 
+                        isOpen={isHistoryOpen} 
+                        onClose={() => setIsHistoryOpen(false)} 
+                        history={history}
+                    />
+                </Suspense>
+            )}
         </>
     )
 }

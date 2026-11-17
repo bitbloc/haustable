@@ -5,7 +5,7 @@ import OpenPackMeter from './OpenPackMeter';
 
 export default function StockCard({ item, onClick, onRecipe, searchActive = false, categories = [] }) {
     const status = stockStatus(item);
-    const { main, unit, open, openPercent, totalValue, totalUnit } = stockQtyParts(item);
+    const { main, unit, open, openPercent, totalValue, totalUnit, single } = stockQtyParts(item);
     const categoryLabel = searchActive ? categories?.find(c => c.id === item.category)?.label : '';
 
     return (
@@ -39,13 +39,14 @@ export default function StockCard({ item, onClick, onRecipe, searchActive = fals
 
             <div className="sc-name"><h3 className="sc-title">{item.name}</h3></div>
 
-            {/* Two cells: how many on the shelf, and how much that is in the unit recipes use */}
-            <div className="sc-cells">
+            {/* Two cells: how many on the shelf, and how much that is in the unit recipes use.
+                Things used one by one (bottles of a crate) have one cell: the bottles, crates as the foot. */}
+            <div className={`sc-cells${single ? ' sc-cells--single' : ''}`}>
                 <div className="sc-cell">
                     <span className="sc-cell__n sc-qty__val">{main}</span>
                     <span className="sc-cell__unit">{unit}</span>
                 </div>
-                <div className="sc-cell">
+                {!single && <div className="sc-cell">
                     {totalValue ? (
                         <>
                             <span className="sc-cell__n">{totalValue}</span>
@@ -54,7 +55,7 @@ export default function StockCard({ item, onClick, onRecipe, searchActive = fals
                     ) : (
                         <span className="sc-cell__none" aria-label="ยังไม่ได้ตั้งว่าแพ็คหนึ่งมีเท่าไร">–</span>
                     )}
-                </div>
+                </div>}
             </div>
 
             {/* The opened pack: what is left in it, and one tube that drains */}
@@ -62,7 +63,7 @@ export default function StockCard({ item, onClick, onRecipe, searchActive = fals
                 {open && (
                     <>
                         <span className="sc-open__text">{open}</span>
-                        <OpenPackMeter percent={openPercent} />
+                        {!single && <OpenPackMeter percent={openPercent} />}
                     </>
                 )}
             </div>

@@ -20,8 +20,14 @@ export type StockTx = {
     current_quantity?: number | string | null
     min_stock_threshold?: number | string | null
     reorder_point?: number | string | null
+    pack_unit?: string | null
+    usage_unit?: string | null
+    conversion_factor?: number | string | null
   } | null
 }
+
+/** The units an item is counted and used in; pieces when a crate or pack holds countable things. */
+export type StockUnits = { unit?: string | null; pack_unit?: string | null; usage_unit?: string | null; conversion_factor?: number | string | null }
 
 const C = {
   ink: '#1E1918',
@@ -62,6 +68,37 @@ const UNIT_TH: Record<string, string> = {
   bottle: 'ขวด', box: 'กล่อง', can: 'กระป๋อง', gallon: 'แกลลอน', pack: 'แพ็ค', bag: 'ถุง',
   pcs: 'ชิ้น', piece: 'ชิ้น', kg: 'กก.', g: 'กรัม', l: 'ลิตร', litre: 'ลิตร', liter: 'ลิตร',
   ml: 'มล.', roll: 'ม้วน', unit: 'หน่วย', 'กก': 'กก.', 'แกลอน': 'แกลลอน',
+  crate: 'ลัง', carton: 'ลัง', glass: 'แก้ว', portion: 'ส่วน', dozen: 'โหล',
+}
+
+// Units that are counted one by one, and units that hold several of them
+const PIECE_UNITS = new Set(['bottle', 'can', 'pcs', 'piece', 'unit', 'glass', 'box', 'bag', 'pack',
+  'ขวด', 'กระป๋อง', 'ชิ้น', 'ใบ', 'อัน', 'แก้ว', 'กล่อง', 'ถุง', 'ซอง', 'ม้วน'])
+const HOLDER_UNITS = new Set(['crate', 'carton', 'pack', 'box', 'bag', 'dozen', 'ลัง', 'แพ็ค', 'แพค', 'กล่อง', 'ถุง', 'ห่อ', 'โหล'])
+
+/** Pieces in one counted unit (12 bottles in a crate), or 0 when it is not a pack of pieces. */
+export function piecesPerUnit(item?: StockUnits | null): number {
+  const low = (v: unknown) => String(v ?? '').trim().toLowerCase()
+  const f = Number(item?.conversion_factor) || 0
+  const usage = low(item?.usage_unit)
+  const unit = low(item?.unit || item?.pack_unit)
+  if (!(f > 1) || !PIECE_UNITS.has(usage) || usage === unit) return 0
+  return HOLDER_UNITS.has(unit) || HOLDER_UNITS.has(low(item?.pack_unit)) ? f : 0
+}
+
+/** 17 bottles of a 12-crate -> { whole: 1, pieces: 5 }; rounding crumbs are dropped. */
+function wholeAndPieces(qty: number, per: number) {
+  const total = Math.round(Math.abs(qty) * per)
+  return { whole: Math.floor(total / per), pieces: total % per }
+}
+
+function piecesText(qty: number, item: StockUnits, per: number): string {
+  const { whole, pieces } = wholeAndPieces(qty, per)
+  const u = unitLabel(item.unit || item.pack_unit)
+  const p = unitLabel(item.usage_unit)
+  if (!whole && !pieces) return ''
+  if (!whole) return `${pieces} ${p}`
+  return pieces ? `${whole} ${u} + ${pieces} ${p}` : `${whole} ${u}`
 }
 
 export function unitLabel(unit?: string | null): string {
@@ -92,11 +129,25 @@ export function quarterText(value: number): string {
   return q ? `${whole} ${QUARTER[q]}` : String(whole)
 }
 
-/** Stock left, in words a person checks against the shelf. */
-export function remainingText(qty: number, unit?: string | null): string {
-  const u = unitLabel(unit)
+/**
+ * Stock left, in words a person checks against the shelf. A crate of bottles is said in
+ * crates and bottles ("1 ลัง + 5 ขวด"); other things in whole units and the nearest quarter.
+ * The second argument is a unit (older callers) or the item's units.
+ */
+export function remainingText(qty: number, units?: string | StockUnits | null): string {
+  const item: StockUnits = typeof units === 'object' && units ? units : { unit: units as string | null }
+  const u = unitLabel(item.unit || item.pack_unit)
   const v = Math.max(0, Number(qty) || 0)
   if (v <= EPS) return 'หมด'
+  const per = piecesPerUnit(item)
+  if (per) {
+    // Used one by one: how many bottles in all first, crates as a short summary
+    const total = Math.round(v * per)
+    if (!total) return 'หมด'
+    const { whole } = wholeAndPieces(v, per)
+    const said = piecesText(v, item, per)
+    return whole ? `${total} ${unitLabel(item.usage_unit)} (${said})` : `${total} ${unitLabel(item.usage_unit)}`
+  }
   const whole = Math.floor(v + EPS)
   const rest = v - whole
   const part = quarterText(rest)
@@ -106,10 +157,16 @@ export function remainingText(qty: number, unit?: string | null): string {
   return `${whole} ${u} + เปิด ${part}`.replace(/\s+/g, ' ').trim()
 }
 
-export function changeText(delta: number, unit?: string | null): string {
+export function changeText(delta: number, units?: string | StockUnits | null): string {
+  const item: StockUnits = typeof units === 'object' && units ? units : { unit: units as string | null }
   const v = Number(delta) || 0
   if (Math.abs(v) <= EPS) return '0'
-  return `${v > 0 ? '+' : '-'}${quarterText(v)} ${unitLabel(unit)}`.trim()
+  const per = piecesPerUnit(item)
+  if (per) {
+    const said = piecesText(v, item, per)
+    return said ? `${v > 0 ? '+' : '-'}${said}` : '0'
+  }
+  return `${v > 0 ? '+' : '-'}${quarterText(v)} ${unitLabel(item.unit || item.pack_unit)}`.trim()
 }
 
 type Status = 'out' | 'low' | 'reorder' | 'ok'
@@ -135,6 +192,7 @@ type ItemSummary = {
   key: string
   name: string
   unit: string
+  units: StockUnits
   current: number
   status: Status
   inQty: number
@@ -157,6 +215,7 @@ export function summarize(transactions: StockTx[]) {
         key,
         name: String(it.name || 'ไม่ทราบชื่อ'),
         unit: String(it.unit || ''),
+        units: { unit: it.unit, pack_unit: it.pack_unit, usage_unit: it.usage_unit, conversion_factor: it.conversion_factor },
         current: Number(it.current_quantity) || 0,
         status: stockStatus(it),
         inQty: 0, outQty: 0, countAdjust: 0, counts: 0, moves: 0,
@@ -189,10 +248,10 @@ export function summarize(transactions: StockTx[]) {
 
 function activityText(s: ItemSummary): string {
   const parts: string[] = []
-  if (s.inQty > EPS) parts.push(`รับเข้า ${changeText(s.inQty, s.unit)}`)
-  if (s.outQty < -EPS) parts.push(`ใช้ ${changeText(s.outQty, s.unit)}`)
+  if (s.inQty > EPS) parts.push(`รับเข้า ${changeText(s.inQty, s.units)}`)
+  if (s.outQty < -EPS) parts.push(`ใช้ ${changeText(s.outQty, s.units)}`)
   if (s.counts > 0) {
-    const adj = Math.abs(s.countAdjust) > EPS ? ` (${changeText(s.countAdjust, s.unit)})` : ''
+    const adj = Math.abs(s.countAdjust) > EPS && changeText(s.countAdjust, s.units) !== '0' ? ` (${changeText(s.countAdjust, s.units)})` : ''
     parts.push(s.counts > 1 ? `นับ ${s.counts} ครั้ง${adj}` : `นับแล้ว${adj}`)
   }
   return parts.join(' · ') || 'ไม่มีการเปลี่ยนแปลง'
@@ -215,7 +274,7 @@ function itemRow(s: ItemSummary) {
       },
       {
         type: 'box', layout: 'vertical', flex: 4, contents: [
-          { type: 'text', text: remainingText(s.current, s.unit), size: 'sm', weight: 'bold', color: s.status === 'ok' ? C.ink : st.color, align: 'end', wrap: true },
+          { type: 'text', text: remainingText(s.current, s.units), size: 'sm', weight: 'bold', color: s.status === 'ok' ? C.ink : st.color, align: 'end', wrap: true },
           ...(st.label ? [{ type: 'text', text: st.label, size: 'xxs', weight: 'bold', color: st.color, align: 'end', margin: 'xs' }] : []),
         ],
       },

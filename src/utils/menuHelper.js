@@ -35,11 +35,22 @@ export const invalidateMenuCache = () => {
     lastFetchTime = 0;
 };
 
+// One request in flight is shared by every caller (several hooks mounting at once, or
+// several realtime channels firing for the same change), so menu_items (~340 KB) is
+// downloaded once instead of once per caller.
+let inFlight = null;
+
 export const fetchAndSortMenu = async (forceRefresh = false) => {
     const now = Date.now();
     if (!forceRefresh && cachedMenu && cachedCategories && (now - lastFetchTime < CACHE_TTL)) {
         return { menuItems: cachedMenu, categories: cachedCategories };
     }
+    if (inFlight) return inFlight;
+    inFlight = loadMenuFromDb().finally(() => { inFlight = null; });
+    return inFlight;
+}
+
+const loadMenuFromDb = async () => {
 
     const [
         { data: menuRaw, error: menuError },

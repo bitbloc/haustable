@@ -14,12 +14,12 @@ export default function PublicLayout({ session }) {
 
             {/* Footer */}
             <footer className="py-8 text-center border-t border-[var(--color-rule)] bg-paper mt-auto">
-                <div className="flex flex-col items-center gap-1">
-                    <p className="text-[10px] font-bold text-ink uppercase tracking-[0.2em]">
-                        on haus table <span className="text-subInk font-normal">by in the haus</span>
+                <div className="flex flex-col items-center gap-1 leading-normal">
+                    <p className="text-sm font-bold text-ink">
+                        ร้านในบ้าน นครพนม <span className="text-[var(--color-muted)] font-normal">In the haus</span>
                     </p>
-                    <p className="text-[10px] text-subInk font-mono">
-                        Last updated: {new Date().toLocaleDateString('en-GB')}
+                    <p className="text-sm text-[var(--color-muted)]">
+                        โทร <a href="tel:0985284217" className="font-mono underline text-ink">098-528-4217</a>
                     </p>
                 </div>
             </footer>

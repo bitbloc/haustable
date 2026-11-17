@@ -5,7 +5,7 @@ import OpenPackMeter from './OpenPackMeter';
 
 export default function StockListItem({ item, onClick, onRecipe, searchActive = false, categories = [] }) {
     const status = stockStatus(item);
-    const { main, unit, open, openPercent, total } = stockQtyParts(item);
+    const { main, unit, open, openPercent, total, single } = stockQtyParts(item);
     const categoryLabel = searchActive ? categories?.find(c => c.id === item.category)?.label : '';
 
     return (
@@ -31,7 +31,7 @@ export default function StockListItem({ item, onClick, onRecipe, searchActive = 
                             สูตร
                         </button>
                     )}
-                    {open && <span className="sc-open sc-open--inline"><OpenPackMeter percent={openPercent} /><span className="sc-open__text">{open}</span></span>}
+                    {open && !single && <span className="sc-open sc-open--inline"><OpenPackMeter percent={openPercent} /><span className="sc-open__text">{open}</span></span>}
                 </div>
             </div>
 

@@ -5,10 +5,11 @@ import { supabase } from './lib/supabaseClient'
 import { BookingProvider } from './context/BookingContext'
 import { Toaster } from 'sonner'
 import ErrorBoundary from './components/staff/ErrorBoundary'
-import AdsLandingPage from './AdsLandingPage'
 
 // Lazy load layouts to prevent admin framer-motion from leaking into entry bundle
 const PublicLayout = lazy(() => import('./components/layout/PublicLayout'))
+// /link in production is api/link.js (vercel rewrite); this React page is only a fallback, so it stays out of the entry bundle
+const AdsLandingPage = lazy(() => import('./AdsLandingPage'))
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const RequireAuthLayout = lazy(() => import('./components/layout/RequireAuthLayout'))
 const StaffAuthLayout = lazy(() => import('./components/layout/StaffAuthLayout'))
@@ -71,29 +72,38 @@ const HausmadeKeychainPage = lazy(() => import('./pages/HausmadeKeychainPage'))
 const AdminStaffLogsPage = lazy(() => import('./pages/admin/AdminStaffLogsPage'))
 
 const FallbackLoader = () => (
-  <div className="min-h-screen bg-[#ECECE9] flex flex-col items-center justify-center text-[#181815] font-mono text-xs uppercase tracking-widest gap-3 select-none">
-    <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
-    <span>LOADING MODULE...</span>
+  <div className="min-h-screen bg-canvas flex items-center justify-center text-[var(--color-muted)] text-base select-none" aria-busy="true">
+    กำลังโหลด...
   </div>
 )
 
-function BookingProviderLayout() {
+function useRedirectAfterLogin() {
   const navigate = useNavigate()
 
   useEffect(() => {
     const redirectTo = localStorage.getItem('redirectAfterLogin')
     if (redirectTo) {
       localStorage.removeItem('redirectAfterLogin')
-      console.log("Found redirect path after login. Sending user to:", redirectTo)
       navigate(redirectTo, { replace: true })
     }
   }, [navigate])
+}
+
+function BookingProviderLayout() {
+  useRedirectAfterLogin()
 
   return (
     <BookingProvider>
       <Outlet />
     </BookingProvider>
   )
+}
+
+// /pickup has its own menu, settings and LIFF handling, so it does not pay for the
+// booking provider's tables / blocked dates / menu fetch and realtime channel.
+function StandaloneLayout() {
+  useRedirectAfterLogin()
+  return <Outlet />
 }
 
 function App() {
@@ -190,6 +200,12 @@ function App() {
               <Route path="/arcade/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
               <Route path="/arcade/tai-pla" element={<Navigate to="/arcade?tab=tai_pla" replace />} />
 
+              <Route element={<StandaloneLayout />}>
+                <Route element={<PublicLayout session={session} />}>
+                  <Route path="/pickup" element={<PickupPage />} />
+                </Route>
+              </Route>
+
               {/* Routes requiring Booking Context */}
               <Route element={<BookingProviderLayout />}>
                 {/* Home & Auth */}
@@ -206,7 +222,6 @@ function App() {
                 {/* Public Routes */}
                 <Route element={<PublicLayout session={session} />}>
                   <Route path="/booking" element={<BookingPage />} />
-                  <Route path="/pickup" element={<PickupPage />} />
                   <Route path="/hausmade" element={<HausmadeShopPage />} />
                   <Route path="/hausmade/studio" element={<HausmadeKeychainPage />} />
                   <Route path="/hausmade/keychain" element={<HausmadeKeychainPage />} />
