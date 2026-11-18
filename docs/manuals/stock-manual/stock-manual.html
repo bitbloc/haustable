@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คู่มือสต็อก สูตร และ SOP · ร้านในบ้าน</title>
+<style>
+/* Fonts: same self-hosted files as src/index.css (served from the repo root) */
+@font-face { font-family: 'SOV_monomon'; src: url('/public/fonts/sov-monomon-thai-latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/public/fonts/ibm-plex-sans-thai-400-thai.woff2') format('woff2'); font-weight: 400; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/public/fonts/ibm-plex-sans-thai-400-latin.woff2') format('woff2'); font-weight: 400; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/public/fonts/ibm-plex-sans-thai-600-thai.woff2') format('woff2'); font-weight: 600; font-display: swap; unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'IBM Plex Sans Thai'; src: url('/public/fonts/ibm-plex-sans-thai-600-latin.woff2') format('woff2'); font-weight: 600; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
+@font-face { font-family: 'DM Mono'; src: url('/public/fonts/dm-mono-400-latin.woff2') format('woff2'); font-weight: 400; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
+@font-face { font-family: 'DM Mono'; src: url('/public/fonts/dm-mono-500-latin.woff2') format('woff2'); font-weight: 500; font-display: swap; unicode-range: U+0000-00FF, U+2000-206F, U+2190-2193, U+2212; }
+
+:root {
+  --plum: #41032A; --plum-2: #571C3E; --plum-3: #6E3855; --on-plum-2: #D0B5C1;
+  --charcoal: #1A1A1A; --cream: #F6F2EA; --paper-2: #ECE4E7; --paper-3: #E3D9DE;
+  --rule: #D4CBCF; --neutral: #635B5F; --muted: #524A4E; --error: #B42318;
+  --head: 'SOV_monomon', 'IBM Plex Sans Thai', sans-serif;
+  --body: 'IBM Plex Sans Thai', sans-serif;
+  --mono: 'DM Mono', 'IBM Plex Sans Thai', monospace;
+}
+@page {
+  size: A4;
+  margin: 12mm 14mm 16mm;
+  @bottom-left { content: "ร้านในบ้าน · คู่มือสต็อก สูตร และ SOP · ฉบับ 18 พ.ย. 2569"; font: 9pt 'IBM Plex Sans Thai', sans-serif; color: #635B5F; }
+  @bottom-right { content: counter(page) " / " counter(pages); font: 9pt 'DM Mono', monospace; color: #635B5F; }
+}
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; background: var(--cream); color: var(--charcoal); font-family: var(--body); font-size: 16px; line-height: 1.6; }
+@media screen { body { padding: 32px 16px; } }
+@media print { body { background: none; } }
+.sheet { max-width: 182mm; margin: 0 auto; }
+
+/* Letterhead */
+.letterhead { display: grid; grid-template-columns: 1fr auto; background: var(--plum); color: var(--cream); }
+.lh-brand { padding: 20px 24px; border-right: 1px solid var(--plum-2); display: flex; align-items: center; gap: 24px; }
+.lh-brand img { height: 64px; width: auto; display: block; }
+.lh-brand .shop { font-size: 13px; line-height: 1.5; color: var(--on-plum-2); }
+.lh-meta { padding: 20px 24px; display: grid; align-content: center; gap: 4px; text-align: right; }
+.lh-meta .k { font-size: 12px; color: var(--on-plum-2); line-height: 1.5; }
+.lh-meta .v { font-family: var(--mono); font-size: 16px; line-height: 1.4; }
+.titlebar { border: 1px solid var(--rule); border-top: 0; padding: 20px 24px 16px; }
+h1 { font-family: var(--head); font-weight: 400; font-size: 34px; line-height: 1.5; margin: 0; color: var(--plum); }
+.subtitle { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+
+/* Contents grid */
+.toc { display: grid; grid-template-columns: 1fr 1fr; border-left: 1px solid var(--rule); }
+.toc div { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 8px 12px; font-size: 14px; line-height: 1.5; display: grid; grid-template-columns: 32px 1fr; }
+.toc .n { font-family: var(--mono); color: var(--plum); }
+
+section { margin-top: 28px; }
+section.new { break-before: page; margin-top: 0; }
+h2 { font-family: var(--head); font-weight: 400; font-size: 24px; line-height: 1.5; margin: 0 0 8px; color: var(--plum);
+     display: grid; grid-template-columns: 44px 1fr; align-items: baseline; border-bottom: 1px solid var(--plum); padding-bottom: 4px; break-after: avoid; }
+h2 .n { font-family: var(--mono); font-size: 16px; }
+h2 small { font-family: var(--body); font-size: 13px; color: var(--neutral); margin-left: 8px; }
+h3 { font-family: var(--body); font-weight: 600; font-size: 17px; line-height: 1.6; margin: 20px 0 4px; break-after: avoid; }
+.lead { margin: 8px 0 12px; font-weight: 600; }
+.where { font-size: 14px; color: var(--muted); margin: 0 0 12px; }
+.where b { font-weight: 600; color: var(--charcoal); }
+p { margin: 0 0 8px; }
+ul, ol { margin: 0 0 8px; padding-left: 32px; }
+li { margin: 0 0 4px; padding-left: 4px; }
+li::marker { color: var(--plum); }
+ol li::marker { font-family: var(--mono); }
+b { font-weight: 600; }
+.num { font-family: var(--mono); }
+.ui { font-weight: 600; color: var(--plum); white-space: nowrap; }
+.nw { white-space: nowrap; }
+
+table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 14px; }
+th, td { border: 1px solid var(--rule); padding: 6px 10px; text-align: left; vertical-align: top; line-height: 1.55; }
+th { background: var(--paper-2); font-weight: 600; font-size: 13px; color: var(--muted); }
+td.r, th.r { text-align: right; }
+tr { break-inside: avoid; }
+
+/* Highlight: the rule to remember */
+.rule-box { border: 2px solid var(--plum); padding: 12px 16px; margin: 12px 0; break-inside: avoid; }
+.rule-box .tag { display: inline-block; background: var(--plum); color: var(--cream); font-size: 12px; font-weight: 600; padding: 0 8px; line-height: 1.8; margin-bottom: 4px; }
+.rule-box p:last-child, .rule-box ul:last-child { margin-bottom: 0; }
+.rule-box .big { font-size: 18px; font-weight: 600; line-height: 1.6; }
+/* Caution: plum on paper, not red (red is errors only) */
+.note { background: var(--paper-2); border-left: 4px solid var(--plum); padding: 10px 14px; margin: 12px 0; font-size: 15px; break-inside: avoid; }
+.note p:last-child { margin: 0; }
+
+/* Units pipeline */
+.units { display: grid; grid-template-columns: 1fr 24px 1fr 24px 1fr; align-items: stretch; margin: 12px 0; break-inside: avoid; }
+.unit { border: 1px solid var(--plum); padding: 10px 12px; }
+.unit.mid { background: var(--plum); color: var(--cream); }
+.unit .k { font-size: 12px; line-height: 1.5; color: var(--neutral); }
+.unit.mid .k { color: var(--on-plum-2); }
+.unit .t { font-weight: 600; font-size: 17px; line-height: 1.5; }
+.unit .ex { font-size: 13px; line-height: 1.5; margin-top: 4px; }
+.unit .use { font-size: 13px; line-height: 1.5; margin-top: 6px; border-top: 1px solid var(--rule); padding-top: 6px; }
+.unit.mid .use { border-top-color: var(--plum-3); }
+.arrow { display: grid; place-items: center; font-family: var(--mono); color: var(--plum); font-size: 18px; }
+
+/* Worked example */
+.calc { border: 1px solid var(--rule); margin: 12px 0; break-inside: avoid; }
+.calc .hd { background: var(--paper-2); padding: 6px 12px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--rule); }
+.calc .row { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding: 6px 12px; border-bottom: 1px solid var(--rule); font-size: 15px; }
+.calc .row:last-child { border-bottom: 0; }
+.calc .row .v { font-family: var(--mono); text-align: right; white-space: nowrap; }
+.calc .row.total { font-weight: 600; color: var(--plum); }
+
+/* Screenshots */
+.shots { display: grid; gap: 12px; margin: 12px 0; break-inside: avoid; }
+.shots.c2 { grid-template-columns: 1fr 1fr; }
+.shots.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.shots.c2s { grid-template-columns: 48mm 1fr; align-items: start; }
+figure { margin: 0; break-inside: avoid; }
+/* Height caps keep each section on its own pages instead of spilling a few lines onto a blank one */
+figure img { width: auto; height: auto; max-width: 100%; max-height: 78mm; display: block; border: 1px solid var(--rule); }
+figure.phone img { max-width: 46mm; max-height: 100mm; }
+figure.wide img { max-width: 150mm; max-height: 72mm; }
+.shots.c2 figure img { max-height: 70mm; }
+.shots.c2.tight figure img { max-height: 54mm; }
+figure.wide.tight img { max-height: 56mm; }
+figcaption { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
+figcaption .fn { font-family: var(--mono); color: var(--plum); margin-right: 6px; }
+.side { font-size: 15px; }
+.side ol { padding-left: 28px; }
+
+.check td:first-child { width: 22%; font-weight: 600; }
+.check li { margin-bottom: 0; }
+.check ul { margin: 0; }
+.compact th, .compact td { padding: 4px 10px; }
+.box { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--charcoal); margin-right: 8px; vertical-align: -1px; }
+.check li { list-style: none; margin-left: -24px; }
+</style>
+</head>
+<body>
+<main class="sheet">
+
+<header class="letterhead">
+  <div class="lh-brand">
+    <img src="/public/logo-inbaan-wordmark-cream.png" alt="ในบ้าน">
+    <div class="shop">ร้านในบ้าน<br>ริมโขง นครพนม</div>
+  </div>
+  <div class="lh-meta">
+    <div class="k">ฉบับวันที่</div>
+    <div class="v">18.11.2569</div>
+    <div class="k">สำหรับ</div>
+    <div class="v" style="font-family:var(--body)">พนักงานทุกคน</div>
+  </div>
+</header>
+
+<div class="titlebar">
+  <h1>คู่มือสต็อก สูตร และ SOP</h1>
+  <p class="subtitle">รับของ นับสต็อก เบิกออก ลงสูตร ร้อน/เย็น ความหวาน SOP และ Stock Recon · ภาพทุกภาพมาจากหน้าแอปจริง</p>
+</div>
+
+<div class="toc">
+  <div><span class="n">01</span>หัวใจเรื่องหน่วย อ่านก่อน</div>
+  <div><span class="n">07</span>ลงสูตรเมนูและเบส</div>
+  <div><span class="n">02</span>เข้าหน้าคลังวัตถุดิบ</div>
+  <div><span class="n">08</span>ร้อน / เย็น และตัวเลือกอื่น</div>
+  <div><span class="n">03</span>ตั้งค่าวัตถุดิบและหน่วย</div>
+  <div><span class="n">09</span>ระดับความหวาน</div>
+  <div><span class="n">04</span>รับของเข้า</div>
+  <div><span class="n">10</span>SOP วิธีทำ</div>
+  <div><span class="n">05</span>นับสต็อก</div>
+  <div><span class="n">11</span>Stock Recon กระทบยอด</div>
+  <div><span class="n">06</span>เบิกออก ป้าย QR ตรวจหน่วย</div>
+  <div><span class="n">12</span>เช็กลิสต์ประจำวันและข้อผิดพลาดที่พบบ่อย</div>
+</div>
+
+<!-- 01 UNITS -->
+<section>
+  <h2><span class="n">01</span><span>หัวใจเรื่องหน่วย<small>อ่านก่อนทำทุกอย่าง</small></span></h2>
+  <p class="lead">ทุกวัตถุดิบมี 2 หน่วย: <span class="ui">หน่วยนับ</span> ที่ใช้รับของและนับในคลัง กับ <span class="ui">หน่วยใช้</span> ที่ใช้ในสูตร ตัวแปลงหน่วยเป็นสะพานระหว่างสองหน่วยนี้</p>
+
+  <div class="units">
+    <div class="unit">
+      <div class="k">หน่วยซื้อ = หน่วยนับ</div>
+      <div class="t">ขวด แพ็ค ถุง ลัง</div>
+      <div class="ex">นมสด M-Milk นับเป็น <b>ขวด</b></div>
+      <div class="use">ใช้ตอน: รับของ · นับสต็อก · <span class="nw">เบิกออก</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="unit mid">
+      <div class="k">ตัวแปลงหน่วย</div>
+      <div class="t">1 ขวด = 2,000 มล.</div>
+      <div class="ex">ตั้งครั้งเดียวตอนสร้างวัตถุดิบ ต้องตรงกับของจริง</div>
+      <div class="use">ระบบใช้แปลงสต็อกและคิดต้นทุน</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="unit">
+      <div class="k">หน่วยใช้</div>
+      <div class="t">มล. กรัม ชิ้น</div>
+      <div class="ex">ลาเต้ใช้นม <b>145 มล.</b></div>
+      <div class="use">ใช้ตอน: ลงสูตร · ร้อน/เย็น · <span class="nw">ตัวเลือก</span></div>
+    </div>
+  </div>
+
+  <div class="rule-box">
+    <span class="tag">หลักคิด</span>
+    <p class="big">มือจับอะไร นับเป็นสิ่งนั้น · สูตรตวงอะไร ใส่เป็นสิ่งนั้น</p>
+    <ul>
+      <li><b>รับของ / นับ / เบิก</b> = นับของที่จับได้ในคลัง เช่น 3 ขวด 2 แพ็ค ไม่ต้องแปลงเป็น มล. เอง</li>
+      <li><b>ลงสูตร</b> = ใส่ตามที่ตวงจริงต่อ 1 แก้ว/จาน เช่น 145 มล. 20 กรัม ระบบแปลงกลับเป็นขวดให้</li>
+      <li><b>ตัวแปลงหน่วยผิด = ทุกอย่างผิด</b> ทั้งต้นทุนเมนูและยอดที่ควรเหลือ ดูจากฉลากของจริงทุกครั้ง</li>
+    </ul>
+  </div>
+
+  <div class="calc">
+    <div class="hd">ตัวอย่างจริงจากระบบ · นมสด M-Milk ในลาเต้</div>
+    <div class="row"><span>ราคาซื้อ 1 ขวด</span><span class="v">฿98.00</span></div>
+    <div class="row"><span>ตัวแปลงหน่วย 1 ขวด = 2,000 มล. · ใช้ได้จริง (Yield) 100%</span><span class="v">÷ 2,000</span></div>
+    <div class="row"><span>ต้นทุนต่อ 1 มล.</span><span class="v">฿0.049</span></div>
+    <div class="row"><span>ลาเต้ 1 แก้วใช้ 145 มล. → 145 × 0.049</span><span class="v">฿7.11</span></div>
+    <div class="row total"><span>ขายลาเต้ 1 แก้ว สต็อกนมลด 145 ÷ 2,000</span><span class="v">0.0725 ขวด</span></div>
+  </div>
+
+  <h3>สูตรคิดต้นทุนที่ระบบใช้</h3>
+  <p>ต้นทุนจริงต่อ 1 หน่วยใช้ = <span class="num">ราคาต่อแพ็ค ÷ (จำนวนต่อการซื้อ × ตัวแปลง × Yield)</span></p>
+  <p>Yield คือส่วนที่ใช้ได้จริง เช่น ผักที่ต้องเด็ดทิ้ง 20% ให้ใส่ 80% ต้นทุนต่อกรัมจะสูงขึ้นตามจริง ของที่ใช้ได้หมด เช่น นม น้ำเชื่อม ใส่ 100%</p>
+
+  <h3>ขวดที่เปิดแล้ว คิดอย่างไร</h3>
+  <div class="calc">
+    <div class="hd">ตัวอย่าง · ไซรัปมิ้นท์ ขวดละ 700 มล.</div>
+    <div class="row"><span>ยังไม่เปิด 2 ขวด</span><span class="v">2 ขวด</span></div>
+    <div class="row"><span>ขวดที่เปิดอยู่ เหลือประมาณครึ่ง (50%) หรือวัดได้ 350 มล.</span><span class="v">+ 0.5 ขวด</span></div>
+    <div class="row total"><span>ระบบบันทึกเป็น</span><span class="v">2.5 ขวด = 1,750 มล.</span></div>
+  </div>
+
+  <h3>ตารางเลือกหน่วยให้ถูก</h3>
+  <table>
+    <thead><tr><th>ของที่ซื้อมา</th><th>หน่วยนับ (ซื้อ)</th><th>ตัวแปลง</th><th>หน่วยใช้ในสูตร</th></tr></thead>
+    <tbody>
+      <tr><td>นมสด M-Milk</td><td>ขวด</td><td class="num">1 ขวด = 2,000 มล.</td><td>มล.</td></tr>
+      <tr><td>ไซรัปมิ้นท์</td><td>ขวด</td><td class="num">1 ขวด = 700 มล.</td><td>มล.</td></tr>
+      <tr><td>เมล็ดกาแฟ</td><td>ถุง</td><td>ตามฉลาก เช่น 1 ถุง = 1,000 กรัม</td><td>กรัม</td></tr>
+      <tr><td>เบียร์กระป๋อง</td><td>กระป๋อง</td><td class="num">1 กระป๋อง = 1 กระป๋อง</td><td>กระป๋อง</td></tr>
+      <tr><td>แก้วสกรีน 16 ออนซ์</td><td>แพ็ค</td><td>ตามจำนวนในแพ็ค เช่น 1 แพ็ค = 50 ใบ</td><td>ใบ (glass)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <p><b>กับดักที่เจอบ่อย:</b> ตั้ง "1 ชิ้น = 1 กรัม" ทั้งที่ของจริงหนัก 1 กิโล ต้นทุนในสูตรจะเพี้ยนเป็นพันเท่า ถ้าไม่แน่ใจให้ถามหัวหน้าก่อนบันทึก หน้า <span class="ui">ตรวจหน่วย</span> (ข้อ 06) จะฟ้องรายการแบบนี้ให้</p>
+  </div>
+</section>
+
+<!-- 02 ENTRY -->
+<section class="new">
+  <h2><span class="n">02</span><span>เข้าหน้าคลังวัตถุดิบ</span></h2>
+  <p class="where">ล็อกอินบัญชีพนักงาน → หน้า <b>Staff</b> → กด <b>คลังวัตถุดิบ</b> (หรือเปิด <span class="num">/staff/stock</span>)</p>
+  <div class="shots c2s">
+    <figure class="phone"><img src="img/00-staff-home.jpg" alt=""><figcaption><span class="fn">ภาพ 2.1</span>หน้า Staff มีปุ่มคลังวัตถุดิบและสูตรบาร์</figcaption></figure>
+    <div class="side">
+      <figure class="phone" style="margin-bottom:12px"><img src="img/01-stock-home.jpg" alt=""><figcaption><span class="fn">ภาพ 2.2</span>หน้าคลังวัตถุดิบ</figcaption></figure>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>ส่วนบนจอ</th><th>ใช้ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>หมด / เหลือน้อย / ควรสั่ง</td><td>นับจำนวนรายการ <b>หมด</b> = เหลือ 0 · <b>เหลือน้อย</b> = ต่ำกว่าจุดวิกฤต · <b>ควรสั่ง</b> = ต่ำกว่าจุดสั่งซื้อ</td></tr>
+      <tr><td><span class="ui">นับสต๊อก</span></td><td>นับของที่มีอยู่จริง (ข้อ 05)</td></tr>
+      <tr><td><span class="ui">รับของ</span></td><td>ลงของเข้าตามบิล พร้อมราคาและค่าใช้จ่าย (ข้อ 04)</td></tr>
+      <tr><td>ส่ง LINE</td><td>ส่งสรุปการเคลื่อนไหวชั่วโมงล่าสุดเข้ากลุ่ม LINE (มีหน้ายืนยันก่อนส่ง)</td></tr>
+      <tr><td>สรุปเบิก · ประวัติ</td><td>ดูยอดใช้ 7 / 30 วัน และประวัติรับเข้า เบิกออก นับ</td></tr>
+      <tr><td>ตรวจหน่วย</td><td>รายการที่ตั้งหน่วยหรือราคาผิด (ข้อ 06)</td></tr>
+      <tr><td>การ์ดวัตถุดิบ</td><td>แตะเพื่อ <b>รับเข้า / เบิกออก / ตรวจนับ</b> ทีละรายการ ปุ่ม <b>สูตร</b> บนการ์ดเปิดสูตรของวัตถุดิบนั้น</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 03 ITEM SETUP -->
+<section class="new">
+  <h2><span class="n">03</span><span>ตั้งค่าวัตถุดิบและหน่วย</span></h2>
+  <p class="where">กด <b>เพิ่มวัตถุดิบ</b> มุมขวาบน หรือแตะการ์ด → <b>แก้</b> · ฟอร์มมี 2 แท็บ</p>
+  <div class="shots c3">
+    <figure class="phone"><img src="img/07-item-general.jpg" alt=""><figcaption><span class="fn">ภาพ 3.1</span>ข้อมูลทั่วไป: ชื่อ หมวด บาร์โค้ด ระดับสต็อก</figcaption></figure>
+    <figure class="phone"><img src="img/08-item-units.jpg" alt=""><figcaption><span class="fn">ภาพ 3.2</span>ต้นทุนและหน่วย: การซื้อ หน่วยใช้ ตัวแปลง</figcaption></figure>
+    <figure class="phone"><img src="img/09-item-yield-sweetener.jpg" alt=""><figcaption><span class="fn">ภาพ 3.3</span>Yield สารให้ความหวาน และต้นทุนต่อหน่วยใช้</figcaption></figure>
+  </div>
+  <h3>ขั้นตอน SOP</h3>
+  <ol>
+    <li><b>ข้อมูลทั่วไป:</b> ชื่อตามที่เรียกในร้าน เลือกหมวด สแกนบาร์โค้ดถ้ามี</li>
+    <li><b>1 · การซื้อ:</b> <span class="ui">ราคาซื้อต่อแพ็ค</span> = ราคาที่จ่ายต่อ 1 หน่วยซื้อ · <span class="ui">จำนวนต่อการซื้อ</span> ปกติ = 1 · <span class="ui">หน่วยซื้อ</span> = สิ่งที่จับนับในคลัง (ขวด แพ็ค ถุง)</li>
+    <li><b>2 · หน่วยที่ใช้ในสูตร:</b> เลือก มล. / กรัม / ชิ้น แล้วใส่ <span class="ui">ตัวแปลงหน่วย</span> ตามฉลาก เช่น 1 ขวด = 700 มล.</li>
+    <li><b>3 · Yield:</b> 100% ถ้าใช้ได้หมด ต่ำกว่านั้นเมื่อมีส่วนทิ้ง (ระบบเตือนเมื่อต่ำกว่า 80%)</li>
+    <li><b>สารให้ความหวาน:</b> ติ๊กเฉพาะน้ำเชื่อม น้ำตาล นมข้นหวาน น้ำผึ้ง (อ่านข้อ 09)</li>
+    <li><b>ระดับสต็อก</b> (นับเป็นหน่วยซื้อ): <span class="ui">จุดวิกฤต</span> <span class="ui">จุดสั่งซื้อ</span> <span class="ui">เป้าหมาย (Par)</span> · <span class="ui">คงเหลือตอนนี้</span> ใส่ได้ตอนสร้างครั้งแรกเท่านั้น หลังจากนั้นเปลี่ยนผ่านรับเข้า / เบิกออก / นับ</li>
+    <li>ตรวจบรรทัด <b>ต้นทุนจริงต่อ 1 หน่วยใช้</b> ด้านล่างว่าสมเหตุสมผล แล้วกด <span class="ui">บันทึก</span></li>
+  </ol>
+  <div class="note"><p><b>เปลี่ยนหน่วยทีหลังได้</b> ระบบแปลงยอดคงเหลือและสูตรที่ใช้วัตถุดิบนั้นให้อัตโนมัติ ถ้าขึ้นข้อความว่าแปลงยอดไม่สำเร็จ ให้นับรายการนั้นใหม่ทันที</p></div>
+</section>
+
+<!-- 04 RECEIVE -->
+<section class="new">
+  <h2><span class="n">04</span><span>รับของเข้า<small>บันทึกครั้งเดียว ได้ทั้งสต็อก ราคาทุน และค่าใช้จ่าย</small></span></h2>
+  <p class="where">คลังวัตถุดิบ → <b>รับของ</b> (<span class="num">/staff/stock/receive</span>)</p>
+  <div class="shots c2s">
+    <figure class="phone"><img src="img/05-receive-filled.jpg" alt=""><figcaption><span class="fn">ภาพ 4.1</span>ตัวอย่าง: นมสด 6 ขวด รวม ฿588 จาก Makro</figcaption></figure>
+    <div class="side">
+      <ol>
+        <li>ใส่ <span class="ui">ร้าน / ผู้ขาย</span> เช่น Makro ตลาด และเลขที่บิลในช่องโน้ต</li>
+        <li>ค้นหาหรือกด <span class="ui">สแกน</span> ทีละรายการตามบิล (สแกน 1 ครั้ง = รับเพิ่ม 1)</li>
+        <li>ใส่ <b>จำนวน</b> เป็นหน่วยนับในคลัง (ขวด แพ็ค)</li>
+        <li>ใส่ <span class="ui">รวม ฿</span> = <b>ยอดรวมของบรรทัดนั้นในบิล</b> ไม่ใช่ราคาต่อชิ้น ระบบหารให้เอง</li>
+        <li>ดูราคาต่อหน่วยที่ระบบคำนวณ ถ้าต่างจากเดิมเกิน 20% ระบบจะเตือนให้ตรวจจำนวนกับราคาอีกครั้ง</li>
+        <li>ติ๊ก <span class="ui">อัปเดตราคาทุน</span> ไว้ (ค่าเริ่มต้น)</li>
+        <li><b>ค่าใช้จ่ายของบิลนี้:</b> <span class="ui">สร้างใหม่</span> แล้วเลือก เงินสด / โอน / เครดิต · ใช้ <span class="ui">ผูกที่บันทึกไว้</span> ถ้าลงค่าใช้จ่ายไปแล้ว · <span class="ui">ไม่บันทึก</span> สำหรับของแถมหรือโอนย้าย</li>
+        <li>กด <span class="ui">บันทึกรับเข้า</span> แล้วเลือก <b>รับบิลถัดไป</b> หรือ <b>กลับหน้าคลัง</b></li>
+      </ol>
+    </div>
+  </div>
+  <div class="rule-box"><span class="tag">จำให้ขึ้นใจ</span><p>จำนวน = <b>หน่วยนับ</b> · ราคา = <b>ยอดรวมตามบิล</b> · ของที่ยังไม่มีในระบบให้เพิ่มวัตถุดิบก่อน (ข้อ 03) แล้วค่อยรับเข้า</p></div>
+  <div class="note"><p>ร่างบิลเก็บไว้ในเครื่อง ปิดแอปแล้วกลับมาทำต่อได้ · กดบันทึกซ้ำไม่ทำให้รับของซ้ำ ระบบจะขึ้นว่า "บิลนี้บันทึกไปแล้ว"</p></div>
+</section>
+
+<!-- 05 COUNT -->
+<section class="new">
+  <h2><span class="n">05</span><span>นับสต็อก</span></h2>
+  <p class="where">คลังวัตถุดิบ → <b>นับสต๊อก</b> (<span class="num">/staff/stock/count</span>) · วันทำการตัดรอบตอน <span class="num">05:00</span></p>
+  <div class="shots c2">
+    <figure class="phone"><img src="img/02-count.jpg" alt=""><figcaption><span class="fn">ภาพ 5.1</span>หน้านับ: ตัวเลขสีเทา = ยอดในระบบ ยังไม่ถือว่านับ</figcaption></figure>
+    <figure class="phone"><img src="img/03-count-opened.jpg" alt=""><figcaption><span class="fn">ภาพ 5.2</span>กด "มีของเปิดแล้ว" ใส่ของที่ยังไม่เปิด + ที่เปิดแล้วเหลือกี่ %</figcaption></figure>
+  </div>
+  <div class="rule-box"><span class="tag">กฎข้อเดียวของการนับ</span><p class="big">ใส่จำนวนที่มีอยู่จริงทั้งหมด ไม่ใช่จำนวนที่เพิ่มเข้ามา</p></div>
+  <h3>รอบการนับ (ระบบเลือกจากเวลาให้เอง)</h3>
+  <table>
+    <thead><tr><th>เวลา</th><th>รอบ</th><th>หมายเหตุ</th></tr></thead>
+    <tbody>
+      <tr><td class="num">05:00 – 15:00</td><td>เปิดร้าน</td><td>นับรายการ "นับทุกวัน"</td></tr>
+      <tr><td class="num">15:00 – 21:00</td><td>ระหว่างวัน</td><td>นับตามที่ระบบแนะนำ (spot count)</td></tr>
+      <tr><td class="num">21:00 – 05:00</td><td>ปิดร้าน</td><td><b>ซ่อนยอดในระบบ</b> นับจากของจริงล้วน ๆ · ใช้กระทบยอดใน Stock Recon</td></tr>
+    </tbody>
+  </table>
+  <h3>ขั้นตอน SOP</h3>
+  <ol>
+    <li>เลือก <span class="ui">นับทุกวัน</span> (รายการหลัก) หรือ <span class="ui">ทั้งหมด</span></li>
+    <li>หาเจอด้วยค้นหา หรือ <span class="ui">สแกน</span> ป้าย QR / บาร์โค้ดบนของ (บาร์โค้ดสินค้า = นับเพิ่ม 1 ต่อการสแกน)</li>
+    <li>ใส่จำนวนเต็มหน่วย ด้วยปุ่ม − / + หรือพิมพ์ทับ · ถ้าตรงกับระบบกด <span class="ui">ตรงกับในระบบ</span></li>
+    <li>มีขวด/แพ็คที่เปิดแล้ว: กด <span class="ui">มีของเปิดแล้ว</span> → ใส่ <b>ยังไม่เปิด</b> และ <b>เปิดแล้วเหลือ</b> เป็น มล. หรือ % (0 / 25 / 50 / 75) → <span class="ui">ใช้ค่านี้</span></li>
+    <li>ช่องที่ไม่ได้กรอก ระบบ <b>ไม่เปลี่ยน</b> ยอด · ช่องสีแดงต้องแก้ก่อนบันทึก</li>
+    <li>กด <span class="ui">บันทึกการนับ</span> แล้วดูผลต่าง "ระบบ … → นับได้ …" และมูลค่า ฿ ที่ขาด/เกิน</li>
+  </ol>
+</section>
+
+<!-- 06 WITHDRAW / LABELS / CHECK -->
+<section class="new">
+  <h2><span class="n">06</span><span>เบิกออก ป้าย QR และตรวจหน่วย</span></h2>
+  <h3>เบิกออก: ของเสีย พนักงานกิน อื่น ๆ</h3>
+  <div class="shots c2s">
+    <figure class="phone"><img src="img/12-sheet-withdraw.jpg" alt=""><figcaption><span class="fn">ภาพ 6.1</span>แตะการ์ด → แท็บเบิกออก ต้องเลือกเหตุผล</figcaption></figure>
+    <div class="side">
+      <ol>
+        <li>แตะการ์ดวัตถุดิบ → แท็บ <span class="ui">เบิกออก</span></li>
+        <li>เลือกหน่วย (แพ็ค / ชิ้น) แล้วใส่จำนวน</li>
+        <li>เลือก <b>เหตุผล</b>: <span class="ui">ของเสีย / ทิ้ง</span> · <span class="ui">พนักงานกิน</span> · <span class="ui">อื่น ๆ</span> แล้วเขียนโน้ต เช่น หมดอายุ ทำหก</li>
+        <li>กด <span class="ui">ยืนยันเบิกออก</span></li>
+      </ol>
+      <div class="rule-box"><span class="tag">ห้ามเบิกซ้ำ</span><p>ของที่ใช้ทำเมนูที่ขาย <b>ไม่ต้องเบิกออก</b> ระบบคิดจากสูตรให้ เบิกเฉพาะของเสีย ของพนักงานกิน หรือเหตุอื่นเท่านั้น</p></div>
+      <p style="font-size:14px">แท็บ <b>รับเข้า</b> บนการ์ดใช้รับของชิ้นเดียวแบบเร็ว ถ้ามาเป็นบิลให้ใช้หน้ารับของ (ข้อ 04) เพื่อให้ราคาทุนและค่าใช้จ่ายครบ</p>
+    </div>
+  </div>
+  <h3>ป้าย QR สำหรับของที่ไม่มีบาร์โค้ด</h3>
+  <div class="shots c2s">
+    <figure class="phone"><img src="img/10-labels.jpg" alt=""><figcaption><span class="fn">ภาพ 6.2</span>เลือกรายการ แล้วพิมพ์ป้าย A4</figcaption></figure>
+    <div class="side">
+      <ol>
+        <li>หน้านับสต๊อก → <span class="ui">ป้าย QR</span></li>
+        <li>ติ๊ก <b>เฉพาะของที่ยังไม่มีบาร์โค้ด</b> แล้วเลือกรายการ</li>
+        <li><span class="ui">พิมพ์ป้าย / บันทึก PDF</span> · A4 หน้าละ 24 ป้าย (3 × 8)</li>
+        <li>ติดป้ายที่ชั้นหรือกล่อง ป้ายบอกหน่วยนับไว้ เช่น "นับเป็น ถุง"</li>
+      </ol>
+    </div>
+  </div>
+  <h3>ตรวจหน่วยและต้นทุน</h3>
+  <div class="shots c2s">
+    <figure class="phone"><img src="img/06-check-units.jpg" alt=""><figcaption><span class="fn">ภาพ 6.3</span>รายการที่ทำให้ต้นทุนหรือจำนวนผิด</figcaption></figure>
+    <div class="side">
+      <p>คลังวัตถุดิบ → <span class="ui">ตรวจหน่วย</span> แสดงปัญหาเป็นกลุ่ม แตะ <span class="ui">แก้</span> เพื่อเปิดฟอร์มวัตถุดิบ</p>
+      <ul>
+        <li>อยู่ในสูตร แต่ต้นทุนเป็น 0 → ใส่ราคาซื้อ</li>
+        <li>ตั้งว่า 1 ชิ้น = 1 กรัม (หรือ 1 มล.) → แก้ตัวแปลงตามฉลาก</li>
+        <li>ตัวแปลงหน่วยเป็นไปไม่ได้ · หน่วยนับไม่ตรงกับหน่วยซื้อ</li>
+        <li>ยังไม่ได้ตั้งหน่วย · ยังไม่ได้ใส่ราคาซื้อ</li>
+        <li>ชื่อที่น่าจะเป็นของเดียวกัน → <b>รวม</b> ได้ แต่ <b>ย้อนกลับไม่ได้</b> ให้หัวหน้าเป็นคนกด</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 07 RECIPES -->
+<section class="new">
+  <h2><span class="n">07</span><span>ลงสูตรเมนูและเบส<small>สำหรับหัวหน้าบาร์ / ครัว</small></span></h2>
+  <p class="where">Backoffice → <b>Menu &amp; Lab</b> → แท็บ <b>Food &amp; Drink</b> → <b>เมนู</b> (<span class="num">/admin/lab</span>)</p>
+  <figure class="wide"><img src="img/21-menu-readiness-c.jpg" alt=""><figcaption><span class="fn">ภาพ 7.1</span>ความพร้อมตัดสต๊อกจากยอดขาย: ตอนนี้ 37.7% ของที่ขายได้มีสูตรแล้ว · ลงสูตรเมนูที่ขายดีก่อน</figcaption></figure>
+  <div class="shots c2s" style="margin-top:16px">
+    <figure class="phone"><img src="img/23-recipe-latte-c.jpg" alt=""><figcaption><span class="fn">ภาพ 7.2</span>สูตรลาเต้: ทุกบรรทัดใส่เป็นหน่วยใช้ ต่อ 1 แก้ว</figcaption></figure>
+    <div class="side">
+      <h3 style="margin-top:0">ขั้นตอน SOP</h3>
+      <ol>
+        <li>กด <span class="ui">+ สร้างสูตร</span> (ยังไม่มีสูตร) หรือ <span class="ui">ปรุงสูตร</span> (แก้สูตรเดิม)</li>
+        <li>แผงขวา <b>คลังวัตถุดิบ</b> ค้นหาแล้วกด <span class="ui">+ เพิ่ม</span> ทีละรายการ</li>
+        <li>ใส่ปริมาณที่ใช้จริงต่อ <b>1 แก้ว / 1 จาน</b> เป็นหน่วยใช้ (g, ml, glass) หน่วยต่อท้ายช่องคือหน่วยที่ระบบรับ</li>
+        <li>ใส่ <b>ของทุกอย่างที่หมดไปต่อ 1 ที่</b> รวมแก้ว ฝา หลอด ถุง ไม่ใช่แค่ส่วนผสม</li>
+        <li>ดู <b>ต้นทุนรวม</b> และ % ต้นทุนด้านล่าง ถ้าเพี้ยนมาก ให้เช็กตัวแปลงหน่วยของวัตถุดิบ (ปุ่ม <span class="ui">แก้ข้อมูลสต็อก</span>)</li>
+        <li>ตั้งตัวเลือกที่มีผลกับสต็อก เช่น ร้อน/เย็น ความหวาน (ข้อ 08–09)</li>
+        <li>กด <span class="ui">บันทึกสูตร</span></li>
+      </ol>
+      <div class="note"><p>เครื่องมือหัวสูตร: <b>ประวัติ</b> ดูเวอร์ชันเก่า · <b>นำเข้าสูตร</b> คัดลอกจากเมนูอื่น · <b>บันทึกเป็นแม่แบบ</b></p></div>
+    </div>
+  </div>
+  <h3>เบส / ของเตรียม (ซอส เบสชา นมมิกซ์)</h3>
+  <figure class="wide"><img src="img/20-lab-bases-c.jpg" alt=""><figcaption><span class="fn">ภาพ 7.3</span>แท็บ เบส / ของเตรียม · นมมิกซ์ 1 portion = 800 มล. ใช้อยู่ใน 3 เมนู</figcaption></figure>
+  <ul>
+    <li>กด <span class="ui">สร้างเบสใหม่</span> ใส่ส่วนผสม และ <b>1 portion ได้กี่ มล. / กรัม</b> (ต้องใส่)</li>
+    <li><b>ผลิตเก็บไว้:</b> ทำเสร็จกด <span class="ui">ผลิต</span> ใส่ว่าทำกี่ portion และได้จริงเท่าไร ระบบตัดวัตถุดิบดิบและเพิ่มสต็อกเบส</li>
+    <li><b>ตัดทะลุ:</b> ไม่เก็บสต็อกเบส ขายเมนูแล้วตัดจากวัตถุดิบดิบตรง ๆ</li>
+    <li>ในสูตรเมนู ใส่เบสเหมือนวัตถุดิบทั่วไป (ป้าย <b>ของเตรียม</b>) เช่น นมมิกซ์ 40 มล.</li>
+  </ul>
+</section>
+
+<!-- 08 HOT COLD -->
+<section class="new">
+  <h2><span class="n">08</span><span>ร้อน / เย็น และตัวเลือกอื่น</span></h2>
+  <p class="lead">เมนูมี <b>สูตรหลักสูตรเดียว</b> ร้อน/เย็น เพิ่มช็อต เปลี่ยนนม เป็น "ตัวเลือก" ที่บวกหรือลบวัตถุดิบจากสูตรหลัก ไม่ต้องสร้างสูตรแยก</p>
+  <div class="rule-box">
+    <span class="tag">หลักคิด</span>
+    <p class="big">สูตรหลัก = แก้วที่ขายบ่อยที่สุด · ตัวเลือก = เฉพาะส่วนที่ต่างไป</p>
+    <ul>
+      <li><b>ใช้เพิ่ม (+)</b> ของที่ใส่เพิ่ม เช่น เย็น +น้ำแข็ง 180 กรัม · เพิ่มช็อต +กาแฟ 18 กรัม</li>
+      <li><b>ใช้น้อยลง (−)</b> ของที่ตัวเลือกเอาออก เช่น ร้อน −แก้วพลาสติก −ฝาแก้วเย็น · นมโอ๊ต −นมสด 145 มล. แล้ว +นมโอ๊ต 145 มล.</li>
+      <li>ปริมาณเป็น <b>หน่วยใช้</b> ต่อ 1 ที่ที่สั่ง (ตัวเลขในภาพเป็นตัวอย่าง ใช้ปริมาณตามสูตรจริงของร้าน)</li>
+    </ul>
+  </div>
+  <figure class="wide tight"><img src="img/27b-hotcold-group-c.jpg" alt=""><figcaption><span class="fn">ภาพ 8.1</span>Menu &amp; Lab → Modifiers &amp; Options → กลุ่ม Hot / Cold ใช้ใน 11 เมนู · ตอนนี้ทั้งสองตัวเลือก "ไม่ตัดสต๊อกเพิ่ม"</figcaption></figure>
+  <h3>ตั้งได้ 2 ระดับ</h3>
+  <div class="shots c2 tight">
+    <figure><img src="img/28-choice-ingredients-c.jpg" alt=""><figcaption><span class="fn">ภาพ 8.2</span><b>ค่ากลางทุกเมนู</b>: กด "วัตถุดิบ" ที่ตัวเลือก เลือก ใช้เพิ่ม / ใช้น้อยลง และขอบเขต "ทุกเมนู" หรือ "เฉพาะเมนู"</figcaption></figure>
+    <figure><img src="img/26-hotcold-override.png" alt=""><figcaption><span class="fn">ภาพ 8.3</span><b>เฉพาะเมนูนี้</b>: ในหน้าสูตร หัวข้อ "ตัวเลือกที่มีผลกับสต๊อก" ใส่วัตถุดิบ ± ปริมาณ แล้วกด "บันทึก" ของตัวเลือกนั้น</figcaption></figure>
+  </div>
+  <ol>
+    <li>ของที่เหมือนกันทุกเมนู (เช่น เย็น = แก้วเย็น + ฝา + หลอด) ตั้งที่ <b>ค่ากลางทุกเมนู</b> ครั้งเดียว</li>
+    <li>ของที่ต่างตามเมนู (เช่น ปริมาณน้ำแข็ง) ตั้งที่ <b>เฉพาะเมนูนี้</b> ในหน้าสูตร · แถวเฉพาะเมนูจะใช้ <b>แทน</b> แถวทุกเมนู</li>
+    <li>เปิดสูตรเมนูแล้วเลื่อนลงไปที่ "ตัวเลือกที่มีผลกับสต๊อก" เพื่อตรวจว่าแต่ละตัวเลือกตัดอะไร</li>
+  </ol>
+  <div class="note"><p>ถ้าสูตรหลักใส่แก้วเย็นและฝาไว้แล้ว (เช่นลาเต้ในภาพ 7.2) ตัวเลือก <b>ร้อน</b> ต้อง <b>ใช้น้อยลง</b> ของเหล่านั้น ไม่งั้นแก้วร้อนจะตัดแก้วเย็นด้วย · ถ้าเมนูยังไม่ผูกกลุ่มตัวเลือก ให้ผูกที่หน้าแก้ไขเมนู (Menu Catalog)</p></div>
+</section>
+
+<!-- 09 SWEETNESS -->
+<section>
+  <h2><span class="n">09</span><span>ระดับความหวาน</span></h2>
+  <p class="lead">ความหวานเป็น <b>ตัวคูณ</b> ไม่ใช่ตัวบวก: ระบบเอาปริมาณของ "สารให้ความหวาน" ในสูตร คูณด้วยตัวคูณของระดับที่ลูกค้าเลือก</p>
+  <div class="calc">
+    <div class="hd">ตัวอย่าง · สูตรใส่น้ำเชื่อม 20 มล. (ติ๊กเป็นสารให้ความหวาน)</div>
+    <div class="row"><span>ไม่หวาน × 0</span><span class="v">0 มล.</span></div>
+    <div class="row"><span>หวานน้อย × 0.5</span><span class="v">10 มล.</span></div>
+    <div class="row"><span>หวานปกติ × 1</span><span class="v">20 มล.</span></div>
+    <div class="row"><span>หวานมาก × 1.2</span><span class="v">24 มล.</span></div>
+    <div class="row total"><span>วัตถุดิบที่ไม่ใช่สารให้ความหวาน (นม กาแฟ น้ำแข็ง)</span><span class="v">ไม่เปลี่ยน</span></div>
+  </div>
+  <div class="shots c2">
+    <figure><img src="img/29-sweetness-group-c.jpg" alt=""><figcaption><span class="fn">ภาพ 9.1</span>Modifiers &amp; Options → แก้กลุ่ม "ระดับความหวาน" ช่อง <b>หวาน ×</b> คือตัวคูณ</figcaption></figure>
+    <figure><img src="img/24-recipe-sweetness-c.jpg" alt=""><figcaption><span class="fn">ภาพ 9.2</span>ในหน้าสูตร กดชิปวัตถุดิบเพื่อบอกว่าตัวไหนเป็นสารให้ความหวาน · ลาเต้ยังไม่ได้เลือก จึงขึ้นว่า "เลือกสารให้ความหวานด้านบน"</figcaption></figure>
+  </div>
+  <h3>ขั้นตอน SOP</h3>
+  <ol>
+    <li>บอกระบบว่าอะไรคือความหวาน: ติ๊ก <span class="ui">สารให้ความหวาน</span> ในฟอร์มวัตถุดิบ (ภาพ 3.3) หรือกดชิปในหน้าสูตร (ภาพ 9.2)</li>
+    <li>ตรวจกลุ่ม <b>ระดับความหวาน</b> ว่าตัวคูณเป็น 0 / 0.5 / 1 / 1.2 (เว้นว่าง = ไม่ปรับ)</li>
+    <li>ผูกกลุ่มระดับความหวานกับเมนูที่ลูกค้าเลือกหวานได้</li>
+    <li>ดูตาราง "ระดับ / ตัวคูณ / ตัดสต๊อกสารให้ความหวาน" ในหน้าสูตรว่าแต่ละระดับตัดกี่ มล.</li>
+  </ol>
+  <div class="note"><p>ชิปสารให้ความหวาน <b>มีผลทุกเมนู</b> ที่ใช้วัตถุดิบนั้น ห้ามติ๊กนม กาแฟ หรือแก้ว · ของที่ตัวเลือกอื่นเพิ่มเข้ามา (เช่น เย็น เพิ่มน้ำเชื่อม) ก็ถูกคูณด้วย · บาร์เห็นปริมาณตามระดับเดียวกันในหน้าสูตรบาร์</p></div>
+</section>
+
+<!-- 10 SOP -->
+<section class="new">
+  <h2><span class="n">10</span><span>SOP วิธีทำ</span></h2>
+  <p class="where">หัวหน้าแก้ที่ Menu &amp; Lab → Food &amp; Drink → <b>วิธีทำ (SOP)</b> · พนักงานดูที่ Staff → <b>สูตรบาร์</b> (<span class="num">/staff/sop</span>)</p>
+  <figure class="wide"><img src="img/30-sop-list-c.jpg" alt=""><figcaption><span class="fn">ภาพ 10.1</span>รายการ SOP: 28 จาก 49 สูตรยังไม่ครบ (ขาดส่วนผสมหรือขั้นตอน) · "เผยแพร่แล้ว" เท่านั้นที่พนักงานเห็น</figcaption></figure>
+  <h3>เขียน SOP (หัวหน้า)</h3>
+  <ol>
+    <li>กด <span class="ui">SOP ใหม่</span> หรือ <span class="ui">วางจากข้อความ</span> (วางสูตรจาก LINE) หรือดินสอเพื่อแก้</li>
+    <li><b>ข้อมูลทั่วไป:</b> ชื่อเมนู หมวด ขนาดแก้วมาตรฐาน เวลาเตรียม ระดับน้ำแข็ง</li>
+    <li><b>ส่วนผสม:</b> กด <span class="ui">ผูกกับเมนู / เบส</span> เพื่อดึงส่วนผสมจากสูตร (ต้นทุนและสต็อกตรงกับที่ขาย) · ถ้าไม่ผูก ส่วนผสมเป็นแค่ข้อความ ไม่คิดต้นทุนและไม่ตัดสต็อก</li>
+    <li><b>ขั้นตอน:</b> ชื่อขั้นตอน รายละเอียด <b>จุดสำคัญ</b> และ <b>เหตุผล</b> ทีละขั้น</li>
+    <li>เปิด <b>เผยแพร่แล้ว</b> แล้วกด <span class="ui">บันทึก SOP</span></li>
+  </ol>
+  <div class="shots c2">
+    <figure><img src="img/31-sop-edit-top-c.jpg" alt=""><figcaption><span class="fn">ภาพ 10.2</span>หน้าแก้ SOP: ข้อมูลทั่วไป</figcaption></figure>
+    <figure><img src="img/32-sop-ingredients-c.jpg" alt=""><figcaption><span class="fn">ภาพ 10.3</span>SOP ที่ยังไม่ผูก: ระบบเตือนว่าส่วนผสมเป็นแค่ข้อความ</figcaption></figure>
+  </div>
+  <h3>ใช้ SOP หน้าบาร์ (พนักงาน)</h3>
+  <div class="shots c3">
+    <figure class="phone"><img src="img/40-staff-sop-list.jpg" alt=""><figcaption><span class="fn">ภาพ 10.4</span>ค้นหาเมนู แตะ "ดูสูตร"</figcaption></figure>
+    <figure class="phone"><img src="img/41-staff-sop-card.jpg" alt=""><figcaption><span class="fn">ภาพ 10.5</span>เลือกขนาดแก้วและจำนวนแก้ว ปริมาณปรับตาม</figcaption></figure>
+    <figure class="phone"><img src="img/42-staff-sop-steps.jpg" alt=""><figcaption><span class="fn">ภาพ 10.6</span>ขั้นตอนเรียงเลข <span class="nw">(ตัวอย่าง ลาเต้)</span></figcaption></figure>
+  </div>
+  <div class="note"><p>ทำตามปริมาณใน SOP ทุกแก้ว ระดับความหวานและปริมาณที่เห็นคือค่าเดียวกับที่ระบบใช้คิดสต็อก ถ้าทำเกินหรือขาดเป็นประจำ ยอดใน Stock Recon จะผิดปกติ</p></div>
+</section>
+
+<!-- 11 RECON -->
+<section class="new">
+  <h2><span class="n">11</span><span>Stock Recon กระทบยอด<small>ของหายหรือเกินตรงไหน</small></span></h2>
+  <p class="where">Menu &amp; Lab → แท็บ <b>Stock Recon</b> (<span class="num">/admin/stock-recon</span>)</p>
+  <p class="lead">Stock Recon เทียบ "ของที่ควรเหลือตามระบบ" กับ "ของที่นับได้ตอนปิดร้าน" ทุกวัน ถ้าต่างมาก แปลว่ามีอะไรไม่ได้ลง</p>
+  <div class="rule-box">
+    <span class="tag">สมการ</span>
+    <p class="big"><span class="nw">ยอดเปิด</span> + <span class="nw">รับเข้า</span> + <span class="nw">ผลิต</span> − <span class="nw">ใช้ผลิต</span> − <span class="nw">เสีย</span> − <span class="nw">ใช้ตามยอดขาย</span> = <span class="nw">ควรเหลือ</span></p>
+    <p>แล้วเทียบกับ <b>ยอดนับปิดร้าน</b> · ต่าง = <b>ขาด</b> (ของน้อยกว่าที่ควร) หรือ <b>เกิน</b></p>
+  </div>
+  <figure class="wide tight"><img src="img/35-recon.jpg" alt=""><figcaption><span class="fn">ภาพ 11.1</span>หน้ากระทบยอดรายวัน: เลือก รายวัน / สะสม 7 วัน / 30 วัน · บันทึก PNG หรือคัดลอกรูปส่ง LINE · ภาพนี้ถ่ายก่อนมีการนับปิดร้านของวันนี้ จึงยังเป็น 0</figcaption></figure>
+  <h3>อ่านผลอย่างไร</h3>
+  <table>
+    <thead><tr><th>ช่อง</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>นับปิดร้านแล้ว</td><td>นับไปกี่รายการ · <b>ไม่มีการนับปิดร้าน = ไม่มีผลกระทบยอด</b></td></tr>
+      <tr><td>ผิดปกติ</td><td>ต่างเกิน 5% ของยอดที่ควรเหลือ <b>และ</b> เกิน ฿100 (ของที่ไม่มีราคาใช้เฉพาะ %)</td></tr>
+      <tr><td>ขาด / เกิน (มูลค่า)</td><td>มูลค่ารวมของส่วนต่าง เป็นบาท</td></tr>
+      <tr><td>ตามผู้นับปิดร้าน</td><td>ผลต่างแยกตามคนนับ ใช้ดูว่าต้องสอนการนับใครเพิ่ม</td></tr>
+    </tbody>
+  </table>
+  <h3>เจอรายการผิดปกติ ทำอะไร</h3>
+  <ol>
+    <li>กดชื่อรายการเพื่อดูความเคลื่อนไหว (รับเข้า เสีย ขาย นับ)</li>
+    <li>เช็กตามลำดับ: <b>ลืมรับของ?</b> → <b>ลืมเบิกของเสีย?</b> → <b>นับผิดหน่วย</b> (นับเป็นชิ้นแต่ระบบเป็นแพ็ค) → <b>สูตรผิด</b> หรือ <b>ตัวแปลงผิด</b> → <b>ทำเกินสูตร</b></li>
+    <li>แก้ที่ต้นเหตุ แล้วแจ้งหัวหน้าพร้อมรูปจากปุ่ม <span class="ui">คัดลอกรูป</span></li>
+  </ol>
+  <div class="note"><p><b>สถานะตอนนี้:</b> "ใช้ตามยอดขาย" คำนวณจากสูตร แต่ <b>ยังไม่ตัดสต็อกจริง</b> (shadow mode) ยอดคงเหลือในคลังเปลี่ยนจากรับเข้า เบิกออก ผลิต และการนับเท่านั้น จะเปิดตัดจริงเมื่อลงสูตรครบ ยิ่งลงสูตรถูกและนับปิดร้านทุกวัน ตัวเลขในหน้านี้ยิ่งเชื่อได้</p></div>
+</section>
+
+<!-- 12 CHECKLIST -->
+<section>
+  <h2><span class="n">12</span><span>เช็กลิสต์ประจำวัน และข้อผิดพลาดที่พบบ่อย</span></h2>
+  <table class="check">
+    <thead><tr><th>ช่วง</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>เปิดร้าน<br><span class="num" style="font-weight:400">05:00–15:00</span></td><td><ul><li><span class="box"></span>ดูหมด / เหลือน้อย / ควรสั่ง บนหน้าคลัง</li><li><span class="box"></span>นับรายการ "นับทุกวัน"</li></ul></td></tr>
+      <tr><td>ของเข้า</td><td><ul><li><span class="box"></span>รับของทันทีตามบิล ใส่ยอดรวมของบิล</li><li><span class="box"></span>ของใหม่ที่ไม่มีในระบบ ให้หัวหน้าเพิ่มวัตถุดิบและตั้งหน่วยก่อน</li></ul></td></tr>
+      <tr><td>ระหว่างวัน</td><td><ul><li><span class="box"></span>ของเสีย ของหก ของพนักงานกิน → เบิกออกพร้อมเหตุผล ตอนที่เกิด</li><li><span class="box"></span>ทำเครื่องดื่มตาม SOP ทุกแก้ว</li><li><span class="box"></span>ผลิตเบสเสร็จ → กด "ผลิต"</li></ul></td></tr>
+      <tr><td>ปิดร้าน<br><span class="num" style="font-weight:400">21:00–05:00</span></td><td><ul><li><span class="box"></span>นับปิดร้านจากของจริง (ระบบซ่อนยอด)</li><li><span class="box"></span>ขวดเปิดแล้วใส่เป็น % หรือ มล.</li><li><span class="box"></span>กดบันทึกการนับ แล้วดูผลต่าง</li></ul></td></tr>
+      <tr><td>หัวหน้า ทุกวัน</td><td><ul><li><span class="box"></span>เปิด Stock Recon ดูรายการผิดปกติ แล้วไล่หาต้นเหตุ</li><li><span class="box"></span>ลงสูตรเมนูขายดีที่ยังไม่มีสูตรเพิ่มทีละรายการ</li></ul></td></tr>
+    </tbody>
+  </table>
+
+  <h3>ข้อผิดพลาดที่พบบ่อย</h3>
+  <table class="compact">
+    <thead><tr><th>ทำผิด</th><th>ผลที่เกิด</th><th>ทำให้ถูก</th></tr></thead>
+    <tbody>
+      <tr><td>นับแค่ของที่เพิ่งมา</td><td>ยอดคงเหลือหายเกือบหมด</td><td>ใส่ <b>ของที่มีอยู่ทั้งหมด</b></td></tr>
+      <tr><td>ใส่ราคาต่อชิ้นในช่อง "รวม ฿"</td><td>ราคาทุนต่ำกว่าจริงหลายเท่า</td><td>ใส่ <b>ยอดรวมของบรรทัดในบิล</b></td></tr>
+      <tr><td>นับเป็นชิ้น แต่ระบบนับเป็นแพ็ค</td><td>ของเกินหรือขาดเป็นสิบเท่า</td><td>ดูหน่วยใต้ช่องตัวเลขทุกครั้ง</td></tr>
+      <tr><td>เบิกออกของที่ใช้ทำเมนูขาย</td><td>ตัดซ้ำกับระบบ ของขาดในรีคอน</td><td>เบิกเฉพาะ เสีย / กิน / อื่น ๆ</td></tr>
+      <tr><td>ลงสูตรเป็นขวด แทน มล.</td><td>ต้นทุนเมนูพุ่ง</td><td>ลงสูตรเป็นหน่วยใช้ ตามหน่วยท้ายช่อง</td></tr>
+      <tr><td>ติ๊กนมเป็นสารให้ความหวาน</td><td>หวานน้อยตัดนมครึ่งเดียว</td><td>ติ๊กเฉพาะน้ำเชื่อม น้ำตาล นมข้น น้ำผึ้ง</td></tr>
+      <tr><td>สูตรหลักมีแก้วเย็น แต่ร้อนไม่ได้ลบออก</td><td>แก้วเย็นหายเกินจริง</td><td>ตัวเลือกร้อน "ใช้น้อยลง" แก้ว ฝา หลอด</td></tr>
+      <tr><td>สร้างวัตถุดิบชื่อซ้ำ</td><td>สต็อกแตกสองที่ สูตรผูกผิดตัว</td><td>ค้นหาก่อนสร้างทุกครั้ง · ให้หัวหน้ารวม</td></tr>
+    </tbody>
+  </table>
+  <div class="rule-box"><span class="tag">ไม่แน่ใจ</span><p>อย่าเดา ถ่ายรูปฉลากหรือบิลส่งในกลุ่ม LINE แล้วถามหัวหน้าก่อนบันทึก การแก้ทีหลังยากกว่าการถามก่อนเสมอ</p></div>
+</section>
+
+</main>
+</body>
+</html>
