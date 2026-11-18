@@ -25,6 +25,8 @@ export const unitFix = (qty, from, to) => {
     const b = norm(to);
     if (!a || !b || a === b) return { kind: 'same' };
     const q = Number(qty) || 0;
+    // A แกลลอน is a jug of any size: no ratio to ml or g exists, a person has to say it
+    if (a === 'gallon' || b === 'gallon') return { kind: 'manual' };
     const factor = suggestConversionFactor(a, b);
     if (factor) return { kind: 'convert', factor, quantity: Math.round(q * factor * 10000) / 10000 };
     const ta = getUnitType(a);
