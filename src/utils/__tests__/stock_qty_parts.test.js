@@ -35,6 +35,11 @@ describe('What a stock card shows', () => {
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 1000, current_quantity: 5 })).total).toBe('5,000 กรัม');
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 440, current_quantity: 1.3 })).total).toBe('572 กรัม');
     });
+    it('a แกลลอน is a jug: the card says the jugs and the millilitres inside', () => {
+        const jug = { unit: 'gallon', pack_unit: 'gallon', usage_unit: 'ml', conversion_factor: 5000 };
+        expect(stockQtyParts(item({ ...jug, current_quantity: 1 }))).toMatchObject({ main: '1', unit: 'แกลลอน', open: null, totalValue: '5,000', totalUnit: 'มิลลิลิตร' });
+        expect(stockQtyParts(item({ ...jug, current_quantity: 1.5 }))).toMatchObject({ main: '2', totalValue: '7,500', open: 'เต็ม 1 · เปิดอยู่ 1 เหลือ 2,500 มิลลิลิตร' });
+    });
     it('prints no total for 1:1 items or for broken unit set-ups', () => {
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'unit', conversion_factor: 1, current_quantity: 6 })).total).toBeNull();
         expect(stockQtyParts(item({ unit: 'unit', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 1, current_quantity: 6 })).total).toBeNull();
