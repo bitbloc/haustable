@@ -35,7 +35,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, i
   const recommendCardStyle = "relative bg-neutral-900 border-neutral-800 rounded-2xl overflow-hidden opacity-90";
   
   const currentStyle = isRecommended ? recommendCardStyle : baseCardStyle;
-  const currentBorder = isOverlay ? 'border-[#DFFF00] shadow-[0_0_30px_rgba(223,255,0,0.3)] scale-105 z-50' : (isRecommended ? 'border-neutral-800' : 'border-white/10 hover:border-white/20');
+  const currentBorder = isOverlay ? 'border-[var(--on-plum-2)] scale-105 z-50' : (isRecommended ? 'border-neutral-800' : 'border-white/10 hover:border-white/20');
 
   // --- Mobile Rendering ---
   if (isMobile) {
@@ -66,7 +66,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, i
         <div className="flex-1 min-w-0">
             <h3 className={`font-bold truncate ${isRecommended ? 'text-gray-400' : 'text-white'}`}>{item.name}</h3>
             <div className="flex justify-between items-center">
-                <p className={`text-sm ${isRecommended ? 'text-gray-500' : 'text-[#DFFF00]'}`}>{item.price}.-</p>
+                <p className={`text-sm ${isRecommended ? 'text-gray-500' : 'text-[var(--on-plum-2)]'}`}>{item.price}.-</p>
                 {isRecommended && <div className="text-[10px] bg-neutral-800 text-gray-500 px-2 py-0.5 rounded border border-neutral-700">FIXED</div>}
             </div>
         </div>
@@ -113,7 +113,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, i
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
             <h3 className={`font-bold text-lg line-clamp-1 ${isRecommended ? 'text-gray-400' : 'text-white'}`}>{item.name}</h3>
-            <p className={`font-mono text-lg ${isRecommended ? 'text-gray-500' : 'text-[#DFFF00]'}`}>{item.price}</p>
+            <p className={`font-mono text-lg ${isRecommended ? 'text-gray-500' : 'text-[var(--on-plum-2)]'}`}>{item.price}</p>
         </div>
         
         <div className="flex justify-between items-center mt-4 border-t border-white/5 pt-3">

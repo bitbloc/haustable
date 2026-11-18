@@ -78,20 +78,20 @@ export default function SOPRecipeCard({
         text: 'text-[#CCCCCC]',
         textMuted: 'text-[#666666]',
         textBright: 'text-[#FFFFFF]',
-        accent: 'text-[#DFFF00]',
-        accentBg: 'bg-[#DFFF00]/10 border border-[#DFFF00]/20',
+        accent: 'text-[var(--on-plum-2)]',
+        accentBg: 'bg-[var(--brand-plum)]/40 border border-[var(--brand-plum-3)]',
         sweetAccent: 'text-[#FF9F00]',
         sweetAccentBg: 'bg-[#FF9F00]/10 border border-[#FF9F00]/20',
         divider: 'border-[#2A2A2A]',
         badge: 'bg-[#222222] text-[#888888] group-hover:bg-[#333333]',
-        badgeActive: 'bg-[#DFFF00] text-[#0D0D0D]',
+        badgeActive: 'bg-[var(--brand-plum)] text-[var(--cream)]',
         stepBg: 'bg-[#161616] border border-[#2A2A2A]',
         sectionLabel: 'text-[#777777] flex items-center gap-2',
         ingredientRow: 'border-dashed border-[#333333]',
-        scaledHighlight: 'text-[#DFFF00] font-bold drop-shadow-[0_0_8px_rgba(223,255,0,0.25)]',
+        scaledHighlight: 'text-[var(--on-plum-2)] font-bold',
         sweetScaledHighlight: 'text-[#FF9F00] font-bold drop-shadow-[0_0_8px_rgba(255,159,0,0.25)]',
         glassPill: 'text-[#888888] hover:text-[var(--color-paper)]',
-        glassPillActive: 'bg-[#DFFF00] text-[#0D0D0D] font-bold shadow-[0_0_12px_rgba(223,255,0,0.3)] rounded-md',
+        glassPillActive: 'bg-[var(--brand-plum)] text-[var(--cream)] font-bold rounded-md',
         sweetPillActive: 'bg-[#FF9F00] text-[#0D0D0D] font-bold shadow-[0_0_12px_rgba(255,159,0,0.3)] rounded-md',
     } : {
         // Staff screens: achromatic ledger. Ink and grey only; clay marks what the sweetness setting changed.
@@ -166,7 +166,7 @@ export default function SOPRecipeCard({
             {/* Profile Description */}
             {expanded && recipe?.advanced_details?.profile && (
                 <div className="px-5 pb-3 animate-fade-in">
-                    <div className={`text-sm border-l-2 pl-3 py-1 ${darkMode ? 'italic border-[#DFFF00] text-[var(--color-neutral)]' : 'border-[oklch(82%_0.012_348.33)] text-[var(--color-muted)]'}`}>
+                    <div className={`text-sm border-l-2 pl-3 py-1 ${darkMode ? 'italic border-[var(--on-plum-2)] text-[var(--color-neutral)]' : 'border-[oklch(82%_0.012_348.33)] text-[var(--color-muted)]'}`}>
                         {recipe.advanced_details.profile}
                     </div>
                 </div>
@@ -180,7 +180,7 @@ export default function SOPRecipeCard({
                         {(isCustomMode ? customPresets.length > 0 : glassSizes.length > 0) && (
                             <div>
                                 <div className={`text-xs font-bold mb-3 ${t.sectionLabel}`}>
-                                    {darkMode && <span className="w-1.5 h-1.5 rounded-full bg-[#DFFF00] opacity-50"></span>}
+                                    {darkMode && <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-plum)] opacity-50"></span>}
                                     {isCustomMode ? 'ขนาด' : 'ขนาดแก้ว'}
                                 </div>
                                 <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-[oklch(96%_0.005_110)] border border-[var(--color-paper-3)]'}`}>
@@ -409,7 +409,7 @@ export default function SOPRecipeCard({
                                             {/* Glowing Node */}
                                             <div className={`absolute -left-[35px] top-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold z-10 ${
                                                 darkMode 
-                                                ? 'bg-[#1A1A1A] border-2 border-[#DFFF00] text-[#DFFF00] shadow-[0_0_10px_rgba(223,255,0,0.3)]'
+                                                ? 'bg-[#1A1A1A] border-2 border-[var(--on-plum-2)] text-[var(--on-plum-2)]'
                                                 : 'bg-[var(--color-plum)] text-[var(--color-cream)] font-mono tabular-nums'
                                             }`}>
                                                 {i + 1}
@@ -434,7 +434,7 @@ export default function SOPRecipeCard({
                                                             const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
                                                             if (refs.length === 0) return null;
                                                             return (
-                                                                <div className={`mt-2 font-bold flex flex-wrap gap-x-2 gap-y-1 items-center p-2 rounded-lg border ${darkMode ? 'bg-[#DFFF00]/5 border-[#DFFF00]/10' : 'bg-[var(--color-paper)] border-[var(--color-paper-3)]'}`}>
+                                                                <div className={`mt-2 font-bold flex flex-wrap gap-x-2 gap-y-1 items-center p-2 rounded-lg border ${darkMode ? 'bg-[var(--brand-plum)]/40 border-[var(--brand-plum-3)]' : 'bg-[var(--color-paper)] border-[var(--color-paper-3)]'}`}>
                                                                     {refs.map((ref, idx) => {
                                                                         const linkedIng = scaledIngredients.find(ing => ing.name === ref);
                                                                         if (!linkedIng) return null;
@@ -457,8 +457,8 @@ export default function SOPRecipeCard({
                                                     </div>
                                                 )}
                                                 {step.key_points && (
-                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-[var(--color-paper-2)] border-[var(--color-plum)]'}`}>
-                                                        <div className={`text-xs tabular-nums font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-[var(--color-plum)]'}`}>
+                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[var(--brand-plum-3)]' : 'bg-[var(--color-paper-2)] border-[var(--color-plum)]'}`}>
+                                                        <div className={`text-xs tabular-nums font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-[var(--on-plum-2)]' : 'text-[var(--color-plum)]'}`}>
                                                             จุดสำคัญ
                                                         </div>
                                                         <p className={`text-[13px] ${darkMode ? 'text-[var(--color-neutral)]' : 'text-[var(--color-ink)]'}`}>{step.key_points}</p>
@@ -515,7 +515,7 @@ export default function SOPRecipeCard({
                                             <div key={i} className={`border p-3 rounded-xl text-sm ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[oklch(96%_0.005_110)] border-[var(--color-paper-3)]'}`}>
                                                 <div className={`font-bold tabular-nums text-xs mb-1 flex items-center gap-1 ${darkMode ? 'text-red-400' : 'text-[oklch(21%_0.008_110)]'}`}>ปัญหา: {tb.problem}</div>
                                                 <div className={`mb-2 text-xs tabular-nums ${darkMode ? 'text-[#888]' : 'text-[var(--color-muted)]'}`}>สาเหตุ: {tb.cause}</div>
-                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 tabular-nums ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-[var(--color-paper)] border border-[var(--color-paper-3)] text-[var(--color-ink)] font-medium'}`}>
+                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 tabular-nums ${darkMode ? 'bg-[#1A1A1A] text-[var(--on-plum-2)]' : 'bg-[var(--color-paper)] border border-[var(--color-paper-3)] text-[var(--color-ink)] font-medium'}`}>
                                                     วิธีแก้: {tb.solution}
                                                 </div>
                                             </div>

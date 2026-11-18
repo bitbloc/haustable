@@ -18,7 +18,7 @@ export default function ViewSlipModal({ url, onClose }) {
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#111]">
                     <h3 className="text-white font-bold flex items-center gap-2">
-                        <ImageIcon size={18} className="text-[#DFFF00]" />
+                        <ImageIcon size={18} className="text-[var(--on-plum-2)]" />
                         Payment Slip Evidence
                     </h3>
                     <div className="flex items-center gap-2">

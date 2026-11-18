@@ -300,7 +300,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 {/* View: Check Email */}
                 {view === 'check-email' && (
                     <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-in-up">
-                        <div className="w-20 h-20 bg-[#DFFF00]/20 text-[#DFFF00] rounded-full flex items-center justify-center mb-6">
+                        <div className="w-20 h-20 bg-[var(--brand-plum-2)] text-[var(--cream)] rounded-full flex items-center justify-center mb-6">
                             <Mail size={40} />
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
@@ -308,7 +308,7 @@ export default function AuthModal({ isOpen, onClose }) {
                             We've sent a confirmation link to <span className="text-white">{email}</span>.<br/>
                             Please verify your account to login.
                         </p>
-                        <button onClick={() => setView('login')} className="mt-6 text-[#DFFF00] text-sm hover:underline">
+                        <button onClick={() => setView('login')} className="mt-6 text-[var(--on-plum-2)] text-sm hover:underline">
                             Back to Login
                         </button>
                     </div>
@@ -317,7 +317,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 {/* View: Success */}
                 {view === 'success' && (
                     <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-in-up">
-                        <div className="w-20 h-20 bg-[#DFFF00]/20 text-[#DFFF00] rounded-full flex items-center justify-center mb-6">
+                        <div className="w-20 h-20 bg-[var(--brand-plum-2)] text-[var(--cream)] rounded-full flex items-center justify-center mb-6">
                             <Check size={40} />
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">{t('accountReady') || "Registration Complete!"}</h2>
@@ -361,25 +361,25 @@ export default function AuthModal({ isOpen, onClose }) {
                         </div>
 
                         <form onSubmit={handleEmailLogin} className="space-y-4">
-                            <input type="text" placeholder="Phone Number or Email (เบอร์โทร หรือ อีเมล)" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none font-sans" required />
+                            <input type="text" placeholder="Phone Number or Email (เบอร์โทร หรือ อีเมล)" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none font-sans" required />
                             <div className="relative">
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="Password"
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
-                                    className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none"
+                                    className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none"
                                     required
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
-                            <button disabled={loading} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:opacity-90">{loading ? '...' : 'Login'}</button>
+                            <button disabled={loading} className="w-full bg-[var(--brand-plum)] text-[var(--cream)] font-bold py-3 rounded-xl hover:opacity-90">{loading ? '...' : 'Login'}</button>
                         </form>
 
                         <div className="mt-6 text-center">
-                            <button onClick={() => setView('register')} className="text-gray-400 text-sm hover:text-white">New here? <span className="text-[#DFFF00] font-bold">Create Account</span></button>
+                            <button onClick={() => setView('register')} className="text-gray-400 text-sm hover:text-white">New here? <span className="text-[var(--on-plum-2)] font-bold">Create Account</span></button>
                         </div>
                     </div>
                 )}
@@ -400,7 +400,7 @@ export default function AuthModal({ isOpen, onClose }) {
                             </div>
                             {/* Progress Bar */}
                             <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-                                <motion.div className="h-full bg-[#DFFF00]" initial={{ width: 0 }} animate={{ width: `${(step / 4) * 100}%` }} />
+                                <motion.div className="h-full bg-[var(--on-plum-2)]" initial={{ width: 0 }} animate={{ width: `${(step / 4) * 100}%` }} />
                             </div>
                         </div>
 
@@ -413,7 +413,7 @@ export default function AuthModal({ isOpen, onClose }) {
                                     <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                                         <div className="relative">
                                             <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" />
+                                            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[var(--on-plum-2)] outline-none" />
                                         </div>
                                         <div className="relative">
                                             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -422,7 +422,7 @@ export default function AuthModal({ isOpen, onClose }) {
                                                 placeholder="Password"
                                                 value={password}
                                                 onChange={e => setPassword(e.target.value)}
-                                                className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 pr-10 text-white focus:border-[#DFFF00] outline-none"
+                                                className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 pr-10 text-white focus:border-[var(--on-plum-2)] outline-none"
                                             />
                                             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -435,11 +435,11 @@ export default function AuthModal({ isOpen, onClose }) {
                                                 placeholder="Confirm Password"
                                                 value={confirmPassword}
                                                 onChange={e => setConfirmPassword(e.target.value)}
-                                                className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 pr-10 text-white focus:border-[#DFFF00] outline-none"
+                                                className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 pr-10 text-white focus:border-[var(--on-plum-2)] outline-none"
                                             />
                                         </div>
                                         <div className="bg-[#222] p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3">
-                                            <span className="text-xs text-gray-400">Type the word: <span className="text-[#DFFF00] font-bold text-sm tracking-wider">{botChallenge.word}</span></span>
+                                            <span className="text-xs text-gray-400">Type the word: <span className="text-[var(--on-plum-2)] font-bold text-sm tracking-wider">{botChallenge.word}</span></span>
                                             <input type="text" value={botInput} onChange={e => setBotInput(e.target.value)} placeholder={botChallenge.word} className="w-24 bg-[#111] border border-white/10 rounded p-1 text-center text-white uppercase" />
                                         </div>
                                     </motion.div>
@@ -451,8 +451,8 @@ export default function AuthModal({ isOpen, onClose }) {
                                         <div>
                                             <label className="text-xs text-gray-500 mb-1 block">Full Name & Nickname</label>
                                             <div className="flex gap-2">
-                                                <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="flex-1 bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" />
-                                                <input type="text" placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} className="w-1/3 bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" />
+                                                <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="flex-1 bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none" />
+                                                <input type="text" placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} className="w-1/3 bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none" />
                                             </div>
                                         </div>
 
@@ -474,7 +474,7 @@ export default function AuthModal({ isOpen, onClose }) {
                                             <label className="text-xs text-gray-500 mb-1 block">Gender</label>
                                             <div className="flex bg-[#111] rounded-xl p-1 border border-white/5">
                                                 {['Male', 'Female', 'Not Specified'].map(g => (
-                                                    <button key={g} onClick={() => setGender(g)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${gender === g ? 'bg-[#DFFF00] text-black shadow' : 'text-gray-400 hover:text-white'}`}>
+                                                    <button key={g} onClick={() => setGender(g)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${gender === g ? 'bg-[var(--brand-plum)] text-[var(--cream)] shadow' : 'text-gray-400 hover:text-white'}`}>
                                                         {g === 'Not Specified' ? 'Other' : g}
                                                     </button>
                                                 ))}
@@ -488,11 +488,11 @@ export default function AuthModal({ isOpen, onClose }) {
                                     <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                                         <div className="relative">
                                             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="tel" placeholder="Mobile Number (08xxxxxxxx)" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" required />
+                                            <input type="tel" placeholder="Mobile Number (08xxxxxxxx)" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[var(--on-plum-2)] outline-none" required />
                                         </div>
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">LINE</div>
-                                            <input type="text" placeholder="Line ID (Optional)" value={lineUid} onChange={e => setLineUid(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-14 text-white focus:border-[#DFFF00] outline-none" />
+                                            <input type="text" placeholder="Line ID (Optional)" value={lineUid} onChange={e => setLineUid(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-14 text-white focus:border-[var(--on-plum-2)] outline-none" />
                                         </div>
                                     </motion.div>
                                 )}
@@ -501,12 +501,12 @@ export default function AuthModal({ isOpen, onClose }) {
                                 {step === 4 && (
                                     <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                                         <div className="bg-[#222] p-4 rounded-xl border border-white/5 space-y-3">
-                                            <h3 className="text-white font-bold flex items-center gap-2"><ShieldCheck size={18} className="text-[#DFFF00]" /> Privacy & Terms</h3>
+                                            <h3 className="text-white font-bold flex items-center gap-2"><ShieldCheck size={18} className="text-[var(--on-plum-2)]" /> Privacy & Terms</h3>
                                             <p className="text-xs text-gray-400 leading-relaxed max-h-32 overflow-y-auto">
                                                 We value your privacy. Your data (Name, Phone, Birthday) will be used solely for reservation management and loyalty benefits...
                                             </p>
                                             <label className="flex items-start gap-3 pt-2 cursor-pointer">
-                                                <input type="checkbox" checked={pdpaConsent} onChange={e => setPdpaConsent(e.target.checked)} className="mt-1 accent-[#DFFF00] w-4 h-4" />
+                                                <input type="checkbox" checked={pdpaConsent} onChange={e => setPdpaConsent(e.target.checked)} className="mt-1 accent-[var(--brand-plum)] w-4 h-4" />
                                                 <span className="text-xs text-white">I agree to the PDPA (Privacy Policy) and Terms of Service.</span>
                                             </label>
                                         </div>
@@ -522,7 +522,7 @@ export default function AuthModal({ isOpen, onClose }) {
                                     Next <ArrowRight size={16} />
                                 </button>
                             ) : (
-                                <button onClick={handleFinalRegister} disabled={!pdpaConsent || loading} className="bg-[#DFFF00] text-black px-8 py-2 rounded-full font-bold shadow-[0_0_15px_rgba(223,255,0,0.3)] hover:shadow-[0_0_25px_rgba(223,255,0,0.5)] disabled:opacity-50 disabled:shadow-none transition-all">
+                                <button onClick={handleFinalRegister} disabled={!pdpaConsent || loading} className="bg-[var(--brand-plum)] text-[var(--cream)] px-8 py-2 rounded-full font-bold hover:bg-[var(--brand-plum-2)] disabled:opacity-50 transition-all">
                                     {loading ? 'Creating...' : 'Confirm Registration'}
                                 </button>
                             )}
@@ -547,17 +547,17 @@ export default function AuthModal({ isOpen, onClose }) {
                              <div className="flex gap-2">
                                  <div className="flex-1">
                                     <label className="text-xs text-gray-500 mb-1 block">Full Name</label>
-                                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" />
+                                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none" />
                                  </div>
                                  <div className="w-1/3">
                                     <label className="text-xs text-gray-500 mb-1 block">Nickname</label>
-                                    <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" placeholder="ชื่อเล่น" />
+                                    <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none" placeholder="ชื่อเล่น" />
                                  </div>
                              </div>
                              
                              <div>
                                  <label className="text-xs text-gray-500 mb-1 block">Mobile Number (Required)</label>
-                                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" placeholder="0xx-xxx-xxxx" required />
+                                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[var(--on-plum-2)] outline-none" placeholder="0xx-xxx-xxxx" required />
                              </div>
 
                              <div className="flex gap-2">
@@ -587,13 +587,13 @@ export default function AuthModal({ isOpen, onClose }) {
                             
                             <div className="bg-[#222] p-4 rounded-xl border border-white/5">
                                 <label className="flex items-start gap-3 cursor-pointer">
-                                    <input type="checkbox" checked={pdpaConsent} onChange={e => setPdpaConsent(e.target.checked)} className="mt-1 accent-[#DFFF00] w-4 h-4" />
+                                    <input type="checkbox" checked={pdpaConsent} onChange={e => setPdpaConsent(e.target.checked)} className="mt-1 accent-[var(--brand-plum)] w-4 h-4" />
                                     <span className="text-xs text-white">I agree to the PDPA (Privacy Policy).</span>
                                 </label>
                             </div>
                         </div>
 
-                        <button onClick={handleLineProfileCompletion} disabled={loading} className="w-full mt-6 bg-[#DFFF00] text-black font-bold py-3 rounded-xl shadow-lg hover:brightness-110 disabled:opacity-50">
+                        <button onClick={handleLineProfileCompletion} disabled={loading} className="w-full mt-6 bg-[var(--brand-plum)] text-[var(--cream)] font-bold py-3 rounded-xl shadow-lg hover:brightness-110 disabled:opacity-50">
                             {loading ? 'Saving...' : 'Complete Registration'}
                         </button>
 

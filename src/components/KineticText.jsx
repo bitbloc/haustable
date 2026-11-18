@@ -189,7 +189,7 @@ const KineticText = ({
 
             {/* Decorative Line that also animates? */}
             <motion.div
-                className={`h-[2px] w-full mt-2 origin-left ${highlight ? 'bg-[#DFFF00]' : 'bg-current'}`}
+                className={`h-[2px] w-full mt-2 origin-left ${highlight ? 'bg-[var(--brand-plum)]' : 'bg-current'}`}
                 variants={{
                     hidden: { scaleX: 0 },
                     visible: { scaleX: 1, transition: { duration: 1, delay: 0.5, ease: "easeOut" } }

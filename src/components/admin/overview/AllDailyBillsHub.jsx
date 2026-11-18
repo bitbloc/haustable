@@ -631,8 +631,8 @@ export default function AllDailyBillsHub({
                             )
                             return (
                                 <div key={idx} className="space-y-0.5">
-                                    <div className="flex items-center justify-between text-xs gap-2">
-                                        <span className="truncate text-[var(--color-ink)]">
+                                    <div className="flex items-start justify-between text-xs gap-2">
+                                        <span className="min-w-0 flex-1 break-words leading-normal text-[var(--color-ink)]">
                                             <strong className="text-[var(--brand-plum)] font-bold mr-1 tabular-nums">{qty}x</strong>
                                             {mName}
                                         </span>
@@ -643,7 +643,7 @@ export default function AllDailyBillsHub({
                                     {optList.length > 0 && (
                                         <div className="text-xs tabular-nums text-[var(--brand-plum)] font-semibold pl-4 space-y-0.5">
                                             {optList.map((opt, oIdx) => (
-                                                <span key={oIdx} className="block leading-tight truncate">
+                                                <span key={oIdx} className="block leading-normal break-words">
                                                     + {opt}
                                                 </span>
                                             ))}

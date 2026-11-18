@@ -24,8 +24,8 @@
   --sd-focus:       oklch(24% 0.006 125);
   --sd-live:        oklch(62% 0.17 130);
 
-  --sr-lime:        oklch(89% 0.2 122);
-  --sr-lime-press:  oklch(84% 0.2 122);
+  --sr-lime:        var(--brand-plum);  /* name kept; brand v2 plum (lime retired) */
+  --sr-lime-press:  var(--brand-plum-2);
   --sr-warn-bg:     oklch(95% 0.03 348.33);
   --sr-warn-ink:    var(--brand-plum);
 
@@ -39,7 +39,7 @@
   --color-accent:  var(--sd-ink);
 }
 
-.staff-remote ::selection { background: var(--sr-lime); color: var(--sd-ink); }
+.staff-remote ::selection { background: var(--sr-lime); color: var(--cream); }
 .staff-remote .font-mono { font-family: var(--sd-font); font-variant-numeric: tabular-nums; }
 
 /* The first tab keeps to the column edge here: its active state is a filled chip, which must not hang into the margin */
@@ -74,7 +74,7 @@
 .sr-btn--block { width: 100%; }
 .sr-btn--ghost { background: var(--sd-card); color: var(--sd-ink); border-color: var(--sd-control); font-weight: 500; }
 .sr-btn--ghost:hover { border-color: var(--sd-ink); }
-.sr-btn--send { background: var(--sr-lime); border-color: var(--sr-lime); color: var(--sd-ink); justify-content: space-between; }
+.sr-btn--send { background: var(--sr-lime); border-color: var(--sr-lime); color: var(--cream); justify-content: space-between; }
 .sr-btn--send:hover { background: var(--sr-lime-press); border-color: var(--sr-lime-press); }
 
 /* ── Bill: the figures as one divided strip, then the lines ── */
@@ -114,7 +114,7 @@
   white-space: nowrap;
 }
 .sr-chip.is-warn { background: var(--sr-warn-bg); color: var(--sr-warn-ink); }
-.sr-chip.is-cart { background: var(--sr-lime); color: var(--sd-ink); font-variant-numeric: tabular-nums; }
+.sr-chip.is-cart { background: var(--sr-lime); color: var(--cream); font-variant-numeric: tabular-nums; }
 
 .sr-notice {
   padding: 12px 16px;

@@ -7,7 +7,7 @@ export default function UserProfileBadge({ session, userRole, handleLogout, setS
             <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md pl-4 pr-2 py-2 rounded-full shadow-sm border border-white/20 text-white">
                 <span className="text-xs font-bold truncate max-w-[100px] text-white/90">{session.user.user_metadata.full_name || 'User'}</span>
                 {userRole === 'admin' ? (
-                    <Link to="/admin" className="bg-[#DFFF00] text-black px-3 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform shadow-lg">
+                    <Link to="/admin" className="bg-[var(--brand-plum)] text-[var(--cream)] px-3 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform shadow-lg">
                         Admin
                     </Link>
                 ) : (

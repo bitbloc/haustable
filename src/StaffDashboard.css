@@ -1,7 +1,7 @@
 /* Hallmark · staff home and staff tables shell · app style: achromatic ledger
  * (tasteskill app sheet, seed 1519771181 — the same sheet as the Stock page, so the staff screens read as one product)
- * Palette: lime, white, charcoal (the HAUS staff colours; owner's choice over the clay ledger, which read too flat).
- * Charcoal carries the top bar and the board of figures; lime marks only what needs doing or is selected.
+ * Palette: plum, white, charcoal (brand v2; lime retired 2026-11-17). Staff colours were lime until the brand v2 cleanup.
+ * Charcoal carries the top bar and the board of figures; plum marks only what needs doing or is selected.
  * IBM Plex Sans Thai throughout.
  *
  * Type scale 12 / 14 / 16 / 24 (20 for the title on phones). Thai keeps line-height 1.6 so marks
@@ -14,7 +14,7 @@
  */
 
 .staff-dash {
-  /* Lime, white, charcoal (owner's choice, 2026-11-16). Greys are tinted toward the lime hue, never pure. */
+  /* Plum, white, charcoal (brand v2). Greys keep a faint warm tint, never pure. */
   --sd-paper:       oklch(97.5% 0.004 110);  /* ground */
   --sd-card:        oklch(99.6% 0.002 110);  /* white surface */
   --sd-paper-2:     oklch(94% 0.006 110);
@@ -25,7 +25,8 @@
   --sd-border:      oklch(86% 0.006 110);
   --sd-rule:        oklch(92% 0.005 110);
   --sd-control:     oklch(78% 0.008 110);
-  --sd-accent:      oklch(93% 0.22 118);     /* lime: a fill under charcoal text, or text on charcoal */
+  --sd-accent:      var(--brand-plum);       /* brand v2: plum fill under cream text (lime retired 2026-11-17) */
+  --sd-on-accent:   var(--cream);
   --sd-on-ink:      oklch(98% 0.004 110);
   --sd-on-ink-2:    oklch(80% 0.006 110);    /* secondary text on charcoal, 8:1 */
   --sd-on-ink-rule: oklch(34% 0.008 110);
@@ -52,7 +53,7 @@
   overflow-x: clip;
 }
 
-.staff-dash ::selection { background: var(--sd-accent); color: var(--sd-ink); }
+.staff-dash ::selection { background: var(--sd-accent); color: var(--sd-on-accent); }
 /* Tailwind's preflight already resets buttons, links, headings and lists. Nothing generic here:
    unlayered rules would beat the utility classes used inside shared components (recipe card, table manager). */
 .staff-dash :where(button) { cursor: pointer; }
@@ -60,8 +61,8 @@
 
 .sd-wrap { width: 100%; max-width: 1200px; margin: 0 auto; padding-left: var(--sd-pad); padding-right: var(--sd-pad); }
 .sd-nowrap { white-space: nowrap; }
-/* The marker: lime under charcoal text. On the charcoal board the same class is lime text instead. */
-.sd-signal { padding: 0 4px; border-radius: 2px; background: var(--sd-accent); color: var(--sd-ink); font-weight: 600; }
+/* The marker: plum under cream text. On the charcoal board the same class is underlined cream text instead. */
+.sd-signal { padding: 0 4px; border-radius: 2px; background: var(--sd-accent); color: var(--sd-on-accent); font-weight: 600; }
 
 /* ── Controls ── */
 .sd-quiet {
@@ -100,11 +101,11 @@
 .sd-top__bar .sd-quiet { color: var(--sd-on-ink-2); }
 .sd-top__bar .sd-quiet:hover { background: var(--sd-ink-raised); color: var(--sd-on-ink); }
 .sd-top__bar .sd-quiet:disabled { color: var(--sd-on-ink-2); background: transparent; }
-.sd-top__bar :focus-visible { outline-color: var(--sd-accent); }
+.sd-top__bar :focus-visible { outline-color: var(--sd-on-ink); }
 .sd-top__row { display: flex; align-items: center; justify-content: space-between; gap: var(--sd-gap); height: 56px; }
 .sd-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .sd-brand__logo { height: 28px; width: auto; object-fit: contain; flex: none; }
-.sd-brand__scope { padding: 0 8px; border-radius: var(--sd-r-chip); background: var(--sd-accent); color: var(--sd-ink); font-size: 12px; font-weight: 600; line-height: 24px; }
+.sd-brand__scope { padding: 0 8px; border-radius: var(--sd-r-chip); background: var(--sd-accent); color: var(--sd-on-accent); font-size: 12px; font-weight: 600; line-height: 24px; }
 .sd-top__links { display: flex; align-items: center; gap: 4px; margin-right: -8px; min-width: 0; }
 .sd-top__user { padding: 0 8px; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -122,10 +123,10 @@
 
 .sd-fresh { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 12px; color: var(--sd-ink-3); white-space: nowrap; }
 .sd-fresh__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sd-control); flex: none; }
-.sd-fresh__dot.is-live { background: var(--sd-accent); box-shadow: 0 0 0 1px var(--sd-ink); }
+.sd-fresh__dot.is-live { background: var(--sd-accent); }
 .sd-fresh__time { font-variant-numeric: tabular-nums; }
 
-/* ── Stats: the charcoal board. Zeros recede, what needs doing is lime. ── */
+/* ── Stats: the charcoal board. Zeros recede, what needs doing is underlined cream. ── */
 .sd-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -149,7 +150,7 @@
 }
 .sd-stat:first-child { border-left: 0; }
 .sd-stat:is(button):hover { background: var(--sd-ink-raised); }
-.sd-stat:focus-visible { outline: 2px solid var(--sd-accent); outline-offset: -2px; }
+.sd-stat:focus-visible { outline: 2px solid var(--sd-on-ink); outline-offset: -2px; }
 .sd-stat__label { font-size: 12px; font-weight: 500; color: var(--sd-on-ink-2); }
 .sd-stat__n {
   margin-top: 4px;
@@ -161,9 +162,9 @@
   color: oklch(62% 0.008 110); /* a zero stays grey */
 }
 .sd-stat__n.is-hot { color: var(--sd-on-ink); }
-.sd-stat__n.is-signal { color: var(--sd-accent); }
+.sd-stat__n.is-signal { color: var(--sd-on-ink); }
 .sd-stat__sub { margin-top: auto; font-size: 12px; color: var(--sd-on-ink-2); }
-.sd-stats .sd-signal { padding: 0; background: transparent; color: var(--sd-accent); }
+.sd-stats .sd-signal { padding: 0; background: transparent; color: var(--sd-on-ink); text-decoration: underline; text-underline-offset: 3px; }
 .sd-stats .sd-bar { background: var(--sd-ink-raised); }
 
 /* ── Jobs: three equal cells ── */
@@ -182,7 +183,7 @@
   text-align: left;
   transition: background-color var(--sd-dur) var(--sd-ease), transform 80ms var(--sd-ease), box-shadow 80ms var(--sd-ease);
 }
-.sd-job:hover { background: var(--sd-accent); }
+.sd-job:hover { background: var(--sd-paper-2); }
 .sd-job:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--sd-ink); }
 .sd-job:hover .sd-job__desc { color: var(--sd-ink); }
 .sd-job__title { font-size: 16px; line-height: 1.5; font-weight: 600; }
@@ -218,7 +219,7 @@
   padding: 0 8px;
   border-radius: var(--sd-r-chip);
   background: var(--sd-accent);
-  color: var(--sd-ink);
+  color: var(--sd-on-accent);
   font-size: 12px;
   font-weight: 600;
   line-height: 22px;
