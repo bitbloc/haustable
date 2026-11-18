@@ -103,8 +103,8 @@ export default function SOPRecipeCard({
         textBright: 'text-[var(--color-ink)]',
         accent: 'text-[var(--color-ink)]',
         accentBg: 'bg-[var(--color-paper-2)] border border-[var(--color-paper-3)]',
-        sweetAccent: 'text-[oklch(21%_0.008_110)]',
-        sweetAccentBg: 'bg-[oklch(93%_0.22_118)]',
+        sweetAccent: 'text-[var(--color-plum)]',
+        sweetAccentBg: 'bg-[var(--color-paper-2)]',
         divider: 'border-[var(--color-paper-2)]',
         badge: 'text-[var(--color-muted)]',
         badgeActive: 'text-[var(--color-ink)]',
@@ -112,7 +112,7 @@ export default function SOPRecipeCard({
         sectionLabel: 'text-[var(--color-muted)] flex items-center gap-2 text-xs',
         ingredientRow: 'border-dotted border-[oklch(82%_0.012_348.33)]',
         scaledHighlight: 'text-[var(--color-ink)] font-semibold',
-        sweetScaledHighlight: 'bg-[oklch(93%_0.22_118)] text-[oklch(21%_0.008_110)] px-1 rounded-xs font-semibold',
+        sweetScaledHighlight: 'bg-[var(--color-paper-2)] text-[var(--color-plum)] px-1 rounded-xs font-semibold',
         glassPill: 'text-[var(--color-muted)] hover:text-[var(--color-ink)]',
         glassPillActive: 'bg-[var(--color-ink)] text-[var(--color-paper)] font-medium rounded-md',
         sweetPillActive: 'bg-[var(--color-ink)] text-[var(--color-paper)] font-medium rounded-md',
@@ -332,7 +332,7 @@ export default function SOPRecipeCard({
                                             <div className={`flex-1 mx-3 mb-1.5 border-b ${t.ingredientRow} group-hover:border-[#555] transition-colors`} />
                                             <span className={`text-sm tabular-nums font-bold ${
                                                 ing.isSweetScaled 
-                                                    ? (darkMode ? 'text-[var(--brand-plum)]' : 'bg-[oklch(93%_0.22_118)] text-[oklch(21%_0.008_110)] px-1 rounded-xs') 
+                                                    ? (darkMode ? 'text-[var(--brand-plum)]' : 'bg-[var(--color-paper-2)] text-[var(--color-plum)] px-1 rounded-xs') 
                                                     : ing.isScaled 
                                                         ? 'text-[var(--color-ink)]' 
                                                         : t.textBright
@@ -410,7 +410,7 @@ export default function SOPRecipeCard({
                                             <div className={`absolute -left-[35px] top-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold z-10 ${
                                                 darkMode 
                                                 ? 'bg-[#1A1A1A] border-2 border-[#DFFF00] text-[#DFFF00] shadow-[0_0_10px_rgba(223,255,0,0.3)]'
-                                                : 'bg-[oklch(93%_0.22_118)] border border-[oklch(21%_0.008_110)] text-[oklch(21%_0.008_110)] tabular-nums'
+                                                : 'bg-[var(--color-plum)] text-[var(--color-cream)] font-mono tabular-nums'
                                             }`}>
                                                 {i + 1}
                                             </div>
@@ -457,8 +457,8 @@ export default function SOPRecipeCard({
                                                     </div>
                                                 )}
                                                 {step.key_points && (
-                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-[oklch(93%_0.22_118)] border-[oklch(93%_0.22_118)]'}`}>
-                                                        <div className={`text-xs tabular-nums font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-[oklch(21%_0.008_110)]'}`}>
+                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-[var(--color-paper-2)] border-[var(--color-plum)]'}`}>
+                                                        <div className={`text-xs tabular-nums font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-[var(--color-plum)]'}`}>
                                                             จุดสำคัญ
                                                         </div>
                                                         <p className={`text-[13px] ${darkMode ? 'text-[var(--color-neutral)]' : 'text-[var(--color-ink)]'}`}>{step.key_points}</p>
