@@ -224,7 +224,7 @@ export default function ScanStrip({ onCode, onClose, status }) {
                     <div aria-hidden="true" className="pointer-events-none absolute"
                         style={{ left: `${AIM.x * 100}%`, top: `${AIM.y * 100}%`, width: `${AIM.width * 100}%`, height: `${AIM.height * 100}%` }}>
                         {['top-0 left-0 border-t-[3px] border-l-[3px]', 'top-0 right-0 border-t-[3px] border-r-[3px]', 'bottom-0 left-0 border-b-[3px] border-l-[3px]', 'bottom-0 right-0 border-b-[3px] border-r-[3px]'].map(corner => (
-                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed === 'one' ? 'border-[oklch(93%_0.22_118)]' : 'border-[var(--color-paper)]'}`} />
+                            <span key={corner} className={`absolute w-7 h-7 transition-colors duration-100 ${corner} ${aimed === 'one' ? 'border-[var(--brand-plum)]' : 'border-[var(--color-paper)]'}`} />
                         ))}
                         {aimed === 'many' && (
                             <span className="absolute inset-x-0 top-2 mx-auto w-max max-w-[90%] rounded px-2 py-1 bg-[var(--color-ink)] text-[13px] leading-5 text-[var(--color-paper)] text-center">

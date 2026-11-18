@@ -1105,7 +1105,7 @@ const decodeHTMLEntities = (text) => {
                             </thead>
                             <tbody className="divide-y divide-[var(--color-paper-3)]">
                                 {checkins.map(item => (
-                                    <tr key={item.id} className={`hover:bg-neutral-50/50 transition-colors ${selectedForCollage.includes(item.id) ? 'bg-[#E9F344]/10' : ''}`}>
+                                    <tr key={item.id} className={`hover:bg-neutral-50/50 transition-colors ${selectedForCollage.includes(item.id) ? 'bg-[var(--paper-3)]' : ''}`}>
                                         <td className="p-4 text-center">
                                             {item.image_url !== 'text_only' && (
                                                 <input 
@@ -1206,7 +1206,7 @@ const decodeHTMLEntities = (text) => {
             {selectedForCollage.length > 0 && (
                 <div className="fixed top-28 left-1/2 -translate-x-1/2 bg-[#23201D] text-[var(--color-paper)] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-top-10 fade-in border border-gray-700">
                     <div className="flex flex-col">
-                        <span className="tabular-nums text-xs font-bold text-[#E9F344]  ">Collage Generator</span>
+                        <span className="tabular-nums text-xs font-bold text-[var(--on-plum-2)]  ">Collage Generator</span>
                         <span className="text-sm font-bold">{selectedForCollage.length} Photos Selected (Max 6)</span>
                     </div>
                     <div className="flex gap-2">
@@ -1218,7 +1218,7 @@ const decodeHTMLEntities = (text) => {
                         </button>
                         <button 
                             onClick={() => setShowExporter(true)}
-                            className="px-4 py-2 text-xs font-bold bg-[#E9F344] text-[#23201D] hover:bg-[#d8e330] rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                            className="px-4 py-2 text-xs font-bold bg-[var(--brand-plum)] text-[var(--cream)] hover:bg-[var(--brand-plum-2)] rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                         >
                             <LayoutTemplate size={14} /> Generate Collage
                         </button>

@@ -339,7 +339,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                             }}
                         >
                             {/* HEADER (h: 120px) */}
-                            <div className="h-[120px] border-b-[4px] border-[#23201D] flex w-full bg-[#E9F344] shrink-0">
+                            <div className="h-[120px] border-b-[4px] border-[#23201D] flex w-full bg-[var(--brand-plum)] shrink-0">
                                 <div className="w-[300px] border-r-[4px] border-[#23201D] flex items-center justify-center bg-white relative z-20">
                                     <div 
                                         className="cursor-move group relative block" 
@@ -376,7 +376,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                 <span contentEditable suppressContentEditableWarning className="font-mono text-sm font-bold tracking-widest uppercase outline-none focus:border-b border-gray-400">
                                     © {new Date().getFullYear()} IN THE HAUS, NAKHON PHANOM
                                 </span>
-                                <span contentEditable suppressContentEditableWarning className="font-mono text-sm font-bold tracking-widest uppercase text-[#E9F344] outline-none focus:border-b border-gray-400">
+                                <span contentEditable suppressContentEditableWarning className="font-mono text-sm font-bold tracking-widest uppercase text-[var(--on-plum-2)] outline-none focus:border-b border-gray-400">
                                     @INTHEHAUS
                                 </span>
                             </div>

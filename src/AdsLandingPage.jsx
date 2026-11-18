@@ -470,7 +470,7 @@ export default function AdsLandingPage() {
                 {/* ─── HEADER: IDENTITY & METADATA (TABULAR) ─── */}
                 <header className="flex flex-col border-b border-[var(--color-hallmark-rule)] animate-fade-in select-none">
                     {/* Top Marquee Bar (High Contrast) */}
-                    <div className="w-full bg-[#E9F344] text-[var(--color-hallmark-ink)] border-b border-[var(--color-hallmark-rule)] py-1.5 px-3 flex items-center justify-center overflow-hidden">
+                    <div className="w-full bg-[var(--brand-plum)] text-[var(--cream)] border-b border-[var(--color-hallmark-rule)] py-1.5 px-3 flex items-center justify-center overflow-hidden">
                         <span className="font-mono text-[9px] font-black uppercase tracking-widest truncate">
                             // {marquee} //
                         </span>
@@ -911,7 +911,7 @@ export default function AdsLandingPage() {
                                 href={getPreservedQueryUrl('/pickup')}
                                 onClick={handlePickupClick}
                                 title={lt('linkPickup')} 
-                                bg="bg-[#E9F344] text-[var(--color-hallmark-ink)] hover:bg-[#d8e235] font-black" 
+                                bg="bg-[var(--brand-plum)] text-[var(--cream)] hover:bg-[var(--brand-plum-2)] font-black" 
                                 wide 
                                 internal
                                 id="cta-connect-pickup"

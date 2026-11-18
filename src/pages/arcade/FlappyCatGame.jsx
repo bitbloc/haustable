@@ -194,7 +194,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
             <button
               onClick={handleBack}
               onTouchStart={handleBack}
-              className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5 transition-colors"
+              className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#FAF7F2] hover:bg-[var(--paper-3)] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5 transition-colors"
             >
               <span className="whitespace-nowrap">← กลับ</span>
             </button>
@@ -203,7 +203,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
             <button
               onClick={handleToggleSound}
               onTouchStart={handleToggleSound}
-              className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#E9F344] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider whitespace-nowrap"
+              className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[var(--on-plum-2)] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider whitespace-nowrap"
             >
               {soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'}
             </button>
@@ -212,7 +212,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
               onTouchStart={handleFullscreenToggle}
               className={`px-3 py-1.5 rounded-xl border-2 shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)] ${
                 isNativeFullscreen
-                  ? 'bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] border-[#181615]'
+                  ? 'bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] border-[#181615]'
                   : 'bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] border-[#5C544D]'
               }`}
               title="สลับโหมดเต็มจอระดับเบราว์เซอร์ (Native Fullscreen)"
@@ -226,14 +226,14 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
           <button
             onClick={handleToggleSound}
             onTouchStart={handleToggleSound}
-            className="px-2.5 py-1 bg-[#181615]/95 hover:bg-[#24201E] text-[#E9F344] rounded border border-[#3D3835] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide"
+            className="px-2.5 py-1 bg-[#181615]/95 hover:bg-[#24201E] text-[var(--on-plum-2)] rounded border border-[#3D3835] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide"
           >
             {soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'}
           </button>
           <button
             onClick={handleFullscreenToggle}
             onTouchStart={handleFullscreenToggle}
-            className="px-2.5 py-1 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded border border-[#181615] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+            className="px-2.5 py-1 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] rounded border border-[#181615] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
           >
             เต็มจอ
           </button>

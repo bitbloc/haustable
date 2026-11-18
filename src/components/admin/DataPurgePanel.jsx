@@ -318,7 +318,7 @@ export default function DataPurgePanel() {
             {/* Master All-In-One Purge CTA */}
             <div className="bg-[#1A1A1A] text-[var(--color-paper)] p-6 rounded-2xl border border-[var(--color-ink)] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5">
                 <div className="space-y-1 max-w-2xl">
-                    <div className="inline-flex items-center gap-1.5 bg-[#E9F344] text-[#1A1A1A] px-2.5 py-0.5 rounded text-[11px] tabular-nums font-black  ">
+                    <div className="inline-flex items-center gap-1.5 bg-[var(--brand-plum)] text-[var(--cream)] px-2.5 py-0.5 rounded text-[11px] tabular-nums font-black  ">
                         ⚡ ALL-IN-ONE GO-LIVE RESET
                     </div>
                     <h3 className="text-base font-bold text-[var(--color-paper)] tracking-tight">

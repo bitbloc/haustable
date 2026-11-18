@@ -708,7 +708,7 @@ export default function ArcadeLobby() {
                   pixelSound.play('ui_click');
                   processClaimScore();
                 }}
-                className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-bold py-3.5 rounded-2xl cursor-pointer font-mono text-xs uppercase shadow-xs border-2 border-[#181615]"
+                className="w-full bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] font-bold py-3.5 rounded-2xl cursor-pointer font-mono text-xs uppercase shadow-xs border-2 border-[#181615]"
               >
                 [ บันทึกสถิติ & รับเหรียญ XHAUS ]
               </button>
@@ -717,14 +717,14 @@ export default function ArcadeLobby() {
 
           {claimStatus === 'checking_gps' && (
             <div className="py-8 flex flex-col items-center justify-center gap-3">
-              <div className="w-6 h-6 rounded-full border-2 border-[#181615] border-t-[#E9F344] animate-spin" />
+              <div className="w-6 h-6 rounded-full border-2 border-[#181615] border-t-[var(--brand-plum)] animate-spin" />
               <p className="text-[10px] text-[#181615] font-mono uppercase tracking-wider">[ VERIFYING GPS COORDINATES… ]</p>
             </div>
           )}
 
           {claimStatus === 'saving' && (
             <div className="py-8 flex flex-col items-center justify-center gap-3">
-              <div className="w-6 h-6 rounded-full border-2 border-[#181615] border-t-[#E9F344] animate-spin" />
+              <div className="w-6 h-6 rounded-full border-2 border-[#181615] border-t-[var(--brand-plum)] animate-spin" />
               <p className="text-[10px] text-[#181615] font-mono uppercase tracking-wider">[ COMMITTING DATA TO LEDGER… ]</p>
             </div>
           )}
@@ -955,7 +955,7 @@ export default function ArcadeLobby() {
         </div>
 
         <div className="flex items-center gap-2.5 self-end md:self-auto">
-          <div className="flex items-center gap-1.5 bg-[#E9F344] text-[#181615] border-2 border-[#181615] px-3.5 py-1.5 rounded-2xl font-mono font-bold text-xs shadow-xs">
+          <div className="flex items-center gap-1.5 bg-[var(--brand-plum)] text-[var(--cream)] border-2 border-[#181615] px-3.5 py-1.5 rounded-2xl font-mono font-bold text-xs shadow-xs">
             <span className="text-[9px] uppercase tracking-wider text-[#181615]/70">WALLET:</span>
             <span>{session ? parseFloat(profile?.xhaus_balance || 0).toFixed(2) : "0.00"} XH</span>
           </div>
@@ -972,7 +972,7 @@ export default function ArcadeLobby() {
               onClick={handleRequireLogin}
               className="flex items-center gap-2 px-3.5 py-1.5 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] text-[10px] font-mono font-bold uppercase tracking-wider rounded-2xl border-2 border-[#181615] shadow-xs transition-transform active:scale-95 cursor-pointer"
             >
-              <span className="w-2 h-2 rounded-full bg-[#E9F344]"></span>
+              <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)]"></span>
               <span>[ CONNECT LINE ]</span>
             </button>
           )}
@@ -1024,7 +1024,7 @@ export default function ArcadeLobby() {
                   pixelSound.play('ui_click');
                   setActiveMode('tai_pla');
                 }}
-                className="px-6 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-sans font-bold text-sm rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer whitespace-nowrap transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
+                className="px-6 py-3 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] font-sans font-bold text-sm rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer whitespace-nowrap transition-transform duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924]"
               >
                 เล่นเลย
               </button>
@@ -1070,14 +1070,14 @@ export default function ArcadeLobby() {
           <article className="arcade-card md:col-span-2 bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl overflow-hidden shadow-sm grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <div className="relative border-b-2 md:border-b-0 md:border-r-2 border-[#181615] bg-[#0B1026]">
               <ArcadePreview game="lofi" />
-              <span className={`absolute top-3 left-3 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg ${lofi.playing ? 'bg-[#E9F344] text-[#181615]' : 'bg-[#181615] text-[#FAF7F5]'}`}>
+              <span className={`absolute top-3 left-3 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg ${lofi.playing ? 'bg-[var(--brand-plum)] text-[var(--cream)]' : 'bg-[#181615] text-[#FAF7F5]'}`}>
                 {lofi.playing ? 'กำลังเล่น' : 'ห้องฟังเพลง'}
               </span>
               <div className="absolute bottom-3 left-3 flex items-end gap-1 h-8" aria-hidden="true">
-                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-5 animate-bounce' : 'h-2'}`} />
-                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-7 animate-bounce [animation-delay:0.15s]' : 'h-3'}`} />
-                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-4 animate-bounce [animation-delay:0.3s]' : 'h-2'}`} />
-                <span className={`w-1.5 bg-[#E9F344] ${lofi.playing ? 'h-6 animate-bounce [animation-delay:0.2s]' : 'h-3'}`} />
+                <span className={`w-1.5 bg-[var(--brand-plum)] ${lofi.playing ? 'h-5 animate-bounce' : 'h-2'}`} />
+                <span className={`w-1.5 bg-[var(--brand-plum)] ${lofi.playing ? 'h-7 animate-bounce [animation-delay:0.15s]' : 'h-3'}`} />
+                <span className={`w-1.5 bg-[var(--brand-plum)] ${lofi.playing ? 'h-4 animate-bounce [animation-delay:0.3s]' : 'h-2'}`} />
+                <span className={`w-1.5 bg-[var(--brand-plum)] ${lofi.playing ? 'h-6 animate-bounce [animation-delay:0.2s]' : 'h-3'}`} />
               </div>
             </div>
 
@@ -1101,7 +1101,7 @@ export default function ArcadeLobby() {
                   className={`flex-1 py-3.5 px-3 rounded-2xl border-2 border-[#181615] font-bold text-sm cursor-pointer transition-colors shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924] ${
                     lofi.playing
                       ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]'
-                      : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
+                      : 'bg-[var(--brand-plum)] text-[var(--cream)] hover:bg-[var(--brand-plum-2)]'
                   }`}
                 >
                   {lofi.playing ? 'พักเพลง' : 'เปิดเพลง'}
@@ -1169,7 +1169,7 @@ export default function ArcadeLobby() {
         <section className="w-full bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-7 shadow-sm flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-[#181615] pb-3 gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-plum)] border border-[#181615]" />
               <h3 className="font-pixel text-base sm:text-lg font-bold uppercase tracking-wider text-[#181615]">
                 MONTHLY TOP 10 // อันดับสูงสุดประจำเดือน (รีเซ็ตทุกวันที่ 1)
               </h3>
@@ -1208,7 +1208,7 @@ export default function ArcadeLobby() {
                       key={entry.id || `rank-${index}`}
                       className={`flex items-center justify-between py-2.5 px-3.5 rounded-xl border-2 transition-colors ${
                         index === 0 
-                          ? 'bg-[#E9F344]/35 border-[#181615] text-[#181615] font-bold shadow-2xs' 
+                          ? 'bg-[var(--paper-3)] border-[#181615] text-[#181615] font-bold shadow-2xs' 
                           : index === 1 || index === 2
                             ? 'bg-[#FAF7F2] border-[#181615] text-[#181615] font-semibold'
                             : 'bg-[#FAF7F2] border-[#181615]/30 hover:border-[#181615] text-[#181615]'
