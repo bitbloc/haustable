@@ -16,7 +16,8 @@ const UNIT_FACTORS = {
     // Volume (Base: ml)
     'l': 1000,
     'ml': 1,
-    'gallon': 3785.41,
+    // no 'gallon': a แกลลอน is a jug of any size in a Thai shop (3, 5, 6 litres), never 3,785.41 ml.
+    // The person types what the label says.
     'oz_fl': 29.5735,
     'cup': 240, // standard metric cup
     'tbsp': 15,

@@ -44,10 +44,15 @@ describe('early reservation check-in guard', () => {
         cache.bookings = [walkIn, reservation]
         const onBlocked = vi.fn()
         const confirm = vi.fn(() => true)
-        const ok = await guardReservationCheckIn(reservation, { tableName: 'H4', onBlocked, confirm })
-        expect(ok).toBe(false)
-        expect(onBlocked).toHaveBeenCalledWith(expect.stringContaining('โต๊ะ H4 มีลูกค้านั่งอยู่'))
-        expect(confirm).not.toHaveBeenCalled()
+        // The clock is the incident's: a session older than 16 hours no longer counts as seated,
+        // so on the real clock this test only passed on 2026-11-17 itself
+        vi.useFakeTimers(); vi.setSystemTime(at('11:04'))
+        try {
+            const ok = await guardReservationCheckIn(reservation, { tableName: 'H4', onBlocked, confirm })
+            expect(ok).toBe(false)
+            expect(onBlocked).toHaveBeenCalledWith(expect.stringContaining('โต๊ะ H4 มีลูกค้านั่งอยู่'))
+            expect(confirm).not.toHaveBeenCalled()
+        } finally { vi.useRealTimers() }
     })
 
     it('respects the cashier answer on the early-check-in question for a free table', async () => {

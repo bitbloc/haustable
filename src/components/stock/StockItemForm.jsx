@@ -587,7 +587,14 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     {activeTab === 'costing' && (
                         <>
                             {/* A bottle used by the millilitre needs its size. Once the converter says it, there is nothing to warn about. */}
-                            {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && !(Number(formData.conversion_factor) > 1) && (
+                            {/* A แกลลอน is a jug of any size: the converter is left empty for the person to read off the label. */}
+                            {formData.pack_unit === 'gallon' && formData.usage_unit !== 'gallon' && !(Number(formData.conversion_factor) > 1) ? (
+                                <div className="border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] px-3 py-2.5">
+                                    <p className={`text-sm ${ink} leading-relaxed`}>
+                                        แกลลอนมีหลายขนาด ใส่ตัวแปลงหน่วยตามฉลากของจริง เช่น 1 แกลลอน = 5,000 มล.
+                                    </p>
+                                </div>
+                            ) : !areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && !(Number(formData.conversion_factor) > 1) && (
                                 <div className="border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] px-3 py-2.5">
                                     <p className={`text-sm ${ink} leading-relaxed`}>
                                         หน่วยซื้อ ({unitLabel(formData.pack_unit)}) กับหน่วยใช้ ({unitLabel(formData.usage_unit)}) เป็นคนละประเภท ใส่ตัวแปลงหน่วยตามของจริง เช่น 1 ขวด = 750 มล.

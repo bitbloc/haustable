@@ -67,3 +67,19 @@ describe('planUsageUnitChange', () => {
         expect(planUsageUnitChange(rows, 'g', 'g')).toEqual({ updates: [], manual: 0 });
     });
 });
+
+describe('แกลลอน is a jug of any size', () => {
+    it('suggests no ratio between a gallon and ml, l or g', async () => {
+        const { suggestConversionFactor } = await import('../unitUtils');
+        expect(suggestConversionFactor('gallon', 'ml')).toBeNull();
+        expect(suggestConversionFactor('gallon', 'l')).toBeNull();
+        expect(suggestConversionFactor('ml', 'gallon')).toBeNull();
+        expect(suggestConversionFactor('gallon', 'gallon')).toBe(1);
+        expect(suggestConversionFactor('l', 'ml')).toBe(1000);
+    });
+    it('leaves a recipe row written in gallons for a person to fix', () => {
+        expect(unitFix(2, 'gallon', 'ml')).toEqual({ kind: 'manual' });
+        expect(unitFix(2, 'gallon', 'g')).toEqual({ kind: 'manual' });
+        expect(unitFix(500, 'ml', 'gallon')).toEqual({ kind: 'manual' });
+    });
+});
