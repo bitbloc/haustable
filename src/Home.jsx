@@ -120,7 +120,7 @@ export default function Home({ session }) {
                 />
 
                 {/* 1. Announcement Marquee (High Contrast Neo-Brutalist Top Banner) */}
-                <div className="fixed top-0 left-0 w-full z-[60] bg-[#E9F344] text-black border-b border-black/20 h-9 flex items-center overflow-hidden select-none shadow-md">
+                <div className="fixed top-0 left-0 w-full z-[60] bg-[var(--brand-plum)] text-[var(--cream)] border-b border-black/20 h-9 flex items-center overflow-hidden select-none shadow-md">
                     <div className="relative w-full flex items-center">
                         <motion.div
                             className="whitespace-nowrap flex gap-8 font-mono text-[10px] font-black uppercase tracking-wider text-black"
@@ -133,7 +133,7 @@ export default function Home({ session }) {
                         >
                             {Array.from({ length: 8 }).map((_, i) => (
                                 <div key={i} className="flex items-center gap-3">
-                                    <span className="bg-black text-[#E9F344] px-1.5 py-0.2 font-mono text-[9px] font-bold tracking-widest">
+                                    <span className="bg-black text-[var(--on-plum-2)] px-1.5 py-0.2 font-mono text-[9px] font-bold tracking-widest">
                                         // {announcementHeadline}
                                     </span>
                                     <span>{announcementText}</span>

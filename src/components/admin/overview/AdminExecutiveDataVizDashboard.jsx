@@ -445,10 +445,10 @@ export default function AdminExecutiveDataVizDashboard({
                                                     className="absolute z-20 pointer-events-none transition-transform duration-150 flex flex-col items-center"
                                                     style={{ bottom: `calc(${barHeight}% + 4px)` }}
                                                 >
-                                                    <span className="bg-[#E9F344] text-[var(--color-ink)] font-bold text-[11px] sm:text-[11px] px-1.5 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
+                                                    <span className="bg-[var(--brand-plum)] text-[var(--cream)] font-bold text-[11px] sm:text-[11px] px-1.5 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
                                                         {item.hour}:00 &middot; ฿{Math.round(item.revenue / 1000)}k
                                                     </span>
-                                                    <div className="w-1.5 h-1.5 bg-[#E9F344] rotate-45 -mt-0.5" />
+                                                    <div className="w-1.5 h-1.5 bg-[var(--brand-plum)] rotate-45 -mt-0.5" />
                                                 </div>
                                             )}
 
@@ -675,7 +675,7 @@ export default function AdminExecutiveDataVizDashboard({
                                         y1={splinePoints.peakPoint.y}
                                         x2={splinePoints.peakPoint.x}
                                         y2={splinePoints.height - 15}
-                                        stroke="#E9F344"
+                                        stroke="#41032A"
                                         strokeWidth="1.5"
                                         strokeDasharray="3 2"
                                     />
@@ -692,7 +692,7 @@ export default function AdminExecutiveDataVizDashboard({
                                         transform: 'translate(-50%, -130%)'
                                     }}
                                 >
-                                    <span className="bg-[#E9F344] text-[var(--color-ink)] font-bold text-[11px] px-2 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
+                                    <span className="bg-[var(--brand-plum)] text-[var(--cream)] font-bold text-[11px] px-2 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
                                         ฿{splinePoints.peakPoint.value.toLocaleString()}
                                     </span>
                                 </div>

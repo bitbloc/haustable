@@ -86,7 +86,7 @@ export default class GameOverScene extends Phaser.Scene {
       ease: 'Back.easeOut'
     });
 
-    const rankBadgeFill = currentRank === 'S+' ? '#E9F344' : (currentRank === 'S' ? '#FBBF24' : (currentRank === 'A' ? '#34D399' : '#A8A29E'));
+    const rankBadgeFill = currentRank === 'S+' ? '#D0B5C1' : (currentRank === 'S' ? '#FBBF24' : (currentRank === 'A' ? '#34D399' : '#A8A29E'));
     this.add.text(width / 2, topY + 96, `RANK ${currentRank}`, {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '12px',
@@ -113,7 +113,7 @@ export default class GameOverScene extends Phaser.Scene {
     const btnW = cardW - 40;
 
     // "เล่นอีกครั้ง" Button
-    const restartBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 44, 0xE9F344)
+    const restartBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 44, 0x41032A)
       .setOrigin(0.5)
       .setDepth(20)
       .setStrokeStyle(2, 0x181615)
@@ -122,7 +122,7 @@ export default class GameOverScene extends Phaser.Scene {
     const restartBtn = this.add.text(width / 2, currentBtnY, 'เล่นอีกครั้ง', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, sans-serif',
       fontSize: '15px',
-      fill: '#181615',
+      fill: '#F6F2EA',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
 

@@ -52,7 +52,7 @@ export default class MenuScene extends Phaser.Scene {
 
     // 4. Clean Start Button
     const startBtnW = 220;
-    const startCardBg = this.add.rectangle(width / 2, cy + 70, startBtnW, 50, 0xE9F344, 1)
+    const startCardBg = this.add.rectangle(width / 2, cy + 70, startBtnW, 50, 0x41032A, 1)
       .setOrigin(0.5)
       .setDepth(10)
       .setStrokeStyle(2, 0x181615)
@@ -61,7 +61,7 @@ export default class MenuScene extends Phaser.Scene {
     const startText = this.add.text(width / 2, cy + 70, 'เริ่มเล่น', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, sans-serif',
       fontSize: '18px',
-      fill: '#181615',
+      fill: '#F6F2EA',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(11);
 

@@ -1639,7 +1639,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               onClick={(e) => handleSelectCharacter(char.id, e)}
               className={`py-2 px-1 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
                 isSelected
-                  ? 'bg-[#E9F344] text-[#181615] border-[#181615] shadow-[2px_2px_0px_#181615] -translate-y-0.5'
+                  ? 'bg-[var(--brand-plum)] text-[var(--cream)] border-[#181615] shadow-[2px_2px_0px_#181615] -translate-y-0.5'
                   : dark
                     ? 'bg-[#252220] text-[#D9D2CB] border-[#3D3835] hover:border-[#FAF7F5]/50'
                     : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:border-[#181615]'
@@ -1660,7 +1660,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             : 'bg-[#FAF7F2] text-[#181615] border-[#181615]'
         }`}
       >
-        {activeChar.shortName} · <span className={dark ? 'text-[#E9F344]' : 'text-[#bd4924]'}>{activeChar.shortTrait}</span>
+        {activeChar.shortName} · <span className={dark ? 'text-[var(--on-plum-2)]' : 'text-[#bd4924]'}>{activeChar.shortTrait}</span>
       </div>
     </div>
   );
@@ -1694,7 +1694,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               {score}
             </div>
             {isFeverActive && (
-              <span className="bg-[#E9F344] text-[#181615] px-2 py-0.5 rounded-lg border border-[#181615] text-[10px] font-bold">
+              <span className="bg-[var(--brand-plum)] text-[var(--cream)] px-2 py-0.5 rounded-lg border border-[#181615] text-[10px] font-bold">
                 ×2
               </span>
             )}
@@ -1727,7 +1727,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               TAI-PLA RUN
             </h2>
             {highScore > 0 && (
-              <span className="bg-[#181615]/90 text-[#E9F344] px-2.5 py-0.5 rounded-md font-mono text-[11px] font-bold border border-[#5C544D]">
+              <span className="bg-[#181615]/90 text-[var(--on-plum-2)] px-2.5 py-0.5 rounded-md font-mono text-[11px] font-bold border border-[#5C544D]">
                 BEST {highScore}
               </span>
             )}
@@ -1742,7 +1742,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                 e.stopPropagation();
                 startGame();
               }}
-              className="w-full max-w-[220px] py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-sans text-base font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95 transition-transform"
+              className="w-full max-w-[220px] py-3 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] font-sans text-base font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95 transition-transform"
             >
               เริ่มเล่น
             </button>
@@ -1764,7 +1764,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             <span className="font-mono text-5xl font-bold text-[#FAF7F5] leading-none mt-1">
               {score}
             </span>
-            <span className="font-mono text-xs font-bold text-[#E9F344] mt-1">
+            <span className="font-mono text-xs font-bold text-[var(--on-plum-2)] mt-1">
               RANK {currentRank.rank}
             </span>
           </div>
@@ -1782,7 +1782,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               disabled={!canRestart}
               className={`w-full py-3 font-sans text-sm font-bold rounded-xl cursor-pointer transition-transform active:scale-95 ${
                 canRestart
-                  ? 'bg-[#E9F344] text-[#181615] border-2 border-[#181615]'
+                  ? 'bg-[var(--brand-plum)] text-[var(--cream)] border-2 border-[#181615]'
                   : 'bg-[#252220] text-[#69635D] border border-[#3D3835] cursor-not-allowed'
               }`}
             >
@@ -1810,7 +1810,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {/* Floating Minimal Controls (matching FlappyCatGame) */}
         <button
           onClick={handleBack}
-          className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5 transition-colors"
+          className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#FAF7F2] hover:bg-[var(--paper-3)] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5 transition-colors"
         >
           <span className="whitespace-nowrap">← กลับ</span>
         </button>
@@ -1824,7 +1824,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           </button>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#E9F344] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] transition-colors active:scale-95 cursor-pointer font-bold tracking-wider whitespace-nowrap"
+            className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[var(--on-plum-2)] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] transition-colors active:scale-95 cursor-pointer font-bold tracking-wider whitespace-nowrap"
           >
             {soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'}
           </button>
@@ -1832,7 +1832,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             onClick={handleToggleNativeFullscreen}
             className={`px-3 py-1.5 rounded-xl border-2 shadow-xl text-[11px] transition-colors active:scale-95 cursor-pointer font-bold tracking-wider ${
               isNativeFullscreen
-                ? 'bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] border-[#181615]'
+                ? 'bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] border-[#181615]'
                 : 'bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] border-[#5C544D]'
             }`}
           >

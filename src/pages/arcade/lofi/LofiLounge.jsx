@@ -152,7 +152,7 @@ function LevelBars({ lofi, bars = 14, className = '' }) {
   return (
     <div ref={ref} className={`flex items-end gap-1 ${className}`} aria-hidden="true">
       {Array.from({ length: bars }).map((_, i) => (
-        <span key={i} className="flex-1 bg-[#E9F344]" style={{ height: '12%' }} />
+        <span key={i} className="flex-1 bg-[var(--brand-plum)]" style={{ height: '12%' }} />
       ))}
     </div>
   );
@@ -180,7 +180,7 @@ export function LofiMiniPlayer({ lofi, onOpenStudio }) {
         <button
           type="button"
           onClick={lofi.pause}
-          className="px-3 py-2 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] cursor-pointer transition-colors"
+          className="px-3 py-2 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] rounded-xl border-2 border-[#181615] cursor-pointer transition-colors"
         >
           พัก
         </button>
@@ -220,13 +220,13 @@ export function LofiStudio({ lofi, open, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 px-3 py-2 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] font-mono text-xs font-bold cursor-pointer transition-colors"
+            className="absolute top-3 right-3 px-3 py-2 bg-[#FAF7F2] hover:bg-[var(--paper-3)] text-[#181615] rounded-xl border-2 border-[#181615] font-mono text-xs font-bold cursor-pointer transition-colors"
           >
             ปิด
           </button>
           <div className="absolute left-0 right-0 bottom-0 p-4 flex items-end justify-between gap-4 bg-[#0B1026]/70">
             <div className="min-w-0">
-              <p className="font-mono text-[11px] font-bold text-[#E9F344] uppercase tracking-wider">
+              <p className="font-mono text-[11px] font-bold text-[var(--on-plum-2)] uppercase tracking-wider">
                 {lofi.playing ? 'กำลังเล่น' : 'พร้อมเล่น'} · {lofi.track.bpm} BPM
                 {lofi.chordName ? ` · ${lofi.chordName}` : ''}
               </p>
@@ -243,7 +243,7 @@ export function LofiStudio({ lofi, open, onClose }) {
             type="button"
             onClick={lofi.toggle}
             className={`w-full py-4 rounded-2xl border-2 border-[#181615] font-mono font-bold text-base cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bd4924] ${
-              lofi.playing ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]' : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
+              lofi.playing ? 'bg-[#FAF7F2] text-[var(--cream)] hover:bg-[#F2ECE4]' : 'bg-[var(--brand-plum)] text-[var(--cream)] hover:bg-[var(--brand-plum-2)]'
             }`}
           >
             {lofi.playing ? 'พักเพลง' : 'เล่นเพลง'}
@@ -266,7 +266,7 @@ export function LofiStudio({ lofi, open, onClose }) {
                         : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/25 hover:border-[#181615]'
                     }`}
                   >
-                    <span className={`font-mono text-xs font-bold w-6 shrink-0 ${active ? 'text-[#E9F344]' : 'text-[#78716c]'}`}>
+                    <span className={`font-mono text-xs font-bold w-6 shrink-0 ${active ? 'text-[var(--on-plum-2)]' : 'text-[#78716c]'}`}>
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -275,7 +275,7 @@ export function LofiStudio({ lofi, open, onClose }) {
                         {t.mood}
                       </span>
                     </span>
-                    <span className={`font-mono text-[11px] shrink-0 ${active ? 'text-[#E9F344]' : 'text-[#78716c]'}`}>
+                    <span className={`font-mono text-[11px] shrink-0 ${active ? 'text-[var(--on-plum-2)]' : 'text-[#78716c]'}`}>
                       {t.bpm}
                     </span>
                   </button>

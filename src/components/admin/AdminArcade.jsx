@@ -163,7 +163,7 @@ export default function AdminArcade() {
                         <span className=" text-xs">[ RULES ] กติกาการแจกเหรียญ xhaus & เกณฑ์ Rank:</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
-                        <span className="px-1.5 py-0.5 rounded-xs border bg-[#E9F344] text-[#181615] border-[#181615]">[RANK S+] 40+</span>
+                        <span className="px-1.5 py-0.5 rounded-xs border bg-[var(--brand-plum)] text-[var(--cream)] border-[#181615]">[RANK S+] 40+</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-[#BD4924] text-[#FAF7F2] border-[#181615]">[RANK S] 35–39</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-emerald-100 text-emerald-900 border-emerald-700">[RANK A] 20–34</span>
                         <span className="px-1.5 py-0.5 rounded-xs border bg-amber-100 text-amber-900 border-amber-600">[RANK B] 10–19</span>

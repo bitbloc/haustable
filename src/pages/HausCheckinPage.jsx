@@ -582,7 +582,7 @@ export default function HausCheckinPage() {
             <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] relative overflow-x-hidden pt-[140px] md:pt-[112px] pb-24 px-4 md:px-6">
                 {/* Structural Top Header Placeholder */}
                 <div className="fixed top-0 left-0 right-0 z-40 flex flex-col w-full shadow-sm bg-[var(--color-paper,#FBF9F5)]">
-                    <div className="w-full bg-[#E9F344] h-[32px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
+                    <div className="w-full bg-[var(--brand-plum)] h-[32px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
                     <div className="w-full h-[52px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
                     <div className="w-full h-[44px] md:hidden border-b border-[var(--color-rule,#E2DDD3)] bg-[var(--color-paper-2,#F4F1EA)]"></div>
                 </div>
@@ -631,7 +631,7 @@ export default function HausCheckinPage() {
             {/* ─── STRUCTURAL TOP HEADER (TAB DESIGN) ─── */}
             <div className="fixed top-0 left-0 right-0 z-40 flex flex-col w-full select-none shadow-sm">
                 {/* Yellow Marquee / Info Bar */}
-                <div className="w-full bg-[#E9F344] text-[#23201D] flex items-center h-[32px] px-4 overflow-hidden whitespace-nowrap border-b border-[var(--color-rule,#E2DDD3)]">
+                <div className="w-full bg-[var(--brand-plum)] text-[var(--cream)] flex items-center h-[32px] px-4 overflow-hidden whitespace-nowrap border-b border-[var(--color-rule,#E2DDD3)]">
                     <span className="font-mono text-[9px] font-extrabold tracking-widest uppercase truncate w-full text-center">
                         *** TAG @INTHEHAUS OR #INTHEHAUS TO JOIN THE STREAM ***
                     </span>

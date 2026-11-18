@@ -550,7 +550,7 @@ export default class PlayScene extends Phaser.Scene {
     const popup = this.add.text(this.player.x + 24, this.player.y - 14, '+1', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '18px',
-      fill: '#E9F344',
+      fill: '#D0B5C1',
       stroke: '#181615',
       strokeThickness: 4,
       fontStyle: 'bold'
@@ -805,7 +805,7 @@ export default class PlayScene extends Phaser.Scene {
     const popup = this.add.text(this.player.x, this.player.y - 28, 'BOOST!', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '14px',
-      fill: '#E9F344',
+      fill: '#D0B5C1',
       stroke: '#181615',
       strokeThickness: 4,
       fontStyle: 'bold'

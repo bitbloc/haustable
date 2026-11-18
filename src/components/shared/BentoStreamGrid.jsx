@@ -5,14 +5,14 @@ const COLORS = [
     'bg-[#B4AEDC]', // Soft Purple
     'bg-[#E06132]', // Burnt Orange
     'bg-[#C3D2C4]', // Sage Green
-    'bg-[#E9F344]', // Bright Yellow
+    'bg-[var(--brand-plum)]', // Plum (was lime)
 ]
 
 const TEXT_COLORS = [
     'text-[#23201D]', // Dark Ink for Purple
     'text-white',     // White for Orange
     'text-[#23201D]', // Dark Ink for Green
-    'text-[#23201D]', // Dark Ink for Yellow
+    'text-[var(--cream)]', // Cream on plum (was lime)
 ]
 
 
@@ -45,7 +45,7 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
     
     if (item.source === 'google') {
         BadgeIcon = MapPin
-        badgeColorClass = 'text-[#23201D] bg-[#E9F344]/90 border-[#E9F344]/50'
+        badgeColorClass = 'text-[var(--cream)] bg-[var(--brand-plum)] border-[var(--brand-plum)]'
     } else if (item.source === 'note') {
         BadgeIcon = MessageSquare
         badgeColorClass = 'text-[#23201D] bg-white/90 border-white/50'

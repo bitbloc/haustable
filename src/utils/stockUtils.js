@@ -132,7 +132,10 @@ export function stockQtyParts(item) {
     const unit = cardUnit(item.unit || item.pack_unit);
     // Counted by weight or volume (กิโลกรัม, ลิตร): there is no "opened pack", the amount is the amount.
     // 0.35 kg is "0.35 กิโลกรัม", never "1 กิโลกรัม with one open".
-    if (['mass', 'volume'].includes(getUnitType(item.unit || item.pack_unit))) {
+    // A "แกลลอน" is a jug of any size here (5,000 ml of fish sauce), not 3,785 ml: it is counted
+    // like a bottle, so the card says the jugs and the millilitres they hold.
+    const countedUnit = String(item.unit || item.pack_unit || '').trim().toLowerCase();
+    if (countedUnit !== 'gallon' && ['mass', 'volume'].includes(getUnitType(countedUnit))) {
         const qty = Number(Number(item.current_quantity).toFixed(4)) || 0;
         return {
             main: qty.toLocaleString('th-TH', { maximumFractionDigits: 2 }),
