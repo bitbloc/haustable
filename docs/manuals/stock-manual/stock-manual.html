@@ -125,6 +125,17 @@ figcaption .fn { font-family: var(--mono); color: var(--plum); margin-right: 6px
 .side { font-size: 15px; }
 .side ol { padding-left: 28px; }
 
+/* Soft corners (owner, 2026-11-18): boxes read friendlier rounded; one radius scale, 8px boxes / 4px tags */
+.unit, .rule-box, .calc, .note { border-radius: 8px; }
+.calc { overflow: hidden; }
+.rule-box .tag { border-radius: 4px; }
+figure img { border-radius: 6px; }
+table { border-collapse: separate; border-spacing: 0; border: 1px solid var(--rule); border-radius: 8px; }
+table th, table td { border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+table th:last-child, table td:last-child { border-right: 0; }
+table tr:last-child td { border-bottom: 0; }
+table thead tr:first-child th:first-child { border-top-left-radius: 7px; }
+table thead tr:first-child th:last-child { border-top-right-radius: 7px; }
 .check td:first-child { width: 22%; font-weight: 600; }
 .check li { margin-bottom: 0; }
 .check ul { margin: 0; }
