@@ -23,9 +23,21 @@ const readRecord = () => {
     }
 }
 
+// The customer display on the Sunmi's second screen is a plain Android WebView that MainActivity
+// opens at /pos/cfd. It has no Capacitor bridge, so Capacitor.isNativePlatform() is false there;
+// what it does have is the AndroidCfdBridge object MainActivity injects. Without this check the
+// gate sent the second screen to the home page (the shop website showed instead of the CFD).
+const hasNativeCfdBridge = () => {
+    try {
+        return typeof window !== 'undefined' && typeof window.AndroidCfdBridge === 'object' && window.AndroidCfdBridge !== null
+    } catch {
+        return false
+    }
+}
+
 export const isNativePosApp = () => {
     try {
-        return Capacitor.isNativePlatform()
+        return Capacitor.isNativePlatform() || hasNativeCfdBridge()
     } catch {
         return false
     }
