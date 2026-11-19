@@ -31,7 +31,9 @@ export async function compressImageFile(file, maxWidth = 1000, maxHeight = 1000,
 
     return new Promise((resolve) => {
         // Safety timeout in case image loading hangs or in headless environments without full image decoders
-        const timer = setTimeout(() => resolve(file), 2000);
+        // 10s, not 2s: a 12 MP phone photo can take a few seconds to decode on a slow device, and
+        // giving up means the multi-megabyte original is uploaded as is.
+        const timer = setTimeout(() => resolve(file), 10000);
 
         try {
             const reader = new FileReader();
