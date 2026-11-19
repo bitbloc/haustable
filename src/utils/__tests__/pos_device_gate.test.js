@@ -10,6 +10,12 @@ describe('POS device gate (web /pos)', () => {
     beforeEach(() => {
         localStorage.clear()
         native.value = false
+        delete window.AndroidCfdBridge
+    })
+
+    it('the customer display WebView of the APK (no Capacitor, only AndroidCfdBridge) is allowed', () => {
+        window.AndroidCfdBridge = { sendCfdEvent: () => {} }
+        expect(getPosDeviceStatus()).toMatchObject({ allowed: true, reason: 'app' })
     })
 
     it('a customer browser is not allowed', () => {
