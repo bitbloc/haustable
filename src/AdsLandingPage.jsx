@@ -31,10 +31,10 @@ const DEFAULT_ADS_SETTINGS = {
     link_hours: getStoreHours().label,
     link_location_text: "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม",
     link_logo_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_logo_url_1778317272888.png",
-    link_hero_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_hero_url_1778316469375.jpg",
+    link_hero_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_hero_url_1795064259000.webp",
     link_sig_name_1: "แกงไตปลา (รสชัดเจน)",
     link_sig_price_1: "159",
-    link_sig_img_1: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg",
+    link_sig_img_1: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1795064259000.webp",
     link_sig_name_2: "ผัดใบเหลียงในบ้าน",
     link_sig_price_2: "139",
     link_sig_img_2: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_2_1783397084997.webp",
@@ -55,7 +55,7 @@ const DEFAULT_SIGNATURES = [
     {
         name: "แกงไตปลา (รสชัดเจน)",
         price: "159",
-        img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg"
+        img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1795064259000.webp"
     },
     {
         name: "ผัดใบเหลียงในบ้าน",
