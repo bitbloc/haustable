@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { compressImageFile } from '../../utils/imageOptimizer';
 import { toast } from 'sonner';
 import MakroPriceSheet from './MakroPriceSheet';
 import { makroPickPatch, unitsLookUnset, describeMakroPick } from '../../utils/makroUnits';
@@ -326,31 +327,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         setShowMakroSearch(false);
     }; */
 
-    // ... (Image handling same as before)
-    const resizeImage = (file) => {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const scaleSize = MAX_WIDTH / img.width;
-                    const width = (img.width > MAX_WIDTH) ? MAX_WIDTH : img.width;
-                    const height = (img.width > MAX_WIDTH) ? (img.height * scaleSize) : img.height;
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => {
-                        resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
-                    }, 'image/webp', 0.8);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    };
+    // Shrink the photo before upload (800px, WebP; JPEG where the browser cannot write WebP).
+    // iPhone Safari cannot: the old canvas code silently got a PNG back, so every photo taken
+    // on an iPhone was stored as a ~1.8 MB PNG named .webp (found 2026-11-20, 104 files).
+    const resizeImage = (file) => compressImageFile(file, 800, 800, 0.8);
 
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -358,9 +338,11 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         try {
             setLoading(true);
             const resizedFile = await resizeImage(file);
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.webp`;
+            const ext = resizedFile.type === 'image/webp' ? 'webp' : resizedFile.type === 'image/png' ? 'png' : 'jpg';
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
             const { error: uploadError } = await supabase.storage.from('stock-images').upload(fileName, resizedFile, {
-                cacheControl: '15552000'
+                cacheControl: '15552000',
+                contentType: resizedFile.type || 'image/jpeg'
             });
             if (uploadError) throw uploadError;
             const { data: { publicUrl } } = supabase.storage.from('stock-images').getPublicUrl(fileName);
