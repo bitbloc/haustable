@@ -2,6 +2,7 @@
 import React from 'react';
 import { stockStatus, stockQtyParts, STOCK_STATUS_LABEL } from '../../utils/stockUtils';
 import OpenPackMeter from './OpenPackMeter';
+import { optimizeImageUrl } from '../../utils/urlHelper';
 
 export default function StockCard({ item, onClick, onRecipe, searchActive = false, categories = [] }) {
     const status = stockStatus(item);
@@ -19,7 +20,7 @@ export default function StockCard({ item, onClick, onRecipe, searchActive = fals
             {/* The picture fills the top of the card; the recipe chip and the status sit on its corners */}
             <div className="sc-media">
                 {item.image_url
-                    ? <img src={item.image_url} alt="" className="sc-image" loading="lazy" />
+                    ? <img src={optimizeImageUrl(item.image_url, 400, 75)} alt="" className="sc-image" loading="lazy" decoding="async" onError={e => { if (e.currentTarget.src !== item.image_url) e.currentTarget.src = item.image_url; }} />
                     : <span className="sc-image-placeholder" aria-hidden="true">ไม่มีรูป</span>}
                 <div className="sc-top">
                     {categoryLabel ? (

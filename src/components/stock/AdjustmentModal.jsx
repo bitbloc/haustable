@@ -8,6 +8,7 @@ import { displayUnit, qtyInWords } from '../../utils/stockCount';
 import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import { STOCK_REASONS } from '../../utils/stockLedger';
 import { getUnitType } from '../../utils/unitUtils';
+import { optimizeImageUrl } from '../../utils/urlHelper';
 
 // Why stock leaves outside of sales. Waste and staff meals get their own column
 // in the daily reconciliation; everything else is "other out".
@@ -241,7 +242,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 <div className="px-4 pt-4 pb-3 flex items-start gap-3">
                     <div className={`w-14 h-14 rounded-md overflow-hidden border ${ui.RULE} ${ui.PAPER2} shrink-0`}>
                         {item.image_url
-                            ? <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                            ? <img src={optimizeImageUrl(item.image_url, 120, 75)} alt="" className="w-full h-full object-cover" onError={e => { if (e.currentTarget.src !== item.image_url) e.currentTarget.src = item.image_url; }} />
                             : <div className={`w-full h-full flex items-center justify-center text-[12px] ${ui.NEUTRAL}`}>ไม่มีรูป</div>}
                     </div>
                     <div className="flex-1 min-w-0">

@@ -2,6 +2,7 @@
 import React from 'react';
 import { stockStatus, stockQtyParts, STOCK_STATUS_LABEL } from '../../utils/stockUtils';
 import OpenPackMeter from './OpenPackMeter';
+import { optimizeImageUrl } from '../../utils/urlHelper';
 
 export default function StockListItem({ item, onClick, onRecipe, searchActive = false, categories = [] }) {
     const status = stockStatus(item);
@@ -18,7 +19,7 @@ export default function StockListItem({ item, onClick, onRecipe, searchActive = 
         >
             <div className="sli-image-wrap">
                 {item.image_url
-                    ? <img src={item.image_url} alt="" className="sli-image" loading="lazy" />
+                    ? <img src={optimizeImageUrl(item.image_url, 120, 75)} alt="" className="sli-image" loading="lazy" decoding="async" onError={e => { if (e.currentTarget.src !== item.image_url) e.currentTarget.src = item.image_url; }} />
                     : <span className="sli-image-placeholder" aria-hidden="true">ไม่มีรูป</span>}
             </div>
 
