@@ -1578,7 +1578,10 @@ export default function POSDashboard() {
         // While realtime is connected it already delivers order/bill events instantly, so the three
         // safety queries only need to run every SAFETY_POLL_HEALTHY_MS. When the socket is down they
         // run on every tick. Cuts steady-state polling ~3x on low-power terminals (Sunmi D2s).
-        const SAFETY_POLL_HEALTHY_MS = 10000;
+        // 30s, not 10s: the POS stays on around the clock, and at 10s it sent ~17,000 requests a day
+        // per device with nothing to find (measured 2026-11-19). A missed realtime event is now
+        // recovered within 30s; a dropped socket is still polled on every tick.
+        const SAFETY_POLL_HEALTHY_MS = 30000;
         const lastFullHeartbeatRef = { current: 0 };
 
         const runSafetyHeartbeat = async (force = false) => {
