@@ -389,6 +389,9 @@ async function onShiftClosed(s: Settings, p: any) {
   if (!flag(s, 'telegram_notify_shift')) return 'skipped'
   const { data: sh } = await supabase.from('pos_shifts').select('*').eq('id', p.shift_id).maybeSingle()
   if (!sh) return 'skipped'
+  // The trigger fires the moment closed_at is set, but this runs a moment later. If the shift is
+  // open again by now (a stray close that the POS overwrote), it was never really closed: say nothing.
+  if (!sh.closed_at || sh.status !== 'closed') return 'skipped'
   const diff = Number(sh.difference || 0)
   const text = block(
     `<b>ปิดรอบ · ${baht(sh.total_sales)}</b>`,

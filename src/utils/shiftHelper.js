@@ -533,11 +533,17 @@ export async function syncShiftHistoryFromCloud() {
 export function startShift(staffName, openingFloat) {
     const floatAmount = parseFloat(openingFloat) || 0;
     
-    // Close any lingering open shifts in cloud before starting new shift
+    const newShiftId = `shift_${Date.now()}`;
+
+    // Close any lingering open shifts in cloud before starting new shift.
+    // This request is not awaited, so the new shift's upsert below can reach the server first.
+    // Without the id filter it then closed the shift that had just opened, which sent a
+    // "ปิดรอบ ฿0" Telegram message at opening time (2026-11-20 10:38).
     supabase
         .from('pos_shifts')
         .update({ status: 'closed', closed_at: new Date().toISOString() })
         .eq('status', 'open')
+        .neq('id', newShiftId)
         .then(() => {
             console.log('[Shift Management] Prior open shifts in cloud marked closed');
         })
@@ -546,7 +552,7 @@ export function startShift(staffName, openingFloat) {
         });
 
     const newShift = {
-        id: `shift_${Date.now()}`,
+        id: newShiftId,
         staffName,
         openedAt: new Date().toISOString(),
         openingFloat: floatAmount,
