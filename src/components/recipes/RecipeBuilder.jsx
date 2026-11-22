@@ -16,6 +16,7 @@ import PriceSimulator from './PriceSimulator';
 import { logStaffActivity } from '../../utils/auditLogger';
 import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES, usagePerStockUnit } from '../../utils/recipeGraph';
 import { rescaleForCountUnitChange } from '../../utils/stockUnitChange';
+import { askUnitChange } from '../stock/UnitChangeDialog';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
 import { unitFix } from '../../utils/recipeUnits';
@@ -1068,12 +1069,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             const keepsOwnUnit = before?.unit && before.unit !== before.pack_unit && before.pack_unit === newFormData.pack_unit;
             newFormData = { ...newFormData, unit: keepsOwnUnit ? before.unit : newFormData.pack_unit };
             delete newFormData.current_quantity;
-            // A new counting unit re-says the stock left and the alert levels in it (17 bottles stay 17 bottles)
-            const rescale = before ? rescaleForCountUnitChange(before, newFormData, usagePerStockUnit) : { quantity: null, levels: {} };
-            Object.assign(newFormData, rescale.levels);
+            // One counted unit now holds a different amount: ask whether to convert (way of counting
+            // changed) or keep what was counted (old setup was wrong). Never convert silently.
+            const rescale = before ? rescaleForCountUnitChange(before, newFormData, usagePerStockUnit) : { changed: false, quantity: null, levels: {} };
+            let convert = false;
+            if (rescale.changed) {
+                const choice = await askUnitChange(rescale);
+                if (!choice) return false;
+                convert = choice === 'convert';
+            }
+            if (convert) Object.assign(newFormData, rescale.levels);
             const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
             if (error) throw error;
-            if (rescale.quantity !== null) {
+            if (convert && rescale.quantity !== null) {
                 const moved = await postStockMovement({ itemId: id, mode: 'set', quantity: rescale.quantity, reason: STOCK_REASONS.OPENING, performedBy: 'System (unit change)', note: rescale.note });
                 if (moved.ok) { newFormData.current_quantity = rescale.quantity; toast.info(rescale.note, { duration: 8000 }); }
                 else toast.error('เปลี่ยนหน่วยแล้ว แต่แปลงยอดคงเหลือไม่สำเร็จ ตรวจนับใหม่อีกครั้ง');

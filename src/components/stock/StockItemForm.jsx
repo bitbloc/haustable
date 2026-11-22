@@ -12,6 +12,7 @@ import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/rec
 import { unitSetupWarnings } from '../../utils/stockHealth';
 import { usagePerStockUnit } from '../../utils/recipeGraph';
 import { rescaleForCountUnitChange } from '../../utils/stockUnitChange';
+import { askUnitChange } from './UnitChangeDialog';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
@@ -146,13 +147,20 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
             if (isEdit) {
                  // Prevent Stale Update: Strip current_quantity from update payload
                  delete payload.current_quantity;
-                 // A new counting unit (bottles -> crates of 12): the stock left and the alert levels
-                 // are re-said in it, so 17 bottles stay 17 bottles and never become 17 crates
+                 // One counted unit now holds a different amount. Either the way of counting changed
+                 // (bottles -> crates: convert) or the old setup was wrong (keep what was counted).
+                 // Only the person knows, so ask; never convert silently.
                  const rescale = rescaleForCountUnitChange(item, payload, usagePerStockUnit);
-                 Object.assign(payload, rescale.levels);
+                 let convert = false;
+                 if (rescale.changed) {
+                     const choice = await askUnitChange(rescale);
+                     if (!choice) { setLoading(false); return; }
+                     convert = choice === 'convert';
+                 }
+                 if (convert) Object.assign(payload, rescale.levels);
                  const { error: err } = await supabase.from('stock_items').update(payload).eq('id', item.id);
                  error = err;
-                 if (!err && rescale.quantity !== null) {
+                 if (!err && convert && rescale.quantity !== null) {
                      const moved = await postStockMovement({
                          itemId: item.id,
                          mode: 'set',
