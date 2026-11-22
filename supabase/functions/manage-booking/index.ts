@@ -69,17 +69,23 @@ Deno.serve(async (req) => {
         if (!userId) throw new Error("Failed to determine user ID")
 
         // 2. Upsert Profile
-        const { error: upsertError } = await adminClient.from('profiles').upsert({
+        // Only a brand-new profile starts as 'customer'. A profile that already exists keeps
+        // the role the owner gave it: re-submitting this form must never demote staff.
+        const { data: currentProfile } = await adminClient
+            .from('profiles').select('id').eq('id', userId).maybeSingle()
+        const accountRow: Record<string, unknown> = {
             id: userId,
             display_name: profileData.display_name,
             nickname: profileData.nickname || null,
             phone_number: profileData.phone_number,
             birth_day: profileData.birth_day || null,
             birth_month: profileData.birth_month || null,
-            gender: profileData.gender || null,
-            line_user_id: profileData.line_user_id || null, 
-            role: 'customer'
-        })
+            gender: profileData.gender || null
+        }
+        // Never blank an existing LINE link either: that would lock the person out of LINE login.
+        if (profileData.line_user_id || !currentProfile) accountRow.line_user_id = profileData.line_user_id || null
+        if (!currentProfile) accountRow.role = 'customer'
+        const { error: upsertError } = await adminClient.from('profiles').upsert(accountRow)
 
         if (upsertError) {
             if (isNewlyCreated) {
@@ -263,7 +269,11 @@ Deno.serve(async (req) => {
         if (!targetUuid) throw new Error("Could not resolve User User ID (System Error)")
 
         // Now upsert profile
-        const { error: upsertError } = await supabaseAdmin.from('profiles').upsert({
+        // Only a brand-new profile starts as 'customer'. A profile that already exists keeps
+        // the role the owner gave it: re-submitting this form must never demote staff.
+        const { data: currentProfile } = await supabaseAdmin
+            .from('profiles').select('id').eq('id', targetUuid).maybeSingle()
+        const profileRow: Record<string, unknown> = {
             id: targetUuid,
             line_user_id: lineUserId,
             display_name: profileData.display_name,
@@ -271,9 +281,10 @@ Deno.serve(async (req) => {
             birth_day: profileData.birth_day,
             birth_month: profileData.birth_month,
             gender: profileData.gender,
-            nickname: profileData.nickname,
-            role: 'customer'
-        })
+            nickname: profileData.nickname
+        }
+        if (!currentProfile) profileRow.role = 'customer'
+        const { error: upsertError } = await supabaseAdmin.from('profiles').upsert(profileRow)
         if (upsertError) throw upsertError
 
         // Ensure we have a link

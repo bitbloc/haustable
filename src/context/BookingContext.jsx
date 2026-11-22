@@ -188,6 +188,14 @@ export function BookingProvider({ children }) {
             if (!liff.isLoggedIn()) {
                 liff.login()
             } else {
+                // LIFF keeps saying "logged in" after its ID token (about 1 hour) has expired, and the
+                // server then rejects the token. Outside the LINE app, sign in again for a fresh one.
+                const exp = liff.getDecodedIDToken?.()?.exp
+                if (exp && exp * 1000 <= Date.now() + 30000 && !liff.isInClient?.()) {
+                    liff.logout()
+                    liff.login()
+                    return
+                }
                 const profile = await liff.getProfile()
                 const idToken = liff.getIDToken()
                 dispatch({ type: 'SET_LINE_PROFILE', payload: { profile, idToken } })
