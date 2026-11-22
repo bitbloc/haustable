@@ -86,6 +86,15 @@ export default function AuthModal({ isOpen, onClose }) {
 
                 if (error) throw error
 
+                    // The function answers 200 with { success: false, error } when it fails
+                    // (e.g. an expired LINE token). That is a failed login, not a new member.
+                    if (data?.error || data?.success === false) {
+                        console.error("check_user failed:", data?.error)
+                        logoutLine() // drop the rejected token so the next press signs in afresh
+                        setError('เข้าสู่ระบบด้วย LINE ไม่สำเร็จ กรุณากดปุ่ม LINE อีกครั้ง')
+                        return
+                    }
+
                     // Existing user -> Check for Session Link (Magic Link)
                     if (data?.sessionLink) {
                         console.log("Redirecting to Session...", data.sessionLink)
@@ -94,9 +103,14 @@ export default function AuthModal({ isOpen, onClose }) {
                         return
                     }
 
-                    // Fallback: If existing user but no link
-                    console.warn("Existing user found but no session link returned.")
-                    
+                    // An account that already exists but got no login link is a failed login,
+                    // not a new sign-up: the registration form would overwrite their profile.
+                    if (data?.status === 'existing_user') {
+                        console.warn("Existing user found but no session link returned.")
+                        setError('เข้าสู่ระบบด้วย LINE ไม่สำเร็จ กรุณากดปุ่ม LINE อีกครั้ง')
+                        return
+                    }
+
                     // Pre-fill profile data if available
                     if (data?.profile) {
                         setName(data.profile.display_name || result.profile?.displayName || '')
