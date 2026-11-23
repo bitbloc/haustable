@@ -7,12 +7,22 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { buildStockClosingMessage } from './stockClosing.ts'
+import { buildStockClosingCardPayload, buildStockClosingMessage } from './stockClosing.ts'
+import { formatAlignedItemsPre } from './textFormat.ts'
+import {
+  renderDailySummaryCardSvg,
+  renderOnlineOrderCardSvg,
+  renderShiftCloseCardSvg,
+  renderStockClosingCardSvg,
+  renderTestCardSvg,
+} from './cardSvg.ts'
+import { renderSvgToPng } from './cardRenderer.ts'
 
 const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || ''
 const HOOK_SECRET = Deno.env.get('TELEGRAM_HOOK_SECRET') || ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const APP_ORIGIN = (Deno.env.get('APP_ORIGIN') || 'https://haustable.vercel.app').replace(/\/+$/, '')
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
 
@@ -176,9 +186,15 @@ async function saveSetting(key: string, value: string) {
 
 // ---------- telegram ----------
 
-async function sendTelegram(chatId: string, html: string, silent = false) {
+type TgButton = { text: string; url: string }
+type SendOpts = { silent?: boolean; buttons?: TgButton[][] }
+
+const btn = (text: string, path: string): TgButton => ({ text, url: `${APP_ORIGIN}${path}` })
+
+async function sendTelegram(chatId: string, html: string, opts: boolean | SendOpts = false) {
   if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not set')
   if (!chatId) throw new Error('telegram_chat_id is not set')
+  const { silent = false, buttons } = typeof opts === 'boolean' ? { silent: opts } : opts
   // Telegram hard limit is 4096 chars per message
   const chunks: string[] = []
   let rest = html
@@ -188,14 +204,63 @@ async function sendTelegram(chatId: string, html: string, silent = false) {
     rest = rest.slice(cut > 0 ? cut + 1 : 3900)
   }
   chunks.push(rest)
-  for (const text of chunks) {
+  for (let i = 0; i < chunks.length; i++) {
+    const isLast = i === chunks.length - 1
+    const payload: Record<string, unknown> = {
+      chat_id: chatId,
+      text: chunks[i],
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      disable_notification: silent,
+    }
+    if (isLast && buttons && buttons.length) {
+      payload.reply_markup = { inline_keyboard: buttons }
+    }
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, disable_notification: silent }),
+      body: JSON.stringify(payload),
     })
     const out = await res.json()
     if (!out.ok) throw new Error(`Telegram: ${out.description || res.status}`)
+  }
+}
+
+/**
+ * Render a Brand v2 SVG card to PNG and deliver via Telegram sendPhoto (with lock-screen caption + inline buttons).
+ * Always falls back gracefully to the full HTML text message if image rendering or upload fails.
+ */
+async function sendTelegramCard(
+  chatId: string,
+  svg: string,
+  captionHtml: string,
+  fallbackHtml: string,
+  opts: SendOpts = {},
+) {
+  if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not set')
+  if (!chatId) throw new Error('telegram_chat_id is not set')
+  try {
+    const png = await renderSvgToPng(svg)
+    const form = new FormData()
+    form.append('chat_id', chatId)
+    form.append('photo', new Blob([png], { type: 'image/png' }), 'card.png')
+    if (captionHtml) {
+      form.append('caption', captionHtml.slice(0, 980))
+      form.append('parse_mode', 'HTML')
+    }
+    if (opts.silent) form.append('disable_notification', 'true')
+    if (opts.buttons && opts.buttons.length) {
+      form.append('reply_markup', JSON.stringify({ inline_keyboard: opts.buttons }))
+    }
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+      method: 'POST',
+      body: form,
+    })
+    const out = await res.json()
+    if (!out.ok) throw new Error(`Telegram photo: ${out.description || res.status}`)
+  } catch (err) {
+    console.error('[telegram-report] card photo fallback to HTML:', err)
+    await sendTelegram(chatId, fallbackHtml, opts)
   }
 }
 
@@ -228,8 +293,21 @@ const itemName = (it: any) => it.custom_name || it.menu_items?.name || 'รา�
 const isVoid = (it: any) => VOID_STATUSES.includes(String(it.status || '').toLowerCase())
 const lineTotal = (it: any) => Number(it.quantity || 1) * Number(it.price_at_time || 0)
 
-// 2× ผัดไทยกุ้ง  ฿240
-//    ไม่ใส่ถั่ว
+// Aligned monospace receipt block for live floor events (items_added, bill_paid)
+function itemLinesAligned(items: any[], withPrice = true) {
+  return formatAlignedItemsPre(
+    items.map((it) => ({
+      qty: Number(it.quantity || 1),
+      name: itemName(it),
+      options: optionLabel(it.selected_options) || undefined,
+      priceText: withPrice ? baht(lineTotal(it)) : undefined,
+      voided: isVoid(it),
+    })),
+    withPrice,
+  )
+}
+
+// Plain fallback item lines (non-pre) for HTML fallback blocks
 function itemLines(items: any[], withPrice = true) {
   return items
     .map((it) => {
@@ -243,13 +321,21 @@ function itemLines(items: any[], withPrice = true) {
 }
 
 // "A3" for tables, a channel name otherwise
-function placeShort(b: any, tableName: string) {
-  if (tableName) return esc(tableName.replace(/^โต๊ะ\s*/, ''))
+function placeShortPlain(b: any, tableName: string) {
+  if (tableName) return tableName.replace(/^โต๊ะ\s*/, '')
   if (b.booking_type === 'pickup') return 'กลับบ้าน'
   if (b.booking_type === 'hausmade') return 'HAUSMADE'
   return CHANNEL_LABEL[b.booking_type] || 'ไม่ระบุโต๊ะ'
 }
+const placeShort = (b: any, tableName: string) => esc(placeShortPlain(b, tableName))
 const placeLabel = (b: any, tableName: string) => (tableName ? `โต๊ะ ${placeShort(b, tableName)}` : placeShort(b, tableName))
+const placeLabelPlain = (b: any, tableName: string) => (tableName ? `โต๊ะ ${placeShortPlain(b, tableName)}` : placeShortPlain(b, tableName))
+
+const guestLinePlain = (b: any) => {
+  const name = customerName(b)
+  const real = name && !/^walk-in/i.test(name) && name !== 'MAINTENANCE'
+  return dot(real ? name : '', customerPhone(b) || '')
+}
 
 const guestLine = (b: any) => {
   const name = customerName(b)
@@ -258,8 +344,9 @@ const guestLine = (b: any) => {
 }
 
 // ---------- event handlers ----------
-// Every message: bold headline with the key number (shows in the lock-screen preview),
-// one dot-joined meta line, details in a quote block.
+// Hybrid layout:
+//   Live floor events (table_opened, items_added, bill_paid) -> crisp HTML + aligned <pre> table + inline button
+//   Milestone reports & online orders -> Brand v2 PNG card (sendPhoto) + lock-screen caption + inline button + HTML fallback
 
 // เปิดโต๊ะ A3 · 4 ท่าน
 async function onTableOpened(s: Settings, p: any) {
@@ -272,9 +359,9 @@ async function onTableOpened(s: Settings, p: any) {
     `<b>เปิดโต๊ะ ${placeShort(b, tableName)} · ${b.pax || '-'} ท่าน</b>`,
     dot(fmtTime(b.booking_time || b.created_at), source),
     guestLine(b) || null,
-    b.customer_note ? `<i>${esc(b.customer_note)}</i>` : null,
+    b.customer_note ? quote(`<i>${esc(b.customer_note)}</i>`) : null,
   )
-  await sendTelegram(s.telegram_chat_id, text, true)
+  await sendTelegram(s.telegram_chat_id, text, { silent: true })
   return 'sent'
 }
 
@@ -295,11 +382,11 @@ async function onItemsAdded(s: Settings, p: any) {
 
   const text = block(
     `<b>${placeLabel(b, tableName)} สั่งเพิ่ม · ${baht(sum)}</b>`,
-    quote(itemLines(items)),
+    `<pre>${itemLinesAligned(items)}</pre>`,
     dot(fmtTime(items[0].created_at), isQrBooking(b) ? 'ลูกค้าสั่งผ่าน QR' : 'พนักงาน'),
   )
   // Silent: the most frequent event — visible in the chat without buzzing the phone.
-  await sendTelegram(s.telegram_chat_id, text, true)
+  await sendTelegram(s.telegram_chat_id, text, { silent: true })
   return 'sent'
 }
 
@@ -320,18 +407,21 @@ async function onBillPaid(s: Settings, p: any) {
   const discount = Number(b.discount_amount || 0) + Number(b.xhaus_discount || 0)
   const opened = b.booking_time || b.created_at
 
+  const itemsBody = items.length ? `<pre>${itemLinesAligned(items)}</pre>` : '<i>ไม่มีรายการ</i>'
   const text = block(
     `<b>เช็คบิล ${placeShort(b, tableName)} · ${baht(b.total_amount)}</b>`,
     dot(esc(paymentLabel(resolvePaymentMethod(b))), `${b.pax || '-'} ท่าน`, `${fmtTime(opened)}–${fmtTime(new Date().toISOString())}`, fmtDuration(opened)),
     guestLine(b) || null,
-    quote(itemLines(items) || '<i>ไม่มีรายการ</i>', items.length > 6),
+    items.length > 6 ? quote(itemsBody, true) : itemsBody,
     dot(`${count} รายการ ${baht(subtotal)}`, discount > 0 ? `ส่วนลด −${baht(discount)}` : '', Number(b.xhaus_earned || 0) > 0 ? `+${b.xhaus_earned} xhaus` : ''),
   )
-  await sendTelegram(s.telegram_chat_id, text)
+  await sendTelegram(s.telegram_chat_id, text, {
+    buttons: [[btn('ดูรายงานการเงิน', '/admin/financial')]],
+  })
   return 'sent'
 }
 
-// จองโต๊ะ ศ. 7 พ.ย. 19:00 · 4 ท่าน
+// จองโต๊ะ ศ. 7 พ.ย. 19:00 · 4 ท่าน (Brand v2 Card PNG)
 async function onOnlineOrder(s: Settings, p: any) {
   if (!flag(s, 'telegram_notify_online')) return 'skipped'
   await sleep(4000) // items are inserted right after the booking row
@@ -349,37 +439,97 @@ async function onOnlineOrder(s: Settings, p: any) {
     `ออเดอร์ออนไลน์ · ${baht(b.total_amount)}`
 
   const remark = String(b.staff_remark || '')
-  // States that need a person to act are bold
-  const status =
+  const statusHtml =
     /CALL_CONFIRM/.test(remark) ? '<b>ต้องโทรยืนยัน</b>' :
     b.slip_verification_status === 'auto_verified' ? 'ชำระแล้ว · ตรวจสลิปอัตโนมัติ' :
     b.slip_verification_status ? '<b>รอตรวจสลิป</b>' :
     isPickup ? 'ชำระที่ร้าน' : ''
 
-  const money = dot(
-    isDineIn && Number(b.total_amount || 0) > 0 ? `ยอด ${baht(b.total_amount)}` : '',
-    Number(b.deposit_amount || 0) > 0 ? `มัดจำ ${baht(b.deposit_amount)}` : '',
-  )
+  const deposit = Number(b.deposit_amount || 0)
+  const total = Number(b.total_amount || 0)
+  const statusBanner =
+    /CALL_CONFIRM/.test(remark)
+      ? { label: 'ต้องโทรยืนยันกับลูกค้า', detail: customerPhone(b) || undefined, tone: 'plum' as const }
+      : b.slip_verification_status === 'auto_verified'
+      ? { label: 'ชำระแล้ว · ตรวจสลิปอัตโนมัติ', detail: deposit > 0 ? `มัดจำ ${baht(deposit)}` : undefined, tone: 'calm' as const }
+      : b.slip_verification_status
+      ? { label: 'รอตรวจสลิปการโอน', detail: deposit > 0 ? `มัดจำ ${baht(deposit)}` : (total > 0 ? baht(total) : undefined), tone: 'plum' as const }
+      : isPickup
+      ? { label: 'ชำระเงินที่ร้านตอนรับของ', tone: 'calm' as const }
+      : undefined
 
-  const text = block(
-    `<b>${headline}</b>`,
+  const tag = isDineIn ? 'TABLE BOOKING' : isPickup ? 'FOOD PICKUP' : isHausmade ? 'HAUSMADE' : 'ONLINE ORDER'
+  const cardTitle =
+    isDineIn ? `จองโต๊ะ ${fmtThaiDateTime(b.booking_time)}` :
+    isPickup ? `สั่งกลับบ้าน · รับ ${fmtTime(b.booking_time)}` :
+    isHausmade ? 'ออเดอร์ HAUSMADE' :
+    'ออเดอร์ออนไลน์ใหม่'
+  const cardSub =
+    isDineIn ? dot(`${b.pax || '-'} ท่าน`, tableName ? placeLabelPlain(b, tableName) : '') :
+    dot(guestLinePlain(b), !isPickup ? `กำหนด ${fmtThaiDateTime(b.booking_time)}` : '')
+
+  const infoRows: Array<{ label: string; value: string; bold?: boolean }> = []
+  const gPlain = guestLinePlain(b)
+  if (gPlain) infoRows.push({ label: 'ลูกค้า', value: gPlain, bold: true })
+  if (b.booking_time) infoRows.push({ label: isDineIn ? 'เวลาจอง' : 'เวลารับ', value: `${fmtThaiDateTime(b.booking_time)} น.` })
+  if (isDineIn) infoRows.push({ label: 'โต๊ะ / จำนวน', value: dot(tableName ? placeLabelPlain(b, tableName) : 'ยังไม่ระบุโต๊ะ', `${b.pax || '-'} ท่าน`) })
+  if (b.shipping_address) infoRows.push({ label: 'ที่อยู่จัดส่ง', value: String(b.shipping_address) })
+
+  const MAX_CARD_ITEMS = 12
+  const svg = renderOnlineOrderCardSvg({
+    tag,
+    bookingRef: `#${String(b.id).slice(-6)}`,
+    title: cardTitle,
+    subtitle: cardSub || undefined,
+    statusBanner,
+    infoRows,
+    note: b.customer_note ? String(b.customer_note) : undefined,
+    items: items.slice(0, MAX_CARD_ITEMS).map((it: any) => ({
+      qty: Number(it.quantity || 1),
+      name: itemName(it),
+      options: optionLabel(it.selected_options) || undefined,
+      priceText: baht(lineTotal(it)),
+      voided: isVoid(it),
+    })),
+    itemsOverflow: Math.max(0, items.length - MAX_CARD_ITEMS),
+    totalLabel: isDineIn && total <= 0 && deposit > 0 ? 'มัดจำจองโต๊ะ' : 'ยอดรวมทั้งหมด',
+    totalText: total > 0 ? baht(total) : (deposit > 0 ? baht(deposit) : ''),
+    subTotals: total > 0 && deposit > 0 ? [{ label: 'มัดจำ', value: baht(deposit) }] : [],
+    timestampText: fmtDateTime(b.created_at || new Date().toISOString()),
+  })
+
+  const money = dot(
+    isDineIn && total > 0 ? `ยอด ${baht(total)}` : '',
+    deposit > 0 ? `มัดจำ ${baht(deposit)}` : '',
+  )
+  const fallbackHtml = block(
+    `<b>${esc(headline)}</b>`,
     dot(guestLine(b), isDineIn && tableName ? placeLabel(b, tableName) : '', !isDineIn && !isPickup ? `กำหนด ${fmtThaiDateTime(b.booking_time)}` : '') || null,
     b.customer_note ? `<i>${esc(b.customer_note)}</i>` : null,
     items.length ? quote(itemLines(items), items.length > 6) : null,
     money || null,
-    status || null,
+    statusHtml || null,
   )
-  await sendTelegram(s.telegram_chat_id, text)
+  const caption = block(
+    `<b>${esc(headline)}</b>`,
+    dot(guestLine(b), statusHtml) || null,
+  )
+  const actionBtn = isHausmade ? btn('จัดการ HAUSMADE', '/admin/hausmade') : btn('จัดการบิล / จอง', '/admin/bookings')
+
+  await sendTelegramCard(s.telegram_chat_id, svg, caption, fallbackHtml, { buttons: [[actionBtn]] })
   return 'sent'
 }
 
-// ปิดรอบ · ฿12,400
+// ปิดรอบ · ฿12,400 (Brand v2 Card PNG)
 // Was the stock closing count done for the current shop day? (shown on the shift close message)
-async function stockCountLine() {
+async function stockCountStatus(): Promise<{ text: string; counted: boolean } | null> {
   try {
     const { data, error } = await supabase.rpc('stock_closing_status')
     if (error || !data) return null
-    return data.counted ? `นับสต๊อกปิดร้านแล้ว ${data.items} รายการ` : 'ยังไม่ได้นับสต๊อกปิดร้าน'
+    return {
+      counted: Boolean(data.counted),
+      text: data.counted ? `นับสต๊อกปิดร้านแล้ว ${data.items} รายการ` : 'ยังไม่ได้นับสต๊อกปิดร้าน',
+    }
   } catch {
     return null
   }
@@ -393,7 +543,26 @@ async function onShiftClosed(s: Settings, p: any) {
   // open again by now (a stray close that the POS overwrote), it was never really closed: say nothing.
   if (!sh.closed_at || sh.status !== 'closed') return 'skipped'
   const diff = Number(sh.difference || 0)
-  const text = block(
+  const diffText = diff === 0 ? '฿0' : `${diff > 0 ? '+' : '−'}${baht(Math.abs(diff))}`
+  const timeRange = `${fmtTime(sh.opened_at)} – ${fmtTime(sh.closed_at)}`
+  const sc = await stockCountStatus()
+
+  const svg = renderShiftCloseCardSvg({
+    staffName: String(sh.staff_name || 'Staff'),
+    timeRange,
+    totalSalesText: baht(sh.total_sales),
+    cashSalesText: baht(sh.cash_sales),
+    qrSalesText: baht(sh.qr_sales),
+    openingFloatText: baht(sh.opening_float),
+    expectedCashText: baht(sh.expected_cash),
+    closedCashText: baht(sh.closed_cash),
+    diff,
+    diffText,
+    stockCountText: sc?.text ?? null,
+    stockCounted: sc?.counted ?? false,
+  })
+
+  const fallbackHtml = block(
     `<b>ปิดรอบ · ${baht(sh.total_sales)}</b>`,
     dot(esc(sh.staff_name), `${fmtTime(sh.opened_at)}–${fmtTime(sh.closed_at)}`),
     quote(block(
@@ -402,10 +571,17 @@ async function onShiftClosed(s: Settings, p: any) {
       `เงินทอนตั้งต้น  <code>${baht(sh.opening_float)}</code>`,
       `ควรมี  <code>${baht(sh.expected_cash)}</code> · นับได้  <code>${baht(sh.closed_cash)}</code>`,
     )),
-    diff === 0 ? 'เงินสดตรง' : `<b>ส่วนต่าง ${diff > 0 ? '+' : '−'}${baht(Math.abs(diff))}</b>`,
-    await stockCountLine(),
+    diff === 0 ? 'เงินสดตรง' : `<b>ส่วนต่าง ${diffText}</b>`,
+    sc?.text || null,
   )
-  await sendTelegram(s.telegram_chat_id, text)
+  const caption = block(
+    `<b>ปิดรอบ · ${baht(sh.total_sales)}</b>`,
+    dot(esc(sh.staff_name), diff === 0 ? 'เงินสดตรง' : `<b>ส่วนต่าง ${diffText}</b>`),
+  )
+
+  await sendTelegramCard(s.telegram_chat_id, svg, caption, fallbackHtml, {
+    buttons: [[btn('ดูรายงานการเงิน', '/admin/financial')]],
+  })
   return 'sent'
 }
 // ---------- daily summary ----------
@@ -498,28 +674,36 @@ async function buildDailySummary(start: Date, end: Date, title: string) {
   const row = (label: string, v: { n: number; amt: number }) => `${esc(label)}  <code>${baht(v.amt)}</code>  ${v.n} บิล`
 
   // Everything a manager should act on is collected into one "ต้องตรวจ" block
-  const attention: string[] = []
+  const attentionPlain: string[] = []
   if (stillOpen.length) {
     const names = await Promise.all(stillOpen.slice(0, 10).map((b: any) => loadTableName(b.table_id)))
-    attention.push(`ยังไม่เช็คบิล ${stillOpen.length}: ${names.map((n, i) => n || CHANNEL_LABEL[stillOpen[i].booking_type] || '-').map(esc).join(', ')}`)
+    attentionPlain.push(`ยังไม่เช็คบิล ${stillOpen.length}: ${names.map((n, i) => n || CHANNEL_LABEL[stillOpen[i].booking_type] || '-').join(', ')}`)
   }
   for (const sh of shifts || []) {
     const d = Number(sh.difference || 0)
-    if (d !== 0) attention.push(`เงินสด ${esc(sh.staff_name)} ส่วนต่าง ${d > 0 ? '+' : '−'}${baht(Math.abs(d))}`)
+    if (d !== 0) attentionPlain.push(`เงินสด ${sh.staff_name || 'Staff'} ส่วนต่าง ${d > 0 ? '+' : '−'}${baht(Math.abs(d))}`)
   }
-  if (voided.length) attention.push(`ยกเลิกรายการ ${voided.length}`)
+  if (voided.length) attentionPlain.push(`ยกเลิกรายการ ${voided.length}`)
   if (discount > 0 && revenue > 0 && discount / (revenue + discount) > 0.1) {
-    attention.push(`ส่วนลด ${((discount / (revenue + discount)) * 100).toFixed(0)}% ของยอด`)
+    attentionPlain.push(`ส่วนลด ${((discount / (revenue + discount)) * 100).toFixed(0)}% ของยอด`)
   }
 
   const gp = cost > 0 && itemsGross > 0 ? `GP ${(((itemsGross - cost) / itemsGross) * 100).toFixed(1)}%` : ''
+  const avgPerBill = baht(paid.length ? revenue / paid.length : 0)
+  const floorMeta = dot(
+    `เปิดโต๊ะ ${tablesOpened}`,
+    `ออนไลน์ ${online.length}`,
+    cancelled ? `ยกเลิกบิล ${cancelled}` : '',
+    noShow ? `No-show ${noShow}` : '',
+  )
+  const periodText = `${fmtDateTime(startIso)} – ${fmtDateTime(endIso)}`
   const section = (label: string, body: string) => (body ? `\n<b>${label}</b>\n${quote(body)}` : null)
 
-  return block(
-    `<b>${title} · ${baht(revenue)}</b>`,
-    dot(`${paid.length} บิล`, `เฉลี่ย ${baht(paid.length ? revenue / paid.length : 0)}`, `${pax} ท่าน`),
+  const fallbackHtml = block(
+    `<b>${esc(title)} · ${baht(revenue)}</b>`,
+    dot(`${paid.length} บิล`, `เฉลี่ย ${avgPerBill}`, `${pax} ท่าน`),
     dot(gp, discount > 0 ? `ส่วนลด ${baht(discount)}` : '') || null,
-    section('ต้องตรวจ', attention.join('\n')),
+    section('ต้องตรวจ', attentionPlain.map(esc).join('\n')),
     section('ชำระ', byMethod.map(([k, v]) => row(k, v)).join('\n')),
     section('ช่องทาง', byChannel.map(([k, v]) => row(k, v)).join('\n')),
     section('ขายดี', topList.map(([n, v], i) => `${i + 1}  ${esc(n)} ×${v.q}  <code>${baht(v.amt)}</code>`).join('\n')),
@@ -527,8 +711,31 @@ async function buildDailySummary(start: Date, end: Date, title: string) {
       dot(`เปิดโต๊ะ ${tablesOpened}`, `ออนไลน์ ${online.length}`),
       cancelled || noShow ? dot(`ยกเลิกบิล ${cancelled}`, `No-show ${noShow}`) : null,
     )),
-    `\n<i>${fmtDateTime(startIso)} – ${fmtDateTime(endIso)}</i>`,
+    `\n<i>${periodText}</i>`,
   )
+
+  const svg = renderDailySummaryCardSvg({
+    title,
+    revenueText: baht(revenue),
+    paidCount: paid.length,
+    avgPerBillText: avgPerBill,
+    pax,
+    gpText: gp || undefined,
+    discountText: discount > 0 ? `ส่วนลด ${baht(discount)}` : undefined,
+    attention: attentionPlain,
+    byMethod: byMethod.map(([label, v]) => ({ label, count: v.n, amountText: baht(v.amt) })),
+    byChannel: byChannel.map(([label, v]) => ({ label, count: v.n, amountText: baht(v.amt) })),
+    topItems: topList.map(([name, v], i) => ({ rank: i + 1, name, qty: v.q, amountText: baht(v.amt) })),
+    floorMeta,
+    periodText,
+  })
+
+  const caption = block(
+    `<b>${esc(title)} · ${baht(revenue)}</b>`,
+    dot(`${paid.length} บิล`, `${pax} ท่าน`, gp, attentionPlain.length ? `ต้องตรวจ ${attentionPlain.length}` : ''),
+  )
+
+  return { svg, caption, fallbackHtml }
 }
 
 async function onDailyTick(s: Settings) {
@@ -540,7 +747,10 @@ async function onDailyTick(s: Settings) {
   await saveSetting('telegram_last_daily_summary', key)
   const start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
   const label = fmtDate(new Date(end.getTime() - 12 * 60 * 60 * 1000))
-  await sendTelegram(s.telegram_chat_id, await buildDailySummary(start, end, `สรุป ${label}`))
+  const summary = await buildDailySummary(start, end, `สรุปยอด ${label}`)
+  await sendTelegramCard(s.telegram_chat_id, summary.svg, summary.caption, summary.fallbackHtml, {
+    buttons: [[btn('รายงานการเงิน', '/admin/financial'), btn('หน้า Admin', '/admin')]],
+  })
   return 'sent'
 }
 
@@ -577,7 +787,7 @@ async function sendStockClosing(s: Settings, day: string, sessionId?: string) {
     return Number.isFinite(v) && v >= 0 ? v : d
   }
 
-  const text = buildStockClosingMessage({
+  const input = {
     thresholds: { percent: thVal('stock_variance_percent', 5), baht: thVal('stock_variance_baht', 100) },
     day,
     session,
@@ -586,8 +796,14 @@ async function sendStockClosing(s: Settings, day: string, sessionId?: string) {
     rows: rows || [],
     reorder,
     units: Object.fromEntries((items || []).map((i: any) => [i.id, i])),
+  }
+  const fallbackHtml = buildStockClosingMessage(input)
+  const { card, caption } = buildStockClosingCardPayload(input)
+  const svg = renderStockClosingCardSvg(card)
+
+  await sendTelegramCard(s.telegram_chat_id, svg, caption, fallbackHtml, {
+    buttons: [[btn('ตรวจสต๊อก (Recon)', '/admin/stock-recon'), btn('คลังสต๊อก', '/staff/stock')]],
   })
-  await sendTelegram(s.telegram_chat_id, text)
   return 'sent'
 }
 
@@ -602,7 +818,9 @@ async function onStockSummaryNow(s: Settings, p: any) {
   const day = String(p.shop_day || shopDayOf(new Date()))
   const result = await sendStockClosing(s, day)
   if (result === 'no_closing_count') {
-    await sendTelegram(s.telegram_chat_id, block(`<b>นับปิดร้าน · ${day}</b>`, 'ยังไม่มีการนับปิดร้านในวันนี้'))
+    await sendTelegram(s.telegram_chat_id, block(`<b>นับปิดร้าน · ${day}</b>`, 'ยังไม่มีการนับปิดร้านในวันนี้'), {
+      buttons: [[btn('ไปหน้านับสต๊อก', '/staff/stock/count')]],
+    })
     return 'sent'
   }
   return result
@@ -610,7 +828,10 @@ async function onStockSummaryNow(s: Settings, p: any) {
 
 async function onDailySummaryNow(s: Settings) {
   const start = latestScheduledEnd(s.telegram_daily_summary_time)
-  await sendTelegram(s.telegram_chat_id, await buildDailySummary(start, new Date(), `ยอดถึง ${fmtTime(new Date().toISOString())}`))
+  const summary = await buildDailySummary(start, new Date(), `ยอดถึง ${fmtTime(new Date().toISOString())}`)
+  await sendTelegramCard(s.telegram_chat_id, summary.svg, summary.caption, summary.fallbackHtml, {
+    buttons: [[btn('รายงานการเงิน', '/admin/financial'), btn('หน้า Admin', '/admin')]],
+  })
   return 'sent'
 }
 
@@ -644,7 +865,7 @@ async function isAdminCaller(req: Request) {
 }
 
 const HOOK_EVENTS = new Set(['table_opened', 'items_added', 'bill_paid', 'online_order', 'shift_closed', 'daily_tick', 'stock_closing'])
-const ADMIN_EVENTS = new Set(['test', 'daily_summary_now', 'stock_summary_now', 'discover_chats'])
+const ADMIN_EVENTS = new Set(['test', 'daily_summary_now', 'stock_summary_now', 'discover_chats', 'preview_card'])
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -657,6 +878,18 @@ serve(async (req) => {
   }
   const event = String(payload.event || '')
 
+  // Pure static SVG->PNG health check (no DB access, no Telegram call)
+  if (event === 'preview_card') {
+    try {
+      const nowText = fmtDateTime(new Date().toISOString())
+      const svg = renderTestCardSvg(nowText)
+      const png = await renderSvgToPng(svg)
+      return new Response(png, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'image/png' } })
+    } catch (error) {
+      return json({ error: (error as Error).message }, 500)
+    }
+  }
+
   const fromHook = !!HOOK_SECRET && req.headers.get('x-hook-secret') === HOOK_SECRET
   if (HOOK_EVENTS.has(event) && !fromHook) return json({ error: 'unauthorized' }, 401)
   if (ADMIN_EVENTS.has(event) && !fromHook && !(await isAdminCaller(req))) return json({ error: 'unauthorized' }, 401)
@@ -664,6 +897,13 @@ serve(async (req) => {
 
   try {
     if (event === 'discover_chats') return json({ chats: await discoverChats() })
+
+    if (event === 'preview_card') {
+      const nowText = fmtDateTime(new Date().toISOString())
+      const svg = renderTestCardSvg(nowText)
+      const png = await renderSvgToPng(svg)
+      return new Response(png, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'image/png' } })
+    }
 
     const s = await loadSettings()
     // Admin UI may send an unsaved chat id for testing
@@ -682,10 +922,16 @@ serve(async (req) => {
       case 'daily_summary_now': result = await onDailySummaryNow(s); break
       case 'stock_closing': result = await onStockClosing(s, payload); break
       case 'stock_summary_now': result = await onStockSummaryNow(s, payload); break
-      case 'test':
-        await sendTelegram(s.telegram_chat_id, block('<b>เชื่อมต่อแล้ว</b>', dot('In The Haus', fmtDateTime(new Date().toISOString()))))
+      case 'test': {
+        const nowText = fmtDateTime(new Date().toISOString())
+        const svg = renderTestCardSvg(nowText)
+        const fallback = block('<b>เชื่อมต่อแล้ว</b>', dot('In The Haus', nowText))
+        await sendTelegramCard(s.telegram_chat_id, svg, fallback, fallback, {
+          buttons: [[btn('เปิดหน้า Admin', '/admin')]],
+        })
         result = 'sent'
         break
+      }
     }
     return json({ result })
   } catch (error) {
