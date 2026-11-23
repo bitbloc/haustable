@@ -1512,8 +1512,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 ) : (
                     <div className="flex items-center justify-between py-0.5">
                         <div className="flex items-center gap-2 min-w-0">
-                            <UserPlus size={14} className="text-[#767673] shrink-0" />
-                            <span className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider truncate">
+                            <UserPlus size={14} className="text-[var(--color-neutral)] shrink-0" />
+                            <span className="text-xs font-mono font-bold text-[var(--color-neutral)] uppercase tracking-wider truncate">
                                 {booking?.pickup_contact_name && !['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in'].includes(booking.pickup_contact_name.toLowerCase())
                                     ? booking.pickup_contact_name
                                     : 'No Customer Attached'}
@@ -1532,9 +1532,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-3 py-1.5 space-y-2 scrollbar-none touch-manipulation pos-cart-list-scroll">
                 {order.items.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-3 opacity-90 font-mono text-xs font-bold uppercase tracking-wider py-8">
+                    <div className="h-full flex flex-col items-center justify-center text-[var(--color-neutral)] gap-3 font-mono text-xs font-bold uppercase tracking-wider py-8">
                         <Utensils size={32} strokeWidth={1.5} className="opacity-40" />
-                        <span className="opacity-60">Cart is empty / ยังไม่มีรายการ</span>
+                        <span>Cart is empty / ยังไม่มีรายการ</span>
                         {onOpenMenu && (
                             <button
                                 type="button"
@@ -1561,7 +1561,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Summary & Checkout */}
             <div className="p-4 bg-[#EBEBE9] border-t border-[#D1D1CD] space-y-3 shrink-0 select-none touch-manipulation">
-                <div className="space-y-1.5 font-mono text-xs font-bold uppercase tracking-wider text-[#767673]">
+                <div className="space-y-1.5 font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-neutral)]">
                     <div className="flex justify-between items-center text-sm">
                         <span>SUBTOTAL</span>
                         <span className="text-[#1A1A1A]">฿{subtotal.toLocaleString()}</span>
@@ -1679,8 +1679,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-2">
                         <div className="flex flex-col">
-                            <span className="text-xs font-bold text-[#767673]">
-                                {isFullyPaid 
+                            <span className="text-xs font-bold text-[var(--color-neutral)]">
+                                {isFullyPaid
                                     ? 'NET TOTAL (ยอดสุทธิ)' 
                                     : (totalPaidAmount > 0 ? 'REMAINING DUE / ยอดค้างชำระ' : 'NET TOTAL')}
                             </span>

@@ -728,7 +728,7 @@ export default function MemberCard() {
                             <div className="flex flex-col gap-2 pt-1">
                                 <button
                                     onClick={loginWithLine}
-                                    className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3 rounded-[4px] font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                    className="w-full bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--cream)] py-3 rounded-[4px] font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                                 >
                                     <LogIn size={14} /> เข้าสู่ระบบ / สมัครสมาชิกผ่าน LINE (แนะนำ)
                                 </button>

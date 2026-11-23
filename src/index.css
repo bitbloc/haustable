@@ -187,6 +187,14 @@ body {
   overscroll-behavior: none; /* Prevent elastic pull-to-refresh */
 }
 
+/* Default keyboard focus ring. :where() keeps specificity at zero, so any scoped
+   :focus-visible rule or outline utility still wins. Dark surfaces set
+   --color-focus to cream (plum on charcoal is 1.09:1). */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 /* Touch and selection improvements for Tablet/POS */
 button, a, select, input, textarea, [role="button"] {
   -webkit-tap-highlight-color: transparent;

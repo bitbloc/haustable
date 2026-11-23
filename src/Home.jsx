@@ -123,7 +123,7 @@ export default function Home({ session }) {
                 <div className="fixed top-0 left-0 w-full z-[60] bg-[var(--brand-plum)] text-[var(--cream)] border-b border-black/20 h-9 flex items-center overflow-hidden select-none shadow-md">
                     <div className="relative w-full flex items-center">
                         <motion.div
-                            className="whitespace-nowrap flex gap-8 font-mono text-[10px] font-black uppercase tracking-wider text-black"
+                            className="whitespace-nowrap flex gap-8 font-mono text-[10px] font-black uppercase tracking-wider text-[var(--cream)]"
                             animate={{ x: ["0%", "-50%"] }}
                             transition={{
                                 repeat: Infinity,

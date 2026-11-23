@@ -305,7 +305,7 @@ export default function AuthModal({ isOpen, onClose }) {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-[#1A1A1A] w-full max-w-md rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl overflow-hidden flex flex-col min-h-[400px]">
+            <div className="relative bg-[#1A1A1A] [--color-focus:var(--cream)] w-full max-w-md rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl overflow-hidden flex flex-col min-h-[400px]">
 
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white z-20">
                     <X size={24} />
@@ -364,14 +364,14 @@ export default function AuthModal({ isOpen, onClose }) {
 
                         
                         {/* LINE Login Button */}
-                        <button onClick={handleLineLogin} className="w-full bg-[#06C755] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity mb-4">
+                        <button onClick={handleLineLogin} className="w-full bg-[var(--brand-plum)] text-[var(--cream)] py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity mb-4">
                             <Smartphone className="w-5 h-5" />
                             Continue with LINE
                         </button>
 
                         <div className="relative flex items-center justify-center my-6">
                             <div className="h-px bg-white/10 w-full absolute" />
-                            <span className="bg-[#1A1A1A] px-2 relative text-xs text-gray-500">OR PHONE / EMAIL</span>
+                            <span className="bg-[#1A1A1A] px-2 relative text-xs text-[var(--dark-muted)]">OR PHONE / EMAIL</span>
                         </div>
 
                         <form onSubmit={handleEmailLogin} className="space-y-4">
