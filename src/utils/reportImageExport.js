@@ -18,6 +18,7 @@ export const exportElementImage = async (element, width = 1000) => {
         width: `${width}px`, maxWidth: `${width}px`, height: 'auto', overflow: 'visible', transform: 'none', margin: '0'
     });
     clone.querySelectorAll('[data-export-hide]').forEach(n => n.remove());
+    clone.querySelectorAll('[data-export-show]').forEach(n => { n.style.display = 'block'; });
     clone.querySelectorAll('[data-export-unclip]').forEach(n => { n.style.overflow = 'visible'; n.style.maxHeight = 'none'; });
     container.appendChild(clone);
     document.body.appendChild(container);

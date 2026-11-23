@@ -30,7 +30,7 @@ export const shopDayRange = (endDay, days) =>
 /**
  * Rank items by accumulated variance across days.
  * dayResults: [{ day, rows }] where rows come from stock_daily_reconciliation.
- * Only days with a closing count contribute. Worst money loss first, then most abnormal days.
+ * Only days with a physical count contribute. Worst money loss first, then most abnormal days.
  */
 export const rankVariance = (dayResults = [], thresholds = DEFAULT_THRESHOLDS) => {
     const byItem = new Map();
@@ -38,7 +38,7 @@ export const rankVariance = (dayResults = [], thresholds = DEFAULT_THRESHOLDS) =
         for (const r of rows || []) {
             if (r.closing_qty === null || r.closing_qty === undefined || r.variance === null || r.variance === undefined) continue;
             const e = byItem.get(r.stock_item_id) || {
-                stock_item_id: r.stock_item_id, name: r.name, unit: r.unit, priced: false,
+                stock_item_id: r.stock_item_id, name: r.name, category: r.category || '', unit: r.unit, priced: false,
                 daysCounted: 0, abnormalDays: 0, variance: 0, value: 0, shortValue: 0, lastDay: null
             };
             const v = Number(r.variance) || 0;
@@ -49,6 +49,7 @@ export const rankVariance = (dayResults = [], thresholds = DEFAULT_THRESHOLDS) =
             e.value += val;
             e.shortValue += Math.min(0, val);
             e.priced = e.priced || Number(r.unit_cost) > 0;
+            if (!e.category && r.category) e.category = r.category;
             if (!e.lastDay || day > e.lastDay) e.lastDay = day;
             byItem.set(r.stock_item_id, e);
         }
@@ -74,11 +75,12 @@ export const summarizeRanking = (ranked = []) => ({
 /**
  * Stock card: ledger movements newest first, plus one line per day for the usage
  * computed from sales and for dishes thrown away, which do not move stock yet.
- * tx:        stock_transactions rows
- * salesDaily: [{ shop_day, quantity, order_lines }] from sale_stock_shadow_daily
- * wasteRows: sale_stock_shadow rows with source 'waste' ({ sold_at, quantity })
+ * tx:            stock_transactions rows
+ * salesDaily:    [{ shop_day, quantity, order_lines }] from sale_stock_shadow_daily
+ * wasteRows:     sale_stock_shadow rows with source 'waste' ({ sold_at, quantity })
+ * shadowDetails: optional per-order-line shadow rows ({ sold_at, menu_name, source, quantity, order_quantity })
  */
-export const buildStockCard = (tx = [], salesDaily = [], wasteRows = [], shopDayOfFn) => {
+export const buildStockCard = (tx = [], salesDaily = [], wasteRows = [], shopDayOfFn, shadowDetails = []) => {
     const ledger = tx.map(t => ({
         kind: 'ledger',
         at: t.created_at,
@@ -97,11 +99,38 @@ export const buildStockCard = (tx = [], salesDaily = [], wasteRows = [], shopDay
         wasteByDay.set(d, (wasteByDay.get(d) || 0) + (Number(w.quantity) || 0));
     }
 
+    const breakdownByDay = new Map();
+    for (const row of shadowDetails || []) {
+        if (!row || (row.source && row.source !== 'recipe' && row.source !== 'option')) continue;
+        const q = Number(row.quantity) || 0;
+        if (!q) continue;
+        const d = row.shop_day || (shopDayOfFn && row.sold_at ? shopDayOfFn(new Date(row.sold_at)) : String(row.sold_at || '').slice(0, 10));
+        if (!d) continue;
+        const name = row.menu_name || 'เมนูไม่ระบุชื่อ';
+        const key = `${name}::${row.source || 'recipe'}`;
+        if (!breakdownByDay.has(d)) breakdownByDay.set(d, new Map());
+        const map = breakdownByDay.get(d);
+        const cur = map.get(key) || { name, source: row.source || 'recipe', qty: 0, orders: 0 };
+        cur.qty += q;
+        cur.orders += Number(row.order_quantity) || 1;
+        map.set(key, cur);
+    }
+
+    const round4 = (n) => Math.round(n * 10000) / 10000;
     const computed = [
-        ...salesDaily.filter(s => Number(s.quantity)).map(s => ({
-            kind: 'sales', day: s.shop_day, label: 'ใช้ตามยอดขาย (คำนวณจากสูตร)',
-            change: -Number(s.quantity), lines: Number(s.order_lines) || 0
-        })),
+        ...salesDaily.filter(s => Number(s.quantity)).map(s => {
+            const itemsMap = breakdownByDay.get(s.shop_day);
+            const breakdown = itemsMap
+                ? [...itemsMap.values()]
+                    .map(b => ({ ...b, qty: round4(b.qty) }))
+                    .sort((a, b) => b.qty - a.qty || String(a.name).localeCompare(String(b.name), 'th'))
+                : null;
+            return {
+                kind: 'sales', day: s.shop_day, label: 'ใช้ตามยอดขาย (คำนวณจากสูตร)',
+                change: -Number(s.quantity), lines: Number(s.order_lines) || 0,
+                ...(breakdown && breakdown.length > 0 ? { breakdown } : {})
+            };
+        }),
         ...[...wasteByDay.entries()].filter(([, q]) => q).map(([d, q]) => ({
             kind: 'removed_waste', day: d, label: 'ทำแล้วทิ้ง (จากบิล)', change: -q
         }))
@@ -122,6 +151,34 @@ export const buildStockCard = (tx = [], salesDaily = [], wasteRows = [], shopDay
             computed: g.computed,
             netLedger: Math.round(g.ledger.reduce((s, r) => s + r.change, 0) * 10000) / 10000
         }));
+};
+
+/**
+ * Aggregate raw stock_count_sessions (which can have 100+ single-item spot sessions per day)
+ * into concise summary groups per (kind, performed_by) with total entries and time window.
+ */
+export const groupCountSessions = (sessions = []) => {
+    const order = { closing: 0, opening: 1, spot: 2 };
+    const map = new Map();
+    for (const s of sessions || []) {
+        const kind = s.kind || 'spot';
+        const by = (s.performed_by || '').trim() || 'ไม่ระบุ';
+        const key = `${kind}:${by}`;
+        const cur = map.get(key) || {
+            key, kind, performedBy: by, sessionsCount: 0, lineCount: 0,
+            firstAt: s.created_at || null, lastAt: s.created_at || null, blind: false
+        };
+        cur.sessionsCount += 1;
+        cur.lineCount += Number(s.line_count) || 0;
+        if (s.blind) cur.blind = true;
+        if (s.created_at && (!cur.firstAt || s.created_at < cur.firstAt)) cur.firstAt = s.created_at;
+        if (s.created_at && (!cur.lastAt || s.created_at > cur.lastAt)) cur.lastAt = s.created_at;
+        map.set(key, cur);
+    }
+    return [...map.values()].sort((a, b) =>
+        (order[a.kind] ?? 9) - (order[b.kind] ?? 9)
+        || b.lineCount - a.lineCount
+        || String(a.performedBy).localeCompare(String(b.performedBy), 'th'));
 };
 
 /**
@@ -166,13 +223,34 @@ export const suggestSpotCount = ({ ranked = [], items = [], lastCounted = new Ma
 };
 
 /**
- * Variance per person who did the closing count, over several days.
- * dayResults: [{ day, rows }] (stock_daily_reconciliation)
- * closingBy:  Map day -> [names] of the closing count sessions that day
+ * Variance per person who did the count, over several days.
+ * dayResults:       [{ day, rows }] (stock_daily_reconciliation)
+ * closingBy:        Map day -> [names] of the count sessions that day
+ * counterByDayItem: optional Map `${day}:${stock_item_id}` -> performed_by (exact per-item attribution)
  * Returns rows sorted by money short: { name, days, items, abnormal, shortValue }.
  */
-export const rankByCounter = (dayResults = [], closingBy = new Map(), thresholds = DEFAULT_THRESHOLDS) => {
+export const rankByCounter = (dayResults = [], closingBy = new Map(), thresholds = DEFAULT_THRESHOLDS, counterByDayItem = null) => {
     const acc = new Map();
+    if (counterByDayItem && counterByDayItem.size > 0) {
+        for (const { day, rows } of dayResults) {
+            const counted = (rows || []).filter(r => r.closing_qty !== null && r.closing_qty !== undefined && r.variance !== null && r.variance !== undefined);
+            for (const r of counted) {
+                const rawName = counterByDayItem.get(`${day}:${r.stock_item_id}`);
+                const fallbackNames = [...new Set((closingBy.get(day) || []).filter(Boolean))];
+                const name = rawName || (fallbackNames.length ? fallbackNames.join(', ') : 'ไม่ระบุ');
+                const e = acc.get(name) || { name, daySet: new Set(), items: 0, abnormal: 0, shortValue: 0 };
+                e.daySet.add(day);
+                e.items += 1;
+                if (isAbnormal(r, thresholds)) e.abnormal += 1;
+                e.shortValue += Math.min(0, Number(r.variance_value) || 0);
+                acc.set(name, e);
+            }
+        }
+        return [...acc.values()]
+            .map(e => ({ name: e.name, days: e.daySet.size, items: e.items, abnormal: e.abnormal, shortValue: Math.round(e.shortValue * 100) / 100 }))
+            .sort((a, b) => a.shortValue - b.shortValue || b.abnormal - a.abnormal || String(a.name).localeCompare(String(b.name), 'th'));
+    }
+
     for (const { day, rows } of dayResults) {
         const counted = (rows || []).filter(r => r.closing_qty !== null && r.closing_qty !== undefined && r.variance !== null && r.variance !== undefined);
         if (!counted.length) continue;

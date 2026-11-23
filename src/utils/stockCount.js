@@ -108,6 +108,9 @@ export const isAbnormal = (row, thresholds = DEFAULT_THRESHOLDS) => {
 export const summarizeReconciliation = (rows = [], thresholds = DEFAULT_THRESHOLDS) => {
     const counted = rows.filter(r => r.closing_qty !== null && r.closing_qty !== undefined);
     const abnormal = counted.filter(r => isAbnormal(r, thresholds));
+    const sold = rows.filter(r => Number(r.sales_usage) > 0);
+    const shortRows = counted.filter(r => Number(r.variance) < -0.00005);
+    const overRows = counted.filter(r => Number(r.variance) > 0.00005);
     const shortValue = counted.reduce((s, r) => s + Math.min(0, Number(r.variance_value) || 0), 0);
     const overValue = counted.reduce((s, r) => s + Math.max(0, Number(r.variance_value) || 0), 0);
     return {
@@ -115,9 +118,71 @@ export const summarizeReconciliation = (rows = [], thresholds = DEFAULT_THRESHOL
         counted: counted.length,
         notCounted: rows.length - counted.length,
         abnormal: abnormal.length,
+        abnormalShort: abnormal.filter(r => Number(r.variance) < 0).length,
+        abnormalOver: abnormal.filter(r => Number(r.variance) > 0).length,
+        matched: counted.length - abnormal.length,
+        sold: sold.length,
+        shortCount: shortRows.length,
+        overCount: overRows.length,
         shortValue,
-        overValue
+        overValue,
+        netValue: shortValue + overValue
     };
+};
+
+/**
+ * Operational status + shadow-mode diagnostic hint for a reconciliation row.
+ * Keeps wording plain Thai so staff/owners immediately know what needs checking.
+ */
+export const classifyReconRow = (row, thresholds = DEFAULT_THRESHOLDS) => {
+    if (!row || row.closing_qty === null || row.closing_qty === undefined) {
+        if (Number(row?.sales_usage) > 0) {
+            return {
+                status: 'uncounted_sold',
+                label: 'รอนับจริง',
+                tone: 'muted',
+                pct: null,
+                hint: 'คำนวณยอดใช้จากยอดขายแล้ว ยังไม่มีการนับจริงวันนี้'
+            };
+        }
+        return { status: 'uncounted', label: 'ยังไม่นับ', tone: 'neutral', pct: null, hint: null };
+    }
+
+    const v = Number(row.variance) || 0;
+    const expected = Number(row.expected_close) || 0;
+    const absExp = Math.abs(expected);
+    const pct = absExp > 0.00005 ? Math.round((v / absExp) * 1000) / 10 : null;
+    const bad = isAbnormal(row, thresholds);
+
+    const closingNum = Number(row.closing_qty) || 0;
+    const receivedNum = Number(row.received) || 0;
+    const salesNum = Number(row.sales_usage) || 0;
+
+    const suspectEntry = closingNum >= 10000
+        || (absExp > 0 && Math.abs(v) > absExp * 5 && Math.abs(v) >= 10)
+        || (absExp === 0 && closingNum >= 100);
+    const dupReceive = bad && salesNum === 0 && receivedNum > 0 && Math.abs(closingNum - receivedNum) < 0.001;
+
+    let hint = null;
+    if (suspectEntry) hint = 'ยอดต่างสูงมาก ตรวจหน่วยหรือตัวเลขที่กรอก';
+    else if (dupReceive) hint = 'ยอดนับเท่ากับยอดรับเข้า ตรวจว่านับรวมยอดยกมาหรือไม่';
+    else if (bad && salesNum > 0 && v < 0) hint = 'ใช้จริงมากกว่าสูตร หรือมีของเสียที่ยังไม่บันทึก';
+    else if (bad && salesNum > 0 && v > 0) hint = 'ใช้จริงน้อยกว่าสูตร ตรวจสัดส่วนสูตร';
+    else if (bad && !(Number(row.unit_cost) > 0)) hint = 'ยังไม่ได้ตั้งราคาต้นทุนต่อหน่วย';
+
+    if (Math.abs(v) < 0.00005) return { status: 'exact', label: 'ตรง', tone: 'neutral', pct: 0, hint: null };
+    if (bad && v < 0) return { status: 'abnormal_short', label: 'ขาดผิดปกติ', tone: 'plum', pct, hint };
+    if (bad && v > 0) return { status: 'abnormal_over', label: 'เกินผิดปกติ', tone: 'plum', pct, hint };
+    if (v < 0) return { status: 'minor_short', label: 'ขาดเล็กน้อย', tone: 'muted', pct, hint: null };
+    return { status: 'minor_over', label: 'เกินเล็กน้อย', tone: 'muted', pct, hint: null };
+};
+
+/** Most useful default tab for a shop day so the screen never opens blank when activity exists. */
+export const defaultReconFilter = (rows = [], thresholds = DEFAULT_THRESHOLDS) => {
+    if (rows.some(r => isAbnormal(r, thresholds))) return 'abnormal';
+    if (rows.some(r => r.closing_qty !== null && r.closing_qty !== undefined)) return 'counted';
+    if (rows.some(r => Number(r.sales_usage) > 0)) return 'sold';
+    return 'all';
 };
 
 /** Abnormal first, then by size of the money variance, then by name. */
@@ -170,8 +235,45 @@ export const thresholdsFromSettings = (rows = []) => {
 };
 
 /** Short labels for amounts written inside a table cell. */
-const SHORT_UNITS = { g: 'ก.', kg: 'กก.', ml: 'มล.', l: 'ล.', unit: 'ชิ้น' };
-const shortUnit = (u) => SHORT_UNITS[u] || displayUnit(u);
+const SHORT_UNITS = { g: 'ก.', kg: 'กก.', ml: 'มล.', l: 'ล.', unit: 'ชิ้น', bottle: 'ขวด', pack: 'แพ็ค', bag: 'ถุง', box: 'กล่อง', crate: 'ลัง', gallon: 'แกลอน', pcs: 'ชิ้น', portion: 'สูตร', potion: 'สูตร' };
+export const shortUnit = (u) => {
+    if (!u) return '';
+    return SHORT_UNITS[u] || SHORT_UNITS[String(u).trim().toLowerCase()] || displayUnit(u);
+};
+
+/**
+ * Strip decorative emojis from category labels so admin filters stay pure text.
+ */
+export const cleanCategoryLabel = (label = '') =>
+    String(label || '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim();
+
+/**
+ * Unified human-readable quantity formatter for Stock Recon and Stock Card.
+ * Turns pack decimals into pieces ("17 ขวด", "49 แก้ว") or packs+remainder ("1 กก. 500 ก."),
+ * and appends the short unit when no pack conversion exists ("14 ถุง", "2 กก.").
+ */
+export function formatReconQty(value, { unit = '', factor = 1, usageUnit = '' } = {}, digits = 2, { showUnit = true } = {}) {
+    if (value === null || value === undefined) return '—';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    if (Math.abs(n) < 0.00005) return '0';
+    const f = Number(factor) || 1;
+    const isCountPieces = f > 1
+        && (getUnitType(usageUnit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(usageUnit))
+        && String(usageUnit || '').toLowerCase() !== String(unit || '').toLowerCase();
+    if (isCountPieces) {
+        const rounded = Math.round(n * f);
+        if (rounded === 0) return `${n < 0 ? '-' : ''}<1 ${shortUnit(usageUnit)}`.trim();
+        return `${rounded.toLocaleString('th-TH')} ${shortUnit(usageUnit)}`.trim();
+    }
+    if (f > 1) {
+        const packed = formatPackQty(n, { factor: f, packUnit: unit, usageUnit });
+        if (packed) return packed;
+    }
+    const formatted = Number(n.toFixed(digits)).toLocaleString('th-TH', { maximumFractionDigits: digits });
+    if (!showUnit || !unit) return formatted;
+    return `${formatted} ${shortUnit(unit)}`.trim();
+}
 
 /**
  * A stock quantity in counting units (packs) written the way staff count it: whole packs plus

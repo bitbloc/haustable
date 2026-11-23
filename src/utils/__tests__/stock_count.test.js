@@ -3,7 +3,8 @@ import {
     shopDayOf, addDays, defaultCountKind, displayUnit, parseCount, buildCountLines, stepCount,
     countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft,
     countsInPieces, splitPieces, mergeLoosePieces,
-    isAbnormal, summarizeReconciliation, sortReconciliation, carryOverClosing, thresholdsFromSettings
+    isAbnormal, summarizeReconciliation, sortReconciliation, carryOverClosing, thresholdsFromSettings,
+    classifyReconRow, defaultReconFilter, formatReconQty, cleanCategoryLabel
 } from '../stockCount';
 
 // Bangkok is UTC+7 all year.
@@ -210,5 +211,42 @@ describe('packs counted as packs, pieces, or both', () => {
         expect(splitPieces(14.4, 50)).toEqual({ packs: 14, rest: 20, pieces: 720 });
         expect(splitPieces(39, 25)).toEqual({ packs: 39, rest: 0, pieces: 975 });
         expect(splitPieces(7 / 110, 110)).toEqual({ packs: 0, rest: 7, pieces: 7 });
+    });
+});
+
+describe('recon UX helpers: classifyReconRow, defaultReconFilter, formatReconQty', () => {
+    it('classifies counted and uncounted rows with shadow-mode hints', () => {
+        expect(classifyReconRow({ closing_qty: null, sales_usage: 0.5 }).status).toBe('uncounted_sold');
+        expect(classifyReconRow({ closing_qty: null, sales_usage: 0 }).status).toBe('uncounted');
+        expect(classifyReconRow({ closing_qty: 10, expected_close: 10, variance: 0, unit_cost: 50, variance_value: 0 }).status).toBe('exact');
+
+        const typo = classifyReconRow({ closing_qty: 1000000, expected_close: 0, variance: 1000000, unit_cost: 0, variance_value: 0, sales_usage: 0 });
+        expect(typo.status).toBe('abnormal_over');
+        expect(typo.hint).toContain('ตรวจหน่วยหรือตัวเลข');
+
+        const dupRecv = classifyReconRow({ closing_qty: 14, received: 14, expected_close: 19, variance: -5, unit_cost: 120, variance_value: -600, sales_usage: 0 });
+        expect(dupRecv.status).toBe('abnormal_short');
+        expect(dupRecv.hint).toContain('รับเข้า');
+
+        const recipeShort = classifyReconRow({ closing_qty: 3, expected_close: 5, variance: -2, unit_cost: 200, variance_value: -400, sales_usage: 1.5 });
+        expect(recipeShort.status).toBe('abnormal_short');
+        expect(recipeShort.pct).toBe(-40);
+        expect(recipeShort.hint).toContain('สูตร');
+    });
+
+    it('picks the best non-empty default filter for a day', () => {
+        expect(defaultReconFilter([{ closing_qty: 1, expected_close: 10, variance: -9, unit_cost: 100, variance_value: -900 }])).toBe('abnormal');
+        expect(defaultReconFilter([{ closing_qty: 10, expected_close: 10, variance: 0, unit_cost: 100, variance_value: 0 }])).toBe('counted');
+        expect(defaultReconFilter([{ closing_qty: null, sales_usage: 2 }])).toBe('sold');
+        expect(defaultReconFilter([])).toBe('all');
+    });
+
+    it('formats pack, piece, and plain unit quantities cleanly', () => {
+        expect(formatReconQty(1.4167, { unit: 'crate', factor: 12, usageUnit: 'bottle' })).toBe('17 ขวด');
+        expect(formatReconQty(-0.02, { unit: 'pack', factor: 1000, usageUnit: 'g' })).toBe('-20 ก.');
+        expect(formatReconQty(14, { unit: 'bag', factor: 1, usageUnit: 'bag' })).toBe('14 ถุง');
+        expect(formatReconQty(0, { unit: 'kg', factor: 1 })).toBe('0');
+        expect(formatReconQty(null, { unit: 'kg', factor: 1 })).toBe('—');
+        expect(cleanCategoryLabel('🥬 ผัก (Veg)')).toBe('ผัก (Veg)');
     });
 });

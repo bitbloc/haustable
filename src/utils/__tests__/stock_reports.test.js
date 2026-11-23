@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rankVariance, summarizeRanking, shopDayRange, buildStockCard, reasonLabel, suggestSpotCount, rankByCounter } from '../stockReports';
+import { rankVariance, summarizeRanking, shopDayRange, buildStockCard, reasonLabel, suggestSpotCount, rankByCounter, groupCountSessions } from '../stockReports';
 import { shopDayOf } from '../stockCount';
 
 const row = (id, name, variance, value, extra = {}) => ({
@@ -159,5 +159,50 @@ describe('formatPackQty: packs plus loose pieces instead of pack decimals', () =
     it('returns null when there is no conversion, so the plain number is shown', () => {
         expect(formatPackQty(2.5, { factor: 1, packUnit: 'kg', usageUnit: 'kg' })).toBeNull();
         expect(formatPackQty(null, cups)).toBeNull();
+    });
+});
+
+describe('groupCountSessions, per-item counter ranking, and shadow menu breakdown', () => {
+    it('collapses dozens of single-item spot sessions into one group per staff and kind', () => {
+        const grouped = groupCountSessions([
+            { id: '1', kind: 'spot', performed_by: 'casper', line_count: 1, created_at: '2026-11-21T05:05:00Z' },
+            { id: '2', kind: 'spot', performed_by: 'casper', line_count: 1, created_at: '2026-11-21T13:10:00Z' },
+            { id: '3', kind: 'spot', performed_by: 'Kanchanit', line_count: 1, created_at: '2026-11-21T13:42:00Z' },
+            { id: '4', kind: 'closing', performed_by: 'ก้อง', line_count: 15, blind: true, created_at: '2026-11-21T15:00:00Z' }
+        ]);
+        expect(grouped.map(g => `${g.kind}:${g.performedBy}:${g.lineCount}`)).toEqual([
+            'closing:ก้อง:15',
+            'spot:casper:2',
+            'spot:Kanchanit:1'
+        ]);
+        expect(grouped[1]).toMatchObject({ sessionsCount: 2, firstAt: '2026-11-21T05:05:00Z', lastAt: '2026-11-21T13:10:00Z' });
+    });
+
+    it('attributes items to exact counters when counterByDayItem is supplied', () => {
+        const days = [
+            { day: '2026-11-21', rows: [row('pork', 'หมู', -2, -360), row('milk', 'นม', -1, -120)] }
+        ];
+        const byItem = new Map([['2026-11-21:pork', 'casper'], ['2026-11-21:milk', 'Kanchanit']]);
+        expect(rankByCounter(days, new Map(), undefined, byItem)).toEqual([
+            { name: 'casper', days: 1, items: 1, abnormal: 1, shortValue: -360 },
+            { name: 'Kanchanit', days: 1, items: 1, abnormal: 1, shortValue: -120 }
+        ]);
+    });
+
+    it('attaches per-menu breakdown to shadow sales lines in buildStockCard when shadowDetails provided', () => {
+        const card = buildStockCard(
+            [],
+            [{ shop_day: '2026-11-23', quantity: 0.3, order_lines: 3 }],
+            [],
+            shopDayOf,
+            [
+                { sold_at: '2026-11-23T06:00:00Z', menu_name: 'แกงส้มชะอมกุ้ง', source: 'recipe', quantity: 0.2, order_quantity: 2 },
+                { sold_at: '2026-11-23T07:00:00Z', menu_name: 'แกงส้มปลาทอด', source: 'option', quantity: 0.1, order_quantity: 1 }
+            ]
+        );
+        expect(card[0].computed[0].breakdown).toEqual([
+            { name: 'แกงส้มชะอมกุ้ง', source: 'recipe', qty: 0.2, orders: 2 },
+            { name: 'แกงส้มปลาทอด', source: 'option', qty: 0.1, orders: 1 }
+        ]);
     });
 });
