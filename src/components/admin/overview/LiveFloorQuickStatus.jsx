@@ -277,56 +277,48 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)]" />
                         <h2 className="tabular-nums text-sm md:text-base font-bold text-[var(--color-ink)]">
-                            LIVE FLOOR & 1-TAP TABLE BLOCK
+                            ผังโต๊ะสดและล็อกโต๊ะด่วน
                         </h2>
                     </div>
-                    <p className="text-[13px] text-[var(--color-neutral)] tabular-nums mt-0.5">
-                        Tap empty table to block 2h for walk-in • Tap occupied table to release
+                    <p className="text-[13px] text-[var(--color-neutral)] mt-0.5">
+                        แตะโต๊ะว่างเพื่อล็อก 2 ชม. หรือแตะโต๊ะที่กำลังทานเพื่อดูรายละเอียด
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     {/* Legend badges */}
-                    <div className="hidden sm:flex items-center gap-2 tabular-nums text-xs text-[var(--color-muted)]">
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" /> FREE
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)]" /> OCCUPIED
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(60%_0.15_60)]" /> UPCOMING
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(35%_0.01_348.33)]" /> BLOCKED
-                        </span>
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs">
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] font-semibold">ว่าง</span>
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--color-plum-pale)] text-[var(--brand-plum)] font-semibold">กำลังทาน</span>
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] font-semibold">กำลังจะมา</span>
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--color-ink-soft)] text-[var(--color-paper)] font-semibold">งดใช้งาน</span>
                     </div>
 
                     <Link 
                         to="/admin/tables" 
-                        className="inline-flex items-center gap-1 tabular-nums text-xs font-bold text-[var(--color-ink)] hover:text-[var(--brand-plum)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] px-3 py-1.5 rounded-sm transition-colors"
+                        className="inline-flex items-center text-xs font-semibold text-[var(--color-ink)] hover:text-[var(--brand-plum)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                     >
-                        FULL FLOORPLAN ➔
+                        เปิดผังโต๊ะเต็ม
                     </Link>
                 </div>
             </div>
 
             {/* Table Matrix Grid */}
             {loading ? (
-                <div className="py-12 text-center tabular-nums text-xs text-[var(--color-neutral)] ">
-                    LOADING LIVE FLOOR STATUS...
+                <div className="py-12 text-center text-xs text-[var(--color-neutral)]">
+                    กำลังโหลดสถานะผังโต๊ะ…
                 </div>
             ) : tables.length === 0 ? (
-                <div className="py-12 text-center tabular-nums text-xs text-[var(--color-neutral)]">
-                    NO TABLES CONFIGURED IN SYSTEM
+                <div className="py-12 text-center text-xs text-[var(--color-neutral)]">
+                    ยังไม่มีข้อมูลโต๊ะในระบบ
                 </div>
             ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5 pt-4">
                     {tables.map(table => {
                         const state = getTableState(table.id)
-                        let bgStyle = 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[oklch(82%_0.012_348.33)] hover:border-[oklch(45%_0.08_140)]'
-                        let statusTag = 'FREE'
-                        let tagStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
+                        let bgStyle = 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-control)] hover:border-[var(--status-ok-fill)]'
+                        let statusTag = 'ว่าง'
+                        let tagStyle = 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)]'
 
                         const transfer = parseTableTransferInfo(state.booking)
                         const hasCallStaff = state.status === 'occupied' && Boolean(state.booking?.staff_remark?.includes('[CALL_STAFF]'))
@@ -344,30 +336,31 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
                         if (state.status === 'occupied') {
                             bgStyle = isLongStay 
-                                ? 'bg-[oklch(96%_0.03_348.33)] text-[var(--color-ink)] border-[var(--brand-plum)] ring-1 ring-[var(--brand-plum)]' 
+                                ? 'bg-[var(--color-plum-pale)] text-[var(--color-ink)] border-[var(--brand-plum)] ring-1 ring-[var(--brand-plum)]' 
                                 : isWarning 
-                                    ? 'bg-[oklch(96%_0.03_65)] text-[var(--color-ink)] border-[oklch(80%_0.06_65)]' 
+                                    ? 'bg-[var(--status-warn-bg)] text-[var(--color-ink)] border-[var(--status-warn-border)]' 
                                     : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--brand-plum)]'
-                            statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()} • ${formattedDur}` : `${formattedDur}`
-                            tagStyle = isLongStay ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]' : 'bg-[var(--brand-plum)] text-[var(--color-paper)]'
+                            statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()} (${formattedDur})` : `${formattedDur}`
+                            tagStyle = 'bg-[var(--brand-plum)] text-[var(--color-paper)]'
                         } else if (state.status === 'upcoming') {
-                            bgStyle = 'bg-[oklch(96%_0.02_60)] text-[var(--color-ink)] border-[oklch(60%_0.15_60)]'
+                            bgStyle = 'bg-[var(--status-warn-bg)] text-[var(--color-ink)] border-[var(--status-warn-border)]'
                             const bTime = state.booking?.booking_time ? new Date(state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''
-                            statusTag = bTime ? `RES ${bTime}` : 'RESERVED'
-                            tagStyle = 'bg-[oklch(60%_0.15_60)] text-[var(--color-ink)]'
+                            statusTag = bTime ? `จอง ${bTime}` : 'จองแล้ว'
+                            tagStyle = 'bg-[var(--status-warn-bright)] text-[var(--color-ink)]'
                         } else if (state.status === 'blocked') {
-                            bgStyle = 'bg-[oklch(30%_0.01_348.33)] text-[var(--color-paper)] border-[var(--color-ink)]'
-                            statusTag = 'BLOCKED'
-                            tagStyle = 'bg-black/40 text-[var(--color-paper)]'
+                            bgStyle = 'bg-[var(--color-ink-soft)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                            statusTag = 'งดใช้งาน'
+                            tagStyle = 'bg-[var(--charcoal)] text-[var(--color-paper)]'
                         }
 
                         return (
                             <button
                                 key={table.id}
+                                type="button"
                                 onClick={() => handleTableClick(table, state)}
                                 disabled={actionLoading}
-                                className={`relative p-3 rounded-sm border transition-all text-left flex flex-col justify-between min-h-[84px] active:scale-95 select-none ${bgStyle} ${
-                                    hasCallStaff || hasCallBill ? 'ring-2 ring-[oklch(75%_0.18_65)] animate-pulse' : ''
+                                className={`relative p-3 rounded-lg border transition-colors text-left flex flex-col justify-between min-h-[84px] active:scale-95 select-none cursor-pointer ${bgStyle} ${
+                                    hasCallStaff || hasCallBill ? 'ring-2 ring-[var(--status-warn-border)]' : ''
                                 }`}
                             >
                                 <div className="flex items-center justify-between">
@@ -376,16 +369,16 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                                     </span>
                                     <div className="flex items-center gap-1">
                                         {transfer.isMergedTarget && (
-                                            <span className="bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
+                                            <span className="bg-[var(--status-ok-fill)] text-[var(--color-paper)] text-[11px] tabular-nums font-bold px-1 rounded-sm">
                                                 +{transfer.mergedFromTables.join(',')}
                                             </span>
                                         )}
                                         {transfer.isMoved && (
-                                            <span className="bg-[oklch(45%_0.08_220)] text-[var(--color-paper)] text-[11px] tabular-nums font-bold px-1 rounded-xs">
+                                            <span className="bg-[var(--status-info-fill)] text-[var(--color-paper)] text-[11px] tabular-nums font-bold px-1 rounded-sm">
                                                 ย้าย
                                             </span>
                                         )}
-                                        <span className=" tabular-nums text-xs opacity-70">
+                                        <span className="tabular-nums text-xs opacity-70">
                                             {table.capacity}P
                                         </span>
                                     </div>
@@ -393,13 +386,13 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
                                 {hasCallStaff || hasCallBill ? (
                                     <div className="mt-2">
-                                        <span className="tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs block text-center truncate bg-[oklch(78%_0.18_65)] text-[var(--color-ink)]">
-                                            {hasCallBill ? 'CALL BILL' : 'CALL STAFF'}
+                                        <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.5 rounded-md block text-center truncate bg-[var(--status-warn-bright)] text-[var(--color-ink)]">
+                                            {hasCallBill ? 'เรียกเช็คบิล' : 'เรียกพนักงาน'}
                                         </span>
                                     </div>
                                 ) : (
                                     <div className="mt-2">
-                                        <span className={` tabular-nums text-[11px] md:text-[11px] font-bold px-1.5 py-0.5 rounded-xs block text-center truncate ${tagStyle}`}>
+                                        <span className={`tabular-nums text-[11px] font-semibold px-1.5 py-0.5 rounded-md block text-center truncate ${tagStyle}`}>
                                             {statusTag}
                                         </span>
                                     </div>
@@ -412,22 +405,23 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
 
             {/* Inspection / Action Modal */}
             {selectedTableData && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-[var(--color-veil)] z-50 flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-paper)] rounded-xl max-w-md w-full p-6 shadow-[var(--shadow-sheet)]">
                         <div className="flex items-center justify-between pb-3 border-b border-[var(--color-rule)]">
                             <div>
-                                <span className="tabular-nums text-xs font-bold text-[var(--color-neutral)]">
-                                    TABLE INSPECTION
-                                </span>
                                 <h3 className="tabular-nums text-lg font-bold text-[var(--color-ink)]">
-                                    {selectedTableData.table.table_name} ({selectedTableData.table.capacity} Pax)
+                                    โต๊ะ {selectedTableData.table.table_name} ({selectedTableData.table.capacity} ที่นั่ง)
                                 </h3>
+                                <p className="text-xs text-[var(--color-neutral)]">
+                                    ข้อมูลโต๊ะหน้าร้าน
+                                </p>
                             </div>
                             <button 
+                                type="button"
                                 onClick={() => setSelectedTableData(null)}
-                                className="tabular-nums text-xs font-bold text-[var(--color-muted)] hover:text-[var(--color-ink)] p-1"
+                                className="text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--color-ink)] px-2.5 py-1.5 rounded-lg bg-[var(--color-paper-2)] cursor-pointer transition-colors"
                             >
-                                ✕ CLOSE
+                                ปิด
                             </button>
                         </div>
 
@@ -436,50 +430,50 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                             return (
                                 <div className="my-4 space-y-3 tabular-nums text-xs">
                                     {modalTransfer.isMergedTarget && (
-                                        <div className="bg-[oklch(94%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] p-2 rounded-sm font-bold flex items-center gap-1.5">
-                                            <span>COMBINED BILL:</span>
+                                        <div className="bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] p-2.5 rounded-lg font-semibold flex items-center gap-1.5">
+                                            <span>รวมบิล:</span>
                                             <span>บิลนี้รวมรายการมาจาก {modalTransfer.mergedFromTableDisplay || `โต๊ะ ${modalTransfer.mergedFromTables.join(', ')}`}</span>
                                         </div>
                                     )}
                                     {modalTransfer.isMoved && (
-                                        <div className="bg-[oklch(94%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.04_220)] p-2 rounded-sm font-bold flex items-center gap-1.5">
-                                            <span>MOVED:</span>
+                                        <div className="bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)] p-2.5 rounded-lg font-semibold flex items-center gap-1.5">
+                                            <span>ย้ายโต๊ะ:</span>
                                             <span>ลูกค้าย้ายมาจาก โต๊ะ {modalTransfer.movedFromTable}</span>
                                         </div>
                                     )}
-                                    <div className="bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-paper-3)] space-y-1.5">
+                                    <div className="bg-[var(--color-paper-2)] p-3 rounded-lg border border-[var(--color-paper-3)] space-y-1.5">
                                         <div className="flex justify-between">
-                                            <span className="text-[var(--color-neutral)]">GUEST NAME</span>
+                                            <span className="text-[var(--color-neutral)]">ชื่อลูกค้า</span>
                                             <span className="font-bold text-[var(--color-ink)]">
-                                                {selectedTableData.state.booking.pickup_contact_name || selectedTableData.state.booking.profiles?.display_name || 'Guest'}
+                                                {selectedTableData.state.booking.pickup_contact_name || selectedTableData.state.booking.profiles?.display_name || 'ลูกค้าทั่วไป'}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-[var(--color-neutral)]">TYPE</span>
+                                            <span className="text-[var(--color-neutral)]">ประเภท</span>
                                             <span className="font-bold text-[var(--brand-plum)]">
                                                 {selectedTableData.state.booking.booking_type}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-[var(--color-neutral)]">START TIME</span>
+                                            <span className="text-[var(--color-neutral)]">เวลาเริ่ม</span>
                                             <span className="font-bold">
                                                 {formatThaiTimeOnly(selectedTableData.state.booking.booking_time)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-[var(--color-neutral)]">ELAPSED (เวลาที่ใช้บริการ)</span>
+                                            <span className="text-[var(--color-neutral)]">เวลาที่ใช้บริการ</span>
                                             <span className="font-bold tabular-nums text-[var(--brand-plum)]">
                                                 {formatThaiDuration(calculateDurationMinutes(selectedTableData.state.booking.booking_time, currentTime))}
                                             </span>
                                         </div>
                                         {selectedTableData.state.booking.customer_note && (
                                             <div className="pt-1 text-xs text-[var(--color-muted)] border-t border-[var(--color-paper-3)]">
-                                                Note: "{selectedTableData.state.booking.customer_note}"
+                                                โน้ตลูกค้า: "{selectedTableData.state.booking.customer_note}"
                                             </div>
                                         )}
                                         {modalTransfer.cleanRemark && (
                                             <div className="pt-1 text-xs text-[var(--color-muted)] border-t border-[var(--color-paper-3)]">
-                                                Remark: "{modalTransfer.cleanRemark}"
+                                                หมายเหตุ: "{modalTransfer.cleanRemark}"
                                             </div>
                                         )}
                                     </div>
@@ -488,21 +482,21 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                         })()}
 
                         {!selectedTableData.state.booking && (
-                            <div className="my-6 py-4 text-center tabular-nums text-xs text-[var(--color-neutral)] bg-[var(--color-paper-2)] rounded-xs border border-[var(--color-paper-3)]">
+                            <div className="my-6 py-4 text-center text-xs text-[var(--color-neutral)] bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-paper-3)]">
                                 โต๊ะว่าง พร้อมเปิดบริการที่หน้าเครื่อง POS
                             </div>
                         )}
 
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-[var(--color-rule)]">
-                            <span className="tabular-nums text-xs text-[var(--color-neutral)]">
-                                [INFO] การเปิดโต๊ะ เช็คบิล และเคลียร์โต๊ะ ดำเนินการผ่านเครื่อง POS หน้าร้าน
+                            <span className="text-xs text-[var(--color-neutral)]">
+                                การเปิดโต๊ะ เช็คบิล และเคลียร์โต๊ะ ดำเนินการผ่านเครื่อง POS หน้าร้าน
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setSelectedTableData(null)}
-                                className="px-5 py-2 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] font-bold text-xs rounded-sm cursor-pointer whitespace-nowrap self-end sm:self-auto"
+                                className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] font-semibold text-xs rounded-lg cursor-pointer whitespace-nowrap self-end sm:self-auto transition-colors"
                             >
-                                ✕ ปิดหน้าต่าง
+                                ปิดหน้าต่าง
                             </button>
                         </div>
                     </div>

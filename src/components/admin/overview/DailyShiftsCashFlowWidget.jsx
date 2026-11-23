@@ -9,26 +9,28 @@ export function classifyAdjustmentNote(note = '', type = 'out') {
     const text = (note || '').toLowerCase()
     
     if (text.includes('ทอน') || text.includes('float') || text.includes('change') || text.includes('สำรอง')) {
-        return { label: 'เงินทอน/สำรอง', color: 'bg-[oklch(93%_0.03_140)] text-[oklch(35%_0.08_140)] border-[oklch(80%_0.06_140)]' }
+        return { label: 'เงินทอน/สำรอง', color: 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border-[var(--status-ok-border)]' }
     }
     if (text.includes('ตลาด') || text.includes('ผัก') || text.includes('เนื้อ') || text.includes('หมู') || text.includes('วัตถุดิบ') || text.includes('ของสด') || text.includes('market')) {
-        return { label: 'ตลาด/ของสด', color: 'bg-[oklch(94%_0.04_65)] text-[oklch(38%_0.10_65)] border-[oklch(82%_0.07_65)]' }
+        return { label: 'ตลาด/ของสด', color: 'bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border-[var(--status-warn-border)]' }
     }
     if (text.includes('น้ำแข็ง') || text.includes('ice') || text.includes('ยูนิต')) {
-        return { label: 'น้ำแข็ง/เครื่องดื่ม', color: 'bg-[oklch(93%_0.04_220)] text-[oklch(35%_0.08_220)] border-[oklch(80%_0.07_220)]' }
+        return { label: 'น้ำแข็ง/เครื่องดื่ม', color: 'bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border-[var(--status-info-border)]' }
     }
     if (text.includes('พัสดุ') || text.includes('ส่งของ') || text.includes('per') || text.includes('flash') || text.includes('kerry') || text.includes('ไปรษณีย์') || text.includes('ค่าส่ง')) {
-        return { label: 'พัสดุ/จัดส่ง', color: 'bg-[oklch(93%_0.04_280)] text-[oklch(35%_0.08_280)] border-[oklch(82%_0.07_280)]' }
+        return { label: 'พัสดุ/จัดส่ง', color: 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border-[var(--color-plum-border)]' }
     }
     if (text.includes('ส่งเงิน') || text.includes('เจ้าของ') || text.includes('บอย') || text.includes('owner') || text.includes('drop')) {
-        return { label: 'ส่งยอดเจ้าของ', color: 'bg-[oklch(92%_0.04_348.33)] text-[var(--brand-plum)] border-[oklch(80%_0.08_348.33)]' }
+        return { label: 'ส่งยอดเจ้าของ', color: 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border-[var(--color-plum-border)]' }
     }
     if (text.includes('ซ่อม') || text.includes('ช่าง') || text.includes('แก๊ส') || text.includes('ไฟ') || text.includes('น้ำ')) {
-        return { label: 'ซ่อมบำรุง/สาธารณูปโภค', color: 'bg-[oklch(92%_0.03_45)] text-[oklch(38%_0.08_45)] border-[oklch(80%_0.06_45)]' }
+        return { label: 'ซ่อมบำรุง/สาธารณูปโภค', color: 'bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border-[var(--status-warn-border)]' }
     }
     return {
         label: type === 'in' ? 'นำเข้าทั่วไป' : 'เบิกจ่ายทั่วไป',
-        color: type === 'in' ? 'bg-[oklch(94%_0.02_140)] text-[oklch(40%_0.06_140)] border-[oklch(85%_0.04_140)]' : 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[oklch(85%_0.04_348.33)]'
+        color: type === 'in'
+            ? 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border-[var(--status-ok-border)]'
+            : 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--color-plum-border)]'
     }
 }
 
@@ -221,43 +223,44 @@ export default function DailyShiftsCashFlowWidget({
     }, [activeShift, sortedShifts, aggregatedMetrics])
 
     return (
-        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm mb-6 overflow-hidden transition-all">
+        <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl mb-6 overflow-hidden">
             {/* Header: Title & Shift Selector Tabs (Brutalist Tabular Division) */}
             <div className="flex flex-col md:flex-row md:items-stretch justify-between border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
                 {/* Left Title Cell */}
                 <div className="p-3.5 md:p-4 flex items-center gap-3 border-b md:border-b-0 md:border-r border-[var(--color-rule)]">
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <span className="tabular-nums text-[11px] font-bold text-[var(--brand-plum)] bg-[oklch(93%_0.03_348.33)] px-1.5 py-0.5 rounded-xs border border-[oklch(85%_0.06_348.33)]">
-                                CASH DRAWER & SHIFTS
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="tabular-nums text-[11px] font-semibold text-[var(--brand-plum)] bg-[var(--color-plum-pale)] px-2 py-0.5 rounded-md border border-[var(--color-plum-border)]">
+                                ลิ้นชักและกะ POS
                             </span>
-                            <span className="tabular-nums text-xs text-[var(--color-muted)] font-bold">
-                                // สรุปเงินสดเข้า-ออกประจำกะ
+                            <span className="tabular-nums text-xs text-[var(--color-muted)] font-semibold">
+                                สรุปเงินสดเข้า-ออกประจำกะ
                             </span>
                         </div>
-                        <div className="tabular-nums text-xs text-[var(--color-neutral)] mt-0.5">
-                            {selectedDate} · มีทั้งหมด <strong className="text-[var(--color-ink)]">{sortedShifts.length} กะ</strong>
+                        <div className="tabular-nums text-xs text-[var(--color-neutral)] mt-1 flex items-center gap-x-2.5 flex-wrap">
+                            <span>{selectedDate}</span>
+                            <span>ทั้งหมด <strong className="text-[var(--color-ink)]">{sortedShifts.length} กะ</strong></span>
                             {aggregatedMetrics.openShiftsCount > 0 && (
-                                <span className="ml-1.5 text-[oklch(45%_0.08_140)] font-bold">({aggregatedMetrics.openShiftsCount} กะกำลังเปิด [ACTIVE])</span>
+                                <span className="text-[var(--status-ok-ink)] font-semibold">กำลังเปิด {aggregatedMetrics.openShiftsCount} กะ</span>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Right Shift Selector Ribbon */}
-                <div className="flex items-center gap-1 p-2 md:p-2.5 overflow-x-auto no-scrollbar tabular-nums text-xs">
+                <div className="flex items-center gap-1.5 p-2 md:p-2.5 overflow-x-auto no-scrollbar tabular-nums text-xs">
                     {/* All Shifts Option */}
                     <button
                         type="button"
                         onClick={() => setSelectedShiftId('all')}
-                        className={`px-3 py-1.5 rounded-xs font-bold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                        className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                             selectedShiftId === 'all'
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                 : 'bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-muted)]'
                         }`}
                     >
-                        <span>ภาพรวมรวมทุกกะ</span>
-                        <span className={`text-[11px] px-1 rounded-xs tabular-nums ${selectedShiftId === 'all' ? 'bg-white/20 text-[var(--color-paper)]' : 'bg-[var(--color-paper-3)]'}`}>
+                        <span>ภาพรวมทุกกะ</span>
+                        <span className={`text-[11px] px-1.5 rounded-md tabular-nums ${selectedShiftId === 'all' ? 'bg-[var(--cream)]/20 text-[var(--color-paper)]' : 'bg-[var(--color-paper-3)]'}`}>
                             {sortedShifts.length}
                         </span>
                     </button>
@@ -271,15 +274,20 @@ export default function DailyShiftsCashFlowWidget({
                                 key={s.id}
                                 type="button"
                                 onClick={() => setSelectedShiftId(s.id)}
-                                className={`px-3 py-1.5 rounded-xs font-bold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                                     isSelected
-                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                         : 'bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-muted)]'
                                 }`}
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-[oklch(45%_0.08_140)] ' : 'bg-[var(--color-neutral)]'}`} />
-                                <span>กะ {idx + 1}: {s.staff_name || 'Staff'}</span>
-                                {isOpen && <span className="text-xs text-emerald-400 font-normal">[LIVE]</span>}
+                                <span>กะ {idx + 1}: {s.staff_name || 'พนักงาน'}</span>
+                                {isOpen && (
+                                    <span className={`text-[11px] px-1.5 py-0.2 rounded-md font-semibold ${
+                                        isSelected ? 'bg-[var(--cream)]/20 text-[var(--color-paper)]' : 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)]'
+                                    }`}>
+                                        เปิดอยู่
+                                    </span>
+                                )}
                             </button>
                         )
                     })}
@@ -290,9 +298,9 @@ export default function DailyShiftsCashFlowWidget({
                             onClick={onRefreshShifts}
                             title="รีเฟรชข้อมูลกะล่าสุด"
                             disabled={loading}
-                            className="px-2 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs text-[var(--color-neutral)] hover:text-[var(--color-ink)] tabular-nums text-xs font-bold transition-colors cursor-pointer ml-1"
+                            className="px-2.5 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-[var(--color-neutral)] hover:text-[var(--color-ink)] tabular-nums text-xs font-semibold transition-colors cursor-pointer ml-1 whitespace-nowrap"
                         >
-                            <span>{loading ? '[SYNCING...]' : '[REFRESH]'}</span>
+                            <span>{loading ? 'กำลังโหลด…' : 'รีเฟรช'}</span>
                         </button>
                     )}
                 </div>
@@ -301,7 +309,7 @@ export default function DailyShiftsCashFlowWidget({
             {/* Empty State Guard */}
             {sortedShifts.length === 0 ? (
                 <div className="p-8 text-center tabular-nums">
-                    <p className="text-[13px] font-bold text-[var(--color-muted)]  ">
+                    <p className="text-[13px] font-bold text-[var(--color-muted)]">
                         ยังไม่มีข้อมูลการเปิดกะ POS ในวันที่ {selectedDate}
                     </p>
                     <p className="text-[13px] text-[var(--color-neutral)] mt-1">
@@ -312,103 +320,98 @@ export default function DailyShiftsCashFlowWidget({
                 <div>
                     {/* Shift Metadata Banner (Active Staff, Timing & Status) */}
                     <div className="px-4 py-2.5 bg-[var(--color-paper-2)] border-b border-[var(--color-paper-3)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
                             <span className="font-bold text-[var(--color-ink)]">{currentViewData.title}</span>
-                            <span className="text-[var(--color-neutral)]">·</span>
-                            <span className="text-[var(--color-muted)] flex items-center gap-1.5">
-                                <span className="text-xs text-[var(--color-neutral)]">[HOURS]</span>
-                                <span>เปิด {currentViewData.openTime} → {currentViewData.closeTime}</span>
+                            <span className="text-[var(--color-muted)]">
+                                เวลาทำการ เปิด {currentViewData.openTime} ถึง {currentViewData.closeTime}
                             </span>
                         </div>
 
                         <div className="flex items-center gap-2">
                             {currentViewData.isOpen ? (
-                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-bold text-[11px] bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)] border border-[oklch(80%_0.06_140)]">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
-                                    <span>กะกำลังทำงานอยู่ [ACTIVE]</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-[11px] bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
+                                    กะกำลังทำงานอยู่
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-bold text-[11px] bg-[var(--color-paper-2)] text-[oklch(35%_0.012_348.33)] border border-[oklch(82%_0.012_348.33)]">
-                                    <span className="text-xs tabular-nums">[CLOSED]</span>
-                                    <span>ปิดกะแล้ว</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-[11px] bg-[var(--color-paper)] text-[var(--color-ink-soft)] border border-[var(--color-control)]">
+                                    ปิดกะแล้ว
                                 </span>
                             )}
                         </div>
                     </div>
 
-                    {/* Cellular Drawer Reconciliation Grid (Dieter Rams + Tabular Precision) */}
+                    {/* Cellular Drawer Reconciliation Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-[var(--color-paper-3)] border-b border-[var(--color-rule)] bg-[var(--color-paper)] tabular-nums">
                         {/* 1. Opening Float */}
                         <div className="p-3">
-                            <div className="text-xs font-bold text-[var(--color-neutral)] ">
+                            <div className="text-xs font-bold text-[var(--color-neutral)]">
                                 เงินทอนตั้งต้น
                             </div>
                             <div className="text-base md:text-lg font-bold text-[var(--color-ink)] tabular-nums mt-1">
                                 ฿{currentViewData.openingFloat.toLocaleString()}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                [FLOAT OPEN]
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                เงินเปิดลิ้นชัก
                             </div>
                         </div>
 
                         {/* 2. Cash Sales */}
                         <div className="p-3">
-                            <div className="text-xs font-bold text-[oklch(35%_0.08_140)] flex items-center justify-between">
+                            <div className="text-xs font-bold text-[var(--status-ok-ink)] flex items-center justify-between">
                                 <span>+ ขายเงินสด</span>
-                                <span className="text-xs">IN</span>
                             </div>
-                            <div className="text-base md:text-lg font-bold text-[oklch(35%_0.08_140)] tabular-nums mt-1">
+                            <div className="text-base md:text-lg font-bold text-[var(--status-ok-ink)] tabular-nums mt-1">
                                 +฿{currentViewData.cashSales.toLocaleString()}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                [CASH SALES]
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                รับเงินสดหน้าร้าน
                             </div>
                         </div>
 
                         {/* 3. Cash In (Total In) */}
-                        <div className="p-3 bg-[oklch(98%_0.02_140)]/40">
-                            <div className="text-xs font-bold text-[oklch(35%_0.08_140)] flex items-center justify-between">
+                        <div className="p-3 bg-[var(--status-ok-bg-soft)]">
+                            <div className="text-xs font-bold text-[var(--status-ok-ink)] flex items-center justify-between">
                                 <span>+ เงินนำเข้า</span>
-                                <span className="text-[11px] bg-[oklch(90%_0.04_140)] px-1 rounded-2xs">+{currentViewData.adjustments.filter(a => a.type === 'in').length}</span>
+                                <span className="text-[11px] bg-[var(--status-ok-bg)] px-1.5 rounded-md">+{currentViewData.adjustments.filter(a => a.type === 'in').length}</span>
                             </div>
-                            <div className="text-base md:text-lg font-bold text-[oklch(35%_0.08_140)] tabular-nums mt-1">
+                            <div className="text-base md:text-lg font-bold text-[var(--status-ok-ink)] tabular-nums mt-1">
                                 +฿{currentViewData.totalIn.toLocaleString()}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                [DEPOSITS / ทอน]
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                เติมทอน / นำเข้า
                             </div>
                         </div>
 
                         {/* 4. Cash Out (Total Out) */}
-                        <div className="p-3 bg-[var(--color-paper)]/40">
+                        <div className="p-3 bg-[var(--color-paper)]">
                             <div className="text-xs font-bold text-[var(--brand-plum)] flex items-center justify-between">
                                 <span>- เงินนำออก</span>
-                                <span className="text-[11px] bg-[oklch(90%_0.04_348.33)] px-1 rounded-2xs">-{currentViewData.adjustments.filter(a => a.type === 'out').length}</span>
+                                <span className="text-[11px] bg-[var(--color-plum-pale)] px-1.5 rounded-md">-{currentViewData.adjustments.filter(a => a.type === 'out').length}</span>
                             </div>
                             <div className="text-base md:text-lg font-bold text-[var(--brand-plum)] tabular-nums mt-1">
                                 -฿{currentViewData.totalOut.toLocaleString()}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                [PAYOUTS / จ่าย]
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                เบิกจ่าย / นำออก
                             </div>
                         </div>
 
                         {/* 5. Expected in Drawer */}
                         <div className="p-3 bg-[var(--color-paper)]">
-                            <div className="text-xs font-bold text-[var(--color-ink)] ">
+                            <div className="text-xs font-bold text-[var(--color-ink)]">
                                 = เงินที่ควรมี
                             </div>
                             <div className="text-base md:text-lg font-bold text-[var(--color-ink)] tabular-nums mt-1">
                                 ฿{currentViewData.expectedCash.toLocaleString()}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                [EXPECTED DRAWER]
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                ยอดคาดการณ์
                             </div>
                         </div>
 
                         {/* 6. Closed Actual Cash */}
                         <div className="p-3">
-                            <div className="text-xs font-bold text-[var(--color-muted)] ">
+                            <div className="text-xs font-bold text-[var(--color-muted)]">
                                 เงินสดนับจริง
                             </div>
                             <div className="text-base md:text-lg font-bold text-[var(--color-ink)] tabular-nums mt-1">
@@ -418,8 +421,8 @@ export default function DailyShiftsCashFlowWidget({
                                     `฿${currentViewData.closedCash.toLocaleString()}`
                                 )}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                [COUNTED ACTUAL]
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                นับตอนปิดรอบ
                             </div>
                         </div>
 
@@ -428,27 +431,27 @@ export default function DailyShiftsCashFlowWidget({
                             currentViewData.isOpen 
                                 ? 'bg-[var(--color-paper)]' 
                                 : Math.abs(currentViewData.difference) < 0.01 
-                                    ? 'bg-[oklch(95%_0.04_140)]/30' 
-                                    : 'bg-[oklch(95%_0.04_348.33)]/40'
+                                    ? 'bg-[var(--status-ok-bg-soft)]' 
+                                    : 'bg-[var(--color-plum-pale)]'
                         }`}>
-                            <div className="text-xs font-bold text-[var(--color-muted)] ">
-                                ส่วนต่าง (ผลลัพธ์)
+                            <div className="text-xs font-bold text-[var(--color-muted)]">
+                                ส่วนต่าง
                             </div>
                             <div className="text-base md:text-lg font-bold tabular-nums mt-1">
                                 {currentViewData.isOpen ? (
-                                    <span className="text-xs font-normal text-[var(--color-neutral)]">—</span>
+                                    <span className="text-xs font-normal text-[var(--color-neutral)]">-</span>
                                 ) : Math.abs(currentViewData.difference) < 0.01 ? (
-                                    <span className="text-[oklch(35%_0.08_140)] text-sm md:text-base font-bold">
-                                        <span>ตรงยอดพอดี</span>
+                                    <span className="text-[var(--status-ok-ink)] text-sm md:text-base font-bold">
+                                        ตรงยอดพอดี
                                     </span>
                                 ) : (
                                     <span className="text-[var(--brand-plum)] text-sm md:text-base font-bold">
-                                        <span>{currentViewData.difference > 0 ? `+฿${currentViewData.difference.toLocaleString()}` : `-฿${Math.abs(currentViewData.difference).toLocaleString()}`}</span>
+                                        {currentViewData.difference > 0 ? `+฿${currentViewData.difference.toLocaleString()}` : `-฿${Math.abs(currentViewData.difference).toLocaleString()}`}
                                     </span>
                                 )}
                             </div>
-                            <div className="text-xs text-[var(--color-neutral)] mt-0.5">
-                                {currentViewData.isOpen ? '[SHIFT ACTIVE]' : Math.abs(currentViewData.difference) < 0.01 ? '[BALANCED ✓]' : currentViewData.difference > 0 ? '[CASH OVER]' : '[CASH SHORT]'}
+                            <div className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                {currentViewData.isOpen ? 'กำลังเปิดกะ' : Math.abs(currentViewData.difference) < 0.01 ? 'ยอดตรง' : currentViewData.difference > 0 ? 'เงินเกิน' : 'เงินขาด'}
                             </div>
                         </div>
                     </div>
@@ -456,13 +459,13 @@ export default function DailyShiftsCashFlowWidget({
                     {/* Spending Summary Category Pills */}
                     {currentViewData.categorySummary.length > 0 && (
                         <div className="px-4 py-2.5 bg-[var(--color-paper)] border-b border-[var(--color-paper-3)] flex flex-wrap items-center gap-2 tabular-nums text-xs">
-                            <span className="text-xs font-bold text-[var(--color-muted)] ">
+                            <span className="text-xs font-bold text-[var(--color-muted)]">
                                 สรุปหมวดหมู่ค่าใช้จ่ายในกะ:
                             </span>
                             {currentViewData.categorySummary.map((cat, idx) => (
                                 <span
                                     key={idx}
-                                    className={`px-2 py-0.5 rounded-xs border text-[11px] font-bold tabular-nums flex items-center gap-1.5 ${cat.color}`}
+                                    className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold tabular-nums flex items-center gap-1.5 ${cat.color}`}
                                 >
                                     <span>{cat.label}</span>
                                     <span className="text-xs opacity-80">({cat.count} รายการ)</span>
@@ -471,22 +474,22 @@ export default function DailyShiftsCashFlowWidget({
                             ))}
 
                             <div className="ml-auto text-xs text-[var(--color-muted)] font-bold">
-                                <span>สุทธิเงินสดไหลเวียน (Net Cash): </span>
-                                <strong className={currentViewData.netCashMovement >= 0 ? 'text-[oklch(35%_0.08_140)]' : 'text-[var(--brand-plum)]'}>
+                                <span>สุทธิเงินสดไหลเวียน: </span>
+                                <strong className={currentViewData.netCashMovement >= 0 ? 'text-[var(--status-ok-ink)]' : 'text-[var(--brand-plum)]'}>
                                     {currentViewData.netCashMovement >= 0 ? `+฿${currentViewData.netCashMovement.toLocaleString()}` : `-฿${Math.abs(currentViewData.netCashMovement).toLocaleString()}`}
                                 </strong>
                             </div>
                         </div>
                     )}
 
-                    {/* Itemized Cash In / Cash Out Table (บอกว่าเงินเข้า-ออกใช้ทำอะไรบ้าง) */}
+                    {/* Itemized Cash In / Cash Out Table */}
                     <div className="p-4">
-                        <div className="flex items-center justify-between mb-2 tabular-nums">
+                        <div className="flex items-center justify-between gap-2 mb-2 tabular-nums">
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[var(--color-ink)]  ">
-                                    รายการนำเงินเข้า - ออกในลิ้นชัก (ADJUSTMENTS LOG)
+                                <span className="text-xs font-bold text-[var(--color-ink)]">
+                                    รายการนำเงินเข้า - ออกในลิ้นชัก
                                 </span>
-                                <span className="text-[11px] px-1.5 py-0.2 rounded-xs bg-[var(--color-paper-3)] text-[oklch(35%_0.012_348.33)] font-bold tabular-nums">
+                                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-paper-3)] text-[var(--color-ink-soft)] font-semibold tabular-nums">
                                     {currentViewData.adjustments.length} รายการ
                                 </span>
                             </div>
@@ -495,20 +498,19 @@ export default function DailyShiftsCashFlowWidget({
                                 <button
                                     type="button"
                                     onClick={() => onSelectShiftTab('shifts')}
-                                    className="text-xs text-[var(--brand-plum)] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                                    className="text-xs text-[var(--brand-plum)] hover:underline font-semibold cursor-pointer whitespace-nowrap"
                                 >
-                                    <span>ดูรายงานกะฉบับเต็ม</span>
-                                    <span>➔</span>
+                                    ดูรายงานกะฉบับเต็ม
                                 </button>
                             )}
                         </div>
 
                         {currentViewData.adjustments.length === 0 ? (
-                            <div className="py-6 text-center border border-dashed border-[var(--color-rule)] rounded-xs bg-[var(--color-paper)] tabular-nums text-xs text-[var(--color-neutral)]">
-                                ไม่มีการนำเงินสดเข้าหรือเบิกจ่ายเงินสดระหว่างกะนี้ (No Adjustments Recorded)
+                            <div className="py-6 text-center border border-dashed border-[var(--color-rule)] rounded-lg bg-[var(--color-paper)] tabular-nums text-xs text-[var(--color-neutral)]">
+                                ไม่มีการนำเงินสดเข้าหรือเบิกจ่ายเงินสดระหว่างกะนี้
                             </div>
                         ) : (
-                            <div className="border border-[var(--color-rule)] rounded-xs overflow-hidden bg-[var(--color-paper)]">
+                            <div className="border border-[var(--color-rule)] rounded-lg overflow-hidden bg-[var(--color-paper)]">
                                 <div className="overflow-x-auto max-h-[280px] overflow-y-auto no-scrollbar">
                                     <table className="w-full text-left border-collapse text-[13px]">
                                         <thead>
@@ -516,7 +518,7 @@ export default function DailyShiftsCashFlowWidget({
                                                 <th className="py-2.5 px-3 w-20">เวลา</th>
                                                 <th className="py-2.5 px-3 w-28">ประเภท</th>
                                                 <th className="py-2.5 px-3 w-32 text-right">จำนวนเงิน</th>
-                                                <th className="py-2.5 px-3">บันทึกเหตุผลว่าใช้ทำอะไร (PURPOSE / NOTE)</th>
+                                                <th className="py-2.5 px-3">เหตุผล / บันทึก</th>
                                                 <th className="py-2.5 px-3 w-36">หมวดหมู่</th>
                                                 <th className="py-2.5 px-3 w-28 text-right">ผู้บันทึก</th>
                                             </tr>
@@ -529,7 +531,7 @@ export default function DailyShiftsCashFlowWidget({
                                                 const amt = Number(adj.amount || 0)
 
                                                 return (
-                                                    <tr key={adj.id || idx} className="hover:bg-[var(--color-paper)] transition-colors">
+                                                    <tr key={adj.id || idx} className="hover:bg-[var(--color-paper-2)] transition-colors">
                                                         {/* Time */}
                                                         <td className="py-2.5 px-3 text-[13px] text-[var(--color-neutral)] tabular-nums whitespace-nowrap">
                                                             {timeStr}
@@ -538,19 +540,19 @@ export default function DailyShiftsCashFlowWidget({
                                                         {/* Type Tag */}
                                                         <td className="py-2.5 px-3">
                                                             {isIn ? (
-                                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-2xs tabular-nums text-[11px] font-bold bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)] border border-[oklch(80%_0.06_140)]">
-                                                                    <span>↓ เงินเข้า (IN)</span>
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md tabular-nums text-[11px] font-semibold bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
+                                                                    เงินเข้า
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-2xs tabular-nums text-[11px] font-bold bg-[oklch(92%_0.04_348.33)] text-[var(--brand-plum)] border border-[oklch(80%_0.08_348.33)]">
-                                                                    <span>↑ เงินออก (OUT)</span>
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md tabular-nums text-[11px] font-semibold bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)]">
+                                                                    เงินออก
                                                                 </span>
                                                             )}
                                                         </td>
 
                                                         {/* Amount */}
                                                         <td className={`py-2.5 px-3 text-sm font-bold text-right tabular-nums whitespace-nowrap ${
-                                                            isIn ? 'text-[oklch(35%_0.08_140)]' : 'text-[var(--brand-plum)]'
+                                                            isIn ? 'text-[var(--status-ok-ink)]' : 'text-[var(--brand-plum)]'
                                                         }`}>
                                                             {isIn ? `+฿${amt.toLocaleString()}` : `-฿${amt.toLocaleString()}`}
                                                         </td>
@@ -566,7 +568,7 @@ export default function DailyShiftsCashFlowWidget({
 
                                                         {/* Category Badge */}
                                                         <td className="py-2.5 px-3 whitespace-nowrap tabular-nums text-[13px]">
-                                                            <span className={`px-1.5 py-0.5 rounded-2xs border font-bold ${cat.color}`}>
+                                                            <span className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${cat.color}`}>
                                                                 {cat.label}
                                                             </span>
                                                         </td>
@@ -586,17 +588,15 @@ export default function DailyShiftsCashFlowWidget({
                     </div>
 
                     {/* Non-cash contextual payment summary strip */}
-                    <div className="px-4 py-2 bg-[var(--color-paper)] border-t border-[var(--color-paper-3)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs text-[var(--color-muted)]">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <span className="font-bold text-xs">ยอดชำระแบบไร้เงินสด (NON-CASH SALES):</span>
-                            <span>PromptPay QR: <strong className="text-[var(--color-ink)] tabular-nums">฿{currentViewData.qrSales.toLocaleString()}</strong></span>
-                            <span>·</span>
-                            <span>บัตรเครดิต: <strong className="text-[var(--color-ink)] tabular-nums">฿{currentViewData.creditSales.toLocaleString()}</strong></span>
-                            <span>·</span>
-                            <span>รวมยอดขายทุกช่องทาง: <strong className="text-[var(--color-ink)] tabular-nums">฿{currentViewData.totalSales.toLocaleString()}</strong></span>
+                    <div className="px-4 py-2.5 bg-[var(--color-paper-2)] border-t border-[var(--color-paper-3)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs text-[var(--color-muted)]">
+                        <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                            <span className="font-bold text-[var(--color-ink)]">ยอดชำระแบบไร้เงินสด</span>
+                            <span>PromptPay QR <strong className="text-[var(--color-ink)] tabular-nums">฿{currentViewData.qrSales.toLocaleString()}</strong></span>
+                            <span>บัตรเครดิต <strong className="text-[var(--color-ink)] tabular-nums">฿{currentViewData.creditSales.toLocaleString()}</strong></span>
+                            <span>รวมยอดขายทุกช่องทาง <strong className="text-[var(--color-ink)] tabular-nums">฿{currentViewData.totalSales.toLocaleString()}</strong></span>
                         </div>
                         <div className="text-xs text-[var(--color-neutral)]">
-                            *ยอดเงินสดในลิ้นชักคิดเฉพาะเงินสดที่รับจริง (Cash Sales) + เงินทอน/นำเข้า - เบิกจ่ายออก
+                            ยอดเงินสดในลิ้นชักคิดเฉพาะเงินสดรับจริง + เงินทอน/นำเข้า - เบิกจ่ายออก
                         </div>
                     </div>
                 </div>

@@ -13,10 +13,10 @@
   --ram-ink-muted: var(--color-neutral);   /* Muted gray text / secondary markers */
   --ram-rule: var(--color-rule);        /* Mechanical seams / metal guides */
   --ram-rule-light: var(--color-paper-3);
-  --ram-accent: var(--brand-plum);       /* Clay Terracotta */
-  --ram-accent-orange: oklch(72% 0.16 50);/* Function toggle orange */
-  --ram-alert: oklch(62% 0.22 25);        /* Red indicator lamp */
-  --ram-ok: oklch(64% 0.22 140);          /* Green status lamp */
+  --ram-accent: var(--brand-plum);       /* Brand plum */
+  --ram-accent-orange: var(--status-warn-fill); /* Function toggle amber */
+  --ram-alert: var(--error-red);          /* Error / alert indicator */
+  --ram-ok: var(--status-ok-fill);        /* Active / settled status */
   
   --ram-font-display: 'DM Mono', 'IBM Plex Sans Thai', monospace;
   --ram-font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
@@ -53,7 +53,6 @@
   padding: 16px 12px;
   background-color: var(--ram-canvas);
   border-right: 1px solid var(--ram-rule-light);
-  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .admin-sidebar.is-collapsed {
@@ -62,22 +61,22 @@
 }
 
 .admin-main {
-  transition: margin-left 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 0;
 }
 
 .admin-nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .admin-nav-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 36px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: 8px;
   font-size: 13px;
   line-height: 20px;
@@ -135,7 +134,7 @@
 
 .admin-nav-count {
   min-width: 20px;
-  padding: 0 6px;
+  padding: 0 8px;
   border-radius: 999px;
   font-size: 11px;
   line-height: 20px;
@@ -160,7 +159,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 4px 0 10px;
+  padding: 12px 4px 0 12px;
   border-top: 1px solid var(--ram-rule-light);
 }
 
@@ -190,7 +189,7 @@
 .admin-link-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 32px;
   padding: 0 12px;
   border: 1px solid var(--ram-rule);
@@ -215,14 +214,14 @@
 .admin-pending {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 32px;
   padding: 0 12px;
   border-radius: 8px;
   font-size: 13px;
   white-space: nowrap;
   color: var(--ram-accent);
-  background-color: oklch(94% 0.03 348.33);
+  background-color: var(--color-plum-pale);
 }
 
 .admin-mobile-nav {
@@ -257,14 +256,12 @@
   50% { opacity: 0.5; }
 }
 
-/* A new order line folds open in a live table card (resize timing: 300ms, smooth-out). */
+/* A new order line settles in cleanly with transform & opacity only (Brand v2 §5). */
 .admin-row-in {
-  overflow: hidden;
-  animation: admin-row-in 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: admin-row-in 180ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 @keyframes admin-row-in {
-  from { max-height: 0; opacity: 0; }
-  to   { max-height: 160px; opacity: 1; }
+  from { opacity: 0; transform: translateY(-4px); }
 }
 
 /* Dialog scrims fade in instead of snapping. */
@@ -317,7 +314,7 @@
   justify-content: center;
   gap: 8px;
   height: 40px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 1px solid var(--ram-rule);
   border-radius: 8px;
   background-color: transparent;
@@ -356,7 +353,7 @@
 }
 
 .admin-btn.is-primary:hover {
-  background-color: oklch(28% 0.012 348.33);
+  background-color: var(--action-primary-hover);
 }
 
 .admin-btn.is-icon {

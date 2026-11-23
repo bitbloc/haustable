@@ -131,14 +131,14 @@ export default function AdminShiftsLedgerTab({
     return (
         <div className="space-y-4 tabular-nums">
             {/* Top Overview Strip */}
-            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-xs">
-                            MASTER SHIFT LEDGER
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-semibold text-[var(--status-ok-ink)] bg-[var(--status-ok-bg)] px-2 py-0.5 rounded-md">
+                            บันทึกกะ POS
                         </span>
-                        <span className="text-xs text-[var(--color-neutral)] font-bold">
-                            // ประวัติกะและการเคลื่อนไหวเงินสดประจำวัน
+                        <span className="text-xs text-[var(--color-neutral)] font-medium">
+                            ประวัติกะและการเคลื่อนไหวเงินสดประจำวัน
                         </span>
                     </div>
                     <div className="text-sm font-bold text-[var(--color-ink)] mt-1">
@@ -148,19 +148,19 @@ export default function AdminShiftsLedgerTab({
 
                 <div className="flex items-center gap-4 text-xs">
                     <div className="text-right">
-                        <div className="text-xs text-[var(--color-neutral)] ">จำนวนกะทั้งหมด</div>
+                        <div className="text-xs text-[var(--color-neutral)]">จำนวนกะทั้งหมด</div>
                         <div className="text-base font-bold text-[var(--color-ink)] tabular-nums">{sortedShifts.length} กะ</div>
                     </div>
                     <div className="h-7 w-px bg-[var(--color-rule)]" />
                     <div className="text-right">
-                        <div className="text-xs text-[var(--color-neutral)] ">เงินสดเข้าลิ้นชักรวม</div>
-                        <div className="text-base font-bold text-[oklch(35%_0.08_140)] tabular-nums">
+                        <div className="text-xs text-[var(--color-neutral)]">เงินสดเข้าลิ้นชักรวม</div>
+                        <div className="text-base font-bold text-[var(--status-ok-ink)] tabular-nums">
                             +฿{sortedShifts.reduce((acc, s) => acc + Number(s.total_in || 0), 0).toLocaleString()}
                         </div>
                     </div>
                     <div className="h-7 w-px bg-[var(--color-rule)]" />
                     <div className="text-right">
-                        <div className="text-xs text-[var(--color-neutral)] ">เงินสดเบิกจ่ายรวม</div>
+                        <div className="text-xs text-[var(--color-neutral)]">เงินสดเบิกจ่ายรวม</div>
                         <div className="text-base font-bold text-[var(--brand-plum)] tabular-nums">
                             -฿{sortedShifts.reduce((acc, s) => acc + Number(s.total_out || 0), 0).toLocaleString()}
                         </div>
@@ -170,8 +170,8 @@ export default function AdminShiftsLedgerTab({
 
             {/* Shifts Table */}
             {sortedShifts.length === 0 ? (
-                <div className="p-12 text-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm">
-                    <p className="text-[13px] font-bold text-[var(--color-muted)]  ">
+                <div className="p-12 text-center bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl">
+                    <p className="text-[13px] font-bold text-[var(--color-muted)]">
                         ไม่พบข้อมูลกะในวันที่ {selectedDate}
                     </p>
                     <p className="text-[13px] text-[var(--color-neutral)] mt-1">
@@ -179,7 +179,7 @@ export default function AdminShiftsLedgerTab({
                     </p>
                 </div>
             ) : (
-                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm overflow-hidden ">
+                <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-[13px]">
                             <thead>
@@ -189,13 +189,13 @@ export default function AdminShiftsLedgerTab({
                                     <th className="py-3 px-3">เวลาเปิด</th>
                                     <th className="py-3 px-3">เวลาปิด</th>
                                     <th className="py-3 px-3 text-right">เงินทอนเปิดกะ</th>
-                                    <th className="py-3 px-3 text-right text-[oklch(35%_0.08_140)]">ขายเงินสด</th>
-                                    <th className="py-3 px-3 text-right text-[oklch(35%_0.08_140)]">+ นำเข้า (IN)</th>
-                                    <th className="py-3 px-3 text-right text-[var(--brand-plum)]">- นำออก (OUT)</th>
+                                    <th className="py-3 px-3 text-right text-[var(--status-ok-ink)]">ขายเงินสด</th>
+                                    <th className="py-3 px-3 text-right text-[var(--status-ok-ink)]">+ นำเข้า</th>
+                                    <th className="py-3 px-3 text-right text-[var(--brand-plum)]">- นำออก</th>
                                     <th className="py-3 px-3 text-right">เงินที่ควรมี</th>
                                     <th className="py-3 px-3 text-right">นับจริง</th>
                                     <th className="py-3 px-3 text-right">ส่วนต่าง</th>
-                                    <th className="py-3 px-3 text-center w-28">สลิป / PNG</th>
+                                    <th className="py-3 px-3 text-center w-28">สลิป PNG</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-paper-3)]">
@@ -203,7 +203,7 @@ export default function AdminShiftsLedgerTab({
                                     const isOpen = s.status === 'open'
                                     const isExpanded = expandedShiftId === s.id
                                     const openTime = s.opened_at ? new Date(s.opened_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '-'
-                                    const closeTime = isOpen ? 'กำลังเปิดใช้งาน 🟢' : s.closed_at ? new Date(s.closed_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '-'
+                                    const closeTime = isOpen ? 'กำลังเปิดใช้งาน' : s.closed_at ? new Date(s.closed_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '-'
                                     const fl = Number(s.opening_float || 0)
                                     const cs = Number(s.cash_sales || 0)
                                     const tIn = Number(s.total_in || 0)
@@ -217,8 +217,8 @@ export default function AdminShiftsLedgerTab({
                                         <React.Fragment key={s.id || idx}>
                                             <tr 
                                                 onClick={() => setExpandedShiftId(prev => prev === s.id ? null : s.id)}
-                                                className={`hover:bg-[var(--color-paper)] cursor-pointer transition-colors ${
-                                                    isExpanded ? 'bg-[var(--color-paper)]' : ''
+                                                className={`hover:bg-[var(--color-paper-2)] cursor-pointer transition-colors ${
+                                                    isExpanded ? 'bg-[var(--color-paper-2)]' : ''
                                                 }`}
                                             >
                                                 {/* Index & Expand Icon */}
@@ -231,7 +231,7 @@ export default function AdminShiftsLedgerTab({
                                                     <div className="font-bold text-[var(--color-ink)] flex items-center gap-1.5">
                                                         <span>กะ {idx + 1}: {s.staff_name || 'ไม่ระบุชื่อ'}</span>
                                                         {isOpen && (
-                                                            <span className="text-[11px] px-1.5 py-0.2 rounded-xs bg-emerald-100 text-emerald-800 font-bold">
+                                                            <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] font-semibold">
                                                                 เปิดอยู่
                                                             </span>
                                                         )}
@@ -257,12 +257,12 @@ export default function AdminShiftsLedgerTab({
                                                 </td>
 
                                                 {/* Cash Sales */}
-                                                <td className="py-3 px-3 text-right tabular-nums font-bold text-[oklch(35%_0.08_140)]">
+                                                <td className="py-3 px-3 text-right tabular-nums font-bold text-[var(--status-ok-ink)]">
                                                     +฿{cs.toLocaleString()}
                                                 </td>
 
                                                 {/* Total In */}
-                                                <td className="py-3 px-3 text-right tabular-nums font-bold text-[oklch(35%_0.08_140)]">
+                                                <td className="py-3 px-3 text-right tabular-nums font-bold text-[var(--status-ok-ink)]">
                                                     +฿{tIn.toLocaleString()}
                                                 </td>
 
@@ -284,11 +284,11 @@ export default function AdminShiftsLedgerTab({
                                                 {/* Discrepancy */}
                                                 <td className="py-3 px-3 text-right tabular-nums font-bold">
                                                     {isOpen ? (
-                                                        <span className="text-[var(--color-neutral)] font-normal">—</span>
+                                                        <span className="text-[var(--color-neutral)] font-normal">-</span>
                                                     ) : Math.abs(diff) < 0.01 ? (
-                                                        <span className="text-[oklch(35%_0.08_140)]">ตรงยอดพอดี</span>
+                                                        <span className="text-[var(--status-ok-ink)]">ตรงยอดพอดี</span>
                                                     ) : diff > 0 ? (
-                                                        <span className="text-[oklch(35%_0.08_140)]">+฿{diff.toLocaleString()}</span>
+                                                        <span className="text-[var(--status-ok-ink)]">+฿{diff.toLocaleString()}</span>
                                                     ) : (
                                                         <span className="text-[var(--brand-plum)]">-฿{Math.abs(diff).toLocaleString()}</span>
                                                     )}
@@ -300,11 +300,11 @@ export default function AdminShiftsLedgerTab({
                                                         type="button"
                                                         disabled={loadingShiftId === s.id}
                                                         onClick={() => handleOpenShiftSlip(s, idx)}
-                                                        className="px-2.5 py-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xs text-xs font-bold text-[var(--color-ink)] hover:border-[var(--color-neutral)] transition-all cursor-pointer inline-flex items-center gap-1.5 "
+                                                        className="px-2.5 py-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg text-xs font-semibold text-[var(--color-ink)] hover:border-[var(--color-neutral)] transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap"
                                                         title="เปิดดูสลิปสรุปปิดกะ / บันทึก PNG หรือแชร์เข้า LINE"
                                                     >
-                                                        <FileText size={11} className="text-[var(--brand-plum)]" />
-                                                        <span>{loadingShiftId === s.id ? 'กำลังเปิด...' : 'สลิป PNG'}</span>
+                                                        <FileText size={12} className="text-[var(--brand-plum)]" />
+                                                        <span>{loadingShiftId === s.id ? 'กำลังเปิด…' : 'สลิป PNG'}</span>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -314,26 +314,26 @@ export default function AdminShiftsLedgerTab({
                                                 <tr className="bg-[var(--color-paper)]">
                                                     <td colSpan="12" className="p-4 border-t border-b border-[var(--color-rule)]">
                                                         <div className="grid md:grid-cols-2 gap-5">
-                                                            {/* Column 1: Adjustments (บอกว่าเงินเข้า-ออกใช้ทำอะไรบ้าง) */}
+                                                            {/* Column 1: Adjustments */}
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="flex items-center justify-between text-xs font-bold text-[var(--color-ink)]">
-                                                                    <span>รายการเงินเข้า - ออกในกะนี้ (CASH ADJUSTMENTS)</span>
+                                                                    <span>รายการเงินเข้า - ออกในกะนี้</span>
                                                                     <span className="text-xs text-[var(--color-neutral)]">{adjs.length} รายการ</span>
                                                                 </div>
 
                                                                 {adjs.length === 0 ? (
-                                                                    <div className="py-6 text-center border border-dashed border-[var(--color-rule)] rounded-xs bg-[var(--color-paper)] text-xs text-[var(--color-neutral)]">
+                                                                    <div className="py-6 text-center border border-dashed border-[var(--color-rule)] rounded-lg bg-[var(--color-paper)] text-xs text-[var(--color-neutral)]">
                                                                         ไม่มีการนำเงินเข้าหรือเบิกเงินสดระหว่างกะนี้
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="border border-[var(--color-rule)] rounded-xs overflow-hidden bg-[var(--color-paper)] max-h-[220px] overflow-y-auto no-scrollbar">
+                                                                    <div className="border border-[var(--color-rule)] rounded-lg overflow-hidden bg-[var(--color-paper)] max-h-[220px] overflow-y-auto no-scrollbar">
                                                                         <table className="w-full text-left border-collapse text-[13px]">
                                                                             <thead>
                                                                                 <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-xs text-[var(--color-muted)] select-none sticky top-0">
                                                                                     <th className="py-2 px-2.5 w-16">เวลา</th>
                                                                                     <th className="py-2 px-2.5 w-20">ประเภท</th>
                                                                                     <th className="py-2 px-2.5 text-right w-24">จำนวน</th>
-                                                                                    <th className="py-2 px-2.5">เหตุผลว่าใช้ทำอะไร (NOTE)</th>
+                                                                                    <th className="py-2 px-2.5">เหตุผล / บันทึก</th>
                                                                                     <th className="py-2 px-2.5 w-24">หมวดหมู่</th>
                                                                                 </tr>
                                                                             </thead>
@@ -343,17 +343,17 @@ export default function AdminShiftsLedgerTab({
                                                                                     const cat = classifyAdjustmentNote(adj.note, adj.type)
                                                                                     const aTime = adj.timestamp ? new Date(adj.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }) : '-'
                                                                                     return (
-                                                                                        <tr key={adj.id || aIdx} className="hover:bg-[var(--color-paper)]">
+                                                                                        <tr key={adj.id || aIdx} className="hover:bg-[var(--color-paper-2)]">
                                                                                             <td className="py-2 px-2.5 text-[13px] text-[var(--color-neutral)] tabular-nums">{aTime}</td>
                                                                                             <td className="py-2 px-2.5">
-                                                                                                <span className={`px-1 py-0.2 rounded-2xs text-[11px] font-bold  ${
-                                                                                                    isIn ? 'bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)]' : 'bg-[oklch(92%_0.04_348.33)] text-[var(--brand-plum)]'
+                                                                                                <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
+                                                                                                    isIn ? 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)]' : 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)]'
                                                                                                 }`}>
                                                                                                     {isIn ? 'เงินเข้า' : 'เงินออก'}
                                                                                                 </span>
                                                                                             </td>
                                                                                             <td className={`py-2 px-2.5 text-right font-bold tabular-nums text-[13px] ${
-                                                                                                isIn ? 'text-[oklch(35%_0.08_140)]' : 'text-[var(--brand-plum)]'
+                                                                                                isIn ? 'text-[var(--status-ok-ink)]' : 'text-[var(--brand-plum)]'
                                                                                             }`}>
                                                                                                 {isIn ? `+฿${Number(adj.amount || 0).toLocaleString()}` : `-฿${Number(adj.amount || 0).toLocaleString()}`}
                                                                                             </td>
@@ -361,7 +361,7 @@ export default function AdminShiftsLedgerTab({
                                                                                                 {adj.note || '-'}
                                                                                             </td>
                                                                                             <td className="py-2 px-2.5 text-[13px]">
-                                                                                                <span className={`px-1 py-0.2 rounded-2xs border ${cat.color}`}>
+                                                                                                <span className={`px-1.5 py-0.5 rounded-md border text-[11px] font-semibold ${cat.color}`}>
                                                                                                     {cat.label}
                                                                                                 </span>
                                                                                             </td>
@@ -377,14 +377,14 @@ export default function AdminShiftsLedgerTab({
                                                             {/* Column 2: Shift Sales Breakdown & Top Sellers */}
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="flex items-center justify-between text-xs font-bold text-[var(--color-ink)]">
-                                                                    <span>สรุปยอดขาย & เมนูขายดีประจำกะ (TOP SELLERS)</span>
+                                                                    <span>สรุปยอดขายและเมนูขายดีประจำกะ</span>
                                                                     <span className="text-xs text-[var(--color-neutral)]">
-                                                                        ยอดขายรวม: ฿{Number(s.total_sales || 0).toLocaleString()}
+                                                                        ยอดขายรวม ฿{Number(s.total_sales || 0).toLocaleString()}
                                                                     </span>
                                                                 </div>
 
                                                                 {/* Sales Channel Sub-bar */}
-                                                                <div className="grid grid-cols-3 gap-2 text-center text-xs bg-[var(--color-paper)] border border-[var(--color-rule)] p-2 rounded-xs">
+                                                                <div className="grid grid-cols-3 gap-2 text-center text-xs bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg">
                                                                     <div>
                                                                         <div className="text-[var(--color-neutral)]">เงินสด</div>
                                                                         <div className="font-bold text-[var(--color-ink)] tabular-nums">฿{Number(s.cash_sales || 0).toLocaleString()}</div>
@@ -400,10 +400,10 @@ export default function AdminShiftsLedgerTab({
                                                                 </div>
 
                                                                 {/* Top Items Table */}
-                                                                <div className="border border-[var(--color-rule)] rounded-xs overflow-hidden bg-[var(--color-paper)] max-h-[170px] overflow-y-auto no-scrollbar">
+                                                                <div className="border border-[var(--color-rule)] rounded-lg overflow-hidden bg-[var(--color-paper)] max-h-[170px] overflow-y-auto no-scrollbar">
                                                                     {sellersLoading[s.id] ? (
                                                                         <div className="py-8 text-center text-xs text-[var(--color-neutral)]">
-                                                                            กำลังโหลดรายการสินค้าในกะ...
+                                                                            กำลังโหลดรายการสินค้าในกะ…
                                                                         </div>
                                                                     ) : (shiftTopSellers[s.id] || []).length === 0 ? (
                                                                         <div className="py-8 text-center text-xs text-[var(--color-neutral)]">

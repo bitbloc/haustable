@@ -98,14 +98,12 @@ export default function SimplifiedBillsSummaryList({
             {/* Header Strip */}
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-3 border-b border-[var(--color-paper-3)]">
                 <div>
-                    <div className="text-xs text-[var(--color-neutral)]">
-                        {isToday ? 'สรุปบิลประจำวัน' : `สรุปบิลย้อนหลัง · ${selectedDate}`}
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-[var(--color-ink)] mt-0.5 tracking-tight">
-                        {isToday ? 'LIST สรุปบิลประจำวัน' : `LIST สรุปบิลวันที่ ${formatThaiDateOnly(selectedDate)}`}
+                    <h3 className="text-lg sm:text-xl font-bold text-[var(--color-ink)] tracking-tight leading-snug">
+                        {isToday ? 'สรุปบิลประจำวัน' : `สรุปบิลวันที่ ${formatThaiDateOnly(selectedDate)}`}
                     </h3>
-                    <div className=" text-xs text-[var(--color-neutral)] mt-1 tabular-nums">
-                        <span className="font-semibold text-[var(--color-ink)] text-sm">฿{metrics.totalRevenue.toLocaleString()}</span> · {metrics.totalCount} ออเดอร์ ({metrics.settledCount} ชำระแล้ว)
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs text-[var(--color-neutral)] mt-1 tabular-nums">
+                        <span className="font-semibold text-[var(--color-ink)] text-sm">฿{metrics.totalRevenue.toLocaleString()}</span>
+                        <span>{metrics.totalCount} ออเดอร์ ({metrics.settledCount} ชำระแล้ว)</span>
                     </div>
                 </div>
 
@@ -125,9 +123,9 @@ export default function SimplifiedBillsSummaryList({
                                     setStatusFilter(tab.id)
                                     setPage(1)
                                 }}
-                                className={`px-2.5 py-1 rounded-lg font-medium transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                                className={`min-h-[36px] px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                                     statusFilter === tab.id
-                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] '
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                         : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
                                 }`}
                             >
@@ -141,9 +139,9 @@ export default function SimplifiedBillsSummaryList({
                         <button
                             type="button"
                             onClick={onOpenProMode}
-                            className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-ink)] px-2.5 py-1.5 rounded-xl border border-[var(--color-paper-3)] bg-[var(--color-paper-2)] cursor-pointer whitespace-nowrap transition-colors"
+                            className="min-h-[40px] text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-ink)] px-3 py-2 rounded-xl border border-[var(--color-paper-3)] bg-[var(--color-paper-2)] cursor-pointer whitespace-nowrap transition-colors"
                         >
-                            โหมดวิเคราะห์เชิงลึก &rarr;
+                            ดูวิเคราะห์เชิงลึก
                         </button>
                     )}
                 </div>
@@ -191,23 +189,23 @@ export default function SimplifiedBillsSummaryList({
                                         <div className="flex items-center gap-2">
                                             <span className="tabular-nums font-bold text-sm text-[var(--color-ink)]">{tableName}</span>
                                             {transfer.isMergedSource && (
-                                                <span className="text-[11px] px-1.5 py-0.5 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] rounded-md tabular-nums font-semibold">
-                                                    &rarr; โต๊ะ {transfer.mergedToTable}
+                                                <span className="text-[11px] px-1.5 py-0.5 bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)] rounded-md tabular-nums font-semibold">
+                                                    รวมไปโต๊ะ {transfer.mergedToTable}
                                                 </span>
                                             )}
                                             {transfer.isMergedTarget && (
-                                                <span className="text-[11px] px-1 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs tabular-nums font-bold">
+                                                <span className="text-[11px] px-1.5 py-0.5 bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] rounded-md tabular-nums font-semibold">
                                                     +รวม {transfer.mergedFromTables.join(', ')}
                                                 </span>
                                             )}
                                             {isPickup && (
-                                                <span className="text-[11px] px-1 py-0.5 bg-[var(--color-paper-3)] text-[var(--color-neutral)] rounded-xs tabular-nums">
-                                                    PICKUP
+                                                <span className="text-[11px] px-1.5 py-0.5 bg-[var(--color-paper-3)] text-[var(--color-muted)] rounded-md tabular-nums">
+                                                    กลับบ้าน
                                                 </span>
                                             )}
                                             {adTag && (
-                                                <span className="text-[11px] px-1 py-0.5 bg-[oklch(93%_0.02_250)] text-[oklch(35%_0.10_250)] border border-[oklch(80%_0.04_250)] rounded-xs tabular-nums font-bold ">
-                                                    AD: {adTag}
+                                                <span className="text-[11px] px-1.5 py-0.5 bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)] rounded-md tabular-nums font-semibold">
+                                                    โฆษณา: {adTag}
                                                 </span>
                                             )}
                                             <span className=" text-xs text-[var(--color-neutral)] tabular-nums">{timeStr}</span>
@@ -245,28 +243,28 @@ export default function SimplifiedBillsSummaryList({
 
                                         <div className="flex items-center gap-1.5 shrink-0">
                                             {transfer.isMergedSource ? (
-                                                <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] tabular-nums">
+                                                <span className="px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)] tabular-nums">
                                                     รวมบิล
                                                 </span>
                                             ) : isPaid ? (
-                                                <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(82%_0.08_140)]">
+                                                <span className="px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
                                                     ชำระแล้ว
                                                 </span>
                                             ) : isCancelled ? (
-                                                <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-paper-2)] text-[var(--color-neutral)]">
+                                                <span className="px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-paper-2)] text-[var(--color-neutral)]">
                                                     ยกเลิก
                                                 </span>
                                             ) : isSeated ? (
-                                                <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums">
-                                                    LIVE
+                                                <span className="px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums">
+                                                    กำลังทาน
                                                 </span>
                                             ) : (
-                                                <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-paper-3)] text-[var(--color-muted)]">
+                                                <span className="px-1.5 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-paper-3)] text-[var(--color-muted)]">
                                                     {b.status}
                                                 </span>
                                             )}
                                             {(b.payment_slip_url || b.slip_url) && (
-                                                <span className="px-1.5 py-0.5 text-[11px] tabular-nums font-bold text-[oklch(35%_0.08_140)] bg-[oklch(92%_0.012_140)] border border-[oklch(82%_0.08_140)] rounded-xs" title="มีสลิปโอนเงิน">
+                                                <span className="px-1.5 py-0.5 text-[11px] tabular-nums font-semibold text-[var(--status-ok-ink)] bg-[var(--status-ok-bg)] border border-[var(--status-ok-border)] rounded-md" title="มีสลิปโอนเงิน">
                                                     โอน
                                                 </span>
                                             )}
@@ -278,7 +276,7 @@ export default function SimplifiedBillsSummaryList({
                     </div>
 
                     {/* DESKTOP TABULAR VIEW (>= 640px) - Hero Table Hierarchy */}
-                    <div className="hidden sm:block border border-[var(--color-rule)] rounded-xs overflow-hidden bg-[var(--color-paper)]">
+                    <div className="hidden sm:block border border-[var(--color-rule)] rounded-xl overflow-hidden bg-[var(--color-paper)]">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-[13px] border-collapse font-sans">
                                 <thead>
@@ -330,12 +328,12 @@ export default function SimplifiedBillsSummaryList({
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="tabular-nums">{tableName}</span>
                                                         {transfer.isMergedSource && (
-                                                            <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded-md bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] font-semibold">
-                                                                &rarr; โต๊ะ {transfer.mergedToTable}
+                                                            <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded-md bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)] font-semibold">
+                                                                รวมไปโต๊ะ {transfer.mergedToTable}
                                                             </span>
                                                         )}
                                                         {transfer.isMergedTarget && (
-                                                            <span className="text-[11px] tabular-nums px-1.5 py-0.2 rounded-xs bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] font-bold">
+                                                            <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded-md bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] font-semibold">
                                                                 +รวม {transfer.mergedFromTables.join(', ')}
                                                             </span>
                                                         )}
@@ -347,17 +345,17 @@ export default function SimplifiedBillsSummaryList({
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="truncate max-w-[130px]">{customerName}</span>
                                                         {isPickup ? (
-                                                            <span className="text-[11px] px-1 py-0.5 bg-[var(--color-paper-3)] text-[var(--color-neutral)] rounded-xs tabular-nums">
-                                                                PICKUP
+                                                            <span className="text-[11px] px-1.5 py-0.5 bg-[var(--color-paper-3)] text-[var(--color-muted)] rounded-md tabular-nums">
+                                                                กลับบ้าน
                                                             </span>
                                                         ) : (
-                                                            <span className="text-[11px] px-1 py-0.5 bg-[var(--color-paper-2)] text-[var(--color-neutral)] rounded-xs tabular-nums">
-                                                                DINE-IN
+                                                            <span className="text-[11px] px-1.5 py-0.5 bg-[var(--color-paper-2)] text-[var(--color-neutral)] rounded-md tabular-nums">
+                                                                ทานที่ร้าน
                                                             </span>
                                                         )}
                                                         {adTag && (
-                                                            <span className="text-[11px] px-1.5 py-0.2 bg-[oklch(93%_0.02_250)] text-[oklch(35%_0.10_250)] border border-[oklch(80%_0.04_250)] rounded-xs tabular-nums font-bold ">
-                                                                AD: {adTag}
+                                                            <span className="text-[11px] px-1.5 py-0.5 bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)] rounded-md tabular-nums font-semibold">
+                                                                โฆษณา: {adTag}
                                                             </span>
                                                         )}
                                                     </div>
@@ -399,28 +397,28 @@ export default function SimplifiedBillsSummaryList({
                                                 <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         {transfer.isMergedSource ? (
-                                                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] tabular-nums">
-                                                                รวมบิล &rarr; โต๊ะ {transfer.mergedToTable}
+                                                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)] tabular-nums">
+                                                                รวมไปโต๊ะ {transfer.mergedToTable}
                                                             </span>
                                                         ) : isPaid ? (
-                                                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(82%_0.08_140)]">
+                                                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
                                                                 ชำระแล้ว
                                                             </span>
                                                         ) : isSeated ? (
-                                                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums">
-                                                                LIVE
+                                                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums">
+                                                                กำลังทาน
                                                             </span>
                                                         ) : isCancelled ? (
-                                                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-paper-2)] text-[var(--color-neutral)]">
+                                                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-paper-2)] text-[var(--color-neutral)]">
                                                                 ยกเลิก
                                                             </span>
                                                         ) : (
-                                                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-xs bg-[var(--color-paper-3)] text-[var(--color-muted)]">
+                                                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-[var(--color-paper-3)] text-[var(--color-muted)]">
                                                                 {b.status}
                                                             </span>
                                                         )}
                                                         {(b.payment_slip_url || b.slip_url) && (
-                                                            <span className="px-1.5 py-0.5 text-[11px] tabular-nums font-bold text-[oklch(35%_0.08_140)] bg-[oklch(92%_0.012_140)] border border-[oklch(82%_0.08_140)] rounded-xs" title="มีหลักฐานสลิปโอน">
+                                                            <span className="px-1.5 py-0.5 text-[11px] tabular-nums font-semibold text-[var(--status-ok-ink)] bg-[var(--status-ok-bg)] border border-[var(--status-ok-border)] rounded-md" title="มีหลักฐานสลิปโอน">
                                                                 โอน
                                                             </span>
                                                         )}
@@ -463,37 +461,36 @@ export default function SimplifiedBillsSummaryList({
                 </>
             )}
 
-            {/* BILL DETAIL MODAL (Rams High-Density Minimalist Modal) */}
+            {/* BILL DETAIL MODAL */}
             {inspectingBill && (
                 <div 
                     onClick={() => setInspectingBill(null)}
-                    className="fixed inset-0 bg-[var(--color-ink)]/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
+                    className="fixed inset-0 bg-[var(--color-veil)] z-50 flex items-center justify-center p-3 sm:p-4"
                 >
                     <div 
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm max-w-lg w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden font-sans animate-in zoom-in-95 duration-200"
+                        className="bg-[var(--color-paper)] rounded-xl max-w-lg w-full p-4 sm:p-6 shadow-[var(--shadow-sheet)] flex flex-col max-h-[90vh] overflow-hidden font-sans"
                     >
                         {/* Modal Header */}
                         <div className="flex items-start justify-between pb-3 border-b border-[var(--color-rule)]">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h3 className="tabular-nums text-xl font-bold text-[var(--color-ink)]">
-                                        {inspectingBill.tables_layout?.table_name || (inspectingBill.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')}
+                                        {inspectingBill.tables_layout?.table_name || (inspectingBill.booking_type === 'pickup' ? 'สั่งกลับบ้าน' : 'วอล์กอิน')}
                                     </h3>
-                                    <span className="tabular-nums text-[11px] px-2 py-0.5 bg-[var(--color-paper-3)] rounded-xs text-[var(--color-ink)] font-semibold">
-                                        ID: {String(inspectingBill.id).slice(0, 8)}
+                                    <span className="tabular-nums text-[11px] px-2 py-0.5 bg-[var(--color-paper-3)] rounded-md text-[var(--color-ink)] font-semibold">
+                                        #{String(inspectingBill.id).slice(0, 8)}
                                     </span>
                                 </div>
-                                <div className="text-xs text-[var(--color-neutral)] mt-1 flex items-center gap-2 flex-wrap">
-                                    <span>เวลา: <strong className="tabular-nums text-[var(--color-ink)]">{formatThaiTimeOnly(inspectingBill.booking_time || inspectingBill.created_at)}</strong></span>
-                                    <span>•</span>
-                                    <span>ลูกค้า: <strong className="text-[var(--color-ink)]">{inspectingBill.profiles?.display_name || inspectingBill.customer_name || 'ลูกค้าทั่วไป'}</strong></span>
+                                <div className="text-xs text-[var(--color-neutral)] mt-1 flex items-center gap-3 flex-wrap">
+                                    <span>เวลา <strong className="tabular-nums text-[var(--color-ink)]">{formatThaiTimeOnly(inspectingBill.booking_time || inspectingBill.created_at)}</strong></span>
+                                    <span>ลูกค้า <strong className="text-[var(--color-ink)]">{inspectingBill.profiles?.display_name || inspectingBill.customer_name || 'ลูกค้าทั่วไป'}</strong></span>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setInspectingBill(null)}
-                                className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-ink)] px-2.5 py-1 rounded-lg bg-[var(--color-paper-2)] cursor-pointer transition-colors"
+                                className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-ink)] px-3 py-1.5 rounded-lg bg-[var(--color-paper-2)] cursor-pointer transition-colors"
                             >
                                 ปิด
                             </button>
@@ -505,9 +502,9 @@ export default function SimplifiedBillsSummaryList({
                             return (
                                 <>
                                     {inspectingTransfer.isMergedSource && (
-                                        <div className="mt-3 p-2.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs flex items-center justify-between text-xs tabular-nums text-[var(--brand-plum)]">
+                                        <div className="mt-3 p-2.5 bg-[var(--color-plum-pale)] border border-[var(--color-plum-border)] rounded-lg flex items-center justify-between text-xs tabular-nums text-[var(--brand-plum)]">
                                             <div className="flex items-center gap-2">
-                                                <span className="px-1.5 py-0.5 bg-[var(--brand-plum)] text-[var(--color-paper)] rounded-xs text-[11px] font-bold">รวมบิล</span>
+                                                <span className="px-1.5 py-0.5 bg-[var(--brand-plum)] text-[var(--color-paper)] rounded-md text-[11px] font-bold">รวมบิล</span>
                                                 <span>บิลนี้ถูกรวมเข้ากับ <strong>{inspectingTransfer.targetTableDisplay || `โต๊ะ ${inspectingTransfer.mergedToTable}`}</strong> แล้ว</span>
                                             </div>
                                             {inspectingTransfer.originalTotal > 0 && (
@@ -516,9 +513,9 @@ export default function SimplifiedBillsSummaryList({
                                         </div>
                                     )}
                                     {inspectingTransfer.isMergedTarget && (
-                                        <div className="mt-3 p-2.5 bg-[oklch(95%_0.02_140)] border border-[oklch(82%_0.04_140)] rounded-xs flex items-center justify-between text-xs tabular-nums text-[oklch(28%_0.08_140)]">
+                                        <div className="mt-3 p-2.5 bg-[var(--status-ok-bg)] border border-[var(--status-ok-border)] rounded-lg flex items-center justify-between text-xs tabular-nums text-[var(--status-ok-ink)]">
                                             <div className="flex items-center gap-2">
-                                                <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] rounded-xs text-[11px] font-bold">รวมโต๊ะ</span>
+                                                <span className="px-1.5 py-0.5 bg-[var(--status-ok-fill)] text-[var(--color-paper)] rounded-md text-[11px] font-bold">รวมโต๊ะ</span>
                                                 <span>รวมรายการอาหารมาจาก <strong>{inspectingTransfer.mergedFromTableDisplay || `โต๊ะ ${inspectingTransfer.mergedFromTables.join(', ')}`}</strong></span>
                                             </div>
                                         </div>
@@ -650,9 +647,9 @@ export default function SimplifiedBillsSummaryList({
                                         href={inspectingBill.payment_slip_url || inspectingBill.slip_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-[var(--brand-plum)] underline tabular-nums text-xs"
+                                        className="text-[var(--brand-plum)] underline tabular-nums text-xs whitespace-nowrap"
                                     >
-                                        [เปิดดูภาพเต็ม ↗]
+                                        เปิดดูภาพเต็ม
                                     </a>
                                 </div>
                                 <div className="max-h-36 overflow-hidden rounded-xs border border-[var(--color-rule)] bg-[var(--color-paper)] flex items-center justify-center">
@@ -697,12 +694,12 @@ export default function SimplifiedBillsSummaryList({
                         {/* Modal Action Buttons */}
                         <div className="pt-3 mt-2 flex items-center justify-between border-t border-[var(--color-rule)]">
                             <span className="text-xs tabular-nums text-[var(--color-neutral)]">
-                                STATUS: {inspectingBill.status?.toUpperCase()}
+                                สถานะ: {inspectingBill.status}
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setInspectingBill(null)}
-                                className="px-5 py-2 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] font-bold text-xs rounded-xs cursor-pointer whitespace-nowrap"
+                                className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] font-semibold text-xs rounded-lg cursor-pointer whitespace-nowrap transition-colors"
                             >
                                 ปิดหน้าต่าง
                             </button>

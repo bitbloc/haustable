@@ -261,32 +261,29 @@ export default function AdminExecutiveDataVizDashboard({
 
     return (
         <div className="space-y-4 font-sans select-none">
-            {/* Top Minimal Executive Header Breadcrumb */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--color-paper-3)]">
+            {/* Top Minimal Executive Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--color-paper-3)]">
                 <div>
-                    <div className="flex items-center gap-2 text-xs tabular-nums text-[var(--color-neutral)]">
-                        <span>IN THE HAUS</span>
-                        <span>&rarr;</span>
-                        <span className="font-bold text-[var(--color-ink)]">Executive Operations Overview</span>
-                    </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-ink)] tracking-tight mt-0.5">
-                        Finance &amp; Operations Overview
+                    <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-ink)] tracking-tight leading-snug">
+                        ภาพรวมการเงินและหน้าร้าน
                     </h2>
+                    <p className="text-xs text-[var(--color-neutral)] mt-0.5">
+                        วิเคราะห์ยอดขาย ช่องทางรับชำระ และสถานะรอบขายประจำวัน
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap text-xs">
-                    <span className="tabular-nums text-xs font-bold text-[var(--color-muted)] bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] px-2.5 py-1 rounded-sm">
+                    <span className="tabular-nums text-xs font-semibold text-[var(--color-muted)] bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] px-3 py-1.5 rounded-lg">
                         {formatThaiDateOnly(selectedDate)}
                     </span>
                     {onSwitchToLiveNow && (
                         <button
                             type="button"
                             onClick={onSwitchToLiveNow}
-                            className="px-3 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] text-xs font-bold rounded-sm cursor-pointer transition-colors flex items-center gap-1.5"
+                            className="min-h-[36px] px-3 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] text-xs font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap"
                             title="สลับไปผังโต๊ะสดหน้าร้าน"
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-plum)] shrink-0" />
-                            <span>ดูผังโต๊ะสด (LIVE NOW)</span>
+                            ดูผังโต๊ะสด
                         </button>
                     )}
                 </div>
@@ -298,20 +295,20 @@ export default function AdminExecutiveDataVizDashboard({
                 {/* ========================================================================= */}
                 {/* 1. LEFT COLUMN (3 cols on desktop): Operational Briefing / Sentinel Card   */}
                 {/* ========================================================================= */}
-                <div className="lg:col-span-3 flex flex-col justify-between gap-4 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-2xl ">
+                <div className="lg:col-span-3 flex flex-col justify-between gap-4 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-xl">
                     <div>
-                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-paper-3)]">
-                            <span className="text-xs font-semibold text-[var(--color-ink)]">
-                                Operations Status
+                        <div className="flex items-center justify-between gap-2 pb-3 border-b border-[var(--color-paper-3)]">
+                            <span className="text-sm font-semibold text-[var(--color-ink)]">
+                                สถานะหน้าร้าน
                             </span>
-                            <span className={`px-2 py-0.5 tabular-nums text-[11px] font-bold rounded-sm ${
+                            <span className={`px-2 py-0.5 tabular-nums text-[11px] font-semibold rounded-md whitespace-nowrap ${
                                 !isToday
                                     ? 'bg-[var(--color-paper-3)] text-[var(--color-muted)]'
                                     : shiftSummary.isOpen
-                                        ? 'bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)]'
-                                        : 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--color-rule)]'
+                                        ? 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]'
+                                        : 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)]'
                             }`}>
-                                {!isToday ? 'ARCHIVED' : shiftSummary.isOpen ? 'POS ACTIVE' : 'TERMINAL CLOSED'}
+                                {!isToday ? 'ย้อนหลัง' : shiftSummary.isOpen ? 'กะเปิดอยู่' : 'ปิดกะแล้ว'}
                             </span>
                         </div>
 
@@ -323,7 +320,7 @@ export default function AdminExecutiveDataVizDashboard({
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[var(--color-muted)]">เปิดรอบการขาย:</span>
-                                <span className="tabular-nums font-semibold text-[var(--color-ink)]">{shiftSummary.openedTime ? `${shiftSummary.openedTime} น.` : '—'}</span>
+                                <span className="tabular-nums font-semibold text-[var(--color-ink)]">{shiftSummary.openedTime ? `${shiftSummary.openedTime} น.` : '-'}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[var(--color-muted)]">โต๊ะเปิดขณะนี้:</span>
@@ -335,54 +332,47 @@ export default function AdminExecutiveDataVizDashboard({
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-paper-3)]">
                                 <span className="text-[var(--color-muted)]">ยังไม่คิดเงิน:</span>
-                                <span className={` font-bold tabular-nums ${
+                                <span className={`font-bold tabular-nums ${
                                     activeUnpaidRevenue > 0 ? 'text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'
                                 }`}>
                                     {loading
-                                        ? '...'
+                                        ? '…'
                                         : activeUnpaidRevenue > 0
                                             ? `฿${activeUnpaidRevenue.toLocaleString()} (${activeUnpaidCount} บิล)`
-                                            : '฿0 · ไม่มีค้าง'}
+                                            : '฿0 (ไม่มีค้าง)'}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Inner Highlights Card (Matches Advantages / Pro Version card in reference) */}
-                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] p-3.5 sm:p-4 rounded-xl space-y-3">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h4 className="font-bold text-sm text-[var(--color-ink)]">Daily Health</h4>
-                                <p className="text-[13px] text-[var(--color-muted)] mt-0.5">
-                                    ประสิทธิภาพการหมุนเวียนโต๊ะและสลิปปิดวัน
-                                </p>
-                            </div>
-                            <span className="tabular-nums text-[11px] font-bold px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-sm">
-                                100% OK
+                    {/* Daily Bill Summary & Z-Report Trigger (Flat hairline section, real metrics only) */}
+                    <div className="pt-4 border-t border-[var(--color-paper-3)] space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-semibold text-sm text-[var(--color-ink)]">สรุปปิดวัน</h4>
+                            <span className="tabular-nums text-[11px] font-semibold px-2 py-0.5 bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-paper-3)] rounded-md whitespace-nowrap">
+                                {completedOrdersCount} บิลปิดแล้ว
                             </span>
                         </div>
-
-                        {/* Subtle Mini SVG Sparkline */}
-                        <div className="h-9 w-full flex items-center justify-center">
-                            <svg className="w-full h-8 overflow-visible" viewBox="0 0 160 32" fill="none">
-                                <path
-                                    d="M 5 24 Q 45 4, 85 18 T 155 8"
-                                    stroke="oklch(21.78% 0 0)"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                />
-                                <circle cx="155" cy="8" r="3" fill="oklch(21.78% 0 0)" />
-                            </svg>
+                        <div className="space-y-1.5 text-xs tabular-nums">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--color-muted)]">ยอดเฉลี่ยต่อบิล:</span>
+                                <span className="font-semibold text-[var(--color-ink)]">฿{avgCheck.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--color-muted)]">รอบหมุนเวียนโต๊ะ:</span>
+                                <span className="font-semibold text-[var(--color-ink)]">
+                                    {totalTables > 0 ? (completedOrdersCount / totalTables).toFixed(1) : '0.0'}x
+                                </span>
+                            </div>
                         </div>
 
                         {onOpenDailySlip && (
                             <button
                                 type="button"
                                 onClick={onOpenDailySlip}
-                                className="w-full py-2 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] text-xs font-bold rounded-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                                className="w-full min-h-[44px] py-2.5 px-3 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                             >
-                                <span>สลิปปิดวัน [Z-REPORT]</span>
-                                <span>&rarr;</span>
+                                เปิดสลิปปิดวัน
                             </button>
                         )}
                     </div>
@@ -394,28 +384,28 @@ export default function AdminExecutiveDataVizDashboard({
                 <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-12 gap-4">
 
                     {/* --------------------------------------------------------------------- */}
-                    {/* CARD 2A: Activity // Hourly Velocity Bars (Center Top, 7 cols)        */}
+                    {/* CARD 2A: Hourly Velocity Bars (Center Top, 7 cols)                    */}
                     {/* --------------------------------------------------------------------- */}
-                    <div className="md:col-span-7 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
+                    <div className="md:col-span-7 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-xl flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-[var(--color-ink)]">
-                                    Activity
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-[var(--color-ink)]">
+                                    ยอดขายรายชั่วโมง
                                 </span>
                                 <span className="tabular-nums text-xs text-[var(--color-muted)]">
-                                    Hourly Revenue · ชำระแล้ว
+                                    เฉพาะบิลชำระแล้ว
                                 </span>
                             </div>
-                            <div className="mt-1 flex items-baseline gap-2 flex-wrap">
-                                <h3 className=" text-2xl sm:text-3xl font-bold text-[var(--color-ink)] tabular-nums">
-                                    {loading ? '...' : `฿${revenueToday.toLocaleString()}`}
+                            <div className="mt-1 flex items-baseline gap-2.5 flex-wrap">
+                                <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-ink)] tabular-nums">
+                                    {loading ? '…' : `฿${revenueToday.toLocaleString()}`}
                                 </h3>
-                                <span className={`tabular-nums text-xs font-semibold ${deltaInfo.isPos ? 'text-[oklch(38%_0.10_140)]' : 'text-[var(--brand-plum)]'}`}>
+                                <span className={`tabular-nums text-xs font-semibold ${deltaInfo.isPos ? 'text-[var(--status-ok-ink)]' : 'text-[var(--brand-plum)]'}`}>
                                     {deltaInfo.text}
                                 </span>
                                 {activeUnpaidRevenue > 0 && (
-                                    <span className=" text-xs text-[var(--brand-plum)] tabular-nums">
-                                        · รอคิดเงิน +฿{activeUnpaidRevenue.toLocaleString()}
+                                    <span className="text-xs text-[var(--brand-plum)] tabular-nums">
+                                        รอคิดเงิน +฿{activeUnpaidRevenue.toLocaleString()}
                                     </span>
                                 )}
                             </div>
@@ -439,14 +429,14 @@ export default function AdminExecutiveDataVizDashboard({
                                             onMouseEnter={() => setHoveredHour(item.hour)}
                                             onMouseLeave={() => setHoveredHour(null)}
                                         >
-                                            {/* Floating Yellow Callout Badge above Highlighted Bar */}
+                                            {/* Floating Callout Badge above Highlighted Bar */}
                                             {isHighlighted && item.revenue > 0 && (
                                                 <div
                                                     className="absolute z-20 pointer-events-none transition-transform duration-150 flex flex-col items-center"
                                                     style={{ bottom: `calc(${barHeight}% + 4px)` }}
                                                 >
-                                                    <span className="bg-[var(--brand-plum)] text-[var(--cream)] font-bold text-[11px] sm:text-[11px] px-1.5 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
-                                                        {item.hour}:00 &middot; ฿{Math.round(item.revenue / 1000)}k
+                                                    <span className="bg-[var(--brand-plum)] text-[var(--cream)] font-bold text-[11px] px-1.5 py-0.5 rounded-sm whitespace-nowrap tabular-nums">
+                                                        {item.hour}:00 ฿{Math.round(item.revenue / 1000)}k
                                                     </span>
                                                     <div className="w-1.5 h-1.5 bg-[var(--brand-plum)] rotate-45 -mt-0.5" />
                                                 </div>
@@ -459,7 +449,7 @@ export default function AdminExecutiveDataVizDashboard({
                                                     isHighlighted
                                                         ? 'bg-[var(--color-ink)]'
                                                         : item.revenue > 0
-                                                            ? 'bg-[var(--color-rule)] hover:bg-[oklch(75%_0.012_348.33)]'
+                                                            ? 'bg-[var(--color-rule)] hover:bg-[var(--color-control-hover)]'
                                                             : 'bg-[var(--color-paper-2)]'
                                                 }`}
                                             />
@@ -482,18 +472,18 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     <div className="md:col-span-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-3">
                         {/* Upper: Settled vs Active Unpaid Revenue + Payment Ratio */}
-                        <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 rounded-2xl space-y-2.5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-[var(--color-ink)]">
-                                    Treasury &amp; Settlement
+                        <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 rounded-xl space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-[var(--color-ink)]">
+                                    ยอดขายและช่องทางชำระ
                                 </span>
                                 {onOpenShiftLedger && (
                                     <button
                                         type="button"
                                         onClick={onOpenShiftLedger}
-                                        className="text-xs tabular-nums text-[var(--brand-plum)] hover:underline cursor-pointer"
+                                        className="text-xs font-medium text-[var(--brand-plum)] hover:underline cursor-pointer whitespace-nowrap"
                                     >
-                                        กะ POS &rarr;
+                                        ดูกะ POS
                                     </button>
                                 )}
                             </div>
@@ -502,23 +492,22 @@ export default function AdminExecutiveDataVizDashboard({
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="min-w-0">
                                     <div className="text-xs text-[var(--color-muted)]">ชำระแล้ว (ปิดบิล):</div>
-                                    <div className=" text-xl sm:text-2xl font-bold text-[var(--color-ink)] tabular-nums truncate">
-                                        {loading ? '...' : `฿${revenueToday.toLocaleString()}`}
+                                    <div className="text-xl sm:text-2xl font-bold text-[var(--color-ink)] tabular-nums truncate">
+                                        {loading ? '…' : `฿${revenueToday.toLocaleString()}`}
                                     </div>
-                                    <div className="text-xs text-[oklch(38%_0.10_140)] font-semibold mt-0.5 tabular-nums">
+                                    <div className="text-xs text-[var(--status-ok-ink)] font-semibold mt-0.5 tabular-nums">
                                         +{completedOrdersCount} บิลปิดยอดแล้ว
                                     </div>
                                 </div>
 
                                 <div className="min-w-0 border-l border-[var(--color-paper-3)] pl-3">
-                                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
-                                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeUnpaidRevenue > 0 ? 'bg-[var(--brand-plum)]' : 'bg-[oklch(75%_0.01_348.33)]'}`} />
-                                        <span className="truncate">ยังไม่คิดเงิน:</span>
+                                    <div className="text-xs text-[var(--color-muted)] truncate">
+                                        ยังไม่คิดเงิน:
                                     </div>
-                                    <div className={` text-xl sm:text-2xl font-bold tabular-nums truncate ${
+                                    <div className={`text-xl sm:text-2xl font-bold tabular-nums truncate ${
                                         activeUnpaidRevenue > 0 ? 'text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'
                                     }`}>
-                                        {loading ? '...' : `฿${activeUnpaidRevenue.toLocaleString()}`}
+                                        {loading ? '…' : `฿${activeUnpaidRevenue.toLocaleString()}`}
                                     </div>
                                     <div className={`text-xs font-semibold mt-0.5 tabular-nums ${
                                         activeUnpaidCount > 0 ? 'text-[var(--brand-plum)]' : 'text-[var(--color-neutral)]'
@@ -528,40 +517,40 @@ export default function AdminExecutiveDataVizDashboard({
                                 </div>
                             </div>
 
-                            {/* Split Progress Bar */}
+                            {/* Split Progress Bar (static widths, no layout-property transition) */}
                             <div className="space-y-1.5 pt-0.5">
                                 <div className="h-2 w-full rounded-full bg-[var(--color-paper-2)] overflow-hidden flex gap-0.5">
                                     {paymentMix.qrPct > 0 && (
                                         <div
                                             style={{ width: `${paymentMix.qrPct}%` }}
-                                            className="h-full bg-[oklch(45%_0.08_140)] transition-[width] duration-300"
+                                            className="h-full bg-[var(--status-ok-fill)]"
                                         />
                                     )}
                                     {paymentMix.cashPct > 0 && (
                                         <div
                                             style={{ width: `${paymentMix.cashPct}%` }}
-                                            className="h-full bg-[var(--color-ink)] transition-[width] duration-300"
+                                            className="h-full bg-[var(--color-ink)]"
                                         />
                                     )}
                                     {paymentMix.creditPct > 0 && (
                                         <div
                                             style={{ width: `${paymentMix.creditPct}%` }}
-                                            className="h-full bg-[var(--brand-plum)] transition-[width] duration-300"
+                                            className="h-full bg-[var(--brand-plum)]"
                                         />
                                     )}
                                 </div>
                                 <div className="flex items-center justify-between text-xs text-[var(--color-muted)] tabular-nums gap-2 flex-wrap">
-                                    <span className="flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-1.5 rounded-xs bg-[var(--status-ok-fill)]" aria-hidden="true" />
                                         PromptPay {paymentMix.qrPct}%
                                     </span>
-                                    <span className="flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink)]" />
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-1.5 rounded-xs bg-[var(--color-ink)]" aria-hidden="true" />
                                         เงินสด {paymentMix.cashPct}%
                                     </span>
                                     {paymentMix.creditPct > 0 && (
-                                        <span className="flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-plum)]" />
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-1.5 rounded-xs bg-[var(--brand-plum)]" aria-hidden="true" />
                                             บัตร {paymentMix.creditPct}%
                                         </span>
                                     )}
@@ -571,32 +560,32 @@ export default function AdminExecutiveDataVizDashboard({
                             {/* Projected Combined Total Footer (Closes arithmetic: Paid + Unpaid) */}
                             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-paper-3)] text-xs">
                                 <span className="text-[var(--color-muted)]">รวมยอดทั้งหมด (ปิดบิล + ค้างโต๊ะ)</span>
-                                <span className=" font-bold text-[var(--color-ink)] tabular-nums">
-                                    {loading ? '...' : `฿${totalProjectedRevenue.toLocaleString()}`}
+                                <span className="font-bold text-[var(--color-ink)] tabular-nums">
+                                    {loading ? '…' : `฿${totalProjectedRevenue.toLocaleString()}`}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Lower: Stylized POS Cash Drawer Card (Matches Green VISA Card in reference) */}
-                        <div className="bg-[oklch(42%_0.09_140)] text-[var(--color-paper)] p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                        {/* Lower: POS Cash Drawer Summary Card */}
+                        <div className="bg-[var(--status-ok-fill)] text-[var(--color-paper)] p-4 rounded-xl flex flex-col justify-between space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="tabular-nums text-xs font-bold opacity-85">
-                                    POS TERMINAL DRAWER
+                                <span className="text-xs font-semibold opacity-90">
+                                    ลิ้นชักเงินสด POS
                                 </span>
-                                <span className="tabular-nums text-[11px] font-bold px-1.5 py-0.5 bg-white/20 rounded-xs">
-                                    CASH
+                                <span className="tabular-nums text-[11px] font-semibold px-2 py-0.5 bg-[var(--cream)]/20 rounded-md">
+                                    เงินสด
                                 </span>
                             </div>
 
                             <div>
-                                <span className="text-xs tabular-nums opacity-75 block">ยอดเงินสดคาดการณ์ในลิ้นชัก:</span>
-                                <div className=" text-2xl font-bold tabular-nums tracking-tight">
+                                <span className="text-xs opacity-80 block">ยอดเงินสดคาดการณ์ในลิ้นชัก</span>
+                                <div className="text-2xl font-bold tabular-nums tracking-tight">
                                     ฿{shiftSummary.expectedCash.toLocaleString()}
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between text-xs tabular-nums opacity-85 pt-1 border-t border-white/15">
-                                <span>ทอนเปิด ฿{shiftSummary.startingCash.toLocaleString()}</span>
+                            <div className="flex items-center justify-between text-xs tabular-nums opacity-90 pt-1.5 border-t border-[var(--cream)]/20">
+                                <span>เงินทอนเปิด ฿{shiftSummary.startingCash.toLocaleString()}</span>
                                 <span>{shiftSummary.floatOpenedTime ? `${shiftSummary.floatOpenedTime} น.` : 'ยังไม่เปิดกะ'}</span>
                             </div>
                         </div>
@@ -605,18 +594,18 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     {/* CARD 3A: Revenue Flow // Smooth Spline Wave (Center Bottom, 7 cols)   */}
                     {/* --------------------------------------------------------------------- */}
-                    <div className="md:col-span-7 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
+                    <div className="md:col-span-7 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-xl flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-[var(--color-ink)]">
-                                    Revenue Flow
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-[var(--color-ink)]">
+                                    ยอดเฉลี่ยต่อบิล
                                 </span>
                                 <span className="tabular-nums text-xs text-[var(--color-muted)]">
-                                    Average Ticket Pace
+                                    แนวโน้มรายชั่วโมง
                                 </span>
                             </div>
                             <div className="mt-1 flex items-baseline gap-2">
-                                <h3 className=" text-2xl sm:text-3xl font-bold text-[var(--color-ink)] tabular-nums">
+                                <h3 className="text-2xl sm:text-3xl font-bold text-[var(--color-ink)] tabular-nums">
                                     ฿{avgCheck.toLocaleString()}
                                     <small className="text-xs font-sans font-normal text-[var(--color-muted)] ml-1">/ บิล</small>
                                 </h3>
@@ -626,9 +615,11 @@ export default function AdminExecutiveDataVizDashboard({
                             </div>
                         </div>
 
-                        {/* Smooth Bezier Spline Wave with Dots and Callout (Matches Total Spent in reference) */}
+                        {/* Smooth Bezier Spline Wave with Dots and Callout */}
                         <div className="relative my-3 w-full">
                             <svg
+                                role="img"
+                                aria-label="กราฟแนวโน้มยอดขายรายชั่วโมง"
                                 viewBox={`0 0 ${splinePoints.width} ${splinePoints.height}`}
                                 className="w-full h-28 overflow-visible"
                             >
@@ -638,7 +629,7 @@ export default function AdminExecutiveDataVizDashboard({
                                     y1={splinePoints.height - 15}
                                     x2={splinePoints.width - 20}
                                     y2={splinePoints.height - 15}
-                                    stroke="oklch(89.47% 0.0128 345.51)"
+                                    stroke="var(--color-paper-3)"
                                     strokeWidth="1"
                                 />
 
@@ -646,7 +637,7 @@ export default function AdminExecutiveDataVizDashboard({
                                 <path
                                     d={splinePoints.pathD}
                                     fill="none"
-                                    stroke="oklch(21.78% 0 0)"
+                                    stroke="var(--color-ink)"
                                     strokeWidth="2.5"
                                     strokeLinecap="round"
                                 />
@@ -660,8 +651,8 @@ export default function AdminExecutiveDataVizDashboard({
                                                 cx={pt.x}
                                                 cy={pt.y}
                                                 r={isPeak ? 4.5 : 3.5}
-                                                fill={isPeak ? 'oklch(21.78% 0 0)' : 'oklch(96.20% 0.0115 84.58)'}
-                                                stroke="oklch(21.78% 0 0)"
+                                                fill={isPeak ? 'var(--color-ink)' : 'var(--color-paper)'}
+                                                stroke="var(--color-ink)"
                                                 strokeWidth="2"
                                             />
                                         </g>
@@ -675,7 +666,7 @@ export default function AdminExecutiveDataVizDashboard({
                                         y1={splinePoints.peakPoint.y}
                                         x2={splinePoints.peakPoint.x}
                                         y2={splinePoints.height - 15}
-                                        stroke="#41032A"
+                                        stroke="var(--brand-plum)"
                                         strokeWidth="1.5"
                                         strokeDasharray="3 2"
                                     />
@@ -699,7 +690,7 @@ export default function AdminExecutiveDataVizDashboard({
                             )}
                         </div>
 
-                        {/* Bottom Metadata Tiles (Matches 10 Wallets, 26 Assets in reference) */}
+                        {/* Bottom Metadata Tiles */}
                         <div className="flex items-center justify-between pt-2 border-t border-[var(--color-paper-3)] text-xs tabular-nums">
                             <div>
                                 <span className="font-bold text-base text-[var(--color-ink)] block">
@@ -727,17 +718,17 @@ export default function AdminExecutiveDataVizDashboard({
                     {/* --------------------------------------------------------------------- */}
                     {/* CARD 3B: Service Channels // Radial Donut Ring (Right Bottom, 5 cols)  */}
                     {/* --------------------------------------------------------------------- */}
-                    <div className="md:col-span-5 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-[var(--color-ink)]">
-                                Service Channels
+                    <div className="md:col-span-5 bg-[var(--color-paper)] border border-[var(--color-paper-3)] p-4 sm:p-5 rounded-xl flex flex-col justify-between">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-[var(--color-ink)]">
+                                ช่องทางให้บริการ
                             </span>
                             <span className="tabular-nums text-xs text-[var(--color-muted)]">
-                                Breakdown
+                                สัดส่วนออเดอร์
                             </span>
                         </div>
 
-                        {/* Radial Donut Ring (Matches Contract Type 86% in reference) */}
+                        {/* Radial Donut Ring */}
                         <div className="relative py-2 flex items-center justify-center">
                             {(() => {
                                 const size = 120
@@ -751,13 +742,18 @@ export default function AdminExecutiveDataVizDashboard({
 
                                 return (
                                     <div className="relative w-32 h-32 flex items-center justify-center">
-                                        <svg className="w-full h-full -rotate-90 overflow-visible" viewBox={`0 0 ${size} ${size}`}>
+                                        <svg
+                                            role="img"
+                                            aria-label={`สัดส่วนช่องทาง ทานที่ร้าน ${channelMix.dinePct} เปอร์เซ็นต์`}
+                                            className="w-full h-full -rotate-90 overflow-visible"
+                                            viewBox={`0 0 ${size} ${size}`}
+                                        >
                                             {/* Background Track */}
                                             <circle
                                                 cx={size / 2}
                                                 cy={size / 2}
                                                 r={r}
-                                                stroke="oklch(92.60% 0.0095 352.37)"
+                                                stroke="var(--color-paper-2)"
                                                 strokeWidth={stroke}
                                                 fill="none"
                                             />
@@ -768,7 +764,7 @@ export default function AdminExecutiveDataVizDashboard({
                                                     cx={size / 2}
                                                     cy={size / 2}
                                                     r={r}
-                                                    stroke="oklch(45% 0.08 140)"
+                                                    stroke="var(--status-ok-fill)"
                                                     strokeWidth={stroke}
                                                     strokeDasharray={`${dineLen} ${c}`}
                                                     strokeDashoffset="0"
@@ -783,7 +779,7 @@ export default function AdminExecutiveDataVizDashboard({
                                                     cx={size / 2}
                                                     cy={size / 2}
                                                     r={r}
-                                                    stroke="oklch(25.18% 0.1001 348.33)"
+                                                    stroke="var(--brand-plum)"
                                                     strokeWidth={stroke}
                                                     strokeDasharray={`${pickLen} ${c}`}
                                                     strokeDashoffset={`-${dineLen + 2}`}
@@ -798,7 +794,7 @@ export default function AdminExecutiveDataVizDashboard({
                                                     cx={size / 2}
                                                     cy={size / 2}
                                                     r={r}
-                                                    stroke="oklch(75% 0.14 45)"
+                                                    stroke="var(--status-warn-fill)"
                                                     strokeWidth={stroke}
                                                     strokeDasharray={`${onlineLen} ${c}`}
                                                     strokeDashoffset={`-${dineLen + pickLen + 4}`}
@@ -810,18 +806,18 @@ export default function AdminExecutiveDataVizDashboard({
 
                                         {/* Donut Center Display */}
                                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                            <span className=" text-2xl font-bold text-[var(--color-ink)] tabular-nums">
+                                            <span className="text-2xl font-bold text-[var(--color-ink)] tabular-nums">
                                                 {channelMix.dinePct}%
                                             </span>
-                                            <span className="text-xs tabular-nums text-[var(--color-muted)]">
-                                                Dine-in
+                                            <span className="text-xs text-[var(--color-muted)]">
+                                                ทานที่ร้าน
                                             </span>
                                         </div>
 
                                         {/* Floating Tag next to Donut (only shown when Pick-up orders exist) */}
                                         {channelMix.pickPct > 0 && (
-                                            <span className="absolute top-1 -right-2 tabular-nums text-[11px] font-bold px-1.5 py-0.5 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--color-rule)] rounded-sm">
-                                                {channelMix.pickPct}% Pick
+                                            <span className="absolute top-1 -right-2 tabular-nums text-[11px] font-semibold px-1.5 py-0.5 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--color-rule)] rounded-md whitespace-nowrap">
+                                                กลับบ้าน {channelMix.pickPct}%
                                             </span>
                                         )}
                                     </div>

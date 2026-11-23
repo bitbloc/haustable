@@ -157,7 +157,7 @@ export default function OwnerPosBroadcastBar() {
     }
 
     return (
-        <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] rounded-2xl p-4 md:p-5 space-y-3.5 font-sans">
+        <div className="bg-[var(--color-paper)] border border-[var(--color-paper-3)] rounded-xl p-4 md:p-5 space-y-3.5 font-sans">
             {/* Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--color-paper-3)]">
                 <div>
@@ -171,14 +171,13 @@ export default function OwnerPosBroadcastBar() {
 
                 {activeBroadcast && (
                     <div className="flex items-center gap-2 text-xs self-start sm:self-auto">
-                        <span className="px-2.5 py-0.5 bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(84%_0.04_140)] rounded-full font-medium flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
-                            <span>กำลังแสดงบน POS</span>
+                        <span className="px-2.5 py-0.5 bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] rounded-full font-semibold">
+                            กำลังแสดงบน POS
                         </span>
                         <button
                             type="button"
                             onClick={handleClearBroadcast}
-                            className="px-2.5 py-0.5 bg-[var(--color-paper-2)] hover:bg-[oklch(90%_0.03_348.33)] text-[var(--brand-plum)] border border-[oklch(85%_0.04_348.33)] rounded-full font-medium transition-colors cursor-pointer"
+                            className="px-2.5 py-0.5 bg-[var(--color-plum-pale)] hover:bg-[var(--color-plum-soft)] text-[var(--brand-plum)] border border-[var(--color-plum-border)] rounded-full font-semibold transition-colors cursor-pointer whitespace-nowrap"
                             title="ลบประกาศออกจากหน้าจอ POS"
                         >
                             ล้างประกาศ
@@ -198,7 +197,7 @@ export default function OwnerPosBroadcastBar() {
                             &ldquo;{activeBroadcast.text}&rdquo;
                         </span>
                     </div>
-                    <span className=" text-xs text-[var(--color-neutral)] shrink-0 tabular-nums">
+                    <span className="text-xs text-[var(--color-neutral)] shrink-0 tabular-nums">
                         {activeBroadcast.timestamp ? new Date(activeBroadcast.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                 </div>
@@ -208,7 +207,7 @@ export default function OwnerPosBroadcastBar() {
             <div className="flex flex-col sm:flex-row items-center gap-2 text-xs">
                 <input
                     type="text"
-                    placeholder="พิมพ์คำสั่งด่วนหรือประกาศถึงพนักงานหน้าร้าน..."
+                    placeholder="พิมพ์คำสั่งด่วนหรือประกาศถึงพนักงานหน้าร้าน…"
                     value={message}
                     onChange={e => setMessage(e.target.value)}
                     onKeyDown={e => {
@@ -223,10 +222,9 @@ export default function OwnerPosBroadcastBar() {
                     type="button"
                     onClick={() => handleSendBroadcast()}
                     disabled={sending || !message.trim()}
-                    className="w-full sm:w-auto px-4 py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] disabled:opacity-45 text-[var(--color-paper)] rounded-xl font-medium flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer whitespace-nowrap"
+                    className="w-full sm:w-auto min-h-[40px] px-4 py-2.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] disabled:opacity-45 text-[var(--color-paper)] rounded-xl font-semibold flex items-center justify-center shrink-0 transition-colors cursor-pointer whitespace-nowrap"
                 >
-                    <span>{sending ? 'กำลังส่ง...' : 'ส่งถึง POS'}</span>
-                    {!sending && <span aria-hidden="true">&rarr;</span>}
+                    {sending ? 'กำลังส่ง…' : 'ส่งถึง POS'}
                 </button>
             </div>
 
@@ -241,7 +239,7 @@ export default function OwnerPosBroadcastBar() {
                             setMessage(chip)
                             handleSendBroadcast(chip)
                         }}
-                        className="px-2.5 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[oklch(28%_0.012_348.33)] rounded-full font-medium transition-colors cursor-pointer"
+                        className="px-2.5 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[var(--color-ink-soft)] rounded-full font-medium transition-colors cursor-pointer"
                     >
                         + {chip}
                     </button>

@@ -657,36 +657,49 @@ export default function AdminDashboard() {
                 {(() => {
                     const isToday = selectedDate === getThaiDate()
                     const strong = 'font-medium text-[var(--color-ink)]'
-                    const dateChip = (active) => `h-8 px-3 rounded-md text-[13px] cursor-pointer transition-colors whitespace-nowrap ${active ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-medium border border-[var(--color-rule)]' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] border border-transparent'}`
-                    const ghostBtn = 'h-10 px-3 rounded-lg border border-[var(--color-rule)] text-[13px] font-medium text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:translate-y-px'
+                    const dateChip = (active) => `h-9 px-3 rounded-md text-[13px] cursor-pointer transition-colors whitespace-nowrap ${active ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-medium border border-[var(--color-rule)]' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] border border-transparent'}`
+                    const ghostBtn = 'h-11 px-3.5 rounded-lg border border-[var(--color-rule)] text-[13px] font-medium text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:translate-y-px'
+                    const shiftPillClass = !isToday
+                        ? 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)]'
+                        : isShiftOpen
+                            ? 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border-[var(--status-ok-border)]'
+                            : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)]'
+                    const shiftPillLabel = !isToday
+                        ? 'ข้อมูลย้อนหลัง'
+                        : isShiftOpen
+                            ? 'กะเปิดอยู่'
+                            : 'ยังไม่เปิดรอบ'
                     return (
                         <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mb-6">
                             <div className="min-w-0">
                                 <h1 className="text-2xl font-semibold leading-9 text-[var(--color-ink)]">
                                     ภาพรวมหน้าร้าน
                                 </h1>
-                                <p className="mt-1 text-sm leading-6 text-[var(--color-muted)] flex items-start gap-2">
-                                    <span className={`mt-2 w-2 h-2 rounded-full shrink-0 ${isToday && isShiftOpen ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(70%_0.01_348.33)]'}`} />
-                                    <span>
-                                        {!isToday ? (
-                                            latestClosedShift ? (
-                                                <>ย้อนหลัง · ปิดรอบ <span className={`tabular-nums ${strong}`}>{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <span className={strong}>{latestClosedShift.staff_name}</span>{shifts.length > 1 ? ` · ทั้งหมด ${shifts.length} กะ` : ''}</>
-                                            ) : (
-                                                <>ไม่มีรอบขาย POS ในวันที่ {formatThaiDateOnly(selectedDate)}</>
-                                            )
-                                        ) : isShiftOpen ? (
-                                            <>กะเปิดอยู่ · <span className={strong}>{activeShift.staff_name}</span> เปิดเมื่อ <span className="tabular-nums">{formatThaiTimeOnly(activeShift.opened_at)}</span></>
-                                        ) : latestClosedShift ? (
-                                            <>ยังไม่เปิดรอบขาย · ล่าสุดปิด <span className="tabular-nums">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <span className={strong}>{latestClosedShift.staff_name}</span></>
-                                        ) : (
-                                            <>ยังไม่มีการเปิดรอบขายบนเครื่อง POS</>
-                                        )}
+                                <div className="mt-1.5 text-sm leading-6 text-[var(--color-muted)] flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-semibold whitespace-nowrap ${shiftPillClass}`}>
+                                        {shiftPillLabel}
                                     </span>
-                                </p>
+                                    {!isToday ? (
+                                        latestClosedShift ? (
+                                            <>
+                                                <span>ปิดรอบ <span className={`tabular-nums ${strong}`}>{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <span className={strong}>{latestClosedShift.staff_name}</span></span>
+                                                {shifts.length > 1 && <span className="tabular-nums text-[var(--color-neutral)]">ทั้งหมด {shifts.length} กะ</span>}
+                                            </>
+                                        ) : (
+                                            <span>ไม่มีรอบขาย POS ในวันที่ {formatThaiDateOnly(selectedDate)}</span>
+                                        )
+                                    ) : isShiftOpen ? (
+                                        <span><span className={strong}>{activeShift.staff_name}</span> เปิดเมื่อ <span className="tabular-nums">{formatThaiTimeOnly(activeShift.opened_at)}</span></span>
+                                    ) : latestClosedShift ? (
+                                        <span>ล่าสุดปิด <span className="tabular-nums">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <span className={strong}>{latestClosedShift.staff_name}</span></span>
+                                    ) : (
+                                        <span>ยังไม่มีการเปิดรอบขายบนเครื่อง POS</span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap">
-                                <div className="flex items-center gap-1 h-10 px-1 rounded-lg border border-[var(--color-rule)] w-full sm:w-auto min-w-0">
+                                <div className="flex items-center gap-1 h-11 px-1 rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-2)] w-full sm:w-auto min-w-0">
                                     <input
                                         type="date"
                                         value={selectedDate}
@@ -706,10 +719,9 @@ export default function AdminDashboard() {
                                     <button
                                         type="button"
                                         onClick={() => setSoundMuted(!soundMuted)}
-                                        className={`${ghostBtn} ${soundMuted ? 'text-[var(--color-muted)]' : ''}`}
+                                        className={`${ghostBtn} ${soundMuted ? 'text-[var(--color-muted)]' : 'border-[var(--brand-plum)] text-[var(--brand-plum)] bg-[var(--color-plum-pale)]'}`}
                                         title={soundMuted ? 'เปิดเสียงแจ้งเตือนคำขอรอตรวจ' : 'ปิดเสียงแจ้งเตือนคำขอรอตรวจ'}
                                     >
-                                        <span className={`w-2 h-2 rounded-full ${soundMuted ? 'bg-[oklch(70%_0.01_348.33)]' : 'bg-[var(--brand-plum)]'}`} />
                                         <span>{soundMuted ? 'เสียงปิด' : 'เสียงเปิด'}</span>
                                     </button>
                                 )}
@@ -727,7 +739,7 @@ export default function AdminDashboard() {
                                     type="button"
                                     onClick={() => fetchData(false, selectedDate)}
                                     disabled={loading}
-                                    className={`${ghostBtn} w-10 px-0 justify-center`}
+                                    className={`${ghostBtn} w-11 px-0 justify-center`}
                                     title="รีเฟรชข้อมูลล่าสุด"
                                     aria-label="รีเฟรชข้อมูลล่าสุด"
                                 >
@@ -738,11 +750,11 @@ export default function AdminDashboard() {
                     )
                 })()}
 
-                {/* Mode switch: as wide as its two options, on a full-width hairline */}
+                {/* Mode switch: Thai-first tabs on a full-width hairline */}
                 <div className="flex gap-6 border-b border-[var(--color-paper-3)] mb-6" role="tablist" aria-label="โหมดภาพรวม">
                     {[
-                        { key: 'simplified', label: 'Live Now', sub: 'โต๊ะสดหน้าร้าน' },
-                        { key: 'pro', label: 'Pro Analytics', sub: 'ภาพรวมและเชิงลึก' }
+                        { key: 'simplified', label: 'โต๊ะสดหน้าร้าน', sub: 'Live' },
+                        { key: 'pro', label: 'วิเคราะห์เชิงลึก', sub: 'Analytics' }
                     ].map((m) => {
                         const on = overviewMode === m.key
                         return (
@@ -752,10 +764,10 @@ export default function AdminDashboard() {
                                 role="tab"
                                 aria-selected={on}
                                 onClick={() => handleSetOverviewMode(m.key)}
-                                className={`relative h-11 text-sm cursor-pointer transition-colors whitespace-nowrap ${on ? 'text-[var(--color-ink)] font-medium' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
+                                className={`relative h-11 text-sm cursor-pointer transition-colors whitespace-nowrap inline-flex items-baseline gap-1.5 ${on ? 'text-[var(--color-ink)] font-semibold' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}`}
                             >
                                 <span>{m.label}</span>
-                                <span className="hidden sm:inline text-[var(--color-neutral)] font-normal"> · {m.sub}</span>
+                                <span className="hidden sm:inline font-mono text-xs text-[var(--color-neutral)] font-normal">{m.sub}</span>
                                 {on && (
                                     <motion.span
                                         layoutId="overview-mode-underline"

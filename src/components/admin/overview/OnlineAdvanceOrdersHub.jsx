@@ -63,8 +63,8 @@ export function classifyOnlineOrder(booking) {
             type: 'lineman',
             label: 'LINE MAN DELIVERY',
             shortTag: 'LINE MAN',
-            tagClass: 'bg-[oklch(92%_0.02_140)] text-[oklch(35%_0.08_140)] border-[oklch(75%_0.08_140)]',
-            accentClass: 'border-l-[oklch(45%_0.08_140)]'
+            tagClass: 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border-[var(--status-ok-border)]',
+            accentClass: 'border-l-[var(--status-ok-fill)]'
         }
     }
 
@@ -74,8 +74,8 @@ export function classifyOnlineOrder(booking) {
         return {
             type: 'pickup',
             label: 'ONLINE PICK-UP',
-            shortTag: 'PICK-UP',
-            tagClass: 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[oklch(80%_0.04_348.33)]',
+            shortTag: 'รับหน้าร้าน',
+            tagClass: 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--color-plum-border)]',
             accentClass: 'border-l-[var(--brand-plum)]'
         }
     }
@@ -85,9 +85,9 @@ export function classifyOnlineOrder(booking) {
         return {
             type: 'shop',
             label: 'HAUSMADE SHOP',
-            shortTag: 'SHOP / PARCEL',
-            tagClass: 'bg-[var(--color-paper-2)] text-[oklch(35%_0.08_140)] border-[var(--color-rule)]',
-            accentClass: 'border-l-[oklch(45%_0.08_140)]'
+            shortTag: 'พัสดุร้านค้า',
+            tagClass: 'bg-[var(--color-paper-2)] text-[var(--status-ok-ink)] border-[var(--color-rule)]',
+            accentClass: 'border-l-[var(--status-ok-fill)]'
         }
     }
 
@@ -95,8 +95,8 @@ export function classifyOnlineOrder(booking) {
     return {
         type: 'dine_in',
         label: 'ONLINE DINE-IN',
-        shortTag: booking.tables_layout?.table_name ? `โต๊ะ ${booking.tables_layout.table_name}` : 'ONLINE DINE-IN',
-        tagClass: 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[oklch(80%_0.04_348.33)]',
+        shortTag: booking.tables_layout?.table_name ? `โต๊ะ ${booking.tables_layout.table_name}` : 'จองโต๊ะออนไลน์',
+        tagClass: 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--color-plum-border)]',
         accentClass: 'border-l-[var(--brand-plum)]'
     }
 }
@@ -261,10 +261,9 @@ export default function OnlineAdvanceOrdersHub({
                         <button
                             type="button"
                             onClick={onOpenProMode}
-                            className="px-3 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] font-medium rounded-xl cursor-pointer transition-colors hidden sm:inline-flex items-center gap-1"
+                            className="px-3 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] font-medium rounded-xl cursor-pointer transition-colors hidden sm:inline-flex items-center whitespace-nowrap"
                         >
-                            <span>เปิด Inbox</span>
-                            <span aria-hidden="true">&rarr;</span>
+                            เปิดกล่องข้อความ
                         </button>
                     )}
                 </div>
@@ -297,7 +296,7 @@ export default function OnlineAdvanceOrdersHub({
                                                 ? item.isUrgent
                                                     ? 'bg-[var(--brand-plum)] text-[var(--color-paper)] border-[var(--brand-plum)]'
                                                     : 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
-                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-paper-3)] hover:border-[oklch(75%_0.012_348.33)]'
+                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-paper-3)] hover:border-[var(--color-control-hover)]'
                                         }`}
                                     >
                                         <span>{item.label}</span>
@@ -327,7 +326,7 @@ export default function OnlineAdvanceOrdersHub({
                                         className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer whitespace-nowrap text-xs border ${
                                             isActive
                                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
-                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-paper-3)] hover:border-[oklch(75%_0.012_348.33)]'
+                                                : 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-paper-3)] hover:border-[var(--color-control-hover)]'
                                         }`}
                                     >
                                         <span>{item.label}</span>
@@ -378,7 +377,7 @@ export default function OnlineAdvanceOrdersHub({
                                                         ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
                                                         : horizon === 'tomorrow'
                                                             ? 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] font-bold'
-                                                            : 'bg-[var(--color-paper-2)] text-[oklch(35%_0.08_140)] font-medium'
+                                                            : 'bg-[var(--color-paper-2)] text-[var(--status-ok-ink)] font-medium'
                                                 }`}>
                                                     {scheduleLabel}
                                                 </span>
@@ -389,36 +388,34 @@ export default function OnlineAdvanceOrdersHub({
 
                                                 <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${
                                                     isPending
-                                                        ? 'bg-[oklch(94%_0.03_348.33)] text-[var(--brand-plum)] border-[oklch(80%_0.1_348.33)]'
-                                                        : isConfirmed
-                                                            ? 'bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border-[oklch(82%_0.05_140)]'
-                                                            : isReady
-                                                                ? 'bg-[oklch(92%_0.03_140)] text-[oklch(32%_0.09_140)] border-[oklch(76%_0.06_140)]'
-                                                                : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-paper-3)]'
+                                                        ? 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border-[var(--color-plum-border)]'
+                                                        : isConfirmed || isReady
+                                                            ? 'bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border-[var(--status-ok-border)]'
+                                                            : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-paper-3)]'
                                                 }`}>
                                                     {isPending ? 'รอตรวจสอบ' : isConfirmed ? 'ยืนยันแล้ว' : isPreparing ? 'กำลังเตรียม' : isReady ? 'พร้อมรับ' : isSeated ? 'นั่งที่โต๊ะ' : order.status}
                                                 </span>
 
                                                 {hasSlip && (
-                                                    <span className="text-[11px] font-medium bg-[var(--color-paper-2)] text-[var(--brand-plum)] px-2 py-0.5 rounded-md border border-[oklch(84%_0.04_348.33)]">
+                                                    <span className="text-[11px] font-medium bg-[var(--color-paper-2)] text-[var(--brand-plum)] px-2 py-0.5 rounded-md border border-[var(--color-plum-border)]">
                                                         มีสลิปโอน
                                                     </span>
                                                 )}
                                             </div>
 
                                             {/* Customer Name & Notes */}
-                                            <div className="flex items-baseline gap-2 flex-wrap text-sm">
+                                            <div className="flex items-baseline gap-2.5 flex-wrap text-sm">
                                                 <span className="font-semibold text-[var(--color-ink)] truncate">
                                                     {customerName}
                                                 </span>
                                                 {classified.type === 'dine_in' && (
                                                     <span className="tabular-nums text-xs text-[var(--color-neutral)]">
-                                                        {guestCount} ท่าน {order.tables_layout?.table_name ? `· โต๊ะ ${order.tables_layout.table_name}` : ''}
+                                                        {guestCount} ท่าน {order.tables_layout?.table_name ? `โต๊ะ ${order.tables_layout.table_name}` : ''}
                                                     </span>
                                                 )}
                                                 {contactPhone && (
                                                     <span className="tabular-nums text-xs text-[var(--color-neutral)]">
-                                                        · {contactPhone}
+                                                        {contactPhone}
                                                     </span>
                                                 )}
                                                 {order.customer_note && (
@@ -432,10 +429,10 @@ export default function OnlineAdvanceOrdersHub({
                                         {/* Right Side: Total Amount & Action Buttons */}
                                         <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[var(--color-paper-3)]">
                                             <div className="text-left md:text-right">
-                                                <div className=" font-bold text-sm sm:text-base text-[var(--color-ink)] tabular-nums">
+                                                <div className="font-bold text-sm sm:text-base text-[var(--color-ink)] tabular-nums">
                                                     ฿{amount.toLocaleString()}
                                                 </div>
-                                                <div className=" text-xs text-[var(--color-neutral)] tabular-nums">
+                                                <div className="text-xs text-[var(--color-neutral)] tabular-nums">
                                                     {itemCount > 0 ? `${itemCount} รายการ` : 'ยังไม่มีรายการ'}
                                                 </div>
                                             </div>
@@ -449,7 +446,7 @@ export default function OnlineAdvanceOrdersHub({
                                                             e.stopPropagation()
                                                             onViewSlip(order.payment_slip_url)
                                                         }}
-                                                        className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[var(--color-ink)] font-medium rounded-xl cursor-pointer transition-colors"
+                                                        className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[var(--color-ink)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
                                                     >
                                                         ดูสลิป
                                                     </button>
@@ -461,7 +458,7 @@ export default function OnlineAdvanceOrdersHub({
                                                         e.stopPropagation()
                                                         if (onInspectBill) onInspectBill(order)
                                                     }}
-                                                    className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[var(--color-ink)] font-medium rounded-xl cursor-pointer transition-colors"
+                                                    className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-paper-3)] text-[var(--color-ink)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
                                                 >
                                                     ดูบิล
                                                 </button>
@@ -472,9 +469,9 @@ export default function OnlineAdvanceOrdersHub({
                                                         type="button"
                                                         disabled={actionId === order.id}
                                                         onClick={(e) => handleAction(order.id, 'confirmed', e)}
-                                                        className="px-3 py-1.5 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
+                                                        className="px-3 py-1.5 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--color-paper)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
                                                     >
-                                                        {actionId === order.id ? '...' : 'ยืนยัน'}
+                                                        {actionId === order.id ? '…' : 'ยืนยัน'}
                                                     </button>
                                                 )}
 
@@ -483,9 +480,9 @@ export default function OnlineAdvanceOrdersHub({
                                                         type="button"
                                                         disabled={actionId === order.id}
                                                         onClick={(e) => handleAction(order.id, 'ready', e)}
-                                                        className="px-3 py-1.5 bg-[var(--color-ink)] hover:bg-[oklch(28%_0.012_348.33)] text-[var(--color-paper)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
+                                                        className="px-3 py-1.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] font-medium rounded-xl cursor-pointer transition-colors whitespace-nowrap"
                                                     >
-                                                        {actionId === order.id ? '...' : (classified.type === 'pickup' ? 'พร้อมรับ' : 'พร้อมบริการ')}
+                                                        {actionId === order.id ? '…' : (classified.type === 'pickup' ? 'พร้อมรับ' : 'พร้อมบริการ')}
                                                     </button>
                                                 )}
                                             </div>
@@ -498,13 +495,10 @@ export default function OnlineAdvanceOrdersHub({
 
                     {/* 4. Quiet Footer Summary */}
                     <div className="px-4 md:px-5 py-2.5 bg-[var(--color-paper)] border-t border-[var(--color-paper-3)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[var(--color-neutral)]">
-                        <div className="flex items-center gap-3 flex-wrap tabular-nums">
-                            <span>กำลังแสดง <strong className="text-[var(--color-ink)]">{filteredOrders.length}</strong> / {metrics.total} รายการ</span>
-                            <span>·</span>
+                        <div className="flex items-center gap-x-4 gap-y-1 flex-wrap tabular-nums">
+                            <span>แสดง <strong className="text-[var(--color-ink)]">{filteredOrders.length}</strong> / {metrics.total} รายการ</span>
                             <span>วันนี้ <strong className="text-[var(--color-ink)]">{metrics.todayCount}</strong></span>
-                            <span>·</span>
                             <span>พรุ่งนี้ <strong className="text-[var(--color-ink)]">{metrics.tomorrowCount}</strong></span>
-                            <span>·</span>
                             <span>7 วันหน้า <strong className="text-[var(--color-ink)]">{metrics.upcomingCount}</strong></span>
                         </div>
                         <span className="tabular-nums text-xs text-[var(--color-neutral)]">

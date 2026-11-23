@@ -97,10 +97,30 @@
   --color-paper-3: oklch(89.47% 0.0128 345.51);     /* #E3D9DE */
   --color-rule: oklch(85.05% 0.0113 348.48);        /* #D4CBCF */
   --color-control: oklch(82% 0.012 348.33);         /* Control borders, one step darker than rule */
+  --color-control-hover: oklch(75% 0.012 348.33);   /* Hover control border / chart bar hover */
   --color-plum-pale: oklch(95% 0.025 348.33);       /* Soft plum surface for out/urgent badges */
+  --color-plum-soft: oklch(90% 0.04 348.33);        /* Hover / stronger soft plum badge surface */
+  --color-plum-border: oklch(82% 0.055 348.33);     /* Subtle plum border on light surfaces */
+  --color-plum-muted: oklch(44% 0.085 348.33);      /* Secondary plum ink (>6:1 on cream) */
+  --color-ink-soft: oklch(34% 0.012 348.33);        /* Slightly softened charcoal ink (>10:1 on cream) */
   --color-veil: oklch(21.78% 0 0 / 0.45);           /* Modal backdrop veil */
   --shadow-sheet: 0 12px 32px oklch(21.78% 0 0 / 0.14);
   --shadow-pill: 0 1px 2px oklch(21.78% 0 0 / 0.12);
+  /* Semantic status palette for Admin / POS monitoring (WCAG >= 4.5:1 verified) */
+  --status-ok-bg: oklch(93% 0.025 140);             /* Paid / settled / active badge fill */
+  --status-ok-bg-soft: oklch(96% 0.018 140);        /* Subtle row / panel highlight */
+  --status-ok-border: oklch(76% 0.075 140);         /* Settled / active border */
+  --status-ok-ink: oklch(35% 0.085 140);            /* Settled / positive ink (>8.5:1 on bg) */
+  --status-ok-fill: oklch(43% 0.085 140);           /* Solid status badge / bar fill (cream text) */
+  --status-info-bg: oklch(93% 0.025 235);           /* Online / pickup / transfer badge fill */
+  --status-info-border: oklch(76% 0.075 235);       /* Online / transfer border */
+  --status-info-ink: oklch(34% 0.095 235);          /* Online / info ink (>8.8:1 on bg) */
+  --status-info-fill: oklch(40% 0.095 235);         /* Solid info badge fill (cream text) */
+  --status-warn-bg: oklch(94% 0.04 65);             /* Attention / call-bill / upcoming soft fill */
+  --status-warn-border: oklch(75% 0.13 65);         /* Attention border */
+  --status-warn-ink: oklch(35% 0.10 55);            /* Attention ink (>8.5:1 on bg) */
+  --status-warn-fill: oklch(45% 0.125 55);          /* Solid attention badge fill (cream text) */
+  --status-warn-bright: oklch(82% 0.15 68);         /* High-visibility call-bill fill (charcoal ink) */
   --color-neutral: oklch(48.01% 0.0120 345.78);     /* #635B5F 5.89:1 on cream */
   --color-muted: oklch(41.84% 0.0124 345.90);       /* #524A4E 7.68:1 on cream */
   --color-ink: var(--charcoal);

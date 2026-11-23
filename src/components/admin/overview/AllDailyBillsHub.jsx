@@ -61,26 +61,19 @@ function LiveServiceDurationBadge({ booking }) {
         const elapsedMins = Math.max(0, Math.floor((now - start) / (1000 * 60)))
         const formatted = formatThaiDuration(elapsedMins)
 
-        let colorClasses = 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)] font-bold'
-        let dotColor = 'bg-[oklch(45%_0.08_140)]'
+        let colorClasses = 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)] font-semibold'
 
         if (elapsedMins >= 90) {
-            colorClasses = 'bg-[oklch(96%_0.03_348.33)] text-[var(--brand-plum)] border-[var(--brand-plum)] font-bold'
-            dotColor = 'bg-[var(--brand-plum)]'
+            colorClasses = 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border-[var(--color-plum-border)] font-semibold'
         } else if (elapsedMins >= 60) {
-            colorClasses = 'bg-amber-50 text-amber-900 border-amber-300 font-bold'
-            dotColor = 'bg-amber-500'
+            colorClasses = 'bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border-[var(--status-warn-border)] font-semibold'
         }
 
         return (
             <span 
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm tabular-nums text-[11px] border ${colorClasses}`}
+                className={`inline-flex items-center px-2 py-0.5 rounded-md tabular-nums text-[11px] border ${colorClasses}`}
                 title={`เริ่มใช้บริการ: ${formatThaiTimeOnly(startTime)} (${elapsedMins} นาทีที่แล้ว)`}
             >
-                <span className="relative flex h-1.5 w-1.5">
-                    <span className={`absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-75`}></span>
-                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${dotColor}`}></span>
-                </span>
                 <span>ทานไปแล้ว {formatted}</span>
             </span>
         )
@@ -96,8 +89,8 @@ function LiveServiceDurationBadge({ booking }) {
 
         return (
             <span 
-                className="inline-flex items-center px-2 py-0.5 rounded-sm tabular-nums text-[11px] font-bold bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-paper-3)]"
-                title={`เริ่ม: ${formatThaiTimeOnly(startTime)} • ปิดบิล: ${formatThaiTimeOnly(endTime)}`}
+                className="inline-flex items-center px-2 py-0.5 rounded-md tabular-nums text-[11px] font-semibold bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-paper-3)]"
+                title={`เริ่ม: ${formatThaiTimeOnly(startTime)} ปิดบิล: ${formatThaiTimeOnly(endTime)}`}
             >
                 <span>ใช้บริการ {formatThaiDuration(totalMins)}</span>
             </span>
@@ -110,8 +103,8 @@ function LiveServiceDurationBadge({ booking }) {
         if (waitMins <= 0) return null
 
         return (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm tabular-nums text-[11px] bg-amber-50 text-amber-900 border border-amber-300 font-bold">
-                <span>รอตรวจ {waitMins}น.</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md tabular-nums text-[11px] bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border border-[var(--status-warn-border)] font-semibold">
+                <span>รอตรวจ {waitMins} น.</span>
             </span>
         )
     }
@@ -369,8 +362,8 @@ export default function AllDailyBillsHub({
         // Distinct highlight for Source Merged Bills (Clean Rams UI - Zero duplicate clutter)
         if (transfer.isMergedSource) {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[11px] tabular-nums font-bold bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)]" title={`รวมรายการอาหารเข้ากับ ${transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}`}>
-                    <span>รวมบิล ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'บิลหลัก'}`}</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)]" title={`รวมรายการอาหารเข้ากับ ${transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}`}>
+                    รวมไป {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'บิลหลัก'}`}
                 </span>
             )
         }
@@ -378,38 +371,35 @@ export default function AllDailyBillsHub({
         const s = (booking?.status || '').toLowerCase()
         if (s === 'completed' || s === 'paid' || s === 'success') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                    <CheckCircle2 size={11} className="text-emerald-700" />
-                    <span>PAID (ชำระแล้ว)</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
+                    ชำระแล้ว
                 </span>
             )
         }
         if (s === 'seated') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] border border-[oklch(82%_0.02_220)]">
-                    <Clock size={11} />
-                    <span>SEATED (กำลังทาน)</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)]">
+                    กำลังทาน
                 </span>
             )
         }
         if (s === 'pending') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border border-[oklch(80%_0.06_65)] ">
-                    <AlertCircle size={11} />
-                    <span>PENDING (รอตรวจ)</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border border-[var(--status-warn-border)]">
+                    รอตรวจ
                 </span>
             )
         }
         if (s === 'confirmed' || s === 'ready') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.08_140)]">
-                    <span>CONFIRMED</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
+                    ยืนยันแล้ว
                 </span>
             )
         }
         return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)]">
-                <span>{s.toUpperCase() || 'VOID'}</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--color-paper-2)] text-[var(--color-muted)] border border-[var(--color-rule)]">
+                {s === 'cancelled' || s === 'void' ? 'ยกเลิก' : (s || 'ยกเลิก')}
             </span>
         )
     }
@@ -432,32 +422,28 @@ export default function AllDailyBillsHub({
         const breakdown = getBookingPaymentBreakdown(booking)
         if (breakdown.isSplit) {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(93%_0.04_300)] text-[oklch(28%_0.08_300)] border border-[oklch(80%_0.06_300)]">
-                    <Layers size={11} />
-                    <span>SPLIT (ผสม)</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border border-[var(--color-plum-border)]">
+                    แบ่งจ่าย
                 </span>
             )
         }
         if (breakdown.methodLabel === 'Credit Card') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(93%_0.04_250)] text-[oklch(28%_0.08_250)] border border-[oklch(80%_0.06_250)]">
-                    <CreditCard size={11} />
-                    <span>CREDIT CARD</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)]">
+                    บัตรเครดิต
                 </span>
             )
         }
         if (breakdown.methodLabel === 'QR Transfer' || booking.payment_slip_url) {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(93%_0.04_140)] text-[oklch(28%_0.08_140)] border border-[oklch(80%_0.06_140)]">
-                    <QrCode size={11} />
-                    <span>PROMPTPAY QR</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)]">
+                    PromptPay QR
                 </span>
             )
         }
         return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] tabular-nums font-bold bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border border-[oklch(80%_0.06_65)]">
-                <Banknote size={11} />
-                <span>CASH (เงินสด)</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border border-[var(--status-warn-border)]">
+                เงินสด
             </span>
         )
     }
@@ -475,10 +461,10 @@ export default function AllDailyBillsHub({
 
         return (
             <span 
-                className="inline-flex items-center px-1.5 py-0.2 rounded-xs text-[11px] tabular-nums font-bold bg-[oklch(93%_0.02_250)] text-[oklch(35%_0.10_250)] border border-[oklch(80%_0.04_250)]  "
+                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)]"
                 title={`ที่มาจากแคมเปญโฆษณา: ${adTag}`}
             >
-                <span>AD: {adTag}</span>
+                โฆษณา: {adTag}
             </span>
         )
     }
@@ -517,39 +503,39 @@ export default function AllDailyBillsHub({
         )
         const transfer = parseTableTransferInfo(b, bookings)
 
-        // Distinct border styling based on operational priority (Dieter Rams + Thai Modern OKLCH)
-        let cardStyle = 'border-2 border-[var(--color-rule)] bg-[var(--color-paper)] hover:border-[var(--brand-plum)]'
+        // Distinct border styling based on operational priority (Brand v2 tokens)
+        let cardStyle = 'border border-[var(--color-rule)] bg-[var(--color-paper)] hover:border-[var(--brand-plum)]'
         if (transfer.isMergedSource) {
-            cardStyle = 'border-2 border-dashed border-[var(--brand-plum)]/50 bg-[var(--color-paper)] opacity-75'
+            cardStyle = 'border border-dashed border-[var(--brand-plum)]/60 bg-[var(--color-paper)] opacity-75'
         } else if (hasCallBill) {
-            cardStyle = 'border-2 border-[oklch(75%_0.18_65)] bg-[oklch(98%_0.02_65)] '
+            cardStyle = 'border-2 border-[var(--status-warn-border)] bg-[var(--status-warn-bg)]'
         } else if (isSeated) {
-            cardStyle = 'border-2 border-[var(--brand-plum)]/80 bg-[var(--color-paper)] '
+            cardStyle = 'border-2 border-[var(--brand-plum)]/80 bg-[var(--color-paper)]'
         } else if (isPending) {
-            cardStyle = 'border-2 border-[oklch(75%_0.14_65)] bg-[oklch(98%_0.015_65)]'
+            cardStyle = 'border-2 border-[var(--status-warn-border)] bg-[var(--color-paper)]'
         } else if (isPaid) {
-            cardStyle = 'border-2 border-[oklch(75%_0.08_140)] bg-[var(--color-paper)] hover:border-[oklch(45%_0.08_140)]'
+            cardStyle = 'border border-[var(--status-ok-border)] bg-[var(--color-paper)] hover:border-[var(--status-ok-fill)]'
         }
 
         return (
             <div 
                 key={b.id} 
-                className={`rounded-sm p-3.5 flex flex-col justify-between transition-all duration-150 hover:shadow-md ${cardStyle}`}
+                className={`rounded-xl p-3.5 flex flex-col justify-between transition-colors duration-150 ${cardStyle}`}
             >
                 {/* Top Alert if Call Bill or Table Merged */}
                 <div>
                     {hasCallBill && (
-                        <div className="mb-2 px-2.5 py-1 bg-[oklch(78%_0.18_65)] text-[var(--color-ink)] tabular-nums text-xs font-black rounded-xs flex items-center justify-between ">
-                            <span className="tracking-wider">[CALL BILL] ลูกค้าเรียกเช็คบิล</span>
+                        <div className="mb-2 px-2.5 py-1.5 bg-[var(--status-warn-bright)] text-[var(--color-ink)] tabular-nums text-xs font-bold rounded-lg flex items-center justify-between gap-2">
+                            <span>ลูกค้าเรียกเช็คบิล</span>
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold">URGENT</span>
+                                <span className="text-[11px] font-semibold">ด่วน</span>
                                 <button
                                     type="button"
                                     onClick={async (e) => {
                                         e.stopPropagation()
                                         await handleDismissCallBill(b)
                                     }}
-                                    className="ml-1 px-1.5 py-0.5 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] rounded-xs tabular-nums font-bold tracking-tight transition-colors cursor-pointer"
+                                    className="px-2 py-0.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] text-[11px] rounded-md tabular-nums font-semibold transition-colors cursor-pointer"
                                     title="เคลียร์แจ้งเตือนเรียกเช็คบิล"
                                 >
                                     เคลียร์
@@ -561,22 +547,20 @@ export default function AllDailyBillsHub({
                     <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-[var(--color-paper-3)]">
                         <div className="flex items-center gap-1.5 min-w-0">
                             {isDineIn ? (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 border tabular-nums text-xs font-black rounded-xs truncate ${
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 border tabular-nums text-xs font-bold rounded-md truncate ${
                                     transfer.isMergedSource
-                                        ? 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]'
+                                        ? 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border-[var(--color-plum-border)]'
                                         : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
                                 }`}>
-                                    <Utensils size={11} className="text-[var(--brand-plum)] shrink-0" />
-                                    <span>{b.tables_layout?.table_name || 'Table ?'} ({b.pax || 2}P)</span>
+                                    <span>{b.tables_layout?.table_name || 'โต๊ะ'} ({b.pax || 2} ท่าน)</span>
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] border border-[oklch(82%_0.02_220)] tabular-nums text-xs font-black rounded-xs">
-                                    <ShoppingBag size={11} className="shrink-0" />
-                                    <span>PICKUP</span>
+                                <span className="inline-flex items-center px-2 py-0.5 bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)] tabular-nums text-xs font-bold rounded-md">
+                                    รับกลับบ้าน
                                 </span>
                             )}
                             {transfer.isMergedTarget && (
-                                <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[11px] tabular-nums font-bold shrink-0 truncate max-w-[130px]" title={`รวมจาก ${transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}`}>
+                                <span className="px-1.5 py-0.5 bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] rounded-md text-[11px] tabular-nums font-semibold shrink-0 truncate max-w-[130px]" title={`รวมจาก ${transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}`}>
                                     +รวม {transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}
                                 </span>
                             )}
@@ -586,7 +570,7 @@ export default function AllDailyBillsHub({
                             <span className="text-[var(--color-muted)] font-semibold text-xs tabular-nums">
                                 {formatThaiTimeOnly(b.booking_time || b.created_at)}
                             </span>
-                            <span className="px-1.5 py-0.2 bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] font-black rounded-xs tabular-nums">
+                            <span className="px-1.5 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] font-bold rounded-md tabular-nums">
                                 #{shortId}
                             </span>
                         </div>
@@ -608,12 +592,12 @@ export default function AllDailyBillsHub({
                             </span>
                             {phone && (
                                 <span className="text-xs text-[var(--color-muted)] tracking-tight tabular-nums">
-                                    TEL: {phone}
+                                    โทร {phone}
                                 </span>
                             )}
                         </div>
                         {tier && (
-                            <span className="px-1.5 py-0.2 rounded-xs text-[11px] tabular-nums font-bold bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border border-[oklch(80%_0.06_65)] shrink-0">
+                            <span className="px-1.5 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border border-[var(--status-warn-border)] shrink-0">
                                 {tier}
                             </span>
                         )}
@@ -712,34 +696,34 @@ export default function AllDailyBillsHub({
                     </div>
 
                     {/* Action Buttons (Non-wrapping Clickable Affordances) */}
-                    <div className="flex items-center gap-1 tabular-nums text-xs">
+                    <div className="flex items-center gap-1.5 tabular-nums text-xs">
                         {b.payment_slip_url && (
                             <button
                                 type="button"
                                 onClick={() => onViewSlip && onViewSlip(b.payment_slip_url)}
-                                className="flex-1 py-1.5 bg-[oklch(93%_0.04_140)] hover:bg-[oklch(88%_0.06_140)] text-[oklch(28%_0.08_140)] border border-[oklch(80%_0.06_140)] rounded-xs font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                                className="flex-1 py-1.5 bg-[var(--status-ok-bg)] hover:bg-[var(--status-ok-bg-soft)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] rounded-lg font-semibold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                                 title="ดูสลิปโอนเงิน"
                             >
-                                <ImageIcon size={11} />
+                                <ImageIcon size={12} />
                                 <span>ดูสลิป</span>
                             </button>
                         )}
                         <button
                             type="button"
                             onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
-                            className="flex-1 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-xs font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                            className="flex-1 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg font-semibold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                             title="เปิดดูภาพสลิปดิจิทัล (PNG / ส่ง LINE / PDF)"
                         >
-                            <Receipt size={11} />
+                            <Receipt size={12} />
                             <span>สลิป PNG</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => onOpenTaxInvoice && onOpenTaxInvoice(b)}
-                            className="flex-1 py-1.5 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] rounded-xs font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                            className="flex-1 py-1.5 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--color-paper)] rounded-lg font-semibold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                             title="ออกใบกำกับภาษี"
                         >
-                            <FileText size={11} />
+                            <FileText size={12} />
                             <span>ใบกำกับ</span>
                         </button>
                     </div>
@@ -756,14 +740,11 @@ export default function AllDailyBillsHub({
                 {/* Title & Quick Stats */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--color-rule)]">
                     <div>
-                        <div className="flex items-center gap-2">
-                            <Receipt size={20} className="text-[var(--brand-plum)]" />
-                            <h2 className="tabular-nums text-base md:text-lg font-black text-[var(--color-ink)]">
-                                BACKOFFICE ALL-BILLS HUB · {selectedDate}
-                            </h2>
-                        </div>
-                        <p className="tabular-nums text-[13px] text-[var(--color-muted)] mt-0.5">
-                            ศูนย์รวมและตรวจสอบบิลทั้งหมดของวัน รายการอาหาร การชำระเงิน ตรวจสอบสลิป และการออกใบกำกับภาษี
+                        <h2 className="tabular-nums text-base md:text-lg font-bold text-[var(--color-ink)]">
+                            ศูนย์รวมบิลทั้งหมดประจำวัน ({selectedDate})
+                        </h2>
+                        <p className="text-[13px] text-[var(--color-muted)] mt-0.5">
+                            ตรวจสอบบิลทั้งหมดของวัน รายการอาหาร การชำระเงิน สลิปโอนเงิน และการออกใบกำกับภาษี
                         </p>
                     </div>
 
@@ -845,7 +826,7 @@ export default function AllDailyBillsHub({
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--brand-plum)]" />
                         <input
                             type="text"
-                            placeholder="ค้นหาตาม #เลขบิล, ชื่อโต๊ะ, ชื่อลูกค้า, เบอร์โทร, เมนูอาหาร หรือหมายเหตุ..."
+                            placeholder="ค้นหาตาม #เลขบิล, ชื่อโต๊ะ, ชื่อลูกค้า, เบอร์โทร, เมนูอาหาร หรือหมายเหตุ…"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-8 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xs tabular-nums text-xs text-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus:outline-none focus:border-[var(--brand-plum)]"
@@ -947,16 +928,15 @@ export default function AllDailyBillsHub({
                     {filteredBookings.map(b => renderVisualCard(b))}
                 </div>
             ) : viewMode === 'kanban' ? (
-                /* 2. Priority Lanes (Kanban Columns with OKLCH Color Enclosures) */
+                /* 2. Priority Lanes */
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3.5 items-start">
                     {/* Lane 1: Seated (กำลังทาน) */}
-                    <div className="flex flex-col bg-[var(--color-paper)] border-2 border-[var(--brand-plum)]/40 rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                    <div className="flex flex-col bg-[var(--color-paper)] border border-[var(--color-plum-border)] rounded-xl p-3 space-y-2.5 min-h-[400px]">
                         <div className="flex items-center justify-between pb-2 border-b border-[var(--color-paper-3)] tabular-nums">
-                            <span className="font-black text-xs text-[var(--brand-plum)] flex items-center gap-1.5  ">
-                                <span className="w-2 h-2 rounded-full bg-[var(--brand-plum)] " />
-                                กำลังทาน (SEATED)
+                            <span className="font-bold text-xs text-[var(--brand-plum)]">
+                                กำลังทาน
                             </span>
-                            <span className="px-2 py-0.5 bg-[var(--brand-plum)] text-[var(--color-paper)] text-[11px] font-black rounded-xs tabular-nums">
+                            <span className="px-2 py-0.5 bg-[var(--brand-plum)] text-[var(--color-paper)] text-[11px] font-bold rounded-md tabular-nums">
                                 {kanbanLanes.seated.length}
                             </span>
                         </div>
@@ -971,13 +951,12 @@ export default function AllDailyBillsHub({
                     </div>
 
                     {/* Lane 2: Pending (รอตรวจ) */}
-                    <div className="flex flex-col bg-[var(--color-paper)] border-2 border-[oklch(75%_0.14_65)] rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                    <div className="flex flex-col bg-[var(--color-paper)] border border-[var(--status-warn-border)] rounded-xl p-3 space-y-2.5 min-h-[400px]">
                         <div className="flex items-center justify-between pb-2 border-b border-[var(--color-paper-3)] tabular-nums">
-                            <span className="font-black text-xs text-[oklch(28%_0.10_65)] flex items-center gap-1.5  ">
-                                <span className="w-2 h-2 rounded-full bg-[oklch(75%_0.18_65)] " />
-                                รอตรวจ (PENDING)
+                            <span className="font-bold text-xs text-[var(--status-warn-ink)]">
+                                รอตรวจ
                             </span>
-                            <span className="px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[var(--color-ink)] text-[11px] font-black rounded-xs tabular-nums">
+                            <span className="px-2 py-0.5 bg-[var(--status-warn-bright)] text-[var(--color-ink)] text-[11px] font-bold rounded-md tabular-nums">
                                 {kanbanLanes.pending.length}
                             </span>
                         </div>
@@ -992,13 +971,12 @@ export default function AllDailyBillsHub({
                     </div>
 
                     {/* Lane 3: Completed (ชำระแล้ว) */}
-                    <div className="flex flex-col bg-[var(--color-paper)] border-2 border-[oklch(75%_0.08_140)] rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                    <div className="flex flex-col bg-[var(--color-paper)] border border-[var(--status-ok-border)] rounded-xl p-3 space-y-2.5 min-h-[400px]">
                         <div className="flex items-center justify-between pb-2 border-b border-[var(--color-paper-3)] tabular-nums">
-                            <span className="font-black text-xs text-[oklch(28%_0.08_140)] flex items-center gap-1.5  ">
-                                <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
-                                ชำระแล้ว (PAID)
+                            <span className="font-bold text-xs text-[var(--status-ok-ink)]">
+                                ชำระแล้ว
                             </span>
-                            <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] text-[11px] font-black rounded-xs tabular-nums">
+                            <span className="px-2 py-0.5 bg-[var(--status-ok-fill)] text-[var(--color-paper)] text-[11px] font-bold rounded-md tabular-nums">
                                 {kanbanLanes.paid.length}
                             </span>
                         </div>
@@ -1013,13 +991,12 @@ export default function AllDailyBillsHub({
                     </div>
 
                     {/* Lane 4: Pickup (รับกลับ/พัสดุ) */}
-                    <div className="flex flex-col bg-[var(--color-paper)] border-2 border-[oklch(75%_0.08_220)] rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                    <div className="flex flex-col bg-[var(--color-paper)] border border-[var(--status-info-border)] rounded-xl p-3 space-y-2.5 min-h-[400px]">
                         <div className="flex items-center justify-between pb-2 border-b border-[var(--color-paper-3)] tabular-nums">
-                            <span className="font-black text-xs text-[oklch(28%_0.08_220)] flex items-center gap-1.5  ">
-                                <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_220)]" />
-                                รับกลับ/พัสดุ (PICKUP)
+                            <span className="font-bold text-xs text-[var(--status-info-ink)]">
+                                รับกลับ / พัสดุ
                             </span>
-                            <span className="px-2 py-0.5 bg-[oklch(45%_0.08_220)] text-[var(--color-paper)] text-[11px] font-black rounded-xs tabular-nums">
+                            <span className="px-2 py-0.5 bg-[var(--status-info-fill)] text-[var(--color-paper)] text-[11px] font-bold rounded-md tabular-nums">
                                 {kanbanLanes.pickup.length}
                             </span>
                         </div>
@@ -1034,13 +1011,12 @@ export default function AllDailyBillsHub({
                     </div>
 
                     {/* Lane 5: Merged & Cancelled */}
-                    <div className="flex flex-col bg-[var(--color-paper)] border-2 border-[var(--color-rule)] rounded-sm p-3 space-y-2.5 min-h-[400px] opacity-85">
+                    <div className="flex flex-col bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl p-3 space-y-2.5 min-h-[400px] opacity-85">
                         <div className="flex items-center justify-between pb-2 border-b border-[var(--color-paper-3)] tabular-nums">
-                            <span className="font-black text-xs text-[var(--color-muted)] flex items-center gap-1.5  ">
-                                <span className="w-2 h-2 rounded-full bg-[var(--color-neutral)]" />
-                                โต๊ะรวม/ยกเลิก (MERGED & CANCELLED)
+                            <span className="font-bold text-xs text-[var(--color-muted)]">
+                                โต๊ะรวม / ยกเลิก
                             </span>
-                            <span className="px-2 py-0.5 bg-[var(--color-muted)] text-[var(--color-paper)] text-[11px] font-black rounded-xs tabular-nums">
+                            <span className="px-2 py-0.5 bg-[var(--color-muted)] text-[var(--color-paper)] text-[11px] font-bold rounded-md tabular-nums">
                                 {kanbanLanes.other.length}
                             </span>
                         </div>
@@ -1093,38 +1069,36 @@ export default function AllDailyBillsHub({
                                             {formatThaiTimeOnly(b.booking_time || b.created_at)}
                                         </div>
 
-                                        <div className="px-2 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums text-xs font-black rounded-sm tracking-wider">
+                                        <div className="px-2 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)] tabular-nums text-xs font-bold rounded-md">
                                             #{shortId}
                                         </div>
 
                                         {isDineIn ? (
-                                            <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 border tabular-nums text-xs font-black rounded-sm ${
+                                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 border tabular-nums text-xs font-bold rounded-md ${
                                                 transfer.isMergedSource
-                                                    ? 'bg-[var(--color-paper-2)] text-[var(--brand-plum)] border-[var(--brand-plum)]'
+                                                    ? 'bg-[var(--color-plum-pale)] text-[var(--brand-plum)] border-[var(--color-plum-border)]'
                                                     : 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
                                             }`}>
-                                                <Utensils size={12} className="text-[var(--brand-plum)]" />
-                                                <span>{b.tables_layout?.table_name || 'Table ?'} ({b.pax || 2}P)</span>
+                                                <span>{b.tables_layout?.table_name || 'โต๊ะ'} ({b.pax || 2} ท่าน)</span>
                                                 {transfer.isMergedSource && (
-                                                    <span className="ml-1 px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--brand-plum)] border border-[var(--brand-plum)] rounded-xs text-[11px] tabular-nums font-bold">
-                                                        ➔ โต๊ะ {transfer.mergedToTable}
+                                                    <span className="px-1.5 py-0.5 bg-[var(--color-paper)] text-[var(--brand-plum)] border border-[var(--color-plum-border)] rounded-md text-[11px] tabular-nums font-semibold">
+                                                        รวมไปโต๊ะ {transfer.mergedToTable}
                                                     </span>
                                                 )}
                                                 {transfer.isMergedTarget && (
-                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[11px] tabular-nums font-bold">
+                                                    <span className="px-1.5 py-0.5 bg-[var(--status-ok-bg)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] rounded-md text-[11px] tabular-nums font-semibold">
                                                         + รวมจาก {transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}
                                                     </span>
                                                 )}
                                                 {transfer.isMoved && (
-                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] rounded-xs text-[11px] tabular-nums font-black">
+                                                    <span className="px-1.5 py-0.5 bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)] rounded-md text-[11px] tabular-nums font-semibold">
                                                         ย้ายจาก {transfer.movedFromTable}
                                                     </span>
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] border border-[oklch(82%_0.02_220)] tabular-nums text-xs font-black rounded-sm">
-                                                <ShoppingBag size={12} />
-                                                <span>PICKUP</span>
+                                            <div className="inline-flex items-center px-2.5 py-0.5 bg-[var(--status-info-bg)] text-[var(--status-info-ink)] border border-[var(--status-info-border)] tabular-nums text-xs font-bold rounded-md">
+                                                รับกลับบ้าน
                                             </div>
                                         )}
 
@@ -1147,15 +1121,15 @@ export default function AllDailyBillsHub({
                                             !(b.status === 'completed' || b.status === 'paid' || b.status === 'success' || b.status === 'cancelled' || b.status === 'void') && 
                                             !dismissedCallBillIds.has(b.id)
                                         ) && (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[var(--color-ink)] tabular-nums text-[11px] font-black rounded-sm ">
-                                                <span>[CALL BILL]</span>
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[var(--status-warn-bright)] text-[var(--color-ink)] tabular-nums text-[11px] font-bold rounded-md">
+                                                <span>เรียกเช็คบิล</span>
                                                 <button
                                                     type="button"
                                                     onClick={async (e) => {
                                                         e.stopPropagation()
                                                         await handleDismissCallBill(b)
                                                     }}
-                                                    className="ml-1 px-1 bg-[var(--color-ink)] hover:bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] rounded-xs tabular-nums font-bold tracking-tight cursor-pointer"
+                                                    className="px-1.5 bg-[var(--color-ink)] hover:bg-[var(--action-primary-hover)] text-[var(--color-paper)] text-[11px] rounded-md tabular-nums font-semibold cursor-pointer"
                                                 >
                                                     เคลียร์
                                                 </button>
@@ -1167,11 +1141,11 @@ export default function AllDailyBillsHub({
                                     <div className="flex items-center justify-between lg:justify-end gap-4">
                                         <div className="text-left lg:text-right">
                                             <div className="flex items-center lg:justify-end gap-1.5">
-                                                <span className="font-sans font-black text-sm text-[var(--color-ink)]">
+                                                <span className="font-sans font-bold text-sm text-[var(--color-ink)]">
                                                     {guestName}
                                                 </span>
                                                 {tier && (
-                                                    <span className="px-1.5 py-0.2 rounded text-[11px] tabular-nums font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                                    <span className="px-1.5 py-0.5 rounded-md text-[11px] tabular-nums font-semibold bg-[var(--status-warn-bg)] text-[var(--status-warn-ink)] border border-[var(--status-warn-border)]">
                                                         {tier}
                                                     </span>
                                                 )}
@@ -1223,20 +1197,20 @@ export default function AllDailyBillsHub({
                                 )}
 
                                 {transfer.isMergedTarget && (
-                                    <div className="px-3.5 py-1.5 bg-[oklch(95%_0.02_140)] border-t border-[oklch(85%_0.04_140)] flex items-center gap-2 text-xs tabular-nums text-[oklch(30%_0.08_140)]">
-                                        <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-[var(--color-paper)] rounded-xs text-[11px] font-bold">
-                                            COMBINED BILL
+                                    <div className="px-3.5 py-1.5 bg-[var(--status-ok-bg)] border-t border-[var(--status-ok-border)] flex items-center gap-2 text-xs tabular-nums text-[var(--status-ok-ink)]">
+                                        <span className="px-1.5 py-0.5 bg-[var(--status-ok-fill)] text-[var(--color-paper)] rounded-md text-[11px] font-bold">
+                                            รวมโต๊ะ
                                         </span>
-                                        <span className="font-bold">บิลนี้ได้รับรายการอาหารรวมมาจาก <strong>{transfer.mergedFromTableDisplay || `โต๊ะ ${transfer.mergedFromTables.join(', ')}`}</strong></span>
+                                        <span className="font-semibold">บิลนี้ได้รับรายการอาหารรวมมาจาก <strong>{transfer.mergedFromTableDisplay || `โต๊ะ ${transfer.mergedFromTables.join(', ')}`}</strong></span>
                                     </div>
                                 )}
 
                                 {transfer.isMoved && (
-                                    <div className="px-3.5 py-1.5 bg-[oklch(95%_0.02_220)] border-t border-[oklch(85%_0.04_220)] flex items-center gap-2 text-xs tabular-nums text-[oklch(30%_0.08_220)]">
-                                        <span className="px-1.5 py-0.5 bg-[oklch(35%_0.10_220)] text-[var(--color-paper)] rounded-xs text-[11px] font-bold">
-                                            MOVED TABLE
+                                    <div className="px-3.5 py-1.5 bg-[var(--status-info-bg)] border-t border-[var(--status-info-border)] flex items-center gap-2 text-xs tabular-nums text-[var(--status-info-ink)]">
+                                        <span className="px-1.5 py-0.5 bg-[var(--status-info-fill)] text-[var(--color-paper)] rounded-md text-[11px] font-bold">
+                                            ย้ายโต๊ะ
                                         </span>
-                                        <span className="font-bold">ลูกค้าย้ายโต๊ะจาก <strong>โต๊ะ {transfer.movedFromTable}</strong> ➔ <strong>โต๊ะ {transfer.movedToTable || b.tables_layout?.table_name}</strong> {transfer.moveTimestamp && `(${transfer.moveTimestamp})`}</span>
+                                        <span className="font-semibold">ลูกค้าย้ายโต๊ะจาก <strong>โต๊ะ {transfer.movedFromTable}</strong> ไป <strong>โต๊ะ {transfer.movedToTable || b.tables_layout?.table_name}</strong> {transfer.moveTimestamp && `(${transfer.moveTimestamp})`}</span>
                                     </div>
                                 )}
 
@@ -1244,10 +1218,10 @@ export default function AllDailyBillsHub({
                                 <div className="px-3.5 py-2 bg-[var(--color-paper)] border-t border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-2 tabular-nums text-xs">
                                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)] truncate max-w-[280px]">
                                         {transfer.cleanRemark && (
-                                            <span className="truncate">Remark: <strong className="text-[var(--color-ink)]">{transfer.cleanRemark}</strong></span>
+                                            <span className="truncate">หมายเหตุ: <strong className="text-[var(--color-ink)]">{transfer.cleanRemark}</strong></span>
                                         )}
                                         {b.customer_note && !transfer.cleanRemark && (
-                                            <span className="truncate">Note: <strong className="text-[var(--color-ink)]">{b.customer_note}</strong></span>
+                                            <span className="truncate">โน้ตลูกค้า: <strong className="text-[var(--color-ink)]">{b.customer_note}</strong></span>
                                         )}
                                     </div>
 
@@ -1256,8 +1230,9 @@ export default function AllDailyBillsHub({
                                         {/* View Payment Slip (if attached) */}
                                         {b.payment_slip_url && (
                                             <button
+                                                type="button"
                                                 onClick={() => onViewSlip && onViewSlip(b.payment_slip_url)}
-                                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded font-bold flex items-center gap-1 transition-colors"
+                                                className="px-2.5 py-1.5 bg-[var(--status-ok-bg)] hover:bg-[var(--status-ok-bg-soft)] text-[var(--status-ok-ink)] border border-[var(--status-ok-border)] rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                                                 title="ดูสลิปโอนเงิน"
                                             >
                                                 <ImageIcon size={13} />
@@ -1269,7 +1244,7 @@ export default function AllDailyBillsHub({
                                         <button
                                             type="button"
                                             onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
-                                            className="px-2.5 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                                            className="px-2.5 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink)] border border-[var(--color-rule)] rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                                             title="เปิดดูภาพสลิปดิจิทัลใบแจ้งยอด/ใบเสร็จ (คัดลอกรูปส่งลูกค้า LINE หรือ Save PNG)"
                                         >
                                             <Receipt size={13} />
@@ -1278,8 +1253,9 @@ export default function AllDailyBillsHub({
 
                                         {/* Tax Invoice Modal Trigger */}
                                         <button
+                                            type="button"
                                             onClick={() => onOpenTaxInvoice && onOpenTaxInvoice(b)}
-                                            className="px-2.5 py-1 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum)] text-[var(--color-paper)] rounded font-black flex items-center gap-1 transition-colors "
+                                            className="px-2.5 py-1.5 bg-[var(--brand-plum)] hover:bg-[var(--brand-plum-2)] text-[var(--color-paper)] rounded-lg font-semibold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                                             title="ออกใบกำกับภาษีเต็มรูปสำหรับบิลนี้"
                                         >
                                             <FileText size={13} />
@@ -1334,8 +1310,8 @@ export default function AllDailyBillsHub({
                                                                     {optList.length > 0 && (
                                                                         <div className="flex flex-wrap gap-1 mt-1">
                                                                             {optList.map((opt, oIdx) => (
-                                                                                <span key={oIdx} className="bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] text-[11px] text-[var(--color-muted)] px-1.5 py-0.5 rounded-sm">
-                                                                                    ▶ {opt}
+                                                                                <span key={oIdx} className="bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] text-[11px] text-[var(--color-muted)] px-1.5 py-0.5 rounded-md">
+                                                                                    + {opt}
                                                                                 </span>
                                                                             ))}
                                                                         </div>
