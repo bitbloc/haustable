@@ -54,6 +54,15 @@ describe('stockHealth', () => {
     it('leaves house-made bases out of cost and unit checks: their cost comes from their recipe', () => {
         expect(names('gram_per_unit')).not.toContain('เบสแกงไตปลา');
         expect(names('cost_zero')).not.toContain('เบสแกงไตปลา');
+        expect(names('count_unit_differs')).not.toContain('เบสแกงไตปลา');
+    });
+    it('does not flag Thai/English aliases or prep portions as count_unit_differs', () => {
+        const h = stockHealth([
+            it_({ name: 'ซอสแม็กกี้', unit: 'ขวด', pack_unit: 'bottle', usage_unit: 'ml', conversion_factor: 200 }),
+            it_({ name: 'ซอสญี่ปุ่น 1 สูตร', item_type: 'prep', is_base_recipe: true, unit: 'portion', pack_unit: 'unit', usage_unit: 'g', conversion_factor: 1700 }),
+            it_({ name: 'โออิชิ', unit: 'ขวด', pack_unit: 'crate', usage_unit: 'bottle', conversion_factor: 24 }),
+        ]);
+        expect(h.groups.find(g => g.key === 'count_unit_differs').rows.map(r => r.item.name)).toEqual(['โออิชิ']);
     });
     it('keeps a zero-cost item that is in a recipe out of the "no price yet" list', () => {
         expect(names('cost_zero')).toEqual(['ถ่าน 3A']);

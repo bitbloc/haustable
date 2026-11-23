@@ -9,11 +9,49 @@
 
 const toNum = (v) => {
     if (v === '' || v === null || v === undefined) return NaN;
-    const n = typeof v === 'number' ? v : Number(String(v).replace(/,/g, '').trim());
+    if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+    const raw = String(v).trim().replace(/−/g, '-');
+    if (raw === '') return NaN;
+    // Support both "1,000" (thousands) and "0,5" / "2,5" (regional decimal comma)
+    const normalized = /^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw)
+        ? raw.replace(/,/g, '')
+        : (raw.includes(',') && !raw.includes('.') ? raw.replace(',', '.') : raw.replace(/,/g, ''));
+    const n = Number(normalized);
     return Number.isFinite(n) ? n : NaN;
 };
 
 const scopeKey = (row) => `${row.menu_item_id ?? 'all'}:${row.stock_item_id}`;
+
+/**
+ * Parse a raw string typed into an option ingredient amount field.
+ * Leading "-" / "−" switches sign to "minus"; leading "+" switches to "plus".
+ * Keeps partial decimal entry (e.g. "0.", ".5", "1,5") intact while typing.
+ */
+export const parseOptionAmountInput = (raw, currentSign = 'plus') => {
+    const str = String(raw ?? '').trimStart();
+    let sign = currentSign === 'minus' ? 'minus' : 'plus';
+    let rest = str;
+    if (rest.startsWith('-') || rest.startsWith('−')) {
+        sign = 'minus';
+        rest = rest.slice(1);
+    } else if (rest.startsWith('+')) {
+        sign = 'plus';
+        rest = rest.slice(1);
+    }
+    const cleaned = rest.replace(/[^0-9.,]/g, '');
+    return { sign, amount: cleaned };
+};
+
+/**
+ * Step an option ingredient amount up or down by `delta` (default 1), clamped at 0.
+ * Empty input starts from 0 so tapping "+" sets "1".
+ */
+export const stepOptionAmount = (raw, delta = 1) => {
+    const current = toNum(raw);
+    const start = Number.isFinite(current) ? Math.abs(current) : 0;
+    const next = Math.max(0, start + (Number(delta) || 0));
+    return String(Math.round(next * 10000) / 10000);
+};
 
 /** Signed quantity from the editor's sign + magnitude fields, rounded like the column (4 dp). */
 export const signedQuantity = (sign, amount) => {

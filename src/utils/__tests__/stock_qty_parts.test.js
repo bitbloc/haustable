@@ -24,6 +24,7 @@ describe('What a stock card shows', () => {
         expect(soy).toMatchObject({ main: '0.35', open: null, openPercent: 0, total: null });
         expect(stockQtyParts(item({ unit: 'l', pack_unit: 'l', usage_unit: 'ml', conversion_factor: 1000, current_quantity: 2.5 })).main).toBe('2.5');
         expect(stockQtyParts(item({ unit: 'kg', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 2 })).main).toBe('2');
+        expect(stockQtyParts(item({ unit: 'kg', pack_unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 0.002 })).main).toBe('0.002');
     });
     it('adds the pieces for packs, boxes and crates used one by one', () => {
         expect(stockQtyParts(item({ unit: 'pack', pack_unit: 'pack', usage_unit: 'pcs', conversion_factor: 110, current_quantity: 1.3 }))).toMatchObject({ main: '143', unit: 'ชิ้น', total: '1 แพ็ค + 33 ชิ้น' });

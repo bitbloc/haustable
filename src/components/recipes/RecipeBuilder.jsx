@@ -14,7 +14,8 @@ import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 import { logStaffActivity } from '../../utils/auditLogger';
-import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES, usagePerStockUnit } from '../../utils/recipeGraph';
+import { getItemType, hasPortionYield, buildLiveCostResolver, ITEM_TYPES, PREP_MODES, usagePerStockUnit, unitCode } from '../../utils/recipeGraph';
+import { displayUnit } from '../../utils/stockCount';
 import { rescaleForCountUnitChange } from '../../utils/stockUnitChange';
 import { askUnitChange } from '../stock/UnitChangeDialog';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
@@ -57,12 +58,12 @@ function MakroPickButton({ term, current, unitsUnset, onApply }) {
 // ── 1. Mini Modal for Quick Stock Item Edit ──
 function EditStockModal({ item, onClose, onSave }) {
     const [formData, setFormData] = useState({
-        cost_price: item.cost_price || 0,
-        pack_size: item.pack_size || 1,
-        pack_unit: item.pack_unit || 'g',
-        usage_unit: item.usage_unit || 'g',
-        conversion_factor: item.conversion_factor || 1,
-        yield_percent: item.yield_percent || 100,
+        cost_price: item.cost_price ?? 0,
+        pack_size: item.pack_size ?? 1,
+        pack_unit: item.pack_unit || 'unit',
+        usage_unit: item.usage_unit || 'unit',
+        conversion_factor: item.conversion_factor ?? 1,
+        yield_percent: item.yield_percent ?? 100,
         image_url: item.image_url || ''
     });
     const [makroNote, setMakroNote] = useState('');
@@ -70,10 +71,15 @@ function EditStockModal({ item, onClose, onSave }) {
     const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
     const suggestedFactor = suggestConversionFactor(formData.pack_unit, formData.usage_unit);
     const isStandard = suggestedFactor !== null;
+    const factorMatchesStandard = isStandard && Math.abs((parseFloat(formData.conversion_factor) || 0) - suggestedFactor) < 1e-9;
     const [useRatioMode, setUseRatioMode] = useState(false); 
 
-    const realCostPerUsage = (formData.cost_price / (formData.pack_size * (parseFloat(formData.conversion_factor) || 1))) * (100 / formData.yield_percent);
-    const costPerPackUnit = formData.cost_price / formData.pack_size;
+    const costNum = parseFloat(formData.cost_price) || 0;
+    const packNum = parseFloat(formData.pack_size) || 1;
+    const factorNum = parseFloat(formData.conversion_factor) || 1;
+    const yieldNum = parseFloat(formData.yield_percent) || 100;
+    const realCostPerUsage = (costNum / (packNum * factorNum)) * (100 / yieldNum);
+    const costPerPackUnit = costNum / packNum;
 
     const handleUnitChange = (type, value) => {
         const newData = { ...formData, [type]: value };
@@ -83,7 +89,7 @@ function EditStockModal({ item, onClose, onSave }) {
     };
 
     const handleSave = () => {
-        const costPrice = parseFloat(formData.cost_price);
+        const costPrice = formData.cost_price === '' ? 0 : parseFloat(formData.cost_price);
         const packSize = parseFloat(formData.pack_size);
         const conversionFactorVal = parseFloat(formData.conversion_factor);
         const yieldPercent = parseFloat(formData.yield_percent);
@@ -114,7 +120,15 @@ function EditStockModal({ item, onClose, onSave }) {
             return;
         }
 
-        onSave(item.id, formData);
+        onSave(item.id, {
+            cost_price: costPrice,
+            pack_size: packSize,
+            pack_unit: formData.pack_unit,
+            usage_unit: formData.usage_unit,
+            conversion_factor: conversionFactorVal,
+            yield_percent: yieldPercent,
+            image_url: formData.image_url || ''
+        });
     };
 
     return (
@@ -171,7 +185,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <input 
                                     type="number" 
                                     value={formData.cost_price} 
-                                    onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
+                                    onChange={e => setFormData({...formData, cost_price: e.target.value})} 
                                     className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                                 />
                             </div>
@@ -180,7 +194,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <input 
                                     type="number" 
                                     value={formData.pack_size} 
-                                    onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
+                                    onChange={e => setFormData({...formData, pack_size: e.target.value})} 
                                     className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm" 
                                 />
                             </div>
@@ -196,7 +210,7 @@ function EditStockModal({ item, onClose, onSave }) {
                             </div>
                         </div>
                         <div className="text-xs text-[var(--color-neutral)] text-right">
-                            เฉลี่ย ฿{costPerPackUnit.toFixed(4)} / {formData.pack_unit}
+                            เฉลี่ย ฿{costPerPackUnit.toFixed(4)} / {displayUnit(formData.pack_unit)}
                         </div>
                     </div>
 
@@ -221,7 +235,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <input 
                                     type="number"
                                     value={formData.yield_percent}
-                                    onChange={e => setFormData({...formData, yield_percent: e.target.value === '' ? 100 : parseFloat(e.target.value)})}
+                                    onChange={e => setFormData({...formData, yield_percent: e.target.value})}
                                     className="w-full p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm text-center"
                                 />
                             </div>
@@ -229,32 +243,42 @@ function EditStockModal({ item, onClose, onSave }) {
 
                         {/* Conversion factor display */}
                         <div className="p-2 bg-[var(--color-paper-2)] border border-[var(--color-paper-3)] text-xs">
-                            {isStandard ? (
+                            {factorMatchesStandard ? (
                                 <div className="flex items-center justify-between text-[var(--color-muted)]">
                                     <span className="font-bold">มาตรฐานสากล</span>
-                                    <span>1 {formData.pack_unit} = <strong>{suggestedFactor}</strong> {formData.usage_unit}</span>
+                                    <span>1 {displayUnit(formData.pack_unit)} = <strong>{suggestedFactor}</strong> {displayUnit(formData.usage_unit)}</span>
                                 </div>
                             ) : (
                                 <div>
                                     <div className="flex justify-between items-center mb-1 text-xs">
                                         <span className="font-bold">กำหนดสัดส่วนตัวแปลง:</span>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setUseRatioMode(!useRatioMode)}
-                                            className="text-[var(--brand-plum)] hover:underline"
-                                        >
-                                            {useRatioMode ? "สลับเป็น × (คูณ)" : "สลับเป็น ÷ (หาร)"}
-                                        </button>
+                                        {isStandard ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, conversion_factor: suggestedFactor }))}
+                                                className="text-[var(--brand-plum)] font-bold hover:underline cursor-pointer"
+                                            >
+                                                ใช้ค่ามาตรฐาน ({suggestedFactor})
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                type="button"
+                                                onClick={() => setUseRatioMode(!useRatioMode)}
+                                                className="text-[var(--brand-plum)] hover:underline"
+                                            >
+                                                {useRatioMode ? "สลับเป็น × (คูณ)" : "สลับเป็น ÷ (หาร)"}
+                                            </button>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <span>1 {formData.pack_unit} =</span>
+                                        <span>1 {displayUnit(formData.pack_unit)} =</span>
                                         <input 
                                             type="number" 
                                             className="w-20 p-1 border border-[var(--color-rule)] bg-[var(--color-paper)] text-center"
                                             value={formData.conversion_factor}
-                                            onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value)})}
+                                            onChange={e => setFormData({...formData, conversion_factor: e.target.value})}
                                         />
-                                        <span>{formData.usage_unit}</span>
+                                        <span>{displayUnit(formData.usage_unit)}</span>
                                     </div>
                                 </div>
                             )}
@@ -692,6 +716,15 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
     const itemType = getItemType(ingredient);
     const isBaseRecipe = itemType !== ITEM_TYPES.RAW;
     const missingYield = !hasPortionYield(ingredient);
+    const [qtyText, setQtyText] = useState(quantity === null || quantity === undefined ? '' : String(quantity));
+
+    useEffect(() => {
+        const parsed = parseFloat(String(qtyText).replace(',', '.'));
+        const incoming = quantity === null || quantity === undefined ? '' : String(quantity);
+        if (incoming === '' && qtyText === '') return;
+        if (!Number.isNaN(parsed) && parsed === Number(quantity)) return;
+        setQtyText(incoming);
+    }, [quantity]);
 
     return (
         <div 
@@ -718,7 +751,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                 </div>
                 {missingYield && (
                     <div className="text-xs font-sans leading-5 text-[var(--brand-plum)]">
-                        ยังไม่ได้ระบุปริมาณต่อ portion ต้นทุนบรรทัดนี้ยังไม่ถูก
+                        ยังไม่ได้ระบุปริมาณต่อสูตร ต้นทุนบรรทัดนี้ยังไม่ถูก
                     </div>
                 )}
                 <button 
@@ -736,13 +769,18 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
             {/* Quantity Input */}
             <div className="flex items-center gap-1 flex-shrink-0">
                 <input 
-                    type="number" 
-                    className="w-16 bg-[var(--color-paper)] border border-[var(--color-rule)] p-1 text-right text-sm outline-none focus:border-[var(--color-ink)]"
-                    value={quantity ?? ''}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    className="w-16 bg-[var(--color-paper)] border border-[var(--color-rule)] p-1 text-right text-base sm:text-sm tabular-nums outline-none focus:border-[var(--color-ink)]"
+                    value={qtyText}
                     placeholder="0"
                     onChange={(e) => {
-                        const val = e.target.value;
-                        onUpdate(id, val === '' ? 0 : parseFloat(val));
+                        const raw = e.target.value.replace(/[^0-9.,]/g, '');
+                        setQtyText(raw);
+                        const normalized = raw.replace(',', '.');
+                        const num = parseFloat(normalized);
+                        onUpdate(id, normalized === '' || Number.isNaN(num) ? 0 : num);
                     }}
                 />
                 <span className="text-xs text-[var(--color-neutral)] min-w-7 max-w-16 whitespace-nowrap" title={unit}>{unit}</span>
@@ -959,8 +997,13 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     const handleSave = async () => {
         if (isPrep && !hasYield) {
-            toast.error('กรุณาระบุปริมาณที่ได้ต่อ 1 portion ก่อนบันทึก');
+            toast.error('กรุณาระบุปริมาณที่ได้ต่อ 1 สูตร ก่อนบันทึก');
             return;
+        }
+        if (parentType === 'stock' && !isPrep && parentItem && getItemType(parentItem) !== ITEM_TYPES.RECIPE && Number(parentItem.current_quantity || 0) > 0) {
+            if (!confirm(`"${parentItem.name}" มียอดคงเหลือในสต๊อกอยู่ การตั้งเป็น "สูตรต่อแก้ว/จาน" จะซ่อนรายการนี้ออกจากหน้าคลังสต๊อก ยืนยันหรือไม่?`)) {
+                return;
+            }
         }
         setLoading(true);
         try {
@@ -1004,8 +1047,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 }
                 // What one making of this recipe is, and what it costs
                 const legacyFields = isPrep
-                    ? { cost_price: totalCost, pack_size: 1, pack_unit: 'unit', unit: 'portion', usage_unit: portionForm.yieldUnit, conversion_factor: yieldQtyNum }
-                    : { cost_price: totalCost };
+                    ? { cost_price: totalCost, pack_size: 1, pack_unit: 'unit', unit: 'portion', usage_unit: portionForm.yieldUnit, conversion_factor: yieldQtyNum, updated_at: new Date().toISOString() }
+                    : { cost_price: totalCost, updated_at: new Date().toISOString() };
                 const typedFields = isPrep
                     ? { ...legacyFields, item_type: ITEM_TYPES.PREP, prep_mode: portionForm.prepMode, portion_yield_qty: yieldQtyNum }
                     : { ...legacyFields, item_type: ITEM_TYPES.RECIPE };
@@ -1065,9 +1108,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         try {
             // Same model as the stock item form: the item is counted in its purchase unit.
             const before = availableItems.find(i => i.id === id);
-            // Counted in the purchase unit, unless an older item is counted in something else
-            const keepsOwnUnit = before?.unit && before.unit !== before.pack_unit && before.pack_unit === newFormData.pack_unit;
-            newFormData = { ...newFormData, unit: keepsOwnUnit ? before.unit : newFormData.pack_unit };
+            // Counted in the purchase unit, unless an older item is counted in something else (or a prep counted per สูตร)
+            const keepsOwnUnit = (before?.item_type === ITEM_TYPES.PREP && before?.unit)
+                || (before?.unit && unitCode(before.unit) !== unitCode(before.pack_unit) && unitCode(before.pack_unit) === unitCode(newFormData.pack_unit));
+            newFormData = { ...newFormData, unit: keepsOwnUnit ? before.unit : newFormData.pack_unit, updated_at: new Date().toISOString() };
             delete newFormData.current_quantity;
             // One counted unit now holds a different amount: ask whether to convert (way of counting
             // changed) or keep what was counted (old setup was wrong). Never convert silently.
@@ -1094,6 +1138,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 const note = describeUnitChange(res, oldUsage, newUsage);
                 if (note) (res.failed || res.manual ? toast.warning : toast.info)(note, { duration: 8000 });
             }
+            logStaffActivity('stock', 'stock_item_update', {
+                amount: Number(newFormData.cost_price) || 0,
+                reason: `แก้ไขข้อมูลสต็อกในตัวปรุงสูตร: ${before?.name || id} (ราคา ฿${Number(before?.cost_price || 0)} → ฿${Number(newFormData.cost_price || 0)})`,
+                metadata: {
+                    module: 'stock',
+                    item_id: id,
+                    item_name: before?.name,
+                    old_cost_price: before?.cost_price,
+                    new_cost_price: newFormData.cost_price,
+                    old_unit: before?.unit,
+                    new_unit: newFormData.unit
+                }
+            });
                         
             toast.success('อัปเดตข้อมูลวัตถุดิบแล้ว');
             setEditingStockItem(null);
@@ -1329,7 +1386,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         )}
                         <p className="text-[13px] tabular-nums text-[var(--color-neutral)] mt-0.5">
                             {parentType === 'stock'
-                                ? 'ส่วนผสมด้านล่างคือของที่ใช้ทำ 1 portion'
+                                ? 'ส่วนผสมด้านล่างคือของที่ใช้ทำ 1 สูตร'
                                 : 'ลากวางเพื่อจัดลำดับชั้นวัตถุดิบ (Layers)'
                             }
                         </p>
@@ -1409,7 +1466,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                 <div className="p-3 flex flex-wrap gap-x-6 gap-y-3">
                                     <div className="space-y-1.5">
                                         <label htmlFor="portion-yield" className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block">
-                                            1 portion ได้
+                                            1 สูตร ได้
                                         </label>
                                         <div className="flex items-center gap-1.5">
                                             <input
@@ -1425,12 +1482,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                                 }`}
                                             />
                                             <select
-                                                aria-label="หน่วยของปริมาณต่อ portion"
+                                                aria-label="หน่วยของปริมาณต่อสูตร"
                                                 value={portionForm.yieldUnit}
                                                 onChange={e => setPortionForm(f => ({ ...f, yieldUnit: e.target.value }))}
                                                 className="p-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-sm cursor-pointer"
                                             >
-                                                {THAI_UNITS.filter(u => u.type !== 'count').map(u => (
+                                                {portionForm.yieldUnit && !THAI_UNITS.some(u => u.value === portionForm.yieldUnit) && (
+                                                    <option value={portionForm.yieldUnit}>{displayUnit(portionForm.yieldUnit)}</option>
+                                                )}
+                                                {THAI_UNITS.map(u => (
                                                     <option key={u.value} value={u.value}>{u.value}</option>
                                                 ))}
                                             </select>
@@ -1656,7 +1716,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                     <div className="text-xs text-[var(--color-neutral)] mt-0.5">
                                         {hasPortionYield(item)
                                             ? <>฿{unitCost?.toFixed(4) || 0} / {item.usage_unit}</>
-                                            : <span className="font-sans text-xs leading-5 text-[var(--brand-plum)]">ยังไม่ได้ระบุปริมาณต่อ portion</span>}
+                                            : <span className="font-sans text-xs leading-5 text-[var(--brand-plum)]">ยังไม่ได้ระบุปริมาณต่อสูตร</span>}
                                     </div>
                                 </div>
                                 <span className="text-xs font-medium text-[var(--color-neutral)] group-hover:text-[var(--color-ink)] transition-colors">

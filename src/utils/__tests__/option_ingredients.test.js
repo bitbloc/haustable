@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { signedQuantity, validateChoiceIngredients, planChoiceIngredientSave, summarizeChoiceIngredients } from '../optionIngredients';
+import {
+    parseOptionAmountInput,
+    planChoiceIngredientSave,
+    signedQuantity,
+    stepOptionAmount,
+    summarizeChoiceIngredients,
+    validateChoiceIngredients
+} from '../optionIngredients';
 
 describe('signedQuantity', () => {
     it('applies the sign and rounds to 4 decimals', () => {
@@ -7,8 +14,39 @@ describe('signedQuantity', () => {
         expect(signedQuantity('minus', '150')).toBe(-150);
         expect(signedQuantity('plus', '0.123456')).toBe(0.1235);
         expect(signedQuantity('minus', '-5')).toBe(-5);
+        expect(signedQuantity('plus', '0,5')).toBe(0.5);
+        expect(signedQuantity('minus', '2,5')).toBe(-2.5);
+        expect(signedQuantity('plus', '1,000')).toBe(1000);
+        expect(signedQuantity('plus', '1,500.25')).toBe(1500.25);
+        expect(signedQuantity('minus', '−5')).toBe(-5);
         expect(Number.isNaN(signedQuantity('plus', ''))).toBe(true);
         expect(Number.isNaN(signedQuantity('plus', 'abc'))).toBe(true);
+    });
+});
+
+describe('parseOptionAmountInput', () => {
+    it('switches sign on leading - or + and keeps partial decimals', () => {
+        expect(parseOptionAmountInput('-5', 'plus')).toEqual({ sign: 'minus', amount: '5' });
+        expect(parseOptionAmountInput('−2.5', 'plus')).toEqual({ sign: 'minus', amount: '2.5' });
+        expect(parseOptionAmountInput('+3', 'minus')).toEqual({ sign: 'plus', amount: '3' });
+        expect(parseOptionAmountInput('-', 'plus')).toEqual({ sign: 'minus', amount: '' });
+        expect(parseOptionAmountInput('0.', 'plus')).toEqual({ sign: 'plus', amount: '0.' });
+        expect(parseOptionAmountInput('.5', 'minus')).toEqual({ sign: 'minus', amount: '.5' });
+        expect(parseOptionAmountInput('1,5', 'plus')).toEqual({ sign: 'plus', amount: '1,5' });
+        expect(parseOptionAmountInput('12a.5', 'plus')).toEqual({ sign: 'plus', amount: '12.5' });
+    });
+});
+
+describe('stepOptionAmount', () => {
+    it('increments and decrements from empty, whole and decimal values without going below zero', () => {
+        expect(stepOptionAmount('', 1)).toBe('1');
+        expect(stepOptionAmount('', -1)).toBe('0');
+        expect(stepOptionAmount('1', 1)).toBe('2');
+        expect(stepOptionAmount('2', -1)).toBe('1');
+        expect(stepOptionAmount('0.5', 1)).toBe('1.5');
+        expect(stepOptionAmount('1.5', -1)).toBe('0.5');
+        expect(stepOptionAmount('0.5', -1)).toBe('0');
+        expect(stepOptionAmount('0,5', 1)).toBe('1.5');
     });
 });
 

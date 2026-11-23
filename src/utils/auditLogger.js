@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { getCurrentShift } from './shiftHelper';
+import { displayUnit } from './stockCount';
 
 /**
  * Centrally records staff & system activity across POS, Stock, Shifts, and Backoffice Admin.
@@ -120,7 +121,6 @@ export async function fetchUnifiedStaffAuditLogs({
 } = {}) {
     try {
         const fetchPosLogs = async () => {
-            if (module === 'stock') return [];
             let q = supabase
                 .from('pos_audit_logs')
                 .select('*, bookings(table_id, tables_layout(table_name), total_amount, status)')
@@ -134,6 +134,10 @@ export async function fetchUnifiedStaffAuditLogs({
                     q = q.or('module.eq.sop,action_type.ilike.%sop%,action_type.ilike.%recipe%');
                 } else if (module === 'admin') {
                     q = q.or('module.eq.admin,module.eq.tax,action_type.ilike.%menu%,action_type.ilike.%setting%,action_type.ilike.%table%,action_type.ilike.%promo%,action_type.ilike.%stamp%,action_type.ilike.%toggle%,action_type.ilike.%calendar%');
+                } else if (module === 'stock') {
+                    // Quantity movements already come from stock_transactions; pull non-movement stock logs
+                    // (price/item edits, merges, deletes, receipts, prep productions) from pos_audit_logs.
+                    q = q.eq('module', 'stock').not('action_type', 'in', '("stock_in","stock_out","stock_audit")');
                 } else {
                     q = q.eq('module', module);
                 }
@@ -199,7 +203,7 @@ export async function fetchUnifiedStaffAuditLogs({
             }
             return (data || []).map(row => {
                 const itemName = row.stock_items?.name || 'วัตถุดิบ';
-                const unit = row.stock_items?.unit || 'หน่วย';
+                const unit = displayUnit(row.stock_items?.unit) || 'หน่วย';
                 const change = Number(row.quantity_change) || 0;
                 let actionType = 'stock_adjust';
                 if (row.transaction_type === 'set' || row.transaction_type === 'audit') actionType = 'stock_audit';
@@ -374,6 +378,18 @@ function formatAuditTitle(actionType, metadata = {}, booking = null) {
             return `ต่อเวลาโต๊ะ: ${metadata.table_name || 'โต๊ะ'} (+${metadata.add_minutes || 30} นาที)`;
         case 'promo_deactivate':
             return `ปิดใช้งานโค้ดโปรโมชั่น: ${metadata.code || ''}`;
+        case 'stock_item_update':
+            return `แก้ไขวัตถุดิบ: ${metadata.item_name || ''}`;
+        case 'stock_item_create':
+            return `เพิ่มวัตถุดิบใหม่: ${metadata.item_name || ''}`;
+        case 'stock_item_delete':
+            return `ลบวัตถุดิบ: ${metadata.item_name || ''}`;
+        case 'stock_merge':
+            return `รวมวัตถุดิบซ้ำ: ${metadata.removed_name || ''} → ${metadata.kept_name || ''}`;
+        case 'stock_receive':
+            return `รับของเข้าสต็อก`;
+        case 'prep_production':
+            return `ผลิตของเตรียม: ${metadata.item_name || ''}`;
         default:
             return actionType.replace(/_/g, ' ').toUpperCase();
     }

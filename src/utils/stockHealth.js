@@ -3,7 +3,7 @@
 // Pure: fed by the stock page's rows and a map of how many recipes use each item.
 import { getUnitType } from './unitUtils';
 import { displayUnit } from './stockCount';
-import { usagePerStockUnit } from './recipeGraph';
+import { usagePerStockUnit, unitCode } from './recipeGraph';
 
 const lower = (v) => String(v ?? '').trim().toLowerCase();
 const factorOf = (item) => Number(item?.conversion_factor) || 1;
@@ -71,7 +71,7 @@ export const HEALTH_GROUPS = [
         key: 'count_unit_differs',
         title: 'หน่วยนับไม่ตรงกับหน่วยซื้อ',
         why: 'จุดสั่งซื้อและป้าย "ควรสั่ง" อาจเตือนผิด',
-        test: (item) => lower(item.unit) && lower(item.pack_unit) && lower(item.unit) !== lower(item.pack_unit),
+        test: (item) => !isMade(item) && lower(item.unit) && lower(item.pack_unit) && unitCode(item.unit) !== unitCode(item.pack_unit),
     },
     {
         key: 'units_unset',
