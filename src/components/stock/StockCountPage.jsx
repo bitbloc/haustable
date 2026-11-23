@@ -590,7 +590,7 @@ export default function StockCountPage() {
                                             className={`relative h-8 px-3 rounded text-[14px] whitespace-nowrap transition-colors cursor-pointer ${scope === s.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[var(--color-ink)]`}`}>
                                             {scope === s.id && (
                                                 <motion.span layoutId="count-scope-pill" transition={pillTransition}
-                                                    className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(21.78%_0_0/0.12)]`} />
+                                                    className={`absolute inset-0 rounded ${ui.PAPER} shadow-[var(--shadow-pill)]`} />
                                             )}
                                             <span className="relative">{s.label} <span className={`tabular-nums ${ui.NEUTRAL}`}>{s.n}</span></span>
                                         </button>
@@ -713,7 +713,7 @@ export default function StockCountPage() {
                         </AnimatePresence>
 
                         {loading ? (
-                            <p className={`p-6 text-[14px] ${ui.NEUTRAL}`}>กำลังโหลด...</p>
+                            <p className={`p-6 text-[14px] ${ui.NEUTRAL}`}>กำลังโหลด…</p>
                         ) : visible.length === 0 ? (
                             <div className={`p-6 space-y-2 text-[14px] leading-6 ${ui.MUTED}`}>
                                 {scope === 'daily' && !search

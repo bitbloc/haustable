@@ -68,6 +68,7 @@ export const THAI_UNITS = [
     { value: 'bag', label: 'ถุง (Bag)', type: 'count' },
     { value: 'crate', label: 'ลัง (Crate)', type: 'count' },
     { value: 'carton', label: 'คาร์ตัน (Carton)', type: 'count' },
+    { value: 'portion', label: 'สูตร (Portion)', type: 'count' },
 ];
 
 /**

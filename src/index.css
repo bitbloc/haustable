@@ -96,6 +96,11 @@
   --color-paper-2: oklch(92.60% 0.0095 352.37);     /* #ECE4E7 */
   --color-paper-3: oklch(89.47% 0.0128 345.51);     /* #E3D9DE */
   --color-rule: oklch(85.05% 0.0113 348.48);        /* #D4CBCF */
+  --color-control: oklch(82% 0.012 348.33);         /* Control borders, one step darker than rule */
+  --color-plum-pale: oklch(95% 0.025 348.33);       /* Soft plum surface for out/urgent badges */
+  --color-veil: oklch(21.78% 0 0 / 0.45);           /* Modal backdrop veil */
+  --shadow-sheet: 0 12px 32px oklch(21.78% 0 0 / 0.14);
+  --shadow-pill: 0 1px 2px oklch(21.78% 0 0 / 0.12);
   --color-neutral: oklch(48.01% 0.0120 345.78);     /* #635B5F 5.89:1 on cream */
   --color-muted: oklch(41.84% 0.0124 345.90);       /* #524A4E 7.68:1 on cream */
   --color-ink: var(--charcoal);

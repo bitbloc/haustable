@@ -9,7 +9,7 @@ export default function OpenPackMeter({ percent = 0 }) {
     const left = Math.max(0, Math.min(100, Number(percent) || 0));
     return (
         <span className="sc-open__meter" role="img" aria-label={`ของที่เปิดแล้วเหลือ ${left}%`}>
-            <span className="sc-open__fill" style={{ width: `${left}%` }} />
+            <span className="sc-open__fill" style={{ transform: `scaleX(${left / 100})` }} />
         </span>
     );
 }

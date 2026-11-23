@@ -1,8 +1,11 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: custom · designed-as-app */
-import React, { useState, useEffect, useRef } from 'react';
+/* Hallmark · shape: app screen · theme: Thai Twist Modern (Brand v2) · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { stockStatus, STOCK_STATUS_LABEL, packCapacity } from './utils/stockUtils';
-import { qtyInWords, displayUnit } from './utils/stockCount';
+import { qtyInWords, displayUnit, shopDayOf, addDays } from './utils/stockCount';
+import { stockHealth } from './utils/stockHealth';
+import { buildStockPriorityQueue } from './utils/stockReports';
 import { logStaffActivity } from './utils/auditLogger';
 import { postStockMovement, recordSpotCount, STOCK_REASONS } from './utils/stockLedger';
 
@@ -55,6 +58,11 @@ export default function StockPage() {
     const [categories, setCategories] = useState([]); // Dynamic
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState(null); // For Adjustment Modal
+    const [adjustInitialMode, setAdjustInitialMode] = useState('in');
+    const [recipeCounts, setRecipeCounts] = useState({});
+    const [shadowByItem, setShadowByItem] = useState({});
+    const [lastCountByItem, setLastCountByItem] = useState({});
+    const [showPriority, setShowPriority] = useState(true);
 
     // Track items currently being adjusted to prevent realtime flicker
     const pendingAdjustIds = useRef(new Set());
@@ -102,7 +110,67 @@ export default function StockPage() {
         });
         fetchCategories();
         fetchItems();
+        fetchAuxiliarySignals();
     }, []);
+
+    // Non-blocking signals for urgent unit-check badge and shadow-mode priority strip
+    const fetchAuxiliarySignals = async () => {
+        try {
+            const since7d = addDays(shopDayOf(new Date()), -6);
+            const since14dIso = new Date(`${addDays(shopDayOf(new Date()), -13)}T05:00:00+07:00`).toISOString();
+            const [recRes, shadowRes, countRes] = await Promise.all([
+                supabase.from('recipe_ingredients').select('ingredient_id'),
+                supabase.from('sale_stock_shadow_daily')
+                    .select('stock_item_id, shop_day, quantity')
+                    .gte('shop_day', since7d),
+                supabase.from('stock_count_lines')
+                    .select('stock_item_id, stock_count_sessions!inner(created_at)')
+                    .gte('stock_count_sessions.created_at', since14dIso)
+                    .limit(3000)
+            ]);
+
+            if (!recRes.error && recRes.data) {
+                const counts = {};
+                for (const r of recRes.data) {
+                    if (r.ingredient_id) counts[r.ingredient_id] = (counts[r.ingredient_id] || 0) + 1;
+                }
+                setRecipeCounts(counts);
+            }
+
+            const lastCounts = {};
+            if (!countRes.error && countRes.data) {
+                for (const l of countRes.data) {
+                    const t = l.stock_count_sessions?.created_at;
+                    if (!t || !l.stock_item_id) continue;
+                    if (!lastCounts[l.stock_item_id] || t > lastCounts[l.stock_item_id]) {
+                        lastCounts[l.stock_item_id] = t;
+                    }
+                }
+                setLastCountByItem(lastCounts);
+            }
+
+            if (!shadowRes.error && shadowRes.data) {
+                const agg = {};
+                for (const row of shadowRes.data) {
+                    const id = row.stock_item_id;
+                    const q = Number(row.quantity) || 0;
+                    if (!id || q <= 0) continue;
+                    if (!agg[id]) agg[id] = { qty7d: 0, sinceCount: 0, daySet: new Set() };
+                    agg[id].qty7d += q;
+                    agg[id].daySet.add(row.shop_day);
+                    const lastDay = lastCounts[id] ? shopDayOf(new Date(lastCounts[id])) : null;
+                    if (!lastDay || row.shop_day >= lastDay) {
+                        agg[id].sinceCount += q;
+                    }
+                }
+                setShadowByItem(Object.fromEntries(
+                    Object.entries(agg).map(([k, v]) => [k, { qty7d: v.qty7d, sinceCount: v.sinceCount, activeDays: v.daySet.size }])
+                ));
+            }
+        } catch (err) {
+            console.warn('[StockPage] auxiliary signals failed:', err);
+        }
+    };
 
     // --- Fetching Items ---
     const fetchItems = async () => {
@@ -193,6 +261,9 @@ export default function StockPage() {
                  const newQty = Number(ledger.data?.new_quantity ?? roundedChange);
                  const diff = Number(ledger.data?.quantity_change ?? (newQty - oldQty));
                  if (type === 'set') {
+                     const nowIso = new Date().toISOString();
+                     setLastCountByItem(prev => ({ ...prev, [itemId]: nowIso }));
+                     setShadowByItem(prev => prev[itemId] ? ({ ...prev, [itemId]: { ...prev[itemId], sinceCount: 0 } }) : prev);
                      logStaffActivity('stock', 'stock_audit', {
                          staffName: performedBy,
                          amount: Math.abs(diff),
@@ -395,22 +466,22 @@ export default function StockPage() {
                 const reorderPoint = Number(Number(item.reorder_point).toFixed(4)) || 0;
                 const EPSILON = 0.0001;
                 
-                let statusEmoji = '🟢';
+                let statusLabel = 'ปกติ';
                 let statusText = 'OK';
-                let statusColor = '#1C6C38'; // Muted Braun Green
+                let statusColor = '#635B5F'; // Brand v2 neutral
 
                 if (qty <= EPSILON) {
-                    statusEmoji = '⚫ หมด';
+                    statusLabel = 'หมด';
                     statusText = 'OUT';
-                    statusColor = '#1C1C1C'; // Dark gray/black
+                    statusColor = '#41032A'; // Brand v2 plum
                 } else if ((minThreshold > 0 && qty <= minThreshold + EPSILON) || qty <= minThreshold) {
-                    statusEmoji = '🔴 วิกฤต';
+                    statusLabel = 'วิกฤต';
                     statusText = 'CRITICAL';
-                    statusColor = '#B71C1C'; // Braun Accent Red
+                    statusColor = '#B42318'; // Brand v2 error red
                 } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
-                    statusEmoji = '🟠 ต้องเติม';
+                    statusLabel = 'ต้องเติม';
                     statusText = 'REORDER';
-                    statusColor = '#D05D00'; // Braun Clock Orange
+                    statusColor = '#41032A'; // Brand v2 plum
                 }
                 
                 // Same words as the stock card and count sheet: "1 ลัง + เปิดอยู่ 1 เหลือ 5 ขวด", Thai units
@@ -424,7 +495,7 @@ export default function StockPage() {
                     return t;
                 }).join(', ');
 
-                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${qtyDisplay} ${statusEmoji} (จุดวิกฤต ${minThreshold} / จุดสั่งซื้อ ${reorderPoint} ${displayUnit(item.unit)})\n\n`;
+                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${qtyDisplay} [${statusLabel}] (จุดวิกฤต ${minThreshold} / จุดสั่งซื้อ ${reorderPoint} ${displayUnit(item.unit)})\n\n`;
                 
                 const displayIndex = String(index).padStart(2, '0');
                 
@@ -715,6 +786,17 @@ export default function StockPage() {
     for (const item of items) statusCounts[stockStatus(item)] += 1;
     const restockCount = statusCounts.out + statusCounts.low + statusCounts.reorder;
 
+    const healthSummary = useMemo(() => stockHealth(items, recipeCounts), [items, recipeCounts]);
+    const priorityQueue = useMemo(
+        () => buildStockPriorityQueue({ items, shadowByItem, lastCountByItem, limit: 6 }),
+        [items, shadowByItem, lastCountByItem]
+    );
+
+    const openAdjust = (item, startMode = 'in') => {
+        setAdjustInitialMode(startMode);
+        setSelectedItem(item);
+    };
+
     // Filter & Sort Items
     const filteredItems = items
         .filter(item => {
@@ -762,8 +844,13 @@ export default function StockPage() {
                     <button type="button" onClick={() => setShowReport(true)} title="สรุปการเบิกออก 7 / 30 วัน">สรุปเบิก</button>
                     <button type="button" onClick={() => setShowHistory(true)}>ประวัติ</button>
                     <button type="button" onClick={() => setShowCategoryManager(true)}>หมวดหมู่</button>
-                    <button type="button" onClick={() => navigate('/staff/stock/check')} title="หน่วยที่ตั้งผิด ต้นทุนที่ยังไม่ใส่ และรายการซ้ำ">ตรวจหน่วย</button>
-                    <button type="button" onClick={fetchItems}>{loading ? 'กำลังโหลด' : 'โหลดใหม่'}</button>
+                    <button type="button" onClick={() => navigate('/staff/stock/check')} title="หน่วยที่ตั้งผิด ต้นทุนที่ยังไม่ใส่ ยอดคงเหลือผิดปกติ และรายการซ้ำ">
+                        <span>ตรวจหน่วย</span>
+                        {healthSummary.urgentCount > 0 && (
+                            <span className="sp-tools__badge">{healthSummary.urgentCount}</span>
+                        )}
+                    </button>
+                    <button type="button" onClick={() => { fetchItems(); fetchAuxiliarySignals(); }}>{loading ? 'กำลังโหลด' : 'โหลดใหม่'}</button>
                 </nav>
             </header>
 
@@ -773,7 +860,7 @@ export default function StockPage() {
                     {['out', 'low', 'reorder'].map(s => (
                         <button key={s} type="button" onClick={() => pickStatus(s)} aria-pressed={statusFilter === s}
                             className={`sp-stat sp-stat--${s} ${statusCounts[s] > 0 ? 'is-hot' : ''} ${statusFilter === s ? 'is-active' : ''}`}>
-                            <span className="sp-stat__n">{loading && !items.length ? '–' : statusCounts[s]}</span>
+                            <span className="sp-stat__n">{loading && !items.length ? '0' : statusCounts[s]}</span>
                             <span className="sp-stat__label">{STOCK_STATUS_LABEL[s]}</span>
                         </button>
                     ))}
@@ -789,6 +876,45 @@ export default function StockPage() {
                     </button>
                 </div>
             </section>
+
+            {/* Smart Priority Strip: actively selling items to check or fix first (Shadow Mode) */}
+            {!loading && priorityQueue.length > 0 && (
+                <section className="sp-wrap sp-priority-wrap" aria-label="แนะนำให้เช็กวันนี้">
+                    <div className="sp-priority">
+                        <div className="sp-priority__head">
+                            <div className="sp-priority__title">
+                                <h2>แนะนำให้เช็กวันนี้ ({priorityQueue.length})</h2>
+                                <p className="sp-priority__sub">คัดจากรายการที่มียอดขาย 7 วันล่าสุดและยอดผิดปกติ แตะเพื่อตรวจนับทันที</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPriority(v => !v)}
+                                className="sp-priority__toggle"
+                            >
+                                {showPriority ? 'ซ่อน' : 'แสดง'}
+                            </button>
+                        </div>
+                        {showPriority && (
+                            <div className="sp-priority__grid">
+                                {priorityQueue.map(({ item, badge, tone, reason }) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => openAdjust(item, 'set')}
+                                        className="sp-priority__item"
+                                    >
+                                        <span className="sp-priority__row">
+                                            <span className="sp-priority__name">{item.name}</span>
+                                            <span className={`sp-priority__badge sp-priority__badge--${tone}`}>{badge}</span>
+                                        </span>
+                                        <span className="sp-priority__reason">{reason}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
 
             <div className="sp-filters">
                 <div className="sp-wrap">
@@ -818,7 +944,7 @@ export default function StockPage() {
                             {filteredItems.length.toLocaleString('th-TH')} รายการ
                         </span>
                         <div className="sp-seg" role="group" aria-label="เรียง">
-                            <button type="button" onClick={() => setSortMode('name')} aria-pressed={sortMode === 'name'}>ชื่อ ก–ฮ</button>
+                            <button type="button" onClick={() => setSortMode('name')} aria-pressed={sortMode === 'name'}>เรียงตามชื่อ</button>
                             <button type="button" onClick={() => setSortMode('low_stock')} aria-pressed={sortMode === 'low_stock'}>น้อยก่อน</button>
                         </div>
                         <div className="sp-seg" role="group" aria-label="มุมมอง">
@@ -848,10 +974,10 @@ export default function StockPage() {
                 ) : (
                     <div key={`${viewMode}:${activeCategory}`} className={viewMode === 'grid' ? 'sp-grid sp-fade' : 'sp-list sp-fade'}>
                         {filteredItems.map(item => viewMode === 'grid' ? (
-                            <StockCard key={item.id} item={item} onClick={(i) => setSelectedItem(i)} onRecipe={handleOpenRecipe}
+                            <StockCard key={item.id} item={item} onClick={(i) => openAdjust(i, 'in')} onRecipe={handleOpenRecipe}
                                 searchActive={searching} categories={categories} />
                         ) : (
-                            <StockListItem key={item.id} item={item} onClick={(i) => setSelectedItem(i)} onRecipe={handleOpenRecipe}
+                            <StockListItem key={item.id} item={item} onClick={(i) => openAdjust(i, 'in')} onRecipe={handleOpenRecipe}
                                 searchActive={searching} categories={categories} />
                         ))}
                     </div>
@@ -862,6 +988,7 @@ export default function StockPage() {
             {selectedItem && (
                 <AdjustmentModal 
                     item={selectedItem} 
+                    initialMode={adjustInitialMode}
                     currentUser={currentUser}
                     onClose={() => setSelectedItem(null)}
                     onUpdate={handleAdjustment}

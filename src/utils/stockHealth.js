@@ -39,8 +39,32 @@ export const isOneUnitOneGram = (item) =>
 export const unitsNeverSet = (item) =>
     GENERIC.includes(lower(item?.pack_unit)) && ['unit', 'pcs', 'pack', ''].includes(lower(item?.usage_unit)) && factorOf(item) === 1;
 
-/** "1 กิโลกรัม = 1,000 กรัม": how an item is set up, in the words the form uses. */
-export const unitLine = (item) => `1 ${displayUnit(item.pack_unit || item.unit || 'unit')} = ${factorOf(item).toLocaleString('th-TH')} ${displayUnit(item.usage_unit || 'unit')}`;
+/** "1 กิโลกรัม = 1,000 กรัม" (or "1 สูตร = 1,300 มิลลิลิตร" for house-made bases). */
+export const unitLine = (item) => {
+    const rawPack = isMade(item) && ['portion', 'potion', 'สูตร'].includes(lower(item?.unit))
+        ? 'portion'
+        : (item.pack_unit || item.unit || 'unit');
+    return `1 ${displayUnit(rawPack)} = ${factorOf(item).toLocaleString('th-TH')} ${displayUnit(item.usage_unit || 'unit')}`;
+};
+
+/** Balance looks like a unit mix-up (e.g. typed grams in kg, or 1,000,000 L). */
+export const hasSuspectQty = (item) => {
+    const qty = Number(item?.current_quantity) || 0;
+    if (qty >= 1000) return true;
+    const u = lower(item?.unit || item?.pack_unit);
+    if (['kg', 'l', 'กิโลกรัม', 'ลิตร'].includes(u) && qty >= 50) return true;
+    return false;
+};
+
+/** Reorder point set unusually high for a bulk container (often left over from a unit switch). */
+const BULK_CONTAINERS = ['pack', 'crate', 'carton', 'gallon', 'bag', 'box', 'bottle', 'แพ็ค', 'ลัง', 'แกลอน', 'ถุง', 'กล่อง', 'ขวด'];
+export const hasSuspectReorder = (item) => {
+    const u = lower(item?.unit || item?.pack_unit);
+    if (!BULK_CONTAINERS.includes(u)) return false;
+    const reorder = Number(item?.reorder_point) || 0;
+    const min = Number(item?.min_stock_threshold) || 0;
+    return reorder >= 25 || min >= 25;
+};
 
 export const HEALTH_GROUPS = [
     {
@@ -62,6 +86,12 @@ export const HEALTH_GROUPS = [
         test: (item) => hasBrokenFactor(item),
     },
     {
+        key: 'suspect_qty', urgent: true,
+        title: 'ยอดคงเหลือสูงผิดปกติ (สงสัยกรอกหน่วยผิด)',
+        why: 'เช่น กรอกกรัมในช่องกิโลกรัม หรือพิมพ์เลขศูนย์เกิน ทำให้มูลค่าสต็อกและรายงาน Shadow เพี้ยนหนัก',
+        test: (item) => hasSuspectQty(item),
+    },
+    {
         key: 'packaging_by_weight',
         title: 'บรรจุภัณฑ์ที่ตั้งเป็นน้ำหนัก',
         why: 'ถุง ถ้วย ช้อนส้อม ควรนับเป็นแพ็คและชิ้น กดราคากลาง makro ในฟอร์มเพื่อเปลี่ยนให้เอง',
@@ -72,6 +102,12 @@ export const HEALTH_GROUPS = [
         title: 'หน่วยนับไม่ตรงกับหน่วยซื้อ',
         why: 'จุดสั่งซื้อและป้าย "ควรสั่ง" อาจเตือนผิด',
         test: (item) => !isMade(item) && lower(item.unit) && lower(item.pack_unit) && unitCode(item.unit) !== unitCode(item.pack_unit),
+    },
+    {
+        key: 'suspect_reorder',
+        title: 'จุดสั่งซื้อตั้งสูงผิดปกติ',
+        why: 'จุดสั่งซื้อเกิน 25 แพ็ค/ถุง/ขวด อาจค้างจากการเปลี่ยนหน่วยเดิม ทำให้ป้าย "ควรสั่ง" เตือนตลอดเวลา',
+        test: (item) => hasSuspectReorder(item),
     },
     {
         key: 'units_unset',

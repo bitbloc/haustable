@@ -80,4 +80,13 @@ describe('packCapacity (what is left in the opened one)', () => {
         expect(packCapacity({ unit: 'unit', pack_unit: 'unit', usage_unit: 'unit', conversion_factor: 1 })).toBeNull();
         expect(packCapacity({ unit: 'unit', pack_unit: 'unit', usage_unit: 'bottle', conversion_factor: 1000 })).toBeNull();
     });
+
+    it('always leads with สูตร for house-made bases (portion) while showing yield beside it', () => {
+        const thaiTeaBase = { unit: 'portion', pack_unit: 'portion', usage_unit: 'ml', conversion_factor: 1300, current_quantity: 1.5 };
+        expect(stockQtyParts(thaiTeaBase)).toMatchObject({ main: '2', unit: 'สูตร', totalValue: '1,950', totalUnit: 'มิลลิลิตร', open: 'เต็ม 1 · เปิดอยู่ 1 เหลือ 650 มิลลิลิตร' });
+
+        const bolognese = { unit: 'portion', pack_unit: 'portion', usage_unit: 'bag', conversion_factor: 24, current_quantity: 1.0417 };
+        expect(stockQtyParts(bolognese)).toMatchObject({ main: '1', unit: 'สูตร', totalValue: '25', totalUnit: 'ถุง' });
+        expect(packCapacity(bolognese)).toEqual({ amount: 24, unit: 'bag' });
+    });
 });

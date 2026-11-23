@@ -54,7 +54,7 @@ export default function StockCard({ item, onClick, onRecipe, searchActive = fals
                             <span className="sc-cell__unit">{totalUnit}</span>
                         </>
                     ) : (
-                        <span className="sc-cell__none" aria-label="ยังไม่ได้ตั้งว่าแพ็คหนึ่งมีเท่าไร">–</span>
+                        <span className="sc-cell__none" aria-label="ยังไม่ได้ตั้งว่าแพ็คหนึ่งมีเท่าไร">-</span>
                     )}
                 </div>}
             </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rankVariance, summarizeRanking, shopDayRange, buildStockCard, reasonLabel, suggestSpotCount, rankByCounter, groupCountSessions } from '../stockReports';
+import { rankVariance, summarizeRanking, shopDayRange, buildStockCard, reasonLabel, suggestSpotCount, rankByCounter, groupCountSessions, buildStockPriorityQueue } from '../stockReports';
 import { shopDayOf } from '../stockCount';
 
 const row = (id, name, variance, value, extra = {}) => ({
@@ -204,5 +204,31 @@ describe('groupCountSessions, per-item counter ranking, and shadow menu breakdow
             { name: 'แกงส้มชะอมกุ้ง', source: 'recipe', qty: 0.2, orders: 2 },
             { name: 'แกงส้มปลาทอด', source: 'option', qty: 0.1, orders: 1 }
         ]);
+    });
+
+    it('builds a shop-floor priority queue: suspect balances first, then selling-low/zero, then stale active', () => {
+        const items = [
+            { id: 'leaf', name: 'ใบเหลียง', unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 943.5 },
+            { id: 'tea', name: 'เบสชาไทย', unit: 'portion', usage_unit: 'ml', conversion_factor: 1300, current_quantity: 0 },
+            { id: 'cup', name: 'แก้วสกรีน 16 ออนซ์', unit: 'pack', usage_unit: 'glass', conversion_factor: 50, current_quantity: 14, reorder_point: 2 },
+            { id: 'beer', name: 'เบียร์สิงห์', unit: 'crate', usage_unit: 'bottle', conversion_factor: 12, current_quantity: 2, reorder_point: 1.5 },
+            { id: 'idle', name: 'ธูปไหว้พระ', unit: 'unit', current_quantity: 0 }
+        ];
+        const queue = buildStockPriorityQueue({
+            items,
+            shadowByItem: {
+                tea: { qty7d: 1.66, sinceCount: 1.66, activeDays: 5 },
+                cup: { qty7d: 0.68, sinceCount: 0.68, activeDays: 6 },
+                beer: { qty7d: 1.0, sinceCount: 0.8, activeDays: 4 }
+            },
+            lastCountByItem: { beer: '2026-11-22T12:00:00Z' },
+            now: new Date('2026-11-23T12:00:00Z'),
+            limit: 6
+        });
+        expect(queue.map(q => q.item.id)).toEqual(['leaf', 'tea', 'beer', 'cup']);
+        expect(queue[0].badge).toBe('ยอดผิดปกติ');
+        expect(queue[1].reason).toContain('สูตร');
+        expect(queue[2].badge).toBe('ใกล้ถึงจุดสั่ง');
+        expect(queue[3].badge).toBe('ควรนับเช็ก');
     });
 });

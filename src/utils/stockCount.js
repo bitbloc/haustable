@@ -192,6 +192,87 @@ export const defaultReconFilter = (rows = [], thresholds = DEFAULT_THRESHOLDS) =
     return 'all';
 };
 
+/**
+ * Evaluate a pending stock adjustment (in / out / set) before saving:
+ * computes the exact resulting balance and catches common shop-floor mistakes
+ * (typing grams in kg, extreme 5x+ jumps, or counting equal to a just-received qty).
+ */
+export function evaluateStockAdjustment({
+    item,
+    mode = 'in',
+    amount = '',
+    selectedUnit = null,
+    partialAmount = 0,
+    recentPurchase = null
+} = {}) {
+    const currentQty = Math.max(0, Number(item?.current_quantity) || 0);
+    const trimmed = String(amount ?? '').trim();
+    const rawNum = trimmed === '' ? (mode === 'set' ? 0 : NaN) : Number(trimmed.replace(',', '.'));
+    if (!Number.isFinite(rawNum) || rawNum < 0 || (mode !== 'set' && rawNum <= 0)) {
+        return { valid: false, currentQty, nextQty: currentQty, deltaQty: 0, warnings: [] };
+    }
+
+    const factor = Number(selectedUnit?.factor) || 1;
+    const opened = mode === 'set' && factor === 1 ? Math.max(0, Number(partialAmount) || 0) : 0;
+
+    let nextQty = currentQty;
+    let deltaQty = 0;
+    if (mode === 'set') {
+        nextQty = Math.max(0, Number((rawNum * factor + opened).toFixed(4)));
+        deltaQty = Number((nextQty - currentQty).toFixed(4));
+    } else if (mode === 'in') {
+        deltaQty = Number((rawNum * factor).toFixed(4));
+        nextQty = Number((currentQty + deltaQty).toFixed(4));
+    } else {
+        deltaQty = -Number((rawNum * factor).toFixed(4));
+        nextQty = Math.max(0, Number((currentQty + deltaQty).toFixed(4)));
+    }
+
+    const warnings = [];
+    const baseUnit = String(item?.unit || item?.pack_unit || '').trim().toLowerCase();
+    const usageUnit = String(item?.usage_unit || '').trim().toLowerCase();
+    const isKgG = (baseUnit === 'kg' || baseUnit === 'กิโลกรัม') && usageUnit === 'g';
+    const isLMl = (baseUnit === 'l' || baseUnit === 'ลิตร') && usageUnit === 'ml';
+
+    if (selectedUnit?.key === 'base' && (isKgG || isLMl) && (mode === 'set' ? rawNum >= 50 : rawNum >= 20)) {
+        const usageLabel = displayUnit(usageUnit);
+        const baseLabel = selectedUnit?.label || displayUnit(baseUnit);
+        warnings.push({
+            code: 'unit_mixup',
+            severity: 'high',
+            fixUnitKey: 'usage',
+            fixUnitLabel: usageLabel,
+            message: `กำลังใส่ ${rawNum.toLocaleString('th-TH')} ${baseLabel} ตั้งใจใส่ ${rawNum.toLocaleString('th-TH')} ${usageLabel} หรือเปล่า?`
+        });
+    } else if (
+        nextQty >= 1000
+        || (mode !== 'out' && currentQty > 0 && Math.abs(deltaQty) >= currentQty * 5 && Math.abs(deltaQty) >= 10)
+        || (mode !== 'out' && currentQty === 0 && nextQty >= 100)
+    ) {
+        warnings.push({
+            code: 'huge_jump',
+            severity: 'high',
+            message: 'ยอดเปลี่ยนแปลงสูงผิดปกติ กรุณาตรวจตัวเลขและหน่วยที่เลือกอีกครั้ง'
+        });
+    }
+
+    if (
+        mode === 'set'
+        && recentPurchase
+        && Number(recentPurchase.qty) > 0
+        && Math.abs(nextQty - Number(recentPurchase.qty)) < 0.001
+        && nextQty < currentQty - 0.001
+    ) {
+        warnings.push({
+            code: 'recent_purchase_overwrite',
+            severity: 'medium',
+            message: 'เพิ่งรับเข้าจำนวนเท่านี้เมื่อสักครู่ ยอดตรวจนับต้องรวมของเดิมที่มีอยู่ในคลังด้วย'
+        });
+    }
+
+    return { valid: true, currentQty, nextQty, deltaQty, warnings };
+}
+
 /** Abnormal first, then by size of the money variance, then by name. */
 export const sortReconciliation = (rows = [], thresholds = DEFAULT_THRESHOLDS) => [...rows].sort((a, b) => {
     const ab = isAbnormal(b, thresholds) - isAbnormal(a, thresholds);

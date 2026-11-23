@@ -75,7 +75,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 
                 cost_price: item.cost_price ?? 0,
                 pack_size: item.pack_size ?? 1,
-                pack_unit: item.pack_unit || 'unit',
+                pack_unit: resolvedType === ITEM_TYPES.PREP && ['portion', 'potion', 'สูตร'].includes(String(item.unit || '').toLowerCase())
+                    ? 'portion'
+                    : (item.pack_unit || 'unit'),
                 // The counting unit as stored: an old "counted in bottles, bought in ml" item keeps it
                 // until someone presses "use the buying unit", so a price edit never re-means the stock
                 unit: item.unit || item.pack_unit || 'unit',
@@ -732,9 +734,11 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </div>
                             )}
 
-                            {/* 1. Buying */}
+                            {/* 1. Buying or Base Yield */}
                             <section className="space-y-3">
-                                <h3 className={sectionTitle}>1 · การซื้อ</h3>
+                                <h3 className={sectionTitle}>
+                                    {formData.is_base_recipe ? '1 · ต้นทุนและหน่วยต่อสูตร' : '1 · การซื้อ'}
+                                </h3>
                                 <div>
                                     <label className={labelCls} htmlFor="stock-cost">
                                         {formData.is_base_recipe ? 'ต้นทุนต่อ 1 สูตร (บาท)' : 'ราคาซื้อต่อแพ็ค (บาท)'}
@@ -751,7 +755,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className={labelCls} htmlFor="stock-pack-size">จำนวนต่อการซื้อ</label>
+                                        <label className={labelCls} htmlFor="stock-pack-size">
+                                            {formData.is_base_recipe ? 'จำนวนต่อรอบ (สูตร)' : 'จำนวนต่อการซื้อ'}
+                                        </label>
                                         <input
                                             id="stock-pack-size"
                                             type="number"
@@ -762,7 +768,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         />
                                     </div>
                                     <div>
-                                        <label className={labelCls} htmlFor="stock-pack-unit">หน่วยซื้อ</label>
+                                        <label className={labelCls} htmlFor="stock-pack-unit">
+                                            {formData.is_base_recipe ? 'หน่วยหลัก (ต่อสูตร)' : 'หน่วยซื้อ'}
+                                        </label>
                                         <select
                                             id="stock-pack-unit"
                                             className={inputCls}
@@ -817,7 +825,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         value={formData.yield_percent}
                                         onChange={numberChange('yield_percent')}
                                         className="flex-1"
-                                        style={{ accentColor: 'oklch(21.78% 0 0)' }}
+                                        style={{ accentColor: 'var(--color-ink)' }}
                                     />
                                     <div className="flex items-center gap-1.5 w-24">
                                         <input
@@ -868,7 +876,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                                 ...prev,
                                                 is_base_recipe: checked,
                                                 item_type: checked ? ITEM_TYPES.PREP : ITEM_TYPES.RAW,
-                                                prep_mode: checked ? (prev.prep_mode || PREP_MODES.STOCKED) : null
+                                                prep_mode: checked ? (prev.prep_mode || PREP_MODES.STOCKED) : null,
+                                                ...(checked ? { unit: 'portion', pack_unit: 'portion', pack_size: 1 } : {})
                                             }));
                                         }}
                                     />

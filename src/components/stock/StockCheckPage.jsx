@@ -148,7 +148,12 @@ export default function StockCheckPage() {
                                             <span className="sk-row__main">
                                                 <span className="sk-row__name">{item.name}</span>
                                                 <span className="sk-row__sub">
-                                                    {detail} · ราคา {baht(item.cost_price)}{recipes > 0 ? ` · ใช้ใน ${recipes} สูตร` : ''}
+                                                    {group.key === 'suspect_qty'
+                                                        ? `คงเหลือในระบบ ${qtyText(item)} (${detail})`
+                                                        : group.key === 'suspect_reorder'
+                                                            ? `จุดสั่งซื้อ ${Number(item.reorder_point || 0).toLocaleString('th-TH')} ${unitOf(item)} / วิกฤต ${Number(item.min_stock_threshold || 0).toLocaleString('th-TH')} ${unitOf(item)}`
+                                                            : `${detail} ราคา ${baht(item.cost_price)}`}
+                                                    {recipes > 0 ? ` ใช้ใน ${recipes} สูตร` : ''}
                                                 </span>
                                             </span>
                                             <span className="sk-row__go">แก้</span>

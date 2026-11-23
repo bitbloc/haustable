@@ -3,7 +3,8 @@
  *   - variance ranking over several shop days (from stock_daily_reconciliation)
  *   - stock card of one item (ledger rows + daily usage computed from sales)
  */
-import { isAbnormal, DEFAULT_THRESHOLDS, addDays } from './stockCount';
+import { isAbnormal, DEFAULT_THRESHOLDS, addDays, formatReconQty } from './stockCount';
+import { hasSuspectQty } from './stockHealth';
 
 export const REASON_LABELS = Object.freeze({
     opening: 'ยอดตั้งต้น',
@@ -308,3 +309,97 @@ export const TX_FILTERS = Object.freeze({
     out: (t) => Number(t.quantity_change) < 0 && t.reason !== 'count_adjust' && t.transaction_type !== 'set',
     count: (t) => t.reason === 'count_adjust' || t.transaction_type === 'set'
 });
+
+/**
+ * Shop-floor priority queue for /staff/stock during shadow mode:
+ * surfaces items that actually matter today without forcing staff to count all 330 items.
+ *   1. Suspect balances (likely unit/typo errors like 943 kg or 1,000,000 L)
+ *   2. Actively selling items whose projected stock (after shadow sales) is 0 or <= reorder
+ *   3. Fast-moving items (>= 3 active sale days in 7d) never counted or stale >= 5 days
+ *
+ * shadowByItem: { [id]: { qty7d, sinceCount, activeDays } }
+ * lastCountByItem: { [id]: ISO string }
+ */
+export const buildStockPriorityQueue = ({
+    items = [],
+    shadowByItem = {},
+    lastCountByItem = {},
+    now = new Date(),
+    limit = 6
+} = {}) => {
+    const out = [];
+    const nowMs = now.getTime();
+    const fmt = (val, it) => formatReconQty(val, {
+        unit: it.unit || it.pack_unit,
+        factor: Number(it.conversion_factor) || 1,
+        usageUnit: it.usage_unit || ''
+    }, 2);
+
+    for (const item of items) {
+        const qty = Number(item.current_quantity) || 0;
+        const reorder = Number(item.reorder_point) || 0;
+        const minTh = Number(item.min_stock_threshold) || 0;
+        const sh = shadowByItem[item.id] || { qty7d: 0, sinceCount: 0, activeDays: 0 };
+        const lastIso = lastCountByItem[item.id] || null;
+        const daysAgo = lastIso ? Math.floor((nowMs - new Date(lastIso).getTime()) / 86400000) : null;
+
+        if (hasSuspectQty(item)) {
+            out.push({
+                item,
+                kind: 'suspect_qty',
+                score: 1000 + Math.min(qty, 100000),
+                badge: 'ยอดผิดปกติ',
+                tone: 'plum',
+                reason: `ในระบบมี ${fmt(qty, item)} ตรวจหน่วยหรือนับใหม่`
+            });
+            continue;
+        }
+
+        if (sh.qty7d > 0) {
+            const deducted = sh.sinceCount > 0 ? sh.sinceCount : sh.qty7d;
+            const projected = Math.max(0, qty - deducted);
+            const triggerPoint = Math.max(reorder, minTh);
+
+            if (qty <= 0.0001) {
+                out.push({
+                    item,
+                    kind: 'selling_zero',
+                    score: 600 + sh.activeDays * 20 + Math.min(sh.qty7d * 10, 100),
+                    badge: 'ขายอยู่แต่ยอด 0',
+                    tone: 'plum',
+                    reason: `7 วันใช้ไป ${fmt(sh.qty7d, item)} ยังไม่มียอดในคลัง`
+                });
+                continue;
+            }
+
+            if (triggerPoint > 0 && projected <= triggerPoint + 0.0001) {
+                out.push({
+                    item,
+                    kind: 'projected_low',
+                    score: 500 + sh.activeDays * 15,
+                    badge: 'ใกล้ถึงจุดสั่ง',
+                    tone: 'plum',
+                    reason: `7 วันใช้ ${fmt(sh.qty7d, item)} คาดว่าเหลือ ${fmt(projected, item)}`
+                });
+                continue;
+            }
+
+            if (sh.activeDays >= 3 && (daysAgo === null || daysAgo >= 5)) {
+                out.push({
+                    item,
+                    kind: 'stale_active',
+                    score: 200 + sh.activeDays * 15 + (daysAgo === null ? 30 : Math.min(daysAgo, 30)),
+                    badge: 'ควรนับเช็ก',
+                    tone: 'muted',
+                    reason: daysAgo === null
+                        ? `ขาย ${sh.activeDays} วันติด ยังไม่เคยนับ (ใช้ ${fmt(sh.qty7d, item)})`
+                        : `ขาย ${sh.activeDays} วันติด ไม่ได้นับ ${daysAgo} วัน`
+                });
+            }
+        }
+    }
+
+    return out
+        .sort((a, b) => b.score - a.score || String(a.item.name || '').localeCompare(String(b.item.name), 'th'))
+        .slice(0, limit);
+};

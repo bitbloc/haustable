@@ -4,7 +4,7 @@ import {
     countsWholeUnits, splitQty, openLeftText, qtyInWords, diffInWords, mergeOpenLeft,
     countsInPieces, splitPieces, mergeLoosePieces,
     isAbnormal, summarizeReconciliation, sortReconciliation, carryOverClosing, thresholdsFromSettings,
-    classifyReconRow, defaultReconFilter, formatReconQty, cleanCategoryLabel
+    classifyReconRow, defaultReconFilter, formatReconQty, cleanCategoryLabel, evaluateStockAdjustment
 } from '../stockCount';
 
 // Bangkok is UTC+7 all year.
@@ -252,5 +252,30 @@ describe('recon UX helpers: classifyReconRow, defaultReconFilter, formatReconQty
         expect(formatReconQty(0, { unit: 'kg', factor: 1 })).toBe('0');
         expect(formatReconQty(null, { unit: 'kg', factor: 1 })).toBe('—');
         expect(cleanCategoryLabel('🥬 ผัก (Veg)')).toBe('ผัก (Veg)');
+    });
+
+    it('catches kg/g unit mix-ups, huge jumps, and recent purchase overwrites before saving', () => {
+        const leaf = { unit: 'kg', usage_unit: 'g', conversion_factor: 1000, current_quantity: 0.5 };
+        const mixup = evaluateStockAdjustment({
+            item: leaf, mode: 'in', amount: '450', selectedUnit: { key: 'base', label: 'กิโลกรัม', factor: 1 }
+        });
+        expect(mixup.valid).toBe(true);
+        expect(mixup.nextQty).toBe(450.5);
+        expect(mixup.warnings[0]).toMatchObject({ code: 'unit_mixup', fixUnitKey: 'usage', fixUnitLabel: 'กรัม' });
+
+        // Once switched to grams, no warning!
+        const fixed = evaluateStockAdjustment({
+            item: leaf, mode: 'in', amount: '450', selectedUnit: { key: 'usage', label: 'กรัม', factor: 0.001 }
+        });
+        expect(fixed.nextQty).toBe(0.95);
+        expect(fixed.warnings).toEqual([]);
+
+        // Counting equal to a just-received quantity when stock had prior balance warns
+        const pop = { unit: 'bag', usage_unit: 'g', conversion_factor: 1000, current_quantity: 19 };
+        const overwrite = evaluateStockAdjustment({
+            item: pop, mode: 'set', amount: '14', selectedUnit: { key: 'base', label: 'ถุง', factor: 1 },
+            recentPurchase: { qty: 14, at: '2026-11-23T06:30:00Z' }
+        });
+        expect(overwrite.warnings.some(w => w.code === 'recent_purchase_overwrite')).toBe(true);
     });
 });

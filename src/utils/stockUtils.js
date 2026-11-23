@@ -104,7 +104,7 @@ export const STOCK_STATUS_LABEL = Object.freeze({ out: 'หมด', low: 'เห
 
 /** "2 ขวด" and, when one is open, what is left in it ("เปิดแล้ว 300 ml" / "เปิดแล้ว 40%"). */
 // Units that hold many of something; the piece total is shown only for these
-const CONTAINER_UNITS = ['pack', 'box', 'crate', 'carton', 'bag', 'can', 'bottle', 'แพ็ค', 'แพค', 'กล่อง', 'ลัง', 'ถุง', 'ห่อ', 'กระป๋อง', 'ขวด', 'โหล'];
+const CONTAINER_UNITS = ['pack', 'box', 'crate', 'carton', 'bag', 'can', 'bottle', 'portion', 'สูตร', 'แพ็ค', 'แพค', 'กล่อง', 'ลัง', 'ถุง', 'ห่อ', 'กระป๋อง', 'ขวด', 'โหล'];
 
 // The generic unit reads as "ชิ้น" on cards; "หน่วย/ชิ้น" is the form's name for it
 const cardUnit = (u) => { const label = displayUnit(u); return label === 'หน่วย/ชิ้น' ? 'ชิ้น' : label; };
@@ -179,9 +179,12 @@ export function stockQtyParts(item) {
     const hasTotal = factor > 1 && sound && String(item.usage_unit || '').trim().toLowerCase() !== packUnit;
     const amount = hasTotal ? roundUsage(qty * factor) : 0;
     const total = amount > 0 ? `${amount.toLocaleString('th-TH')} ${cardUnit(item.usage_unit)}` : null;
+    // House-made bases (unit = 'portion' / 'สูตร') ALWAYS lead with "สูตร" ("ต่อสูตร")
+    // while showing the total yield in usage units beside it (e.g. 1 สูตร | 24 ถุง or 1,300 มล.).
+    const isPortionBase = packUnit === 'portion' || packUnit === 'potion' || packUnit === 'สูตร';
     // Sold or used one by one (a bottle of beer, a cup): the stock is said in pieces first,
     // "17 ขวด", with the crates beside it (owner, 2026-11-17: ตัดทะลุ shows how many bottles in all)
-    if (piecesInside && hasTotal) {
+    if (piecesInside && hasTotal && !isPortionBase) {
         const pieceUnit = cardUnit(item.usage_unit);
         // The crates are a small summary under the count: "1 ลัง + 5 ขวด", "5 แพ็ค"
         const summary = fullUnits > 0

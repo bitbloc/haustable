@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+/* Hallmark · shape: app screen · theme: Thai Twist Modern (Brand v2) · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import * as ui from './stockUi';
 import { toast } from 'sonner';
+import { supabase } from '../../lib/supabaseClient';
 import LiquidLevelSlider from './LiquidLevelSlider';
 import { formatStockDisplay, packCapacity } from '../../utils/stockUtils';
-import { displayUnit, qtyInWords } from '../../utils/stockCount';
+import { displayUnit, qtyInWords, evaluateStockAdjustment, formatReconQty } from '../../utils/stockCount';
 import { usagePerStockUnit, fullUnitCapacity } from '../../utils/recipeGraph';
 import { STOCK_REASONS } from '../../utils/stockLedger';
 import { getUnitType } from '../../utils/unitUtils';
@@ -18,99 +21,103 @@ const WITHDRAW_REASONS = [
     { key: STOCK_REASONS.ADJUST, label: 'อื่น ๆ' }
 ];
 
-export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, onEdit }) {
-    const [amount, setAmount] = useState(''); // Main input (usually integer)
-    const [mode, setMode] = useState('in'); // 'in', 'out', 'set' (Check/Count)
-    const [outReason, setOutReason] = useState(null); // required for 'out'
+export default function AdjustmentModal({ item, initialMode = 'in', currentUser, onClose, onUpdate, onEdit }) {
+    const [amount, setAmount] = useState('');
+    const [mode, setMode] = useState(initialMode || 'in'); // 'in' | 'out' | 'set'
+    const [outReason, setOutReason] = useState(null);
     const [outNote, setOutNote] = useState('');
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [unitOptions, setUnitOptions] = useState([]);
     const [loading, setLoading] = useState(false);
-    const savingRef = useRef(false); // Sync lock to prevent double-click
-    const countInPieces = useRef(null); // a crate of bottles is counted in bottles
+    const [recentPurchase, setRecentPurchase] = useState(null);
+    const [confirmedWarning, setConfirmedWarning] = useState(false);
+
+    const savingRef = useRef(false);
+    const countInPieces = useRef(null);
     const reduceMotion = useReducedMotion();
-    
+
     // Liquid / Partial State (for Set/Count mode)
-    const [showLiquidSlider, setShowLiquidSlider] = useState(false);
     const [partialAmount, setPartialAmount] = useState(0); // 0.0 - 0.99
     const [useMlCalculator, setUseMlCalculator] = useState(false);
-    const [fullCapacityMl, setFullCapacityMl] = useState(750); // Default 750ml standard
+    const [fullCapacityMl, setFullCapacityMl] = useState(750);
     const [remainingMl, setRemainingMl] = useState(0);
 
     useEffect(() => {
-        if (item) {
-            // Is this a liquid/estimate item or ANY item we want to allow partial counting for?
-            // Now including bags, kg, g for split counting (1 full + 1 open)
-            const unitLower = item.unit.toLowerCase();
-            const isLiquid = item.category === 'sauce' || item.category === 'spirits' || 
-                           unitLower.includes('bottle') || unitLower.includes('l') || unitLower.includes('ขวด') ||
-                           unitLower.includes('bag') || unitLower.includes('ถุง') || unitLower.includes('kg') || unitLower.includes('g');
-            
-            setShowLiquidSlider(isLiquid);
-            
-            // Load capacity if exists
-            // Full bottle size from the item's recipe unit setting (e.g. 700 ml); 750 ml if unknown
-            const cap = fullUnitCapacity(item);
-            if (cap && cap.unit === 'ml') setFullCapacityMl(cap.amount);
-            
-            let options = [];
-            // Add Base Unit (Purchase/Pack Unit)
+        if (!item) return;
+        const cap = fullUnitCapacity(item);
+        if (cap && cap.unit === 'ml') setFullCapacityMl(cap.amount);
+
+        const options = [{
+            key: 'base',
+            label: displayUnit(item.unit || item.pack_unit) || 'หน่วย',
+            factor: 1
+        }];
+
+        if (item.usage_unit && item.usage_unit !== item.unit) {
             options.push({
-                key: 'base',
-                label: displayUnit(item.unit) || 'หน่วย',
-                factor: 1
+                key: 'usage',
+                label: displayUnit(item.usage_unit),
+                factor: 1 / (usagePerStockUnit(item) || 1)
             });
-
-            // Add Usage Unit (Recipe Unit) if different
-            if (item.usage_unit && item.usage_unit !== item.unit) {
-                options.push({
-                    key: 'usage',
-                    label: displayUnit(item.usage_unit),
-                    // Same rule as recipe deduction: a soda bottle holds 325 ml, not 1 ml
-                    factor: 1 / (usagePerStockUnit(item) || 1)
-                });
-            }
-
-            // Add configured multi-units (e.g., Boxes, Packs)
-            if (item.unit_config) {
-                Object.entries(item.unit_config).forEach(([key, config]) => {
-                    options.push({
-                        key: key,
-                        label: config.unit_label || key,
-                        factor: Number(config.factor) || 1
-                    });
-                });
-            }
-
-            setUnitOptions(options);
-            setSelectedUnit(options[0]);
-            // Only things inside that are counted one by one (bottles of a crate, cups of a pack).
-            // A piece of galangal holding 100 g keeps its "opened one" switch.
-            const inside = packCapacity(item);
-            const piecesInside = !!inside && (getUnitType(inside.unit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(inside.unit));
-            countInPieces.current = piecesInside ? options.find(o => o.key === 'usage') || null : null;
-            setAmount('');
-            setPartialAmount(0);
-            
-            // Default mode to 'in'
-            setMode('in');
-            setOutReason(null);
-            setOutNote('');
         }
-    }, [item]);
+
+        if (item.unit_config) {
+            Object.entries(item.unit_config).forEach(([key, config]) => {
+                options.push({
+                    key,
+                    label: config.unit_label || key,
+                    factor: Number(config.factor) || 1
+                });
+            });
+        }
+
+        const baseLower = String(item.unit || item.pack_unit || '').trim().toLowerCase();
+        const isPortionBase = baseLower === 'portion' || baseLower === 'potion' || baseLower === 'สูตร';
+        const inside = packCapacity(item);
+        const piecesInside = !isPortionBase && !!inside && (getUnitType(inside.unit) === 'count' || ['แก้ว', 'ชิ้น', 'ใบ', 'อัน'].includes(inside.unit));
+        const pieceOpt = piecesInside ? options.find(o => o.key === 'usage') || null : null;
+        countInPieces.current = pieceOpt;
+
+        const startMode = initialMode || 'in';
+        setUnitOptions(options);
+        setSelectedUnit(startMode === 'set' && pieceOpt ? pieceOpt : options[0]);
+        setAmount('');
+        setPartialAmount(0);
+        setMode(startMode);
+        setOutReason(null);
+        setOutNote('');
+        setConfirmedWarning(false);
+        setRecentPurchase(null);
+
+        // Fetch any purchase logged in the last 60 minutes to warn if staff count equal to just-received qty
+        let cancelled = false;
+        const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        supabase.from('stock_transactions')
+            .select('quantity_change, created_at')
+            .eq('stock_item_id', item.id)
+            .eq('reason', 'purchase')
+            .gte('created_at', sinceIso)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .then(({ data }) => {
+                if (cancelled) return;
+                const latest = data?.[0];
+                if (latest && Number(latest.quantity_change) > 0) {
+                    setRecentPurchase({ qty: Number(latest.quantity_change), at: latest.created_at });
+                }
+            });
+        return () => { cancelled = true; };
+    }, [item, initialMode]);
 
     // Calculator Logic
     useEffect(() => {
         if (useMlCalculator && fullCapacityMl > 0) {
             const ratio = remainingMl / fullCapacityMl;
-            const clamped = Math.min(Math.max(ratio, 0), 1);
-            setPartialAmount(clamped);
+            setPartialAmount(Math.min(Math.max(ratio, 0), 1));
         }
     }, [remainingMl, fullCapacityMl, useMlCalculator]);
 
-    // Pre-fill when entering Set mode, in the unit picked. A crate of bottles is counted in
-    // bottles (17), never as "1 crate + 42% of one", so the opened part only exists for the
-    // counting unit itself.
+    // Pre-fill when entering Set mode
     useEffect(() => {
         if (mode === 'set' && item && selectedUnit) {
             const qty = Math.max(0, Number(item.current_quantity) || 0);
@@ -132,31 +139,40 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
         if (mode !== 'set') { setAmount(''); setPartialAmount(0); }
     }, [mode, item]);
 
+    // Reset warning confirmation whenever the staff edits the value, unit, or mode
+    useEffect(() => {
+        setConfirmedWarning(false);
+    }, [amount, selectedUnit, mode, partialAmount]);
+
+    const evaluation = useMemo(() => evaluateStockAdjustment({
+        item, mode, amount, selectedUnit, partialAmount, recentPurchase
+    }), [item, mode, amount, selectedUnit, partialAmount, recentPurchase]);
+
+    const hasHighWarning = evaluation.warnings.some(w => w.severity === 'high');
+
     const handleSave = async () => {
-        if (savingRef.current) return; // Sync lock: prevents double-click
+        if (savingRef.current) return;
+        if (hasHighWarning && !confirmedWarning) {
+            setConfirmedWarning(true);
+            return;
+        }
         savingRef.current = true;
         setLoading(true);
         try {
+            const mainVal = parseFloat(amount || 0);
 
-            const mainVal = parseFloat(amount || 0); // Integer part
-            
             if (mode === 'set') {
-                // Counted in another unit (bottles of a crate): that count is the whole amount.
-                // Counted in the counting unit: whole units plus the opened one, kept exact
-                // (rounding it to a percent turned 17 bottles into 17.04 on an untouched save).
                 const opened = selectedUnit.factor !== 1 ? 0 : partialAmount;
                 const finalTotal = Number((mainVal * selectedUnit.factor + opened).toFixed(4));
 
                 await onUpdate(item.id, finalTotal, 'set', {
                     note: `นับสต็อกได้: ${qtyInWords(item, finalTotal, packCapacity(item))}`
                 });
-
             } else {
-                // In / Out
                 if (mainVal <= 0) {
-                     setLoading(false);
-                     savingRef.current = false;
-                     return;
+                    setLoading(false);
+                    savingRef.current = false;
+                    return;
                 }
                 const actualChange = mainVal * selectedUnit.factor;
                 const finalChange = mode === 'in' ? actualChange : -actualChange;
@@ -167,7 +183,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                     savingRef.current = false;
                     return;
                 }
-                const extra = outNote.trim() ? ` · ${outNote.trim()}` : '';
+                const extra = outNote.trim() ? ` (${outNote.trim()})` : '';
 
                 await onUpdate(item.id, finalChange, mode, {
                     reason: reason?.key,
@@ -176,11 +192,11 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                         : `เบิกออก (${reason.label}) ${mainVal} ${selectedUnit.label}${extra}`
                 });
             }
-            
+
             onClose();
         } catch (error) {
             console.error(error);
-            toast.error('Failed to update stock');
+            toast.error('บันทึกการปรับสต๊อกไม่สำเร็จ');
         } finally {
             setLoading(false);
             savingRef.current = false;
@@ -201,12 +217,25 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
     ];
     const decrement = () => { const val = parseFloat(amount || 0); if (val > 0) setAmount(String(Math.max(0, val - 1))); };
     const stockNow = qtyInWords(item, item.current_quantity, packCapacity(item));
-    // An opened bottle is guessed by eye; a crate of bottles is counted in bottles only, so
-    // the loose bottles of an opened crate can never be dropped by counting "1 ลัง"
     const countsOpened = selectedUnit?.factor === 1 && !countInPieces.current;
     const shownUnits = mode === 'set' && countInPieces.current ? unitOptions.filter(o => o.key !== 'base') : unitOptions;
     const disabled = loading || (mode !== 'set' && (!amount || parseFloat(amount) <= 0)) || (mode === 'out' && !outReason);
-    const confirmLabel = loading ? 'กำลังบันทึก…' : mode === 'set' ? 'บันทึกการนับ' : mode === 'in' ? 'ยืนยันรับเข้า' : 'ยืนยันเบิกออก';
+
+    const fmtBase = (val) => formatReconQty(val, {
+        unit: item.unit || item.pack_unit,
+        factor: Number(item.conversion_factor) || 1,
+        usageUnit: item.usage_unit || ''
+    }, 2);
+
+    const confirmLabel = loading
+        ? 'กำลังบันทึก…'
+        : hasHighWarning && !confirmedWarning
+            ? 'ตรวจตัวเลขแล้ว กดอีกครั้งเพื่อยืนยัน'
+            : mode === 'set'
+                ? 'บันทึกการนับ'
+                : mode === 'in'
+                    ? 'ยืนยันรับเข้า'
+                    : 'ยืนยันเบิกออก';
 
     const renderStepper = (ariaLabel) => (
         <div className="flex gap-2">
@@ -218,7 +247,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0"
-                className={`flex-1 min-w-0 h-12 rounded-md border ${ui.RULE} ${ui.PAPER} text-center text-2xl font-semibold tabular-nums ${ui.INK} outline-none transition-colors focus:border-[var(--color-ink)]`}
+                className={`flex-1 min-w-0 h-12 rounded-md border ${ui.RULE} ${ui.PAPER} text-center text-2xl font-semibold tabular-nums ${ui.INK} outline-none transition-colors focus:border-[var(--color-ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]`}
             />
             <button type="button" onClick={() => quickAdd(1)} className={ui.stepBtn} aria-label="เพิ่ม 1">+</button>
         </div>
@@ -226,9 +255,9 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[oklch(21.78%_0_0/0.45)]"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[var(--color-veil)]"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: 0.18 } }}
+            animate={{ opacity: 1, transition: { duration: 0.16 } }}
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
             <motion.div
@@ -236,7 +265,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 role="dialog"
                 aria-modal="true"
                 aria-label={`ปรับสต๊อก ${item.name}`}
-                className={`${ui.PAPER} w-full sm:max-w-sm border ${ui.RULE} rounded-t-xl sm:rounded-lg shadow-[0_12px_32px_oklch(21.78%_0_0/0.14)] flex flex-col max-h-[92vh] overflow-hidden`}
+                className={`${ui.PAPER} w-full sm:max-w-sm border ${ui.RULE} rounded-t-xl sm:rounded-lg shadow-[var(--shadow-sheet)] flex flex-col max-h-[92dvh] overflow-hidden`}
             >
                 {/* Header: photo, name, what is in stock now */}
                 <div className="px-4 pt-4 pb-3 flex items-start gap-3">
@@ -255,7 +284,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                     </div>
                 </div>
 
-                {/* Mode switch with a sliding pill */}
+                {/* Mode switch */}
                 <div className="px-4">
                     <div className={`relative grid grid-cols-3 p-1 rounded-md ${ui.PAPER2}`} role="tablist" aria-label="ประเภทการปรับสต๊อก">
                         {MODES.map(m => (
@@ -265,13 +294,13 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                 role="tab"
                                 aria-selected={mode === m.id}
                                 onClick={() => { if (m.id === 'set' && countInPieces.current) setSelectedUnit(countInPieces.current); setMode(m.id); }}
-                                className={`relative h-9 rounded text-sm transition-colors ${mode === m.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[var(--color-ink)]`}`}
+                                className={`relative min-h-[40px] rounded text-sm transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${mode === m.id ? `${ui.INK} font-semibold` : `${ui.NEUTRAL} hover:text-[var(--color-ink)]`}`}
                             >
                                 {mode === m.id && (
                                     <motion.span
                                         layoutId="adjust-mode-pill"
-                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[0_1px_2px_oklch(21.78%_0_0/0.12)]`}
-                                        transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: ui.EASE }}
+                                        className={`absolute inset-0 rounded ${ui.PAPER} shadow-[var(--shadow-pill)]`}
+                                        transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: ui.EASE }}
                                     />
                                 )}
                                 <span className="relative">{m.label}</span>
@@ -282,11 +311,11 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
 
                 {/* Body */}
                 <div className="px-4 py-4 flex-1 overflow-y-auto space-y-4">
-                    {/* Unit */}
+                    {/* Unit Selector */}
                     {shownUnits.length > 1 && (
                         <div>
-                            <span className={ui.label}>หน่วย</span>
-                            <div className="flex flex-wrap gap-1.5">
+                            <span className={ui.label}>เลือกหน่วยที่กรอก</span>
+                            <div className="flex flex-wrap gap-2">
                                 {shownUnits.map(opt => (
                                     <button key={opt.key} type="button" onClick={() => setSelectedUnit(opt)} className={ui.chip(selectedUnit?.key === opt.key)}>
                                         {opt.label}
@@ -304,33 +333,26 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                     {renderStepper('จำนวนที่ยังไม่เปิด')}
                                 </div>
 
-                                {/* Opened container: only when counting in the counting unit */}
-                                {countsOpened && <div className={`rounded-md border ${ui.RULE} p-3 space-y-3`}>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span className={`text-sm ${ui.INK}`}>มีของที่เปิดใช้อยู่</span>
-                                        <button
-                                            type="button"
-                                            role="switch"
-                                            aria-checked={partialAmount > 0}
-                                            onClick={() => setPartialAmount(partialAmount > 0 ? 0 : 0.5)}
-                                            className={`relative w-11 h-6 rounded-full transition-colors ${partialAmount > 0 ? 'bg-[var(--color-ink)]' : 'bg-[var(--color-rule)]'}`}
-                                        >
-                                            <motion.span
-                                                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-[var(--color-paper)]"
-                                                animate={{ x: partialAmount > 0 ? 20 : 0 }}
-                                                transition={reduceMotion ? { duration: 0 } : { duration: 0.18, ease: ui.EASE }}
-                                            />
-                                        </button>
-                                    </div>
-                                    <AnimatePresence initial={false}>
-                                        {partialAmount > 0 && (
-                                            <motion.div
-                                                key="opened"
-                                                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto', transition: { duration: 0.2, ease: ui.EASE } }}
-                                                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, transition: { duration: 0.14 } }}
-                                                className="overflow-hidden"
+                                {countsOpened && (
+                                    <div className={`rounded-md border ${ui.RULE} p-3 space-y-3`}>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className={`text-sm ${ui.INK}`}>มีของที่เปิดใช้อยู่</span>
+                                            <button
+                                                type="button"
+                                                role="switch"
+                                                aria-checked={partialAmount > 0}
+                                                onClick={() => setPartialAmount(partialAmount > 0 ? 0 : 0.5)}
+                                                className={`relative w-12 h-7 rounded-full transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] ${partialAmount > 0 ? 'bg-[var(--color-ink)]' : 'bg-[var(--color-rule)]'}`}
                                             >
+                                                <motion.span
+                                                    className="absolute top-1 left-1 w-5 h-5 rounded-full bg-[var(--color-paper)]"
+                                                    animate={{ x: partialAmount > 0 ? 20 : 0 }}
+                                                    transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: ui.EASE }}
+                                                />
+                                            </button>
+                                        </div>
+                                        {partialAmount > 0 && (
+                                            <div className="pt-1 space-y-2">
                                                 {useMlCalculator ? (
                                                     <div className="space-y-2">
                                                         <div className="grid grid-cols-2 gap-2">
@@ -349,7 +371,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                                         </div>
                                                         <div className="flex items-center justify-between text-sm">
                                                             <span className={`${ui.INK} font-semibold tabular-nums`}>= {Math.round((partialAmount || 0) * 100)}%</span>
-                                                            <button type="button" onClick={() => setUseMlCalculator(false)} className={`text-xs ${ui.MUTED} underline underline-offset-2`}>กะด้วยสายตา</button>
+                                                            <button type="button" onClick={() => setUseMlCalculator(false)} className={`text-xs ${ui.MUTED} underline underline-offset-2 cursor-pointer`}>กะด้วยสายตา</button>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -361,27 +383,15 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                                                 <div className={`text-xs ${ui.NEUTRAL}`}>ประมาณด้วยสายตา</div>
                                                             </div>
                                                         </div>
-                                                        <button type="button" onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className={`text-xs ${ui.MUTED} underline underline-offset-2`}>
+                                                        <button type="button" onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className={`text-xs ${ui.MUTED} underline underline-offset-2 cursor-pointer`}>
                                                             คำนวณจาก มล.
                                                         </button>
                                                     </div>
                                                 )}
-                                            </motion.div>
+                                            </div>
                                         )}
-                                    </AnimatePresence>
-                                </div>}
-
-                                {/* Summary */}
-                                <div className={`rounded-md ${ui.PAPER2} px-3 py-2.5`}>
-                                    <div className={`text-xs ${ui.NEUTRAL}`}>จะบันทึกว่า</div>
-                                    <div className={`text-sm font-semibold tabular-nums ${ui.INK}`}>
-                                        {amount || 0} {selectedUnit?.label || displayUnit(item.unit)}
-                                        {countsOpened && partialAmount > 0 && ` + ที่เปิดอยู่ ${Math.round(partialAmount * 100)}%`}
                                     </div>
-                                    <div className={`text-xs ${ui.NEUTRAL}`}>
-                                        โดย {currentUser?.user_metadata?.full_name || 'พนักงาน'} · {new Date().toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                </div>
+                                )}
                             </motion.div>
                         ) : (
                             <motion.div key={mode} {...ui.panelMotion(reduceMotion)} className="space-y-4">
@@ -392,7 +402,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                 {mode === 'out' && (
                                     <div className="space-y-2">
                                         <span className={ui.label}>เหตุผล</span>
-                                        <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="เหตุผลการเบิกออก">
+                                        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="เหตุผลการเบิกออก">
                                             {WITHDRAW_REASONS.map(r => (
                                                 <button key={r.key} type="button" role="radio" aria-checked={outReason === r.key}
                                                     onClick={() => setOutReason(r.key)}
@@ -417,11 +427,64 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* Sanity Guardrail Warnings (with 1-tap unit switch for kg/g & l/ml mix-ups) */}
+                    {evaluation.warnings.length > 0 && (
+                        <div className="rounded-md border border-[var(--brand-plum)] bg-[var(--color-plum-pale)] p-3 space-y-2" role="alert">
+                            {evaluation.warnings.map(w => (
+                                <div key={w.code} className="space-y-2">
+                                    <p className="text-[13px] leading-5 font-semibold text-[var(--brand-plum)]">
+                                        {w.message}
+                                    </p>
+                                    {w.fixUnitKey && unitOptions.some(o => o.key === w.fixUnitKey) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const nextUnit = unitOptions.find(o => o.key === w.fixUnitKey);
+                                                if (nextUnit) setSelectedUnit(nextUnit);
+                                            }}
+                                            className="px-3 min-h-[36px] rounded border border-[var(--brand-plum)] bg-[var(--color-paper)] text-[13px] font-bold text-[var(--brand-plum)] hover:bg-[var(--brand-plum)] hover:text-[var(--color-paper)] transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
+                                        >
+                                            เปลี่ยนหน่วยเป็น {w.fixUnitLabel}
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Live Before -> After Equation Preview (for ALL 3 modes) */}
+                    {evaluation.valid && (
+                        <div className={`rounded-md border ${ui.RULE} ${ui.PAPER2} px-3 py-2.5 space-y-1`}>
+                            <div className={`text-xs ${ui.NEUTRAL}`}>
+                                สรุปยอดหลังบันทึก ({currentUser?.user_metadata?.full_name || 'พนักงาน'})
+                            </div>
+                            <div className={`text-sm font-semibold tabular-nums ${ui.INK} flex flex-wrap items-baseline gap-x-2`}>
+                                <span className={ui.MUTED}>เดิม {fmtBase(evaluation.currentQty)}</span>
+                                <span className={ui.NEUTRAL}>→</span>
+                                <span className={evaluation.deltaQty < 0 ? 'text-[var(--brand-plum)]' : ui.INK}>
+                                    ใหม่ {fmtBase(evaluation.nextQty)}
+                                </span>
+                                {Math.abs(evaluation.deltaQty) >= 0.0001 && (
+                                    <span className={`text-xs font-medium ${evaluation.deltaQty < 0 ? 'text-[var(--brand-plum)]' : ui.MUTED}`}>
+                                        ({evaluation.deltaQty > 0 ? '+' : '-'}{fmtBase(Math.abs(evaluation.deltaQty))})
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
                 <div className={`px-4 py-3 border-t ${ui.RULE} pb-[max(0.75rem,env(safe-area-inset-bottom))]`}>
-                    <button type="button" onClick={handleSave} disabled={disabled} className={ui.primaryBtn}>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={disabled}
+                        className={hasHighWarning && !confirmedWarning
+                            ? 'w-full h-12 rounded-md bg-[var(--brand-plum)] text-[var(--color-paper)] text-base font-semibold cursor-pointer transition-[background-color,transform] hover:bg-[var(--brand-plum-2)] active:scale-[0.99] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)] disabled:bg-[var(--color-paper-3)] disabled:text-[var(--color-neutral)] disabled:cursor-not-allowed'
+                            : ui.primaryBtn}
+                    >
                         {confirmLabel}
                     </button>
                 </div>

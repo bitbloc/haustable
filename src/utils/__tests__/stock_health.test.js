@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     stockHealth, findDuplicateNames, unitSetupWarnings, readMergeResult,
     isPackagingByWeight, hasBrokenFactor, isOneUnitOneGram, unitsNeverSet,
+    hasSuspectQty, hasSuspectReorder, unitLine,
     sameUnitSetup, suggestMergeRatio, parseRatio, mergedQuantity, ratioUnitOptions, ratioInKeepUnits,
 } from '../stockHealth';
 
@@ -160,5 +161,21 @@ describe('answering the converter in a handier unit', () => {
         expect(ratioInKeepUnits('2', 'bottle', gin)).toBe(2);
         expect(ratioInKeepUnits('5', 'g', gin)).toBeNull();
         expect(ratioInKeepUnits('', 'g', kg)).toBeNull();
+    });
+});
+
+describe('shadow-era health checks and base portion labelling', () => {
+    it('flags suspiciously huge quantities and unrealistic bulk reorder points', () => {
+        expect(hasSuspectQty({ unit: 'kg', current_quantity: 943.5 })).toBe(true);
+        expect(hasSuspectQty({ unit: 'l', current_quantity: 1000000 })).toBe(true);
+        expect(hasSuspectQty({ unit: 'kg', current_quantity: 12 })).toBe(false);
+        expect(hasSuspectReorder({ unit: 'pack', reorder_point: 42.5 })).toBe(true);
+        expect(hasSuspectReorder({ unit: 'bag', reorder_point: 57.143 })).toBe(true);
+        expect(hasSuspectReorder({ unit: 'pack', reorder_point: 5 })).toBe(false);
+    });
+
+    it('renders house-made bases as 1 สูตร = X even when legacy pack_unit was unit', () => {
+        expect(unitLine({ is_base_recipe: true, item_type: 'prep', unit: 'portion', pack_unit: 'unit', usage_unit: 'ml', conversion_factor: 1300 }))
+            .toBe('1 สูตร = 1,300 มิลลิลิตร');
     });
 });
