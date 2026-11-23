@@ -34,6 +34,10 @@ const shortDate = (ymd) => new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString(
     timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit'
 });
 
+const dayMonthIso = (iso) => iso
+    ? new Date(iso).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' })
+    : '';
+
 const thaiDate = (ymd) => new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString('th-TH', {
     timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
 });
@@ -74,6 +78,7 @@ export default function StockReconciliationPage() {
     const [exporting, setExporting] = useState(false);
 
     const [deductionMode, setDeductionMode] = useState('shadow');
+    const [carryoverByItem, setCarryoverByItem] = useState({});
     const [itemUnits, setItemUnits] = useState({});
     const [categories, setCategories] = useState([]);
     const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
@@ -138,22 +143,29 @@ export default function StockReconciliationPage() {
         setLoading(true);
         setError(null);
         try {
-            const [recon, sess] = await Promise.all([
+            const [recon, sess, carry] = await Promise.all([
                 supabase.rpc('stock_daily_reconciliation', { p_day: day }),
                 supabase.from('stock_count_sessions')
                     .select('id, kind, performed_by, line_count, value_diff, blind, created_at')
                     .eq('shop_day', day)
-                    .order('created_at')
+                    .order('created_at'),
+                supabase.rpc('stock_shadow_carryover', { p_day: day })
             ]);
             if (recon.error) throw recon.error;
             const loaded = recon.data || [];
             setRows(loaded);
             setSessions(sess.data || []);
+            if (!carry.error && Array.isArray(carry.data)) {
+                setCarryoverByItem(Object.fromEntries(carry.data.map(c => [c.stock_item_id, c])));
+            } else {
+                setCarryoverByItem({});
+            }
         } catch (err) {
             console.error(err);
             setError(err);
             setRows([]);
             setSessions([]);
+            setCarryoverByItem({});
         } finally {
             setLoading(false);
         }
@@ -441,7 +453,7 @@ export default function StockReconciliationPage() {
                         </span>
                         <span className={`text-[13px] leading-5 ${deductionMode === 'shadow' ? 'text-[var(--on-plum-2)]' : 'text-[var(--color-muted)]'}`}>
                             {deductionMode === 'shadow'
-                                ? 'คำนวณยอดใช้จากสูตรขายเพื่อเทียบกับยอดนับจริง ยังไม่หักยอดคงเหลือในคลัง'
+                                ? 'หักยอดขายสะสมตั้งแต่นับครั้งก่อนให้อัตโนมัติ (รอบนับชนรอบนับ) ไม่ต้องนับทุกวัน ยังไม่ตัดสต๊อกจริง'
                                 : deductionMode === 'live'
                                     ? 'ระบบหักสต๊อกอัตโนมัติตามสูตรเมื่อขาย'
                                     : 'ยังไม่บันทึกยอดใช้จากยอดขาย'}
@@ -1023,6 +1035,8 @@ export default function StockReconciliationPage() {
                                             {visibleDayRows.map(r => {
                                                 const info = classifyReconRow(r, thresholds);
                                                 const moves = movementParts(r);
+                                                const carry = carryoverByItem[r.stock_item_id] || null;
+                                                const priorShadow = Number(carry?.prior_shadow_usage) || 0;
                                                 const v = Number(r.variance);
                                                 const counted = r.closing_qty !== null && r.closing_qty !== undefined;
                                                 const salesNum = Number(r.sales_usage) || 0;
@@ -1046,6 +1060,11 @@ export default function StockReconciliationPage() {
                                                                 {r.closing_counted_at && (
                                                                     <span className="tabular-nums">นับ <span className="font-mono">{timeOf(r.closing_counted_at)}</span></span>
                                                                 )}
+                                                                {carry?.anchor_at && Number(carry.days_since_anchor) > 1 && (
+                                                                    <span className="tabular-nums">
+                                                                        รอบก่อน {dayMonthIso(carry.anchor_at)} ({carry.days_since_anchor} วัน)
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             {info.hint && (
                                                                 <p className={`mt-1 text-[12px] leading-5 ${info.tone === 'plum' ? 'text-[var(--brand-plum)] font-medium' : 'text-[var(--color-muted)]'}`}>
@@ -1056,6 +1075,11 @@ export default function StockReconciliationPage() {
 
                                                         <td className={tdCell}>
                                                             <span className="block text-[var(--color-ink)]">{fmtQty(r.opening_qty, r)}</span>
+                                                            {priorShadow > 0 && (
+                                                                <span className="block mt-0.5 text-[11px] leading-4 text-[var(--color-neutral)]">
+                                                                    หักขายค้าง -{fmtQty(priorShadow, r)} ({dayMonthIso(carry.anchor_at)})
+                                                                </span>
+                                                            )}
                                                             {moves.length > 0 && (
                                                                 <div className="mt-1 flex flex-col items-end gap-0.5 text-[12px] leading-4">
                                                                     {moves.map(m => (
@@ -1171,6 +1195,8 @@ export default function StockReconciliationPage() {
                                 {visibleDayRows.map(r => {
                                     const info = classifyReconRow(r, thresholds);
                                     const moves = movementParts(r);
+                                    const carry = carryoverByItem[r.stock_item_id] || null;
+                                    const priorShadow = Number(carry?.prior_shadow_usage) || 0;
                                     const v = Number(r.variance);
                                     const counted = r.closing_qty !== null && r.closing_qty !== undefined;
                                     const salesNum = Number(r.sales_usage) || 0;
@@ -1196,6 +1222,11 @@ export default function StockReconciliationPage() {
                                                                 นับ <span className="font-mono">{timeOf(r.closing_counted_at)}</span>
                                                             </span>
                                                         )}
+                                                        {carry?.anchor_at && Number(carry.days_since_anchor) > 1 && (
+                                                            <span className="tabular-nums text-[var(--color-neutral)]">
+                                                                รอบก่อน {dayMonthIso(carry.anchor_at)}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -1219,7 +1250,12 @@ export default function StockReconciliationPage() {
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 pt-2 border-t border-[var(--color-paper-3)] text-[12px] leading-5 tabular-nums">
                                                 <div>
                                                     <span className="text-[var(--color-neutral)] block">ยอดเปิด</span>
-                                                    <span className="font-medium text-[var(--color-ink)]">{fmtQty(r.opening_qty, r)}</span>
+                                                    <span className="font-medium text-[var(--color-ink)] block">{fmtQty(r.opening_qty, r)}</span>
+                                                    {priorShadow > 0 && (
+                                                        <span className="text-[11px] leading-4 text-[var(--color-neutral)] block">
+                                                            หักขายค้าง -{fmtQty(priorShadow, r)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <span className="text-[var(--color-neutral)] block">ใช้จากยอดขาย</span>
@@ -1268,9 +1304,9 @@ export default function StockReconciliationPage() {
                     {/* Report Footer Legend */}
                     <div className="px-4 py-3 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)]/30 text-[12px] leading-5 text-[var(--color-neutral)] flex flex-wrap items-center justify-between gap-2">
                         <span>
-                            ควรเหลือ = ยอดเปิด + รับเข้า + ผลิต − ใช้ผลิต − เสีย − ใช้จากยอดขาย (ช่วง 05:00 ถึงเวลานับจริง)
+                            ควรเหลือ = ยอดเปิด (หักยอดขายสะสมตั้งแต่นับครั้งก่อนในโหมด Shadow) + รับเข้า + ผลิต − ใช้ผลิต − เสีย − ใช้จากยอดขายวันนี้
                         </span>
-                        <span>กดชื่อวัตถุดิบเพื่อดูประวัติและเมนูที่คำนวณใช้ในโหมด Shadow</span>
+                        <span>ไม่ต้องนับทุกวัน กดชื่อวัตถุดิบเพื่อดูประวัติและเมนูที่คำนวณใช้</span>
                     </div>
                 </div>
             )}

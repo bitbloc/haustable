@@ -232,6 +232,10 @@ describe('recon UX helpers: classifyReconRow, defaultReconFilter, formatReconQty
         expect(recipeShort.status).toBe('abnormal_short');
         expect(recipeShort.pct).toBe(-40);
         expect(recipeShort.hint).toContain('สูตร');
+
+        const multiDayCarry = classifyReconRow({ closing_qty: 3, expected_close: 5, variance: -2, unit_cost: 200, variance_value: -400, sales_usage: 0, opening_source: 'shadow_carry' });
+        expect(multiDayCarry.status).toBe('abnormal_short');
+        expect(multiDayCarry.hint).toContain('สะสมตั้งแต่รอบนับก่อน');
     });
 
     it('picks the best non-empty default filter for a day', () => {

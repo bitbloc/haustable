@@ -163,12 +163,19 @@ export const classifyReconRow = (row, thresholds = DEFAULT_THRESHOLDS) => {
         || (absExp === 0 && closingNum >= 100);
     const dupReceive = bad && salesNum === 0 && receivedNum > 0 && Math.abs(closingNum - receivedNum) < 0.001;
 
+    const hasShadowUsage = salesNum > 0 || row.opening_source === 'shadow_carry';
     let hint = null;
     if (suspectEntry) hint = 'ยอดต่างสูงมาก ตรวจหน่วยหรือตัวเลขที่กรอก';
     else if (dupReceive) hint = 'ยอดนับเท่ากับยอดรับเข้า ตรวจว่านับรวมยอดยกมาหรือไม่';
-    else if (bad && salesNum > 0 && v < 0) hint = 'ใช้จริงมากกว่าสูตร หรือมีของเสียที่ยังไม่บันทึก';
-    else if (bad && salesNum > 0 && v > 0) hint = 'ใช้จริงน้อยกว่าสูตร ตรวจสัดส่วนสูตร';
-    else if (bad && !(Number(row.unit_cost) > 0)) hint = 'ยังไม่ได้ตั้งราคาต้นทุนต่อหน่วย';
+    else if (bad && hasShadowUsage && v < 0) {
+        hint = row.opening_source === 'shadow_carry'
+            ? 'ใช้จริงมากกว่าสูตรสะสมตั้งแต่รอบนับก่อน หรือมีของเสียที่ยังไม่บันทึก'
+            : 'ใช้จริงมากกว่าสูตร หรือมีของเสียที่ยังไม่บันทึก';
+    } else if (bad && hasShadowUsage && v > 0) {
+        hint = row.opening_source === 'shadow_carry'
+            ? 'ใช้จริงน้อยกว่าสูตรสะสมตั้งแต่รอบนับก่อน ตรวจสัดส่วนสูตร'
+            : 'ใช้จริงน้อยกว่าสูตร ตรวจสัดส่วนสูตร';
+    } else if (bad && !(Number(row.unit_cost) > 0)) hint = 'ยังไม่ได้ตั้งราคาต้นทุนต่อหน่วย';
 
     if (Math.abs(v) < 0.00005) return { status: 'exact', label: 'ตรง', tone: 'neutral', pct: 0, hint: null };
     if (bad && v < 0) return { status: 'abnormal_short', label: 'ขาดผิดปกติ', tone: 'plum', pct, hint };
