@@ -48,6 +48,13 @@ export function piecesPerUnit(u?: ItemUnits | null): number {
   if (!(f > 1) || !PIECE_UNITS.has(usage) || usage === unit) return 0
   return HOLDER_UNITS.has(unit) || HOLDER_UNITS.has(low(u?.pack_unit)) ? f : 0
 }
+/** Plain (non-HTML-escaped) amount string for SVG/card renderers that apply their own escaping. */
+export function plainAmountText(n: number, u?: ItemUnits | null): string {
+  const per = piecesPerUnit(u)
+  if (!per) return `${qty(Math.abs(n))} ${unitLabel((u?.unit || u?.pack_unit) ?? null)}`.trim()
+  return `${Math.round(Math.abs(n) * per)} ${unitLabel(u?.usage_unit ?? null)}`
+}
+
 /** An amount in its units: things used one by one in pieces ("17 ขวด"), else "1.5 กก.". Always positive. */
 export function amountText(n: number, u?: ItemUnits | null): string {
   const per = piecesPerUnit(u)
@@ -140,4 +147,66 @@ export function buildStockClosingMessage(input: {
 
   lines.push('ดูรายละเอียด: Admin → Menu &amp; Lab → Stock Recon')
   return lines.join('\n')
+}
+
+export function buildStockClosingCardPayload(input: {
+  day: string
+  session: { performed_by?: string | null; created_at?: string | null; line_count?: number | null }
+  round: number
+  timeLabel: string
+  rows: ReconRow[]
+  reorder: ReorderItem[]
+  thresholds?: Thresholds
+  units?: Record<string, ItemUnits>
+}) {
+  const t = input.thresholds || DEFAULT_THRESHOLDS
+  const counted = input.rows.filter((r) => r.closing_qty !== null && r.closing_qty !== undefined)
+  const abnormal = counted
+    .filter((r) => isAbnormal(r, t))
+    .sort((a, b) => num(a.variance_value) - num(b.variance_value) || num(a.variance) - num(b.variance))
+  const short = counted.reduce((s, r) => s + Math.min(0, num(r.variance_value)), 0)
+  const reorder = input.reorder.filter(needsReorder).sort((a, b) => a.name.localeCompare(b.name, 'th'))
+
+  const maxAbn = MAX_LINES
+  const maxReo = 10
+
+  const title = `นับปิดร้าน · ${thaiDay(input.day)}${input.round > 1 ? ` · รอบ ${input.round}` : ''}`
+  const subtitle = [input.session.performed_by || 'Staff', input.timeLabel, `นับ ${counted.length} รายการ`].filter(Boolean).join(' · ')
+  const shortText = short < 0 ? `ขาด ${baht(short)}` : undefined
+
+  const card = {
+    title,
+    subtitle,
+    countedCount: counted.length,
+    abnormalCount: abnormal.length,
+    shortText,
+    reorderCount: reorder.length,
+    abnormalRows: abnormal.slice(0, maxAbn).map((r) => {
+      const v = num(r.variance)
+      const u = input.units?.[r.stock_item_id] || { unit: r.unit }
+      const diffText = `${v < 0 ? '−' : '+'}${plainAmountText(v, u)}`
+      const valueText = num(r.unit_cost) > 0 ? `${v < 0 ? '−' : '+'}${baht(num(r.variance_value))}` : undefined
+      return { name: r.name, diffText, valueText, isShort: v < 0 }
+    }),
+    abnormalOverflow: Math.max(0, abnormal.length - maxAbn),
+    reorderRows: reorder.slice(0, maxReo).map((i) => {
+      const point = num(i.reorder_point) > 0 ? num(i.reorder_point) : num(i.min_stock_threshold)
+      return {
+        name: i.name,
+        leftText: plainAmountText(num(i.current_quantity), i),
+        pointText: plainAmountText(point, i),
+      }
+    }),
+    reorderOverflow: Math.max(0, reorder.length - maxReo),
+  }
+
+  const captionParts = [
+    `<b>${esc(title)}</b>`,
+    [
+      abnormal.length ? `ผิดปกติ ${abnormal.length}${shortText ? ` (${shortText})` : ''}` : 'ไม่มีรายการผิดปกติ',
+      reorder.length ? `ต้องสั่ง ${reorder.length} รายการ` : '',
+    ].filter(Boolean).join(' · '),
+  ]
+
+  return { card, caption: captionParts.join('\n') }
 }
