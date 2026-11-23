@@ -11,7 +11,8 @@
       "source": "nutlope/hallmark",
       "sourceType": "github",
       "skillPath": "skills/hallmark/SKILL.md",
-      "computedHash": "21dd43ff72ea3aaef39289d464fe942a9673a9138264c814b21339b67756c261"
+      "computedHash": "e5d4ee5cf0af2dcc81a23ef49b587fbfd71236ff9f9df9da12d3bf347e26e572",
+      "commit": "04977e15f3dfd6ee4b74c887dac3eb52665d6c92"
     },
     "minimalist": {
       "source": "tasteskill/tasteskill",
