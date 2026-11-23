@@ -10,17 +10,42 @@
     <style>
         /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Manual · theme: Thai Modern OKLCH */
         :root {
-            --color-paper: oklch(97% 0.008 28);
-            --color-paper-2: oklch(94% 0.010 28);
-            --color-rule: oklch(85% 0.012 28);
-            --color-neutral: oklch(55% 0.010 28);
-            --color-muted: oklch(42% 0.010 28);
-            --color-ink: oklch(18% 0.012 28);
-            --color-accent: oklch(52% 0.16 28);
-            --color-accent-2: oklch(45% 0.08 140);
-            --color-surface: oklch(99% 0.004 28);
+            --color-paper: oklch(96.20% 0.0115 84.58);
+            --color-paper-2: oklch(92.60% 0.0095 352.37);
+            --color-rule: oklch(85.05% 0.0113 348.48);
+            --color-neutral: oklch(48.01% 0.0120 345.78);
+            --color-muted: oklch(41.84% 0.0124 345.90);
+            --color-ink: oklch(21.78% 0 0);
+            --color-accent: oklch(25.18% 0.1001 348.33);
+            --color-accent-2: oklch(33.03% 0.0965 348.04);
+            --color-surface: oklch(98.5% 0.005 84.58);
             --font-body: 'IBM Plex Sans Thai', sans-serif;
             --font-mono: 'Space Mono', 'IBM Plex Sans Thai', monospace;
+        }
+        .toolbar {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+            gap: 12px; padding: 12px 16px; margin-bottom: 24px;
+            border: 1px solid var(--color-rule); background: var(--color-surface);
+        }
+        .toolbar .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; font-family: var(--font-body); font-size: 13px; font-weight: 700;
+            text-decoration: none; border: 1px solid var(--color-ink); cursor: pointer;
+            background: var(--color-ink); color: var(--color-paper);
+        }
+        .btn.secondary {
+            background: var(--color-accent); border-color: var(--color-accent); color: var(--color-paper);
+        }
+        .badge {
+            display: inline-block; padding: 1px 6px; font-size: 12px; font-weight: 700;
+            border: 1px solid var(--color-rule); background: var(--color-paper-2); color: var(--color-ink);
+        }
+        .badge.plum {
+            background: var(--color-accent); border-color: var(--color-accent); color: var(--color-paper);
+        }
+        @media print {
+            .toolbar { display: none !important; }
         }
         @media (prefers-color-scheme: dark) {
             :root:not([data-theme="light"]) {
@@ -154,9 +179,19 @@
 </head>
 <body>
 <main class="page">
-    <span class="label">Stock · Recipe Entry Guide</span>
-    <h1>คู่มือการลงสูตร</h1>
-    <p class="lead">ลงสูตรให้ระบบคำนวณได้ว่าขายแต่ละจานใช้วัตถุดิบอะไรเท่าไหร่ เพื่อเทียบกับยอดที่นับจริงทุกวัน และใช้ตัดสต๊อกอัตโนมัติในอนาคต</p>
+    <div class="toolbar">
+        <div>
+            <span class="label">IN THE HAUS · คู่มือระบบสต๊อกและการผูกสูตร</span>
+            <div style="font-size:13px;color:var(--color-muted)">ฉบับอัปเดต: ตัวเลือกเมนู (แกงส้ม / ร้อน-เย็น / ความหวาน) + ตัดบรรจุภัณฑ์กลับบ้านอัตโนมัติ + เซ็ตผักแถม</div>
+        </div>
+        <div class="actions">
+            <a class="btn" href="/manuals/recipe_stock_recon_manual.pdf" download="IN_THE_HAUS_Recipe_Stock_Manual.pdf">ดาวน์โหลด PDF คู่มือฉบับสมบูรณ์</a>
+            <button type="button" class="btn secondary" onclick="window.print()">พิมพ์ / บันทึก PDF</button>
+        </div>
+    </div>
+    <span class="label">Stock · Recipe Entry &amp; Reconciliation Guide</span>
+    <h1>คู่มือการลงสูตรและตัดสต๊อกอัตโนมัติ</h1>
+    <p class="lead">ลงสูตรให้ระบบคำนวณได้ว่าขายแต่ละจานใช้วัตถุดิบ ตัวเลือกเสริม และบรรจุภัณฑ์กลับบ้านเท่าไหร่ เพื่อกระทบยอดสต๊อกรายวัน (Stock Recon) เทียบกับยอดนับปิดร้านได้อย่างแม่นยำ</p>
 
     <nav class="toc" aria-label="สารบัญ">
         <a href="#types"><span class="num">01</span><span>ของ 3 ชนิดในระบบ</span></a>
@@ -165,9 +200,9 @@
         <a href="#prep"><span class="num">04</span><span>ของเตรียม</span></a>
         <a href="#recipe"><span class="num">05</span><span>สูตรต่อแก้ว / จาน</span></a>
         <a href="#menu"><span class="num">06</span><span>ผูกสูตรกับเมนูขาย</span></a>
-        <a href="#check"><span class="num">07</span><span>ตรวจว่าลงถูก</span></a>
-        <a href="#mistakes"><span class="num">08</span><span>ข้อผิดพลาดที่พบบ่อย</span></a>
-        <a href="#onsite"><span class="num">09</span><span>รายการที่ต้องตรวจหน้างาน</span></a>
+        <a href="#options-packaging"><span class="num">07</span><span>ตัวเลือก (แกงส้ม) &amp; กล่องกลับบ้าน</span></a>
+        <a href="#check"><span class="num">08</span><span>ตรวจว่าลงถูก</span></a>
+        <a href="#mistakes"><span class="num">09</span><span>ข้อผิดพลาดที่พบบ่อย</span></a>
     </nav>
 
     <h2 id="types"><span class="num">01</span>ของ 3 ชนิดในระบบ</h2>
@@ -263,16 +298,68 @@
     </ul>
 
     <h2 id="menu"><span class="num">06</span>ผูกสูตรกับเมนูขาย</h2>
-    <p>หน้า Food Costing → แผง "ความพร้อมตัดสต๊อกจากยอดขาย" เมนูเรียงจากขายดีที่สุด</p>
+    <p>หน้า Food &amp; Drink → แท็บ "เมนู" → แผง "ความพร้อมตัดสต๊อกจากยอดขาย" เมนูเรียงจากขายดีที่สุด</p>
     <ul>
         <li><strong>ปุ่ม "ผูก ..."</strong> ขึ้นเมื่อมีสูตรต่อแก้วที่ชื่อตรงกัน กดแล้วเมนูนั้นใช้สูตรนั้น 1 ที่ต่อการขาย 1 ที่ ตรวจชื่อก่อนกด</li>
-        <li><strong>ปุ่ม "สร้างสูตร"</strong> เปิด Recipe Builder ของเมนูนั้น สำหรับอาหาร ใส่วัตถุดิบและของเตรียมของ 1 จานได้เลย ไม่ต้องสร้างสูตรต่อจานแยก</li>
-        <li>เมนูที่มี 2 ตัวเลือก เช่น Cocktail กับ Mocktail ให้ผูกตัวที่ขายบ่อยกว่าก่อน</li>
-        <li>เมนูเซตและเมนูที่มีตัวเลือกเพิ่มวัตถุดิบ (เพิ่มช็อต นม Oat ไข่ดาว เครื่องดื่มในเซต) จะลงผ่านหน้าตัวเลือกเมนู ซึ่งยังไม่เปิดใช้ ตอนนี้ผูกส่วนหลักไว้ก่อน</li>
+        <li><strong>ปุ่ม "สร้างสูตร" / "แก้ไขสูตร"</strong> เปิด Recipe Builder ของเมนูนั้น สำหรับอาหาร ใส่วัตถุดิบและของเตรียมของ 1 จานได้เลย ไม่ต้องสร้างสูตรต่อจานแยก</li>
     </ul>
     <p class="note"><strong>ข้าวสวย น้ำเปล่า น้ำแข็ง</strong> ขายมากที่สุดและสูตรง่ายที่สุด ลงก่อนจะขยับตัวเลขความพร้อมได้เร็ว</p>
 
-    <h2 id="check"><span class="num">07</span>ตรวจว่าลงถูก</h2>
+    <h2 id="options-packaging"><span class="num">07</span>ตัวเลือกเมนู (เช่น แกงส้ม / ร้อน-เย็น) &amp; บรรจุภัณฑ์สั่งกลับบ้าน</h2>
+    <p>ระบบคำนวณสต๊อกต่อ 1 รายการที่ขาย โดยรวม <strong>สูตรหลักของเมนู + ตัวเลือกที่ลูกค้ากด + บรรจุภัณฑ์ตามประเภทบิล</strong> เข้าด้วยกันอัตโนมัติ</p>
+
+    <h3>7.1 เมนูที่มีตัวเลือกเปลี่ยนวัตถุดิบ (กรณีศึกษา: แกงส้ม เลือกหน่อไม้ดอง หรือ ยอดมะพร้าวอ่อน)</h3>
+    <p>ใช้หลักการเดียวกับตัวเลือก <strong>ร้อน / เย็น</strong> ของเครื่องดื่ม คือใส่เฉพาะเบสที่เหมือนกันในสูตรหลัก แล้วให้ตัวเลือกเป็นตัวตัดวัตถุดิบที่ต่างกัน:</p>
+    <ol class="steps">
+        <li><strong>ในสูตรหลักของเมนู (เช่น แกงส้มกุ้ง, แกงส้มปลาสำลี)</strong>: ใส่เฉพาะส่วนผสมยืนพื้น เช่น <code>เบสแกงส้ม 1 สูตร</code> + <code>กุ้งแกงส้ม/กล่อง</code> (หรือปลาสำลี) <strong>ไม่ต้องใส่หน่อไม้ดองหรือยอดมะพร้าวในสูตรหลัก</strong></li>
+        <li><strong>ผูกวัตถุดิบที่ตัวเลือก (ตั้งค่ากลางครั้งเดียว ใช้ได้ทุกเมนูแกงส้ม)</strong>:
+            <ul>
+                <li>ไปที่ <strong>Menu &amp; Lab → Modifiers &amp; Options</strong> เปิดกลุ่มตัวเลือก <code>โปรดเลือกวัตถุดิบ</code></li>
+                <li>ที่ตัวเลือก <strong>ยอดมะพร้าวอ่อน (Coconut Heart)</strong> กดปุ่ม <code>วัตถุดิบ</code> ด้านล่างการ์ด → เพิ่ม <code>ยอดมะพร้าวอ่อน/แพ็ค</code> เลือก <span class="badge">ใช้เพิ่ม</span> กรอก <code>120</code> (g) เลือกขอบเขต <code>ทุกเมนู</code></li>
+                <li>ที่ตัวเลือก <strong>หน่อไม้ดอง (Pickled Bamboo Shoots)</strong> กดปุ่ม <code>วัตถุดิบ</code> → เพิ่ม <code>หน่อไม้ดอง/ถุง (แพ็คแล้ว)</code> เลือก <span class="badge">ใช้เพิ่ม</span> กรอก <code>100</code> (g) เลือกขอบเขต <code>ทุกเมนู</code></li>
+            </ul>
+        </li>
+        <li><strong>กรณีอยากแก้เฉพาะบางเมนู</strong> (เช่น เมนูหนึ่งใช้ยอดมะพร้าวมากกว่าปกติ): เปิดหน้าแก้ไขสูตรของเมนูนั้น เลื่อนลงมาที่กล่อง <strong>"ตัวเลือกที่มีผลกับสต๊อก"</strong> ด้านล่างสุดของหน้าสูตร แล้วกำหนดปริมาณเฉพาะเมนูนั้นได้เลย (ค่าเฉพาะเมนูจะใช้แทนค่ากลางทันที)</li>
+    </ol>
+
+    <h3>7.2 การตัดบรรจุภัณฑ์ (Packaging) อัตโนมัติสำหรับบิลสั่งกลับบ้าน / Pickup / Delivery</h3>
+    <p>ในหน้าปรุงสูตรของเมนู (Recipe Builder) ทุกแถววัตถุดิบจะมีปุ่มเลือกประเภทบิล 3 สถานะ:</p>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>ปุ่มสถานะในแถวสูตร</th><th>ความหมายและการตัดสต๊อก</th><th>การคิดต้นทุน (Food Cost)</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge">ทุกบิล</span></td>
+                    <td>ตัดสต๊อกทุกครั้งที่ขาย ทั้งทานที่ร้านและสั่งกลับบ้าน (เช่น เนื้อสัตว์ ผัก ซอส หรือแก้วพลาสติกที่ใช้ทุกออเดอร์)</td>
+                    <td>รวมใน <strong>ต้นทุนทานร้าน</strong></td>
+                </tr>
+                <tr>
+                    <td><span class="badge plum">กลับบ้าน</span></td>
+                    <td>ตัดสต๊อก<strong>เฉพาะบิลสั่งกลับบ้าน / Pickup / LINE MAN / Delivery</strong> อัตโนมัติ เมื่อทานที่ร้านระบบจะข้ามไม่ตัดสต๊อกรายการนี้</td>
+                    <td>แยกแสดงเป็น <strong>(+กลับบ้าน ฿X.XX)</strong> ไม่ปนกับต้นทุนทานร้าน</td>
+                </tr>
+                <tr>
+                    <td><span class="badge">ทานร้าน</span></td>
+                    <td>ตัดสต๊อกเฉพาะบิลนั่งทานที่ร้าน (ข้ามเมื่อเป็นบิลกลับบ้าน)</td>
+                    <td>รวมใน <strong>ต้นทุนทานร้าน</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <ul>
+        <li><strong>วิธีเพิ่มกล่อง/ถุงในสูตรเมนู</strong>: เปิดสูตรเมนู → ที่คลังวัตถุดิบด้านขวา กดตัวกรอง <span class="badge">บรรจุภัณฑ์</span> → คลิกเลือกกล่อง ช้อนส้อม หรือถุงแกง ระบบจะตั้งค่าแถวนั้นเป็น <span class="badge plum">กลับบ้าน</span> ให้อัตโนมัติทันที</li>
+        <li><strong>วิธีเปลี่ยนหรือแก้ไขหลังบ้าน</strong>: กดสลับปุ่ม <code>ทุกบิล | กลับบ้าน | ทานร้าน</code> ที่ท้ายแถววัตถุดิบในหน้าสูตรเมนู แล้วกด <strong>บันทึกสูตร</strong></li>
+    </ul>
+
+    <h3>7.3 แนวทางจัดการ "เซ็ตผักแถม" ในระบบ</h3>
+    <ul>
+        <li><strong>แบบที่ 1 (ไม่นับสต๊อกรายวัน · แนะนำหากหยิบตามโต๊ะไม่ได้ชั่งเป๊ะ)</strong>: เข้าไปแก้ไขวัตถุดิบผักแถมในคลังสต๊อก ตั้งโหมดการนับเป็น <code>ไม่นับ (none)</code> เพื่อไม่ให้ขึ้นเตือนผิดปกติหลอกในหน้า Stock Recon รายวัน</li>
+        <li><strong>แบบที่ 2 (จัดเป็นชุด/ถุงชัดเจน เช่น แถมไปกับออเดอร์แกงกลับบ้าน)</strong>: สร้างของเตรียมชื่อ <code>เซ็ตผักแถม</code> เลือกโหมด <strong>ตัดทะลุ (Passthrough)</strong> ใส่ปริมาณผักเฉลี่ยต่อ 1 ชุด แล้วนำ <code>เซ็ตผักแถม</code> ไปใส่ในสูตรเมนูแกง (เลือกเป็น <span class="badge">ทุกบิล</span> หรือ <span class="badge plum">กลับบ้าน</span> ตามการเสิร์ฟจริงของร้าน)</li>
+    </ul>
+
+    <h2 id="check"><span class="num">08</span>ตรวจว่าลงถูก</h2>
     <ol class="steps">
         <li><strong>Recipe Lab → แท็บ "ต้องแก้"</strong> แสดงสูตรที่ยังขาดอะไรพร้อมเหตุผล เช่น วัตถุดิบยังไม่มีราคา ของเตรียมยังไม่มีปริมาณต่อสูตร หน่วยในสูตรไม่ตรง</li>
         <li><strong>ต้นทุนต่อแก้ว/จาน</strong> ควรสมเหตุสมผล ถ้าเครื่องดื่มต้นทุนหลักร้อยบาท แปลว่ามีหน่วยหรือปริมาณผิด</li>
@@ -280,7 +367,7 @@
         <li>ระบบบันทึกยอดที่ควรใช้จากการขายไว้แล้ว (ยังไม่ตัดสต๊อกจริง) เมื่อลงสูตรครบจะเทียบกับยอดนับปิดร้าน ถ้าตัวไหนต่างกันมาก แปลว่าสูตรหรือหน่วยของตัวนั้นผิด</li>
     </ol>
 
-    <h2 id="mistakes"><span class="num">08</span>ข้อผิดพลาดที่พบบ่อย</h2>
+    <h2 id="mistakes"><span class="num">09</span>ข้อผิดพลาดที่พบบ่อย</h2>
     <div class="table-wrap wide">
         <table>
             <thead><tr><th>อาการ</th><th>สาเหตุ</th><th>แก้</th></tr></thead>

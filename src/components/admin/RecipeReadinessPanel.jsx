@@ -123,6 +123,10 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
                         <a href="/manuals/recipe_entry_guide.html" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--color-ink)] underline underline-offset-2 whitespace-nowrap">
                             คู่มือการลงสูตร
                         </a>
+                        {' · '}
+                        <a href="/manuals/recipe_stock_recon_manual.pdf" download="IN_THE_HAUS_Recipe_Stock_Manual.pdf" className="font-bold text-[var(--brand-plum)] underline underline-offset-2 whitespace-nowrap">
+                            ดาวน์โหลด PDF
+                        </a>
                     </p>
                 </div>
                 <div className="p-4 sm:min-w-[13rem] flex sm:flex-col justify-between sm:justify-center items-baseline sm:items-end gap-1 bg-[var(--color-paper)]">
