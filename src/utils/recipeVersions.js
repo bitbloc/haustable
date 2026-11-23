@@ -7,14 +7,33 @@ import { supabase } from '../lib/supabaseClient';
 
 const round = (n) => Math.round((Number(n) || 0) * 10000) / 10000;
 
+export const ORDER_SCOPES = Object.freeze({
+    ALL: 'all',
+    TAKEAWAY: 'takeaway',
+    DINE_IN: 'dine_in'
+});
+
+export const ORDER_SCOPE_LABELS = Object.freeze({
+    all: 'ทุกบิล',
+    takeaway: 'กลับบ้าน',
+    dine_in: 'ทานร้าน'
+});
+
+export const normalizeOrderScope = (s) =>
+    s === 'takeaway' || s === 'dine_in' ? s : 'all';
+
 /** Editor lines -> stored rows (names kept so old versions read well after renames). */
-export const snapshotRows = (ingredients = []) => ingredients.map((ing, i) => ({
-    ingredient_id: ing.ingredientId || ing.ingredient_id,
-    name: ing.ingredient?.name || ing.name || '',
-    quantity: round(ing.quantity),
-    unit: ing.unit || ing.ingredient?.usage_unit || '',
-    layer_order: i
-}));
+export const snapshotRows = (ingredients = []) => ingredients.map((ing, i) => {
+    const scope = normalizeOrderScope(ing.orderScope || ing.order_scope);
+    return {
+        ingredient_id: ing.ingredientId || ing.ingredient_id,
+        name: ing.ingredient?.name || ing.name || '',
+        quantity: round(ing.quantity),
+        unit: ing.unit || ing.ingredient?.usage_unit || '',
+        layer_order: i,
+        ...(scope !== 'all' ? { order_scope: scope } : {})
+    };
+});
 
 /**
  * What changed from `before` to `after` (rows as stored).
@@ -29,8 +48,20 @@ export const diffRecipeRows = (before = [], after = []) => {
     const changed = after
         .filter(r => prev.has(key(r)))
         .map(r => ({ r, p: prev.get(key(r)) }))
-        .filter(({ r, p }) => round(r.quantity) !== round(p.quantity) || (r.unit || '') !== (p.unit || ''))
-        .map(({ r, p }) => ({ name: r.name || p.name, from: round(p.quantity), to: round(r.quantity), unit: r.unit || p.unit || '', fromUnit: p.unit || '' }));
+        .filter(({ r, p }) =>
+            round(r.quantity) !== round(p.quantity) ||
+            (r.unit || '') !== (p.unit || '') ||
+            normalizeOrderScope(r.order_scope) !== normalizeOrderScope(p.order_scope)
+        )
+        .map(({ r, p }) => ({
+            name: r.name || p.name,
+            from: round(p.quantity),
+            to: round(r.quantity),
+            unit: r.unit || p.unit || '',
+            fromUnit: p.unit || '',
+            fromScope: normalizeOrderScope(p.order_scope),
+            toScope: normalizeOrderScope(r.order_scope)
+        }));
     return { added, removed, changed };
 };
 

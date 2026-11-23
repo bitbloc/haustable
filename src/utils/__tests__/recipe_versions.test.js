@@ -30,7 +30,19 @@ describe('diffRecipeRows', () => {
         const d = diffRecipeRows(v1, v2);
         expect(d.added.map(r => r.name)).toEqual(['น้ำแข็ง']);
         expect(d.removed.map(r => r.name)).toEqual(['ไซรัป']);
-        expect(d.changed).toEqual([{ name: 'นม', from: 150, to: 180, unit: 'ml', fromUnit: 'ml' }]);
+        expect(d.changed).toEqual([{ name: 'นม', from: 150, to: 180, unit: 'ml', fromUnit: 'ml', fromScope: 'all', toScope: 'all' }]);
+    });
+
+    it('tracks order_scope changes for takeaway packaging lines', () => {
+        const rows = snapshotRows([
+            { ingredientId: 'box', ingredient: { name: 'กล่องข้าว', usage_unit: 'box' }, quantity: 1, unit: 'box', orderScope: 'takeaway' }
+        ]);
+        expect(rows[0].order_scope).toBe('takeaway');
+        const before = [{ ingredient_id: 'box', name: 'กล่องข้าว', quantity: 1, unit: 'box' }];
+        const d = diffRecipeRows(before, rows);
+        expect(d.changed).toHaveLength(1);
+        expect(d.changed[0].fromScope).toBe('all');
+        expect(d.changed[0].toScope).toBe('takeaway');
     });
 
     it('treats a reordered but equal recipe as the same', () => {

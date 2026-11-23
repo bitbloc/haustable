@@ -50,10 +50,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
             const { data: recipeLinks, error: recipeErr } = await supabase
                 .from('recipe_ingredients')
                 .select(`
-                    parent_menu_item_id,
-                    ingredient_id,
-                    quantity,
-                    unit,
+                    *,
                     ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
@@ -87,7 +84,8 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                             ingredient_id: link.ingredient_id,
                             ingredient: link.ingredient,
                             quantity: link.quantity,
-                            unit: link.unit
+                            unit: link.unit,
+                            order_scope: link.order_scope || 'all'
                         });
                     }
                 });
@@ -96,13 +94,22 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
             // 5. Calculate Costs and margins
             const enrichedItems = (data || []).map(item => {
                 const ingredients = recipesByMenu[String(item.id)] || [];
+                const baseIngredients = ingredients.filter(i => i.order_scope !== 'takeaway');
+                const takeawayOnlyIngredients = ingredients.filter(i => i.order_scope === 'takeaway');
+                const lookup = (id) => liveCost.getItem(id) || ingredients.find(i => i.ingredient_id === id)?.ingredient;
                 const breakdown = calculateRecipeCost(
-                    ingredients,
-                    (id) => liveCost.getItem(id) || ingredients.find(i => i.ingredient_id === id)?.ingredient,
+                    baseIngredients,
+                    lookup,
                     { qFactorPercent: item.q_factor_percent || 0 }
+                );
+                const takeawayBreakdown = calculateRecipeCost(
+                    takeawayOnlyIngredients,
+                    lookup,
+                    { qFactorPercent: 0 }
                 );
 
                 const cost = breakdown.totalCost;
+                const takeawayExtraCost = takeawayBreakdown.totalCost;
                 const price = Number(item.price) || 0;
                 const profit = price - cost;
                 const margin = price > 0 ? (profit / price) * 100 : 0;
@@ -111,6 +118,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                 return {
                     ...item,
                     cost,
+                    takeawayExtraCost,
                     profit,
                     margin,
                     costPercent,

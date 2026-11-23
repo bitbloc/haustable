@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabaseClient';
-import { diffRecipeRows } from '../../utils/recipeVersions';
+import { diffRecipeRows, ORDER_SCOPE_LABELS } from '../../utils/recipeVersions';
 
 const RULE = 'border-[var(--color-rule)]';
 const MUTED = 'text-[var(--color-muted)]';
@@ -71,8 +71,14 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                                         {d && (
                                             <p className={`text-[12px] leading-5 mt-1 ${MUTED}`}>
                                                 {[
-                                                    ...d.changed.map(c => `${c.name} ${q(c.from)}${c.fromUnit !== c.unit ? ' ' + c.fromUnit : ''} → ${q(c.to)} ${c.unit}`),
-                                                    ...d.added.map(r => `+ ${r.name} ${q(r.quantity)} ${r.unit}`),
+                                                    ...d.changed.map(c => {
+                                                        const qtyChanged = q(c.from) !== q(c.to) || c.fromUnit !== c.unit;
+                                                        const scopeChanged = c.fromScope && c.toScope && c.fromScope !== c.toScope;
+                                                        const qtyPart = qtyChanged ? ` ${q(c.from)}${c.fromUnit !== c.unit ? ' ' + c.fromUnit : ''} → ${q(c.to)} ${c.unit}` : '';
+                                                        const scopePart = scopeChanged ? ` (${ORDER_SCOPE_LABELS[c.fromScope] || c.fromScope} → ${ORDER_SCOPE_LABELS[c.toScope] || c.toScope})` : '';
+                                                        return `${c.name}${qtyPart}${scopePart}`;
+                                                    }),
+                                                    ...d.added.map(r => `+ ${r.name} ${q(r.quantity)} ${r.unit}${r.order_scope && r.order_scope !== 'all' ? ` (${ORDER_SCOPE_LABELS[r.order_scope] || r.order_scope})` : ''}`),
                                                     ...d.removed.map(r => `− ${r.name}`)
                                                 ].join(' · ') || 'ไม่เปลี่ยนปริมาณ'}
                                             </p>
@@ -92,7 +98,14 @@ export default function RecipeHistoryModal({ parentType, parentId, onRestore, on
                                             <ul className={`mt-2 border ${RULE} divide-y divide-[var(--color-paper-2)]`}>
                                                 {(v.rows || []).map((r, j) => (
                                                     <li key={j} className="grid grid-cols-[1fr_auto] gap-3 px-2.5 py-1.5 text-[13px] leading-5">
-                                                        <span className="break-words min-w-0">{r.name}</span>
+                                                        <span className="break-words min-w-0">
+                                                            {r.name}
+                                                            {r.order_scope && r.order_scope !== 'all' && (
+                                                                <span className={`ml-1.5 text-[11px] font-bold px-1 border ${RULE} ${ACCENT}`}>
+                                                                    {ORDER_SCOPE_LABELS[r.order_scope] || r.order_scope}
+                                                                </span>
+                                                            )}
+                                                        </span>
                                                         <span className=" tabular-nums">{q(r.quantity)} {r.unit}</span>
                                                     </li>
                                                 ))}

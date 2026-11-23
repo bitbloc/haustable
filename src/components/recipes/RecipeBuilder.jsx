@@ -21,7 +21,7 @@ import { askUnitChange } from '../stock/UnitChangeDialog';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
 import { unitFix } from '../../utils/recipeUnits';
-import { saveRecipeVersion } from '../../utils/recipeVersions';
+import { saveRecipeVersion, ORDER_SCOPES, ORDER_SCOPE_LABELS, normalizeOrderScope } from '../../utils/recipeVersions';
 import RecipeHistoryModal from './RecipeHistoryModal';
 import MakroPriceSheet from '../stock/MakroPriceSheet';
 import MenuOptionStockPanel from './MenuOptionStockPanel';
@@ -524,7 +524,8 @@ function RecipeImportModal({ onClose, onImport }) {
                 ingredientId: r.ingredient_id,
                 ingredient: r.ingredient,
                 quantity: r.quantity,
-                unit: r.unit
+                unit: r.unit,
+                orderScope: normalizeOrderScope(r.order_scope)
             }));
 
             onImport(ingredients);
@@ -710,13 +711,14 @@ function PromoteModal({ initialName, onClose, onPromote }) {
 }
 
 // ── 6. Sortable Layer Component (Dieter Rams Minimalist Row) ──
-function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
+function SortableLayer({ id, ingredient, quantity, unit, orderScope = 'all', allowOrderScope = false, cost, unitCost, index, onDelete, onUpdate, onUpdateScope, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition };
     const itemType = getItemType(ingredient);
     const isBaseRecipe = itemType !== ITEM_TYPES.RAW;
     const missingYield = !hasPortionYield(ingredient);
     const [qtyText, setQtyText] = useState(quantity === null || quantity === undefined ? '' : String(quantity));
+    const scope = normalizeOrderScope(orderScope);
 
     useEffect(() => {
         const parsed = parseFloat(String(qtyText).replace(',', '.'));
@@ -748,6 +750,11 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                             {itemType === ITEM_TYPES.PREP ? 'ของเตรียม' : 'สูตร'}
                         </span>
                     )}
+                    {allowOrderScope && scope !== ORDER_SCOPES.ALL && (
+                        <span className="text-[11px] font-sans font-bold px-1.5 leading-5 bg-[var(--brand-plum)] text-[var(--color-paper)] whitespace-nowrap">
+                            เฉพาะ{ORDER_SCOPE_LABELS[scope]}
+                        </span>
+                    )}
                 </div>
                 {missingYield && (
                     <div className="text-xs font-sans leading-5 text-[var(--brand-plum)]">
@@ -764,8 +771,42 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                 </button>
             </div>
 
-            {/* Quantity, cost and delete stay together; on narrow screens they drop below the name */}
-            <div className="ml-auto flex items-center gap-2.5 flex-shrink-0">
+            {/* Order scope, quantity, cost and delete stay together; on narrow screens they drop below the name */}
+            <div className="ml-auto flex flex-wrap items-center gap-2 flex-shrink-0">
+            {allowOrderScope && (
+                <div
+                    className="inline-flex border border-[var(--color-rule)] divide-x divide-[var(--color-rule)] flex-shrink-0"
+                    role="group"
+                    aria-label={`ประเภทบิลที่ตัด ${ingredient.name}`}
+                    title="กำหนดว่าจะตัดสต๊อกวัตถุดิบนี้ในบิลประเภทใด"
+                >
+                    {[
+                        [ORDER_SCOPES.ALL, 'ทุกบิล'],
+                        [ORDER_SCOPES.TAKEAWAY, 'กลับบ้าน'],
+                        [ORDER_SCOPES.DINE_IN, 'ทานร้าน']
+                    ].map(([val, label]) => {
+                        const active = scope === val;
+                        const activeCls = val === ORDER_SCOPES.TAKEAWAY
+                            ? 'bg-[var(--brand-plum)] text-[var(--color-paper)]'
+                            : 'bg-[var(--color-ink)] text-[var(--color-paper)]';
+                        return (
+                            <button
+                                key={val}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => onUpdateScope?.(id, val)}
+                                className={`h-7 px-2 font-sans text-[11px] font-bold whitespace-nowrap cursor-pointer transition-colors ${
+                                    active
+                                        ? activeCls
+                                        : 'bg-[var(--color-paper)] text-[var(--color-muted)] hover:bg-[var(--color-paper-2)]'
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
             {/* Quantity Input */}
             <div className="flex items-center gap-1 flex-shrink-0">
                 <input 
@@ -819,6 +860,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     
     // Cost State
     const [totalCost, setTotalCost] = useState(0);
+    const [takeawayExtraCost, setTakeawayExtraCost] = useState(0);
     const [currentPrice, setCurrentPrice] = useState(initialPrice || 0);
 
     // Sub-modals State
@@ -897,7 +939,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         ingredientId: r.ingredient_id,
                         ingredient: r.ingredient,
                         quantity: r.quantity,
-                        unit: effectiveUnit
+                        unit: effectiveUnit,
+                        orderScope: normalizeOrderScope(r.order_scope)
                     };
                 });
                 setIngredients(mapped);
@@ -959,18 +1002,31 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     );
     const resolveItem = (id, fallback) => liveCost.getItem(id) || fallback;
 
-    // Recalculate Total Cost
+    // Recalculate Total Cost (dine-in base cost + takeaway extra cost)
     useEffect(() => {
-        const breakdown = calculateRecipeCost(ingredients.map(i => ({
+        const lookup = (id) => liveCost.getItem(id) || ingredients.find(x => x.ingredientId === id)?.ingredient;
+        const baseItems = parentType === 'menu'
+            ? ingredients.filter(i => normalizeOrderScope(i.orderScope) !== ORDER_SCOPES.TAKEAWAY)
+            : ingredients;
+        const takeawayOnlyItems = parentType === 'menu'
+            ? ingredients.filter(i => normalizeOrderScope(i.orderScope) === ORDER_SCOPES.TAKEAWAY)
+            : [];
+
+        const baseBreakdown = calculateRecipeCost(baseItems.map(i => ({
             ingredient_id: i.ingredientId,
             quantity: i.quantity,
             unit: i.unit
-        })), (id) => {
-            return liveCost.getItem(id) || ingredients.find(x => x.ingredientId === id)?.ingredient;
-        });
+        })), lookup);
 
-        setTotalCost(breakdown.totalCost);
-    }, [ingredients, liveCost]);
+        const takeawayBreakdown = calculateRecipeCost(takeawayOnlyItems.map(i => ({
+            ingredient_id: i.ingredientId,
+            quantity: i.quantity,
+            unit: i.unit
+        })), lookup);
+
+        setTotalCost(baseBreakdown.totalCost);
+        setTakeawayExtraCost(takeawayBreakdown.totalCost);
+    }, [ingredients, liveCost, parentType]);
 
     const isPrep = parentType === 'stock' && portionForm.itemType === ITEM_TYPES.PREP;
     const yieldQtyNum = parseFloat(portionForm.yieldQty);
@@ -983,16 +1039,25 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             return;
         }
 
+        const autoScope = parentType === 'menu' && String(item.category || '').toLowerCase() === 'packaging'
+            ? ORDER_SCOPES.TAKEAWAY
+            : ORDER_SCOPES.ALL;
+
         const newLink = {
             id: 'temp-' + Date.now(),
             ingredientId: item.id,
             ingredient: item,
             quantity: 1,
-            unit: item.usage_unit || 'unit'
+            unit: item.usage_unit || 'unit',
+            orderScope: autoScope
         };
 
         setIngredients(prev => [...prev, newLink]);
-        toast.success(`เพิ่ม "${item.name}" แล้ว`);
+        toast.success(
+            autoScope === ORDER_SCOPES.TAKEAWAY
+                ? `เพิ่ม "${item.name}" (ตั้งเป็นเฉพาะกลับบ้านอัตโนมัติ)`
+                : `เพิ่ม "${item.name}" แล้ว`
+        );
     };
 
     const handleSave = async () => {
@@ -1011,7 +1076,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 ingredient_id: ing.ingredientId,
                 quantity: ing.quantity,
                 unit: ing.unit,
-                layer_order: idx
+                layer_order: idx,
+                ...(parentType === 'menu' ? { order_scope: normalizeOrderScope(ing.orderScope) } : {})
             }));
 
             if (parentType === 'menu') {
@@ -1031,7 +1097,13 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
                     if (payloadItems.length > 0) {
                         const payloads = payloadItems.map(p => ({ [queryField]: parentId, ...p }));
-                        await supabase.from('recipe_ingredients').insert(payloads);
+                        const { error: insErr } = await supabase.from('recipe_ingredients').insert(payloads);
+                        if (insErr && /order_scope|PGRST204/i.test(insErr.message || '')) {
+                            const legacyPayloads = payloadItems.map(({ order_scope: _s, ...rest }) => ({ [queryField]: parentId, ...rest }));
+                            await supabase.from('recipe_ingredients').insert(legacyPayloads);
+                        } else if (insErr) {
+                            throw insErr;
+                        }
                     }
                 }
 
@@ -1286,9 +1358,11 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             const notAlreadyAdded = !ingredients.some(existing => existing.ingredientId === i.id);
             const matchesType = itemFilterType === 'all'
                 ? true
-                : itemFilterType === 'base'
-                    ? getItemType(i) !== ITEM_TYPES.RAW
-                    : getItemType(i) === ITEM_TYPES.RAW;
+                : itemFilterType === 'packaging'
+                    ? String(i.category || '').toLowerCase() === 'packaging'
+                    : itemFilterType === 'base'
+                        ? getItemType(i) !== ITEM_TYPES.RAW
+                        : getItemType(i) === ITEM_TYPES.RAW;
             return matchesSearch && notAlreadyAdded && matchesType;
         });
     }, [pickableItems, searchTerm, ingredients, itemFilterType]);
@@ -1320,7 +1394,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                             ingredientId: item.ingredientId,
                             ingredient: item.ingredient,
                             quantity: item.quantity,
-                            unit: item.unit
+                            unit: item.unit,
+                            orderScope: normalizeOrderScope(item.orderScope)
                         }));
                         setIngredients(prev => [...prev, ...newItems]);
                         toast.success(`นำเข้า ${newItems.length} รายการแล้ว`);
@@ -1433,8 +1508,17 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                         {/* Total Cost Display */}
                         <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-1 text-right">
-                            <span className="text-xs text-[var(--color-neutral)] block font-bold">ต้นทุนรวม</span>
-                            <span className="text-base font-bold text-[var(--color-ink)] tabular-nums">฿{totalCost.toFixed(2)}</span>
+                            <span className="text-xs text-[var(--color-neutral)] block font-bold">
+                                {parentType === 'menu' && takeawayExtraCost > 0 ? 'ต้นทุนทานร้าน' : 'ต้นทุนรวม'}
+                            </span>
+                            <div className="flex items-baseline justify-end gap-1.5">
+                                <span className="text-base font-bold text-[var(--color-ink)] tabular-nums">฿{totalCost.toFixed(2)}</span>
+                                {parentType === 'menu' && takeawayExtraCost > 0 && (
+                                    <span className="text-xs font-bold text-[var(--brand-plum)] tabular-nums" title="ต้นทุนบรรจุภัณฑ์เมื่อสั่งกลับบ้าน / Delivery">
+                                        (+กลับบ้าน ฿{takeawayExtraCost.toFixed(2)})
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1572,10 +1656,12 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                             key={item.id} 
                                             index={idx}
                                             {...item}
+                                            allowOrderScope={parentType === 'menu'}
                                             unitCost={unitCost}
                                             cost={unitCost * item.quantity}
                                             onDelete={(id) => setIngredients(prev => prev.filter(x => x.id !== id))}
                                             onUpdate={(id, qty) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, quantity: qty } : x))}
+                                            onUpdateScope={(id, nextScope) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, orderScope: nextScope } : x))}
                                             onEditStock={setEditingStockItem}
                                         />
                                     );
@@ -1681,7 +1767,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         options={[
                             { key: 'all', label: 'ทั้งหมด', count: pickableItems.length },
                             { key: 'raw', label: 'วัตถุดิบ', count: pickableItems.filter(i => getItemType(i) === ITEM_TYPES.RAW).length },
-                            { key: 'base', label: parentType === 'menu' ? 'ของเตรียม/สูตร' : 'ของเตรียม', count: pickableItems.filter(i => getItemType(i) !== ITEM_TYPES.RAW).length }
+                            { key: 'base', label: parentType === 'menu' ? 'ของเตรียม/สูตร' : 'ของเตรียม', count: pickableItems.filter(i => getItemType(i) !== ITEM_TYPES.RAW).length },
+                            ...(parentType === 'menu'
+                                ? [{ key: 'packaging', label: 'บรรจุภัณฑ์', count: pickableItems.filter(i => String(i.category || '').toLowerCase() === 'packaging').length }]
+                                : [])
                         ]}
                         value={itemFilterType}
                         onChange={setItemFilterType}
@@ -1751,7 +1840,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         (version.rows || []).forEach((r, i) => {
                             const item = byId.get(r.ingredient_id);
                             if (!item) { lost += 1; return; }
-                            restored.push({ id: `restore-${version.id}-${i}`, ingredientId: item.id, ingredient: item, quantity: r.quantity, unit: r.unit || item.usage_unit || 'unit' });
+                            restored.push({
+                                id: `restore-${version.id}-${i}`,
+                                ingredientId: item.id,
+                                ingredient: item,
+                                quantity: r.quantity,
+                                unit: r.unit || item.usage_unit || 'unit',
+                                orderScope: normalizeOrderScope(r.order_scope)
+                            });
                         });
                         setIngredients(restored);
                         setIsHistoryOpen(false);
