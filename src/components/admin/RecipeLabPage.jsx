@@ -61,7 +61,7 @@ function CreateFormulaModal({ onClose, onCreate, initialFolder, folders = [] }) 
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <p className="font-sans text-[12px] leading-5 text-[var(--color-muted)]">
-                        เบส / ของเตรียม ทำเป็น portion แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ ส่วนสูตรของเมนูแต่ละจานหรือแก้ว ใส่ที่แท็บ "เมนู"
+                        เบส / ของเตรียม ทำเป็นสูตร แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ ส่วนสูตรของเมนูแต่ละจานหรือแก้ว ใส่ที่แท็บ "เมนู"
                     </p>
 
                     <div>
@@ -226,7 +226,7 @@ function ProduceModal({ item, onClose, onDone }) {
             logStaffActivity('stock', 'prep_production', {
                 staffName: performedBy,
                 amount: portionsNum,
-                reason: `ผลิตของเตรียม: ${item.name} ${portionsNum} portion`,
+                reason: `ผลิตของเตรียม: ${item.name} ${portionsNum} สูตร`,
                 metadata: {
                     module: 'stock',
                     item_id: item.id,
@@ -258,7 +258,7 @@ function ProduceModal({ item, onClose, onDone }) {
                         ผลิต {item.name}
                     </h3>
                     <p className="font-sans text-[12px] leading-5 text-[var(--color-muted)]">
-                        1 portion ได้ {perPortion.toLocaleString()} {item.usage_unit}
+                        1 สูตร ได้ {perPortion.toLocaleString()} {item.usage_unit}
                     </p>
                 </div>
 
@@ -266,7 +266,7 @@ function ProduceModal({ item, onClose, onDone }) {
                     <div className="grid grid-cols-2 divide-x divide-[var(--color-rule)] border-b border-[var(--color-rule)]">
                         <div className="p-4 space-y-1.5">
                             <label htmlFor="produce-portions" className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block">
-                                ทำกี่ portion
+                                ทำกี่สูตร
                             </label>
                             <input
                                 id="produce-portions"
@@ -299,10 +299,10 @@ function ProduceModal({ item, onClose, onDone }) {
                     </div>
 
                     <div className="p-4 space-y-1 font-sans text-[12px] leading-5 text-[var(--color-muted)] border-b border-[var(--color-rule)]">
-                        <p>ตัดวัตถุดิบตามสูตร {validPortions ? portionsNum : 0} portion</p>
+                        <p>ตัดวัตถุดิบตามสูตร {validPortions ? portionsNum : 0} สูตร</p>
                         <p>
                             เพิ่มสต๊อก {item.name}{' '}
-                            <span className="tabular-nums font-bold text-[var(--color-ink)]">+{Number(added.toFixed(4))} portion</span>
+                            <span className="tabular-nums font-bold text-[var(--color-ink)]">+{Number(added.toFixed(4))} สูตร</span>
                         </p>
                         <p className="text-[var(--color-neutral)]">เว้นช่อง "ได้จริง" ไว้ถ้าได้ตามสูตร</p>
                     </div>
@@ -789,7 +789,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                 เบส / ของเตรียม
                             </h2>
                             <p className="text-[13px] text-[var(--color-neutral)] tabular-nums">
-                                ทำเป็น portion แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ สูตรของแต่ละเมนูอยู่ที่แท็บ "เมนู"
+                                ทำเป็นสูตร แล้วเก็บสต๊อก เช่น ซอส เบสชา นมมิกซ์ สูตรของแต่ละเมนูอยู่ที่แท็บ "เมนู"
                             </p>
                         </div>
                     </div>
@@ -1095,7 +1095,7 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                     <div className="text-xs font-sans leading-5 text-[var(--color-neutral)] mt-0.5">
                                                         ส่วนผสม {item.ingredientCount} รายการ
                                                         {isPrepItem && isStockedItem(item) && (
-                                                            <> · <span className="whitespace-nowrap">คงเหลือ <span className="tabular-nums font-bold text-[var(--color-ink)]">{Number(Number(item.current_quantity || 0).toFixed(2))}</span> portion</span></>
+                                                            <> · <span className="whitespace-nowrap">คงเหลือ <span className="tabular-nums font-bold text-[var(--color-ink)]">{Number(Number(item.current_quantity || 0).toFixed(2))}</span> สูตร</span></>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1106,11 +1106,11 @@ export default function RecipeLabPage({ isEmbedded = false, onOpenMethod = null 
                                                 <div className="border border-[var(--color-paper-3)] bg-[var(--color-paper)] p-2.5 flex flex-wrap justify-between items-center gap-x-2">
                                                     <div className="min-w-0">
                                                         <span className="font-sans text-xs font-bold leading-5 text-[var(--color-neutral)] block whitespace-nowrap">
-                                                            {isPrepItem ? 'ต้นทุนต่อ portion' : 'ต้นทุนต่อแก้ว/จาน'}
+                                                            {isPrepItem ? 'ต้นทุนต่อสูตร' : 'ต้นทุนต่อแก้ว/จาน'}
                                                         </span>
                                                         {isPrepItem && yieldKnown && (
                                                             <span className="text-xs tabular-nums text-[var(--color-muted)] block">
-                                                                1 portion = {usagePerPortion(item).toLocaleString()} {item.usage_unit} · ฿{item.unitCost.toFixed(4)}/{item.usage_unit}
+                                                                1 สูตร = {usagePerPortion(item).toLocaleString()} {item.usage_unit} · ฿{item.unitCost.toFixed(4)}/{item.usage_unit}
                                                             </span>
                                                         )}
                                                     </div>

@@ -68,7 +68,7 @@ const UNIT_TH: Record<string, string> = {
   bottle: 'ขวด', box: 'กล่อง', can: 'กระป๋อง', gallon: 'แกลลอน', pack: 'แพ็ค', bag: 'ถุง',
   pcs: 'ชิ้น', piece: 'ชิ้น', kg: 'กก.', g: 'กรัม', l: 'ลิตร', litre: 'ลิตร', liter: 'ลิตร',
   ml: 'มล.', roll: 'ม้วน', unit: 'หน่วย', 'กก': 'กก.', 'แกลอน': 'แกลลอน',
-  crate: 'ลัง', carton: 'ลัง', glass: 'แก้ว', portion: 'ส่วน', dozen: 'โหล',
+  crate: 'ลัง', carton: 'ลัง', glass: 'แก้ว', portion: 'สูตร', potion: 'สูตร', dozen: 'โหล',
 }
 
 // Units that are counted one by one, and units that hold several of them

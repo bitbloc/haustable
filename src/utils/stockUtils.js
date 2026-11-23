@@ -137,8 +137,9 @@ export function stockQtyParts(item) {
     const countedUnit = String(item.unit || item.pack_unit || '').trim().toLowerCase();
     if (countedUnit !== 'gallon' && ['mass', 'volume'].includes(getUnitType(countedUnit))) {
         const qty = Number(Number(item.current_quantity).toFixed(4)) || 0;
+        const maxDigits = qty > 0 && Math.abs(qty) < 0.01 ? 4 : 2;
         return {
-            main: qty.toLocaleString('th-TH', { maximumFractionDigits: 2 }),
+            main: qty.toLocaleString('th-TH', { maximumFractionDigits: maxDigits }),
             unit, open: null, openPercent: 0, total: null, totalValue: null, totalUnit: null
         };
     }

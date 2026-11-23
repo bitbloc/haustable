@@ -10,12 +10,14 @@ import { calculateRealUnitCost } from '../../utils/costUtils';
 import { postStockMovement, STOCK_REASONS } from '../../utils/stockLedger';
 import { convertRecipesForUnitChange, describeUnitChange } from '../../utils/recipeUnitChange';
 import { unitSetupWarnings } from '../../utils/stockHealth';
-import { usagePerStockUnit } from '../../utils/recipeGraph';
+import { usagePerStockUnit, unitCode, ITEM_TYPES, PREP_MODES } from '../../utils/recipeGraph';
+import { displayUnit } from '../../utils/stockCount';
+import { logStaffActivity } from '../../utils/auditLogger';
 import { rescaleForCountUnitChange } from '../../utils/stockUnitChange';
 import { askUnitChange } from './UnitChangeDialog';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
-    const isEdit = !!item;
+    const isEdit = Boolean(item?.id);
     const [loading, setLoading] = useState(false);
     const [searching, setSearching] = useState(false);
     
@@ -41,10 +43,14 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         cost_price: 0,      // Price per Pack
         pack_size: 1,       // Qty per Pack
         pack_unit: item?.pack_unit || 'unit',    // Unit bought/counted
+        unit: item?.unit || item?.pack_unit || 'unit',
         usage_unit: item?.usage_unit || 'unit',    // Unit used in recipe
         conversion_factor: item?.conversion_factor || 1, // 1 pack_unit = X usage_unit
         yield_percent: 100, // Usable %
         is_base_recipe: false,
+        item_type: item?.item_type || (item?.is_base_recipe ? ITEM_TYPES.PREP : ITEM_TYPES.RAW),
+        prep_mode: item?.prep_mode || null,
+        portion_yield_qty: item?.portion_yield_qty ?? null,
         is_sweetener: item?.is_sweetener || false // scaled by the sweetness option of a sale
     });
     
@@ -52,28 +58,34 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
     useEffect(() => {
         if (item) {
+            const resolvedType = item.item_type === ITEM_TYPES.PREP || item.item_type === ITEM_TYPES.RECIPE
+                ? ITEM_TYPES.PREP
+                : (item.is_base_recipe ? ITEM_TYPES.PREP : ITEM_TYPES.RAW);
             setFormData({
                 name: item.name || '',
                 category: item.category || 'veg',
-                current_quantity: item.current_quantity || 0,
-                min_stock_threshold: item.min_stock_threshold || 0,
-                reorder_point: item.reorder_point || 0,
-                par_level: item.par_level || 0,
+                current_quantity: item.current_quantity ?? 0,
+                min_stock_threshold: item.min_stock_threshold ?? 0,
+                reorder_point: item.reorder_point ?? 0,
+                par_level: item.par_level ?? 0,
                 image_url: item.image_url || '',
                 barcode: item.barcode || '',
                 makro_id: item.makro_id || '',
                 makro_sku: item.makro_sku || '',
                 
-                cost_price: item.cost_price || 0,
-                pack_size: item.pack_size || 1,
+                cost_price: item.cost_price ?? 0,
+                pack_size: item.pack_size ?? 1,
                 pack_unit: item.pack_unit || 'unit',
                 // The counting unit as stored: an old "counted in bottles, bought in ml" item keeps it
                 // until someone presses "use the buying unit", so a price edit never re-means the stock
                 unit: item.unit || item.pack_unit || 'unit',
                 usage_unit: item.usage_unit || item.unit || 'unit', // migration fallback
-                conversion_factor: item.conversion_factor || 1,
-                yield_percent: item.yield_percent || 100,
-                is_base_recipe: item.is_base_recipe || false,
+                conversion_factor: item.conversion_factor ?? 1,
+                yield_percent: item.yield_percent ?? 100,
+                is_base_recipe: resolvedType === ITEM_TYPES.PREP,
+                item_type: resolvedType,
+                prep_mode: item.prep_mode || (resolvedType === ITEM_TYPES.PREP ? PREP_MODES.STOCKED : null),
+                portion_yield_qty: item.portion_yield_qty ?? null,
                 is_sweetener: item.is_sweetener || false
             });
         }
@@ -83,7 +95,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const handleUnitChange = (type, value) => {
         const newData = { ...formData, [type]: value };
         // Counted in the buying unit: changing the buying unit changes the counting unit with it
-        if (type === 'pack_unit' && (!formData.unit || formData.unit === formData.pack_unit)) newData.unit = value;
+        if (type === 'pack_unit' && !formData.is_base_recipe && (!formData.unit || unitCode(formData.unit) === unitCode(formData.pack_unit))) {
+            newData.unit = value;
+        }
         
         // Suggest Factor if either unit changed
         if (type === 'pack_unit' || type === 'usage_unit') {
@@ -97,23 +111,36 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const realCost = calculateRealUnitCost(formData);
 
     const handleSave = async () => {
+        const numOr = (v, fallback = 0) => {
+            if (v === '' || v === null || v === undefined) return fallback;
+            const n = parseFloat(v);
+            return Number.isFinite(n) ? n : NaN;
+        };
+        const costPriceVal = numOr(formData.cost_price, 0);
+        const packSizeVal = numOr(formData.pack_size, NaN);
+        const conversionFactorVal = numOr(formData.conversion_factor, NaN);
+        const yieldPercentVal = numOr(formData.yield_percent, NaN);
+        const currentQtyVal = numOr(formData.current_quantity, 0);
+        const minThresholdVal = numOr(formData.min_stock_threshold, 0);
+        const reorderPointVal = numOr(formData.reorder_point, 0);
+        const parLevelVal = numOr(formData.par_level, 0);
+
         // Enforce validations
         if (!formData.name || !formData.name.trim()) {
             toast.error('กรุณากรอกชื่อสินค้าวัตถุดิบ');
             return;
         }
-        if (parseFloat(formData.cost_price) < 0) {
+        if (isNaN(costPriceVal) || costPriceVal < 0) {
             toast.error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท');
             return;
         }
-        if (!formData.pack_size || parseFloat(formData.pack_size) <= 0) {
+        if (isNaN(packSizeVal) || packSizeVal <= 0) {
             toast.error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0');
             return;
         }
         
         // Check unit compatibility
         const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
-        const conversionFactorVal = parseFloat(formData.conversion_factor);
         if (!isCompatible) {
             if (formData.conversion_factor === '' || formData.conversion_factor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
                 toast.error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)');
@@ -126,21 +153,59 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
             }
         }
         
-        if (parseFloat(formData.yield_percent) < 1 || parseFloat(formData.yield_percent) > 100) {
+        if (isNaN(yieldPercentVal) || yieldPercentVal < 1 || yieldPercentVal > 100) {
             toast.error('Yield % ต้องอยู่ระหว่าง 1 ถึง 100%');
             return;
         }
-        if (parseFloat(formData.min_stock_threshold) < 0 || parseFloat(formData.reorder_point) < 0 || parseFloat(formData.par_level) < 0) {
+        if (isNaN(minThresholdVal) || isNaN(reorderPointVal) || isNaN(parLevelVal) || minThresholdVal < 0 || reorderPointVal < 0 || parLevelVal < 0) {
             toast.error('จำนวนสต็อกสำหรับระดับแจ้งเตือนต้องไม่ต่ำกว่า 0');
             return;
         }
 
+        // Guard against accidentally demoting a prep back to raw (which hides it from Recipe Lab)
+        if (isEdit && item.item_type === ITEM_TYPES.PREP && !formData.is_base_recipe) {
+            if (!confirm('ยกเลิกสถานะ "ทำเองในร้าน (สูตร)"? รายการนี้จะถูกย้ายออกจากแท็บเบส/ของเตรียมใน Recipe Lab')) {
+                return;
+            }
+        }
+
         setLoading(true);
         try {
-            const payload = { 
-                ...formData,
-                unit: formData.unit || formData.pack_unit, // counted in the buying unit unless an older item says otherwise
-                barcode: formData.barcode ? formData.barcode.trim() : null
+            const isPrep = Boolean(formData.is_base_recipe);
+            // Shelf items made in-house are ALWAYS item_type='prep' (stocked), never 'recipe'
+            // (setting 'recipe' wipes unit setup and hides the item from /staff/stock).
+            const nextItemType = isPrep ? ITEM_TYPES.PREP : ITEM_TYPES.RAW;
+            const nextPrepMode = isPrep ? (formData.prep_mode || PREP_MODES.STOCKED) : null;
+            const nextYieldQty = isPrep
+                ? (conversionFactorVal > 0 ? conversionFactorVal : (item?.portion_yield_qty ?? null))
+                : null;
+
+            const payload = {
+                name: formData.name.trim(),
+                category: formData.category && formData.category !== 'all' && formData.category !== 'restock'
+                    ? formData.category
+                    : (item?.category || 'other'),
+                current_quantity: currentQtyVal,
+                min_stock_threshold: minThresholdVal,
+                reorder_point: reorderPointVal,
+                par_level: parLevelVal,
+                image_url: formData.image_url || '',
+                barcode: formData.barcode ? formData.barcode.trim() : null,
+                makro_id: formData.makro_id || '',
+                makro_sku: formData.makro_sku || '',
+                cost_price: costPriceVal,
+                pack_size: isPrep ? 1 : packSizeVal,
+                pack_unit: formData.pack_unit || 'unit',
+                unit: formData.unit || formData.pack_unit || 'unit',
+                usage_unit: formData.usage_unit || 'unit',
+                conversion_factor: conversionFactorVal,
+                yield_percent: yieldPercentVal,
+                is_base_recipe: isPrep,
+                item_type: nextItemType,
+                prep_mode: nextPrepMode,
+                portion_yield_qty: nextYieldQty,
+                is_sweetener: formData.is_sweetener === true,
+                updated_at: new Date().toISOString()
             };
             
             let error;
@@ -178,6 +243,29 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                      const note = describeUnitChange(res, item.usage_unit, payload.usage_unit);
                      if (note) (res.failed || res.manual ? toast.warning : toast.info)(note, { duration: 8000 });
                  }
+                 if (!err) {
+                     const priceChanged = Number(item.cost_price || 0) !== Number(payload.cost_price || 0);
+                     const parts = [];
+                     if (priceChanged) parts.push(`ราคา ฿${Number(item.cost_price || 0)} → ฿${Number(payload.cost_price || 0)}`);
+                     if (item.unit !== payload.unit || item.pack_unit !== payload.pack_unit || item.usage_unit !== payload.usage_unit || Number(item.conversion_factor) !== Number(payload.conversion_factor)) {
+                         parts.push(`หน่วย ${displayUnit(payload.pack_unit)} = ${payload.conversion_factor} ${displayUnit(payload.usage_unit)}`);
+                     }
+                     logStaffActivity('stock', 'stock_item_update', {
+                         amount: Number(payload.cost_price) || 0,
+                         reason: `แก้ไขวัตถุดิบ: ${payload.name}${parts.length ? ` (${parts.join(' · ')})` : ''}`,
+                         metadata: {
+                             module: 'stock',
+                             item_id: item.id,
+                             item_name: payload.name,
+                             old_cost_price: item.cost_price,
+                             new_cost_price: payload.cost_price,
+                             old_unit: item.unit,
+                             new_unit: payload.unit,
+                             old_item_type: item.item_type,
+                             new_item_type: payload.item_type
+                         }
+                     });
+                 }
             } else {
                  // Create item with current_quantity: 0 first
                  const initialQty = payload.current_quantity || 0;
@@ -189,6 +277,21 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                  
                  error = err;
                  
+                 if (!err && newItem) {
+                     logStaffActivity('stock', 'stock_item_create', {
+                         amount: Number(payload.cost_price) || 0,
+                         reason: `เพิ่มวัตถุดิบใหม่: ${payload.name} (฿${Number(payload.cost_price || 0)})`,
+                         metadata: {
+                             module: 'stock',
+                             item_id: newItem.id,
+                             item_name: payload.name,
+                             cost_price: payload.cost_price,
+                             unit: payload.unit,
+                             item_type: payload.item_type
+                         }
+                     });
+                 }
+
                  // If successful and initialQty > 0, write audit transaction to sync
                  if (!err && newItem && initialQty > 0) {
                      const initNote = 'จำนวนสต็อกเริ่มต้นเมื่อสร้างสินค้าวัตถุดิบ';
@@ -270,6 +373,14 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     unit: pick.units.packUnit,
                     usage_unit: pick.units.usageUnit,
                     conversion_factor: pick.units.conversionFactor
+                }
+            };
+        } else if (pick.appliedUnits && pick.units && (!formData.unit || unitCode(formData.unit) === unitCode(formData.pack_unit))) {
+            pick = {
+                ...pick,
+                patch: {
+                    ...pick.patch,
+                    unit: pick.units.packUnit
                 }
             };
         }
@@ -370,8 +481,15 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const inputCls = `w-full h-11 px-3 rounded-md border border-[var(--color-rule)] bg-[var(--color-paper)] ${ink} text-[15px] outline-none transition-colors focus:border-[var(--color-ink)] disabled:bg-[var(--color-paper-2)] disabled:text-[var(--color-neutral)] disabled:cursor-not-allowed`;
     const unitSuffix = 'text-xs text-[var(--color-neutral)] whitespace-nowrap';
     const sectionTitle = `text-sm font-semibold ${ink}`;
-    const numberChange = (key) => (e) => setFormData({ ...formData, [key]: e.target.value === '' ? 0 : parseFloat(e.target.value) });
-    const unitLabel = (u) => (THAI_UNITS.find(x => x.value === u)?.label || u || '').replace(/\s*\(.*\)\s*$/, '');
+    const numberChange = (key) => (e) => setFormData(prev => ({ ...prev, [key]: e.target.value }));
+    const unitLabel = (u) => displayUnit(u);
+    const selectableCategories = categories.filter(c => c.id !== 'restock' && c.id !== 'all');
+    const hasCustomCategory = Boolean(formData.category && !selectableCategories.some(c => c.id === formData.category));
+    const showUnitMismatchBanner = !formData.is_base_recipe
+        && formData.item_type !== ITEM_TYPES.PREP
+        && formData.unit
+        && formData.pack_unit
+        && unitCode(formData.unit) !== unitCode(formData.pack_unit);
 
     return (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-[oklch(21.78%_0_0/0.45)] backdrop-blur-sm p-0 sm:p-4">
@@ -446,8 +564,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         <div key={text} className={`border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] pl-3 pr-3 py-2.5 text-sm leading-6 ${ink}`} role="status">{text}</div>
                     ))}
 
-                    {/* Counting unit differs from buying unit */}
-                    {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (
+                    {/* Counting unit differs from buying unit (raw items only; preps count per สูตร) */}
+                    {showUnitMismatchBanner && (
                         <div className="border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] pl-3 pr-3 py-2.5 space-y-2">
                             <p className={`text-sm ${ink}`}>
                                 หน่วยนับ <strong>{unitLabel(formData.unit)}</strong> ไม่ตรงกับหน่วยซื้อ <strong>{unitLabel(formData.pack_unit)}</strong> จุดสั่งซื้ออาจแจ้งเตือนผิด
@@ -498,7 +616,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         value={formData.category}
                                         onChange={e => setFormData({ ...formData, category: e.target.value })}
                                     >
-                                        {categories.filter(c => c.id !== 'restock').map(c => (
+                                        {hasCustomCategory && (
+                                            <option value={formData.category}>{formData.category}</option>
+                                        )}
+                                        {selectableCategories.map(c => (
                                             <option key={c.id} value={c.id}>{c.label}</option>
                                         ))}
                                     </select>
@@ -519,9 +640,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </div>
                             </div>
 
-                            {/* Stock levels, all in the buying unit */}
+                            {/* Stock levels, in the item's counting unit */}
                             <section className="space-y-3 pt-5 border-t border-[var(--color-paper-3)]">
-                                <h3 className={sectionTitle}>ระดับสต๊อก <span className="font-normal text-[var(--color-neutral)]">· นับเป็น {unitLabel(formData.pack_unit)}</span></h3>
+                                <h3 className={sectionTitle}>ระดับสต๊อก <span className="font-normal text-[var(--color-neutral)]">· นับเป็น {unitLabel(formData.unit || formData.pack_unit)}</span></h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     {[
                                         { key: 'current_quantity', label: 'คงเหลือตอนนี้', disabled: isEdit },
@@ -537,6 +658,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             <input
                                                 id={`stock-${f.key}`}
                                                 type="number"
+                                                step="any"
                                                 inputMode="decimal"
                                                 disabled={f.disabled}
                                                 className={`${inputCls} tabular-nums`}
@@ -546,6 +668,24 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         </div>
                                     ))}
                                 </div>
+                                {Number(formData.min_stock_threshold) > 0 && Number(formData.reorder_point) > 0 && Number(formData.min_stock_threshold) > Number(formData.reorder_point) && (
+                                    <div className="border-l-2 border-[var(--brand-plum)] bg-[var(--color-paper)] pl-3 pr-2 py-2 flex items-center justify-between gap-2">
+                                        <p className="text-xs text-[var(--color-ink)] leading-relaxed">
+                                            จุดวิกฤต ({formData.min_stock_threshold}) มากกว่าจุดสั่งซื้อ ({formData.reorder_point}) — โดยปกติจุดวิกฤตจะน้อยกว่าจุดสั่งซื้อ
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({
+                                                ...prev,
+                                                min_stock_threshold: prev.reorder_point,
+                                                reorder_point: prev.min_stock_threshold
+                                            }))}
+                                            className="shrink-0 text-xs font-semibold text-[var(--brand-plum)] hover:underline cursor-pointer"
+                                        >
+                                            สลับค่า
+                                        </button>
+                                    </div>
+                                )}
                                 {isEdit && (
                                     <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
                                         แก้จำนวนคงเหลือได้จากปุ่มรับเข้า / เบิกออกที่หน้าสต๊อก เพื่อให้ประวัติถูกต้อง
@@ -595,20 +735,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             {/* 1. Buying */}
                             <section className="space-y-3">
                                 <h3 className={sectionTitle}>1 · การซื้อ</h3>
-                                <label className="flex items-start gap-3 p-3 rounded-md border border-[var(--color-rule)] cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="mt-0.5 w-4 h-4 accent-[var(--color-ink)]"
-                                        checked={formData.is_base_recipe}
-                                        onChange={e => setFormData({ ...formData, is_base_recipe: e.target.checked })}
-                                    />
-                                    <span>
-                                        <span className={`block text-sm font-medium ${ink}`}>ทำเองในร้าน (สูตรพื้นฐาน)</span>
-                                        <span className="block text-xs text-[var(--color-neutral)]">ผลิตจากวัตถุดิบอื่น เช่น ซอส พริกแกง</span>
-                                    </span>
-                                </label>
                                 <div>
-                                    <label className={labelCls} htmlFor="stock-cost">ราคาซื้อต่อแพ็ค (บาท)</label>
+                                    <label className={labelCls} htmlFor="stock-cost">
+                                        {formData.is_base_recipe ? 'ต้นทุนต่อ 1 สูตร (บาท)' : 'ราคาซื้อต่อแพ็ค (บาท)'}
+                                    </label>
                                     <input
                                         id="stock-cost"
                                         type="number"
@@ -704,15 +834,15 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
                                     ต่ำกว่า 100% เมื่อมีส่วนที่ทิ้ง เช่น เปลือก กาก ต้นทุนต่อหน่วยจริงจะสูงขึ้น
                                 </p>
-                                {formData.yield_percent < 80 && (
+                                {formData.yield_percent !== '' && Number(formData.yield_percent) < 80 && (
                                     <p className="text-sm text-[var(--brand-plum)]">
                                         Yield ต่ำกว่า 80% ตรวจว่าสูญเสียมากขนาดนี้จริงหรือไม่
                                     </p>
                                 )}
                             </section>
 
-                            {/* Sweetener: the sweetness option of a drink scales this ingredient */}
-                            <section className="pt-5 border-t border-[var(--color-paper-3)]">
+                            {/* Sweetener & In-house prep flags (kept below price so nobody taps them by accident) */}
+                            <section className="space-y-3 pt-5 border-t border-[var(--color-paper-3)]">
                                 <label className="flex items-start gap-3 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -724,6 +854,28 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         <span className={`block text-sm font-medium ${ink}`}>สารให้ความหวาน</span>
                                         <span className="block text-xs text-[var(--color-neutral)] leading-relaxed">
                                             เช่น น้ำเชื่อม น้ำตาล นมข้นหวาน น้ำผึ้ง เมื่อลูกค้าเลือก "หวานน้อย" ระบบตัดสต๊อกรายการนี้ตามตัวคูณของตัวเลือก
+                                        </span>
+                                    </span>
+                                </label>
+                                <label className="flex items-start gap-3 p-3 rounded-md border border-[var(--color-rule)] cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-0.5 w-4 h-4 accent-[var(--color-ink)]"
+                                        checked={formData.is_base_recipe}
+                                        onChange={e => {
+                                            const checked = e.target.checked;
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                is_base_recipe: checked,
+                                                item_type: checked ? ITEM_TYPES.PREP : ITEM_TYPES.RAW,
+                                                prep_mode: checked ? (prev.prep_mode || PREP_MODES.STOCKED) : null
+                                            }));
+                                        }}
+                                    />
+                                    <span>
+                                        <span className={`block text-sm font-medium ${ink}`}>ทำเองในร้าน (ของเตรียม / สูตร)</span>
+                                        <span className="block text-xs text-[var(--color-neutral)] leading-relaxed">
+                                            ผลิตจากวัตถุดิบอื่น เช่น ซอส เบสชา พริกแกง (ยังแสดงในหน้าคลังตามปกติ และผูกสูตรส่วนผสมได้ใน Recipe Lab)
                                         </span>
                                     </span>
                                 </label>
@@ -754,6 +906,17 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     try {
                                         const { error } = await supabase.from('stock_items').delete().eq('id', item.id);
                                         if (error) throw error;
+                                        logStaffActivity('stock', 'stock_item_delete', {
+                                            amount: Number(item.current_quantity) || 0,
+                                            reason: `ลบวัตถุดิบ: ${item.name} (คงเหลือเดิม ${item.current_quantity ?? 0} ${displayUnit(item.unit)})`,
+                                            metadata: {
+                                                module: 'stock',
+                                                item_id: item.id,
+                                                item_name: item.name,
+                                                current_quantity: item.current_quantity,
+                                                cost_price: item.cost_price
+                                            }
+                                        });
                                         toast.success('ลบสินค้าเรียบร้อย');
                                         onUpdate();
                                         onClose();

@@ -4,7 +4,13 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { ITEM_TYPE_LABELS, getItemType } from '../../utils/recipeGraph'
-import { planChoiceIngredientSave, validateChoiceIngredients } from '../../utils/optionIngredients'
+import { displayUnit } from '../../utils/stockCount'
+import {
+    parseOptionAmountInput,
+    planChoiceIngredientSave,
+    stepOptionAmount,
+    validateChoiceIngredients
+} from '../../utils/optionIngredients'
 
 const INK = 'text-[var(--color-ink)]'
 const MUTED = 'text-[var(--color-muted)]'
@@ -183,10 +189,10 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                             <ul className="space-y-2">
                                 {draft.map(row => {
                                     const item = itemsById.get(row.stock_item_id)
-                                    const unit = item?.usage_unit || item?.unit || ''
+                                    const unit = displayUnit(item?.usage_unit || item?.unit || '')
                                     const err = errors[row.key]
                                     return (
-                                        <li key={row.key} className={`border ${err ? 'border-red-300' : RULE} rounded-xs bg-[var(--color-paper)] p-3`}>
+                                        <li key={row.key} className={`border ${err ? 'border-[var(--error-red)]' : RULE} rounded-xs bg-[var(--color-paper)] p-3`}>
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <p className={`text-sm font-bold leading-snug ${INK}`}>{item?.name || 'ไม่พบวัตถุดิบ'}</p>
@@ -197,23 +203,26 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                 <button
                                                     type="button"
                                                     onClick={() => removeRow(row.key)}
-                                                    className={`shrink-0 tabular-nums text-xs px-2 py-1 ${NEUTRAL} hover:text-red-700 rounded-xs cursor-pointer ${FOCUS}`}
+                                                    className={`shrink-0 tabular-nums text-xs px-2 py-1 ${NEUTRAL} hover:text-[var(--error-red)] rounded-xs cursor-pointer ${FOCUS}`}
                                                 >
                                                     ลบ
                                                 </button>
                                             </div>
 
-                                            <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_1fr] gap-2 mt-3 items-center">
-                                                <div className={`flex border ${RULE} rounded-xs overflow-hidden text-xs font-bold`} role="group" aria-label="เพิ่มหรือลด">
-                                                    {[['plus', 'ใช้เพิ่ม'], ['minus', 'ใช้น้อยลง']].map(([value, label]) => (
+                                            <div className="flex flex-wrap items-center gap-2 mt-3">
+                                                <div className={`inline-flex border ${RULE} divide-x divide-[var(--color-rule)] rounded-xs overflow-hidden text-xs font-bold shrink-0`} role="group" aria-label="เพิ่มหรือลด">
+                                                    {[
+                                                        ['plus', 'ใช้เพิ่ม', 'bg-[var(--color-ink)] text-[var(--color-paper)]'],
+                                                        ['minus', 'ใช้น้อยลง', 'bg-[var(--brand-plum)] text-[var(--color-paper)]']
+                                                    ].map(([value, label, activeCls]) => (
                                                         <button
                                                             key={value}
                                                             type="button"
                                                             aria-pressed={row.sign === value}
                                                             onClick={() => updateRow(row.key, { sign: value })}
-                                                            className={`px-3 py-2 cursor-pointer transition-colors duration-150 ${FOCUS} ${
+                                                            className={`h-11 px-3 cursor-pointer touch-manipulation transition-colors duration-150 ${FOCUS} ${
                                                                 row.sign === value
-                                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                                    ? activeCls
                                                                     : `bg-[var(--color-paper)] ${MUTED} hover:bg-[var(--color-paper-2)]`
                                                             }`}
                                                         >
@@ -221,29 +230,48 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <label className={`flex items-center border ${RULE} rounded-xs bg-[var(--color-paper)] focus-within:border-[var(--brand-plum)]`}>
+                                                <div className={`flex flex-1 min-w-[164px] items-center border ${RULE} divide-x divide-[var(--color-rule)] rounded-xs bg-[var(--color-paper)] focus-within:border-[var(--brand-plum)]`}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateRow(row.key, { amount: stepOptionAmount(row.amount, -1) })}
+                                                        className={`w-11 h-11 shrink-0 flex items-center justify-center text-lg font-semibold leading-none ${INK} hover:bg-[var(--color-paper-2)] active:bg-[var(--color-paper-3)] cursor-pointer touch-manipulation ${FOCUS}`}
+                                                        aria-label={`ลดจำนวน ${item?.name || ''} 1`}
+                                                    >
+                                                        −
+                                                    </button>
                                                     <input
                                                         type="text"
                                                         inputMode="decimal"
+                                                        autoComplete="off"
                                                         value={row.amount}
-                                                        onChange={e => updateRow(row.key, { amount: e.target.value })}
+                                                        onChange={e => {
+                                                            const parsed = parseOptionAmountInput(e.target.value, row.sign)
+                                                            updateRow(row.key, { sign: parsed.sign, amount: parsed.amount })
+                                                        }}
                                                         placeholder="0"
-                                                        aria-label={`จำนวน ${item?.name || ''}`}
-                                                        className={`w-full min-w-0 bg-transparent px-3 py-2 text-sm tabular-nums outline-none ${INK}`}
+                                                        aria-label={`จำนวน ${item?.name || ''} (${unit})`}
+                                                        className={`flex-1 min-w-[52px] w-full h-11 bg-transparent px-2 text-center text-base font-medium tabular-nums outline-none ${INK}`}
                                                     />
-                                                    <span className={`pr-3 text-xs shrink-0 ${NEUTRAL}`}>{unit}</span>
-                                                </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateRow(row.key, { amount: stepOptionAmount(row.amount, 1) })}
+                                                        className={`w-11 h-11 shrink-0 flex items-center justify-center text-lg font-semibold leading-none ${INK} hover:bg-[var(--color-paper-2)] active:bg-[var(--color-paper-3)] cursor-pointer touch-manipulation ${FOCUS}`}
+                                                        aria-label={`เพิ่มจำนวน ${item?.name || ''} 1`}
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
                                                 <select
                                                     value={row.menu_item_id ?? ''}
                                                     onChange={e => updateRow(row.key, { menu_item_id: e.target.value === '' ? null : Number(e.target.value) })}
                                                     aria-label="ใช้กับเมนู"
-                                                    className={`col-span-2 sm:col-span-1 w-full border ${RULE} rounded-xs bg-[var(--color-paper)] px-2 py-2 text-xs ${INK} ${FOCUS}`}
+                                                    className={`w-full sm:w-auto sm:min-w-[140px] h-11 border ${RULE} rounded-xs bg-[var(--color-paper)] px-2.5 text-sm ${INK} ${FOCUS}`}
                                                 >
                                                     <option value="">ทุกเมนู</option>
                                                     {menus.map(m => <option key={m.id} value={m.id}>เฉพาะ {m.name}</option>)}
                                                 </select>
                                             </div>
-                                            {err && <p className="text-[13px] text-red-700 mt-2">{err}</p>}
+                                            {err && <p className="text-[13px] text-[var(--error-red)] mt-2">{err}</p>}
                                         </li>
                                     )
                                 })}
@@ -258,7 +286,7 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="พิมพ์ชื่อวัตถุดิบ เช่น ช็อต, นมโอ๊ต"
-                                    className={`w-full border ${RULE} rounded-xs bg-[var(--color-paper)] px-3 py-2 text-sm ${INK} outline-none focus:border-[var(--brand-plum)]`}
+                                    className={`w-full min-h-[44px] border ${RULE} rounded-xs bg-[var(--color-paper)] px-3 py-2 text-base sm:text-sm ${INK} outline-none focus:border-[var(--brand-plum)]`}
                                 />
                                 {matches.length > 0 && (
                                     <ul className={`mt-1 border ${RULE} rounded-xs bg-[var(--color-paper)] divide-y divide-[var(--color-paper-3)]`}>
@@ -267,10 +295,10 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                 <button
                                                     type="button"
                                                     onClick={() => addItem(i)}
-                                                    className={`w-full text-left px-3 py-2 flex items-baseline justify-between gap-3 hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}
+                                                    className={`w-full min-h-[44px] text-left px-3 py-2.5 flex items-baseline justify-between gap-3 hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}
                                                 >
                                                     <span className={`text-sm leading-snug ${INK}`}>{i.name}</span>
-                                                    <span className={`tabular-nums text-xs shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {i.usage_unit || i.unit || '-'}</span>
+                                                    <span className={`tabular-nums text-xs shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {displayUnit(i.usage_unit || i.unit || '') || '-'}</span>
                                                 </button>
                                             </li>
                                         ))}

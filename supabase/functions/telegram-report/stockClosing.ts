@@ -33,7 +33,7 @@ const TH_DAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 const UNIT_LABELS: Record<string, string> = {
   unit: 'ชิ้น', piece: 'ชิ้น', pcs: 'ชิ้น', bottle: 'ขวด', can: 'กระป๋อง', pack: 'แพ็ค', box: 'กล่อง',
-  bag: 'ถุง', kg: 'กก.', g: 'ก.', l: 'ล.', ml: 'มล.', gallon: 'แกลลอน', portion: 'ส่วน',
+  bag: 'ถุง', kg: 'กก.', g: 'ก.', l: 'ล.', ml: 'มล.', gallon: 'แกลลอน', portion: 'สูตร', potion: 'สูตร',
   crate: 'ลัง', carton: 'ลัง', glass: 'แก้ว', dozen: 'โหล',
 }
 // Same rule as the LINE summary (line-webhook/stockSummary.ts piecesPerUnit)

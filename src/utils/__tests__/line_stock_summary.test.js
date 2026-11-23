@@ -53,6 +53,7 @@ describe('quarter display', () => {
 
     it('speaks Thai units and categories', () => {
         expect(unitLabel('gallon')).toBe('แกลลอน')
+        expect(unitLabel('portion')).toBe('สูตร')
         expect(unitLabel('ม้วน')).toBe('ม้วน')
         expect(categoryKey('Homemade').label).toBe('ทำเองในร้าน')
         expect(categoryKey(null).label).toBe('ไม่ระบุหมวด')

@@ -35,6 +35,7 @@ const UNIT_FACTORS = {
     'crate': 1,
     'carton': 1,
     'glass': 1,
+    'portion': 1,
 };
 
 // Thai Unit Labels
@@ -84,7 +85,7 @@ export const getUnitType = (unit) => {
     // Fallback classification from keys
     const massKeys = ['kg', 'g', 'mg', 'ขีด', 'lb', 'oz'];
     const volumeKeys = ['l', 'ml', 'gallon', 'oz_fl', 'cup', 'tbsp', 'tsp', 'shot'];
-    const countKeys = ['unit', 'pcs', 'box', 'pack', 'can', 'bottle', 'bag', 'crate', 'carton', 'glass'];
+    const countKeys = ['unit', 'pcs', 'box', 'pack', 'can', 'bottle', 'bag', 'crate', 'carton', 'glass', 'portion', 'สูตร'];
 
     if (massKeys.includes(normalized)) return 'mass';
     if (volumeKeys.includes(normalized)) return 'volume';

@@ -49,10 +49,17 @@ export const defaultCountKind = (date = new Date()) => {
     return 'spot';
 };
 
-const UNIT_LABELS = Object.fromEntries(THAI_UNITS.map(u => [u.value, u.label.replace(/\s*\(.*\)\s*$/, '')]));
+const UNIT_LABELS = {
+    ...Object.fromEntries(THAI_UNITS.map(u => [u.value, u.label.replace(/\s*\(.*\)\s*$/, '')])),
+    portion: 'สูตร',
+    potion: 'สูตร'
+};
 
-/** Thai label for a stored unit code ('bottle' -> 'ขวด'); free-text units pass through. */
-export const displayUnit = (unit) => UNIT_LABELS[unit] || unit || '';
+/** Thai label for a stored unit code ('bottle' -> 'ขวด', 'portion' -> 'สูตร'); free-text units pass through. */
+export const displayUnit = (unit) => {
+    if (!unit) return '';
+    return UNIT_LABELS[unit] || UNIT_LABELS[String(unit).trim().toLowerCase()] || unit;
+};
 
 /** Parse a count typed by staff; returns null for empty or invalid input. */
 export const parseCount = (raw) => {

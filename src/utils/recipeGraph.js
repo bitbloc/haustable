@@ -62,7 +62,8 @@ const UNIT_CODES = {
     gallon: 'gallon', 'แกลลอน': 'gallon', 'แกลอน': 'gallon',
     bottle: 'bottle', 'ขวด': 'bottle', can: 'can', 'กระป๋อง': 'can', pcs: 'pcs', piece: 'pcs', 'ชิ้น': 'pcs',
     pack: 'pack', 'แพ็ค': 'pack', 'แพค': 'pack', crate: 'crate', 'ลัง': 'crate', box: 'box', 'กล่อง': 'box',
-    bag: 'bag', 'ถุง': 'bag', glass: 'glass', 'แก้ว': 'glass'
+    bag: 'bag', 'ถุง': 'bag', glass: 'glass', 'แก้ว': 'glass',
+    portion: 'portion', potion: 'portion', 'สูตร': 'portion'
 };
 export const unitCode = (u) => { const k = String(u || '').trim().toLowerCase(); return UNIT_CODES[k] || k; };
 // Weights and volumes in their base unit (g or ml). A "gallon" is a jug of any size in a Thai
@@ -186,7 +187,7 @@ export const getRecipeIssues = (item, rows = [], itemsById = new Map()) => {
     const issues = [];
     const type = getItemType(item);
     if (type === ITEM_TYPES.PREP && !hasPortionYield(item)) {
-        issues.push({ code: 'no_portion_yield', message: 'ยังไม่ได้ระบุปริมาณที่ได้ต่อ portion' });
+        issues.push({ code: 'no_portion_yield', message: 'ยังไม่ได้ระบุปริมาณที่ได้ต่อสูตร' });
     }
     if (type !== ITEM_TYPES.RAW && rows.length === 0) {
         issues.push({ code: 'no_ingredients', message: 'ยังไม่มีส่วนผสม' });
@@ -201,7 +202,7 @@ export const getRecipeIssues = (item, rows = [], itemsById = new Map()) => {
             issues.push({ code: 'recipe_inside', message: `${ing.name}: เป็นสูตรต่อแก้ว/จาน ใช้เป็นส่วนผสมไม่ได้` });
         }
         if (getItemType(ing) === ITEM_TYPES.PREP && !hasPortionYield(ing)) {
-            issues.push({ code: 'ingredient_no_yield', message: `${ing.name}: ยังไม่ได้ระบุปริมาณต่อ portion` });
+            issues.push({ code: 'ingredient_no_yield', message: `${ing.name}: ยังไม่ได้ระบุปริมาณต่อสูตร` });
         }
         if (row.unit && ing.usage_unit && row.unit !== 'unit' && row.unit !== ing.usage_unit) {
             issues.push({ code: 'unit_mismatch', message: `${ing.name}: สูตรใช้ ${row.unit} แต่หน่วยใช้คือ ${ing.usage_unit}` });
