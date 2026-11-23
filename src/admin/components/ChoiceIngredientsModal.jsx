@@ -25,6 +25,7 @@ const toDraft = (row) => ({
     key: nextKey(),
     id: row.id || null,
     stock_item_id: row.stock_item_id || '',
+    linked_menu_item_id: row.linked_menu_item_id ?? null,
     menu_item_id: row.menu_item_id ?? null,
     sign: Number(row.quantity) < 0 ? 'minus' : 'plus',
     amount: row.quantity ? String(Math.abs(Number(row.quantity))) : ''
@@ -39,21 +40,24 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
     const [missing, setMissing] = useState(false)
     const [saving, setSaving] = useState(false)
     const [stockItems, setStockItems] = useState([])
+    const [allMenus, setAllMenus] = useState([])
     const [menus, setMenus] = useState([])
     const [existing, setExisting] = useState([])
     const [draft, setDraft] = useState([])
     const [errors, setErrors] = useState({})
     const [search, setSearch] = useState('')
+    const [addMode, setAddMode] = useState('stock') // 'stock' | 'menu'
     const searchRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
         const load = async () => {
             setLoading(true)
-            const [rowsRes, itemsRes, linkRes] = await Promise.all([
-                supabase.from('option_choice_ingredients').select('id, choice_id, menu_item_id, stock_item_id, quantity').eq('choice_id', choice.id),
+            const [rowsRes, itemsRes, linkRes, allMenusRes] = await Promise.all([
+                supabase.from('option_choice_ingredients').select('*').eq('choice_id', choice.id),
                 supabase.from('stock_items').select('*').order('name'),
-                supabase.from('menu_item_options').select('menu_item_id').eq('option_group_id', group.id)
+                supabase.from('menu_item_options').select('menu_item_id').eq('option_group_id', group.id),
+                supabase.from('menu_items').select('id, name, category').order('name')
             ])
             if (cancelled) return
             if (rowsRes.error) {
@@ -63,17 +67,18 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                 setLoading(false)
                 return
             }
-            const menuIds = [...new Set((linkRes.data || []).map(l => l.menu_item_id).filter(Boolean))]
-            let menuRows = []
-            if (menuIds.length) {
-                const { data } = await supabase.from('menu_items').select('id, name').in('id', menuIds).order('name')
-                menuRows = data || []
-            }
+            const menuList = allMenusRes.data || []
+            const menuIds = new Set((linkRes.data || []).map(l => Number(l.menu_item_id)).filter(Boolean))
+            const menuRows = menuList.filter(m => menuIds.has(Number(m.id)))
             if (cancelled) return
             setExisting(rowsRes.data || [])
             setDraft((rowsRes.data || []).map(toDraft))
             setStockItems(itemsRes.data || [])
+            setAllMenus(menuList)
             setMenus(menuRows)
+            if ((rowsRes.data || []).some(r => r.linked_menu_item_id != null)) {
+                setAddMode('menu')
+            }
             setLoading(false)
         }
         load()
@@ -87,12 +92,16 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
     }, [onClose, saving])
 
     const itemsById = useMemo(() => new Map(stockItems.map(i => [i.id, i])), [stockItems])
+    const menusById = useMemo(() => new Map(allMenus.map(m => [Number(m.id), m])), [allMenus])
 
     const matches = useMemo(() => {
         const q = search.trim().toLowerCase()
         if (!q) return []
+        if (addMode === 'menu') {
+            return allMenus.filter(m => String(m.name || '').toLowerCase().includes(q)).slice(0, 8)
+        }
         return stockItems.filter(i => String(i.name || '').toLowerCase().includes(q)).slice(0, 8)
-    }, [search, stockItems])
+    }, [search, stockItems, allMenus, addMode])
 
     const updateRow = (key, patch) => {
         setDraft(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)))
@@ -106,6 +115,12 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
 
     const addItem = (item) => {
         setDraft(prev => [...prev, { ...toDraft({ stock_item_id: item.id }), sign: 'plus' }])
+        setSearch('')
+        searchRef.current?.focus()
+    }
+
+    const addLinkedMenu = (menu) => {
+        setDraft(prev => [...prev, { ...toDraft({ linked_menu_item_id: Number(menu.id), quantity: 1 }), sign: 'plus' }])
         setSearch('')
         searchRef.current?.focus()
     }
@@ -188,15 +203,31 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
 
                             <ul className="space-y-2">
                                 {draft.map(row => {
-                                    const item = itemsById.get(row.stock_item_id)
-                                    const unit = displayUnit(item?.usage_unit || item?.unit || '')
+                                    const isLinkedMenu = row.linked_menu_item_id !== null && row.linked_menu_item_id !== undefined && row.linked_menu_item_id !== ''
+                                    const linkedMenu = isLinkedMenu ? menusById.get(Number(row.linked_menu_item_id)) : null
+                                    const item = !isLinkedMenu ? itemsById.get(row.stock_item_id) : null
+                                    const unit = isLinkedMenu ? 'ที่' : displayUnit(item?.usage_unit || item?.unit || '')
+                                    const titleName = isLinkedMenu
+                                        ? (linkedMenu?.name || `เมนู #${row.linked_menu_item_id}`)
+                                        : (item?.name || 'ไม่พบวัตถุดิบ')
                                     const err = errors[row.key]
                                     return (
                                         <li key={row.key} className={`border ${err ? 'border-[var(--error-red)]' : RULE} rounded-xs bg-[var(--color-paper)] p-3`}>
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
-                                                    <p className={`text-sm font-bold leading-snug ${INK}`}>{item?.name || 'ไม่พบวัตถุดิบ'}</p>
-                                                    {item && (
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {isLinkedMenu && (
+                                                            <span className="text-[11px] font-bold px-1.5 py-0.2 bg-[var(--brand-plum)] text-[var(--color-paper)]">
+                                                                สูตรเมนูขาย
+                                                            </span>
+                                                        )}
+                                                        <p className={`text-sm font-bold leading-snug ${INK}`}>{titleName}</p>
+                                                    </div>
+                                                    {isLinkedMenu ? (
+                                                        <p className={`tabular-nums text-[13px] mt-0.5 ${NEUTRAL}`}>
+                                                            ตัดวัตถุดิบตามสูตรของเมนูนี้ · หน่วยใช้ ที่ (เสิร์ฟ)
+                                                        </p>
+                                                    ) : item && (
                                                         <p className={`tabular-nums text-[13px] mt-0.5 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(item)] || ''} · หน่วยใช้ {unit || '-'}</p>
                                                     )}
                                                 </div>
@@ -277,15 +308,39 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                 })}
                             </ul>
 
-                            <div className="mt-4">
-                                <label htmlFor="choice-ingredient-search" className={`block tabular-nums text-xs mb-1.5 ${NEUTRAL}`}>เพิ่มวัตถุดิบ</label>
+                            <div className="mt-4 space-y-2">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <label htmlFor="choice-ingredient-search" className={`block tabular-nums text-xs font-bold ${NEUTRAL}`}>
+                                        {addMode === 'menu' ? 'ผูกตัดตามสูตรเมนูขาย (สำหรับเซตคู่เครื่องดื่ม/อาหาร)' : 'เพิ่มวัตถุดิบ / ของเตรียม'}
+                                    </label>
+                                    <div className={`inline-flex border ${RULE} divide-x divide-[var(--color-rule)] text-xs font-bold`} role="group" aria-label="ประเภทที่จะผูก">
+                                        {[
+                                            ['stock', 'วัตถุดิบ/ของเตรียม'],
+                                            ['menu', 'สูตรเมนูขาย']
+                                        ].map(([mode, label]) => (
+                                            <button
+                                                key={mode}
+                                                type="button"
+                                                aria-pressed={addMode === mode}
+                                                onClick={() => { setAddMode(mode); setSearch(''); searchRef.current?.focus() }}
+                                                className={`h-8 px-2.5 cursor-pointer transition-colors ${
+                                                    addMode === mode
+                                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                        : `bg-[var(--color-paper)] ${MUTED} hover:bg-[var(--color-paper-2)]`
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                                 <input
                                     id="choice-ingredient-search"
                                     ref={searchRef}
                                     type="search"
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    placeholder="พิมพ์ชื่อวัตถุดิบ เช่น ช็อต, นมโอ๊ต"
+                                    placeholder={addMode === 'menu' ? 'พิมพ์ชื่อเมนูขาย เช่น ชาไทย, อเมริกาโน่, นมชมพู' : 'พิมพ์ชื่อวัตถุดิบ เช่น ช็อต, นมโอ๊ต, ยอดมะพร้าว'}
                                     className={`w-full min-h-[44px] border ${RULE} rounded-xs bg-[var(--color-paper)] px-3 py-2 text-base sm:text-sm ${INK} outline-none focus:border-[var(--brand-plum)]`}
                                 />
                                 {matches.length > 0 && (
@@ -294,18 +349,24 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                             <li key={i.id}>
                                                 <button
                                                     type="button"
-                                                    onClick={() => addItem(i)}
+                                                    onClick={() => addMode === 'menu' ? addLinkedMenu(i) : addItem(i)}
                                                     className={`w-full min-h-[44px] text-left px-3 py-2.5 flex items-baseline justify-between gap-3 hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}
                                                 >
                                                     <span className={`text-sm leading-snug ${INK}`}>{i.name}</span>
-                                                    <span className={`tabular-nums text-xs shrink-0 ${NEUTRAL}`}>{ITEM_TYPE_LABELS[getItemType(i)] || ''} · {displayUnit(i.usage_unit || i.unit || '') || '-'}</span>
+                                                    <span className={`tabular-nums text-xs shrink-0 ${NEUTRAL}`}>
+                                                        {addMode === 'menu'
+                                                            ? `เมนูขาย · ${i.category || '1 ที่'}`
+                                                            : `${ITEM_TYPE_LABELS[getItemType(i)] || ''} · ${displayUnit(i.usage_unit || i.unit || '') || '-'}`}
+                                                    </span>
                                                 </button>
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                                 {search.trim() && matches.length === 0 && (
-                                    <p className={`text-[13px] mt-2 ${NEUTRAL}`}>ไม่พบวัตถุดิบชื่อนี้</p>
+                                    <p className={`text-[13px] mt-2 ${NEUTRAL}`}>
+                                        {addMode === 'menu' ? 'ไม่พบเมนูชื่อนี้' : 'ไม่พบวัตถุดิบชื่อนี้'}
+                                    </p>
                                 )}
                             </div>
 

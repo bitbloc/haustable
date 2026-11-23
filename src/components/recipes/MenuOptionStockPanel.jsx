@@ -32,23 +32,29 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
     const [loading, setLoading] = useState(true);
     const [groups, setGroups] = useState([]);
     const [existing, setExisting] = useState([]);   // option_choice_ingredients rows for these choices
-    const [drafts, setDrafts] = useState({});       // choiceId -> [{ key, id, stock_item_id, sign, amount }]
+    const [allMenus, setAllMenus] = useState([]);
+    const [drafts, setDrafts] = useState({});       // choiceId -> [{ key, id, stock_item_id, linked_menu_item_id, sign, amount }]
     const [dirty, setDirty] = useState({});
     const [saving, setSaving] = useState(null);
     const [search, setSearch] = useState({});       // choiceId -> text
     const [rowErrors, setRowErrors] = useState({}); // row.key -> message
 
     const itemsById = useMemo(() => new Map(stockItems.map(i => [i.id, i])), [stockItems]);
+    const menusById = useMemo(() => new Map(allMenus.map(m => [Number(m.id), m])), [allMenus]);
 
     const load = useCallback(async () => {
         setLoading(true);
         const { data: links } = await supabase.from('menu_item_options').select('option_group_id').eq('menu_item_id', menuId);
         const groupIds = [...new Set((links || []).map(l => l.option_group_id).filter(Boolean))];
         if (!groupIds.length) { setGroups([]); setExisting([]); setDrafts({}); setRowErrors({}); setLoading(false); return; }
-        const { data: gs } = await supabase.from('option_groups').select('id, name, option_choices (*)').in('id', groupIds);
+        const [{ data: gs }, { data: menuList }] = await Promise.all([
+            supabase.from('option_groups').select('id, name, option_choices (*)').in('id', groupIds),
+            supabase.from('menu_items').select('id, name, category').order('name')
+        ]);
+        setAllMenus(menuList || []);
         const choiceIds = (gs || []).flatMap(g => (g.option_choices || []).map(c => c.id));
         const { data: rows } = choiceIds.length
-            ? await supabase.from('option_choice_ingredients').select('id, choice_id, menu_item_id, stock_item_id, quantity').in('choice_id', choiceIds)
+            ? await supabase.from('option_choice_ingredients').select('*').in('choice_id', choiceIds)
             : { data: [] };
         const sorted = (gs || []).map(g => ({
             ...g,
@@ -59,7 +65,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
         const d = {};
         for (const c of sorted.flatMap(g => g.option_choices)) {
             d[c.id] = (rows || []).filter(r => r.choice_id === c.id && String(r.menu_item_id) === String(menuId)).map(r => ({
-                key: key(), id: r.id, stock_item_id: r.stock_item_id, menu_item_id: menuId,
+                key: key(), id: r.id, stock_item_id: r.stock_item_id || '', linked_menu_item_id: r.linked_menu_item_id ?? null, menu_item_id: menuId,
                 sign: Number(r.quantity) < 0 ? 'minus' : 'plus', amount: String(Math.abs(Number(r.quantity)))
             }));
         }
@@ -225,7 +231,8 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                         const rows = drafts[c.id] || [];
                         const generic = existing.filter(r => r.choice_id === c.id && r.menu_item_id === null);
                         const q = (search[c.id] || '').trim().toLowerCase();
-                        const matches = q ? stockItems.filter(i => String(i.name || '').toLowerCase().includes(q)).slice(0, 6) : [];
+                        const stockMatches = q ? stockItems.filter(i => String(i.name || '').toLowerCase().includes(q)).slice(0, 5) : [];
+                        const menuMatches = q ? allMenus.filter(m => String(m.name || '').toLowerCase().includes(q) && String(m.id) !== String(menuId)).slice(0, 3) : [];
                         return (
                             <div key={c.id} className="space-y-2">
                                 <div className="flex items-center justify-between gap-2">
@@ -240,21 +247,30 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                 {rows.length === 0 && (
                                     <p className={`text-xs ${NEUTRAL} leading-relaxed`}>
                                         {generic.length
-                                            ? `ใช้ค่ากลางทุกเมนู: ${generic.map(r => `${Number(r.quantity) > 0 ? '+' : '−'}${fmt(Math.abs(r.quantity))} ${unitLabel(itemsById.get(r.stock_item_id)?.usage_unit)} ${itemsById.get(r.stock_item_id)?.name || ''}`).join(' · ')}`
+                                            ? `ใช้ค่ากลางทุกเมนู: ${generic.map(r => {
+                                                if (r.linked_menu_item_id != null) {
+                                                    const m = menusById.get(Number(r.linked_menu_item_id));
+                                                    return `${Number(r.quantity) > 0 ? '+' : '−'}${fmt(Math.abs(r.quantity))} ที่ สูตรเมนู: ${m?.name || `#${r.linked_menu_item_id}`}`;
+                                                }
+                                                return `${Number(r.quantity) > 0 ? '+' : '−'}${fmt(Math.abs(r.quantity))} ${unitLabel(itemsById.get(r.stock_item_id)?.usage_unit)} ${itemsById.get(r.stock_item_id)?.name || ''}`;
+                                            }).join(' · ')}`
                                             : 'ไม่ตัดสต๊อกเพิ่ม'}
                                     </p>
                                 )}
                                 {rows.length > 0 && (
                                     <div className={`divide-y divide-[var(--color-rule)] border-t border-b ${RULE}`}>
                                         {rows.map(r => {
-                                            const it = itemsById.get(r.stock_item_id);
-                                            const unit = unitLabel(it?.usage_unit || it?.unit);
+                                            const isLinkedMenu = r.linked_menu_item_id !== null && r.linked_menu_item_id !== undefined && r.linked_menu_item_id !== '';
+                                            const linkedMenu = isLinkedMenu ? menusById.get(Number(r.linked_menu_item_id)) : null;
+                                            const it = !isLinkedMenu ? itemsById.get(r.stock_item_id) : null;
+                                            const unit = isLinkedMenu ? 'ที่' : unitLabel(it?.usage_unit || it?.unit);
+                                            const rowName = isLinkedMenu ? `สูตรเมนู: ${linkedMenu?.name || `#${r.linked_menu_item_id}`}` : (it?.name || 'วัตถุดิบ');
                                             const err = rowErrors[r.key];
                                             return (
                                                 <div key={r.key} className="py-2.5 space-y-2">
                                                     <div className="flex items-start justify-between gap-2">
                                                         <div className="min-w-0 leading-snug">
-                                                            <span className={`text-sm font-medium ${INK} break-words`}>{it?.name || 'วัตถุดิบ'}</span>
+                                                            <span className={`text-sm font-medium ${INK} break-words`}>{rowName}</span>
                                                             {unit && (
                                                                 <span className={`ml-1.5 text-xs ${NEUTRAL} whitespace-nowrap`}>({unit})</span>
                                                             )}
@@ -263,7 +279,7 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                                             type="button"
                                                             onClick={() => updateDraft(c.id, cur => cur.filter(x => x.key !== r.key), r.key)}
                                                             className={`shrink-0 min-h-[36px] px-2 -mr-2 text-xs ${NEUTRAL} hover:text-[var(--error-red)] cursor-pointer touch-manipulation ${FOCUS}`}
-                                                            aria-label={`ลบ ${it?.name || 'วัตถุดิบ'}`}
+                                                            aria-label={`ลบ ${rowName}`}
                                                         >
                                                             ลบ
                                                         </button>
@@ -341,16 +357,29 @@ export default function MenuOptionStockPanel({ menuId, stockItems = [], recipe =
                                         type="text"
                                         value={search[c.id] || ''}
                                         onChange={e => setSearch(prev => ({ ...prev, [c.id]: e.target.value }))}
-                                        placeholder={rows.length === 0 && generic.length ? '+ ตั้งค่าเฉพาะเมนูนี้ (แทนค่ากลาง)' : '+ เพิ่มวัตถุดิบ'}
+                                        placeholder={rows.length === 0 && generic.length ? '+ ตั้งค่าเฉพาะเมนูนี้ (แทนค่ากลาง)' : '+ เพิ่มวัตถุดิบ หรือ พิมพ์ชื่อเมนูขาย'}
                                         className={`min-h-[44px] w-full px-3 border border-dashed ${RULE} bg-transparent text-base sm:text-sm ${INK} outline-none focus:border-[var(--brand-plum)]`}
                                     />
-                                    {matches.length > 0 && (
+                                    {(stockMatches.length > 0 || menuMatches.length > 0) && (
                                         <ul className={`absolute z-20 left-0 right-0 mt-1 border ${RULE} bg-[var(--color-paper)] divide-y divide-[var(--color-paper-3)] shadow-[0_8px_24px_oklch(21.78%_0_0/0.10)]`}>
-                                            {matches.map(i => (
+                                            {menuMatches.map(m => (
+                                                <li key={`menu_${m.id}`}>
+                                                    <button type="button"
+                                                        onClick={() => {
+                                                            updateDraft(c.id, cur => [...cur, { key: key(), id: null, stock_item_id: '', linked_menu_item_id: Number(m.id), menu_item_id: menuId, sign: 'plus', amount: '1' }]);
+                                                            setSearch(prev => ({ ...prev, [c.id]: '' }));
+                                                        }}
+                                                        className={`w-full min-h-[44px] text-left px-3 py-2.5 flex items-baseline justify-between gap-2 text-sm ${INK} hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}>
+                                                        <span className="break-words font-semibold">สูตรเมนู: {m.name}</span>
+                                                        <span className="text-xs shrink-0 text-[var(--brand-plum)] font-bold">เมนูขาย (ที่)</span>
+                                                    </button>
+                                                </li>
+                                            ))}
+                                            {stockMatches.map(i => (
                                                 <li key={i.id}>
                                                     <button type="button"
                                                         onClick={() => {
-                                                            updateDraft(c.id, cur => [...cur, { key: key(), id: null, stock_item_id: i.id, menu_item_id: menuId, sign: 'plus', amount: '' }]);
+                                                            updateDraft(c.id, cur => [...cur, { key: key(), id: null, stock_item_id: i.id, linked_menu_item_id: null, menu_item_id: menuId, sign: 'plus', amount: '' }]);
                                                             setSearch(prev => ({ ...prev, [c.id]: '' }));
                                                         }}
                                                         className={`w-full min-h-[44px] text-left px-3 py-2.5 flex items-baseline justify-between gap-2 text-sm ${INK} hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}>

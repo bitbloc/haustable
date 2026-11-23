@@ -56,6 +56,7 @@ export default function OptionGroupList() {
     // choice_id -> option_choice_ingredients rows (null = table not installed)
     const [choiceIngredients, setChoiceIngredients] = useState(null)
     const [ingredientItems, setIngredientItems] = useState(new Map())
+    const [linkedMenus, setLinkedMenus] = useState(new Map())
     const [ingredientTarget, setIngredientTarget] = useState(null)
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -116,7 +117,7 @@ export default function OptionGroupList() {
     const fetchGroups = async (showLoadingState = false) => {
         if (showLoadingState) setLoading(true)
         try {
-            const [groupRes, linkRes, ingRes] = await Promise.all([
+            const [groupRes, linkRes, ingRes, menuRes] = await Promise.all([
                 supabase
                     .from('option_groups')
                     .select(`*, option_choices (*)`)
@@ -126,7 +127,10 @@ export default function OptionGroupList() {
                     .select('option_group_id'),
                 supabase
                     .from('option_choice_ingredients')
-                    .select('id, choice_id, menu_item_id, stock_item_id, quantity, stock_items (id, name, unit, usage_unit)')
+                    .select('*, stock_items (id, name, unit, usage_unit)'),
+                supabase
+                    .from('menu_items')
+                    .select('id, name')
             ])
 
             if (groupRes.error) throw groupRes.error
@@ -138,6 +142,10 @@ export default function OptionGroupList() {
                 })
             }
             setLinkedCounts(counts)
+
+            const menuMap = new Map()
+            ;(menuRes.data || []).forEach(m => menuMap.set(Number(m.id), m))
+            setLinkedMenus(menuMap)
 
             if (ingRes.error) {
                 setChoiceIngredients(null)
@@ -472,7 +480,7 @@ export default function OptionGroupList() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                                                 {choicesList.map(c => {
                                                     const ingRows = choiceIngredients?.[c.id] || []
-                                                    const ingSummary = summarizeChoiceIngredients(ingRows, ingredientItems)
+                                                    const ingSummary = summarizeChoiceIngredients(ingRows, ingredientItems, linkedMenus)
                                                     return (
                                                     <div 
                                                         key={c.id} 

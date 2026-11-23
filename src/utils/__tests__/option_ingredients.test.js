@@ -93,10 +93,27 @@ describe('planChoiceIngredientSave', () => {
 
 describe('summarizeChoiceIngredients', () => {
     const items = new Map([['shot', { name: 'ช็อตเอสเปรสโซ', usage_unit: 'shot' }]]);
+    const menus = new Map([[67, { id: 67, name: 'ชาไทย (ร้อน,เย็น)' }]]);
     it('describes one row and counts several', () => {
         expect(summarizeChoiceIngredients([], items)).toBe('');
         expect(summarizeChoiceIngredients([{ stock_item_id: 'shot', quantity: 1 }], items)).toBe('+1 shot ช็อตเอสเปรสโซ');
         expect(summarizeChoiceIngredients([{ stock_item_id: 'shot', quantity: -2 }], items)).toBe('−2 shot ช็อตเอสเปรสโซ');
         expect(summarizeChoiceIngredients([{ stock_item_id: 'a', quantity: 1 }, { stock_item_id: 'b', quantity: 1 }], items)).toBe('2 วัตถุดิบ');
+        expect(summarizeChoiceIngredients([{ linked_menu_item_id: 67, quantity: 1 }], items, menus)).toBe('+1 ที่ สูตรเมนู: ชาไทย (ร้อน,เย็น)');
+    });
+
+    it('validates and plans linked_menu_item_id rows', () => {
+        const { rows, errors } = validateChoiceIngredients([
+            { key: 'm1', stock_item_id: '', linked_menu_item_id: 67, sign: 'plus', amount: '1', menu_item_id: null },
+            { key: 'm2', stock_item_id: '', linked_menu_item_id: 67, sign: 'plus', amount: '1', menu_item_id: null }
+        ]);
+        expect(Object.keys(errors)).toEqual(['m2']);
+        expect(rows).toEqual([
+            { id: null, stock_item_id: null, linked_menu_item_id: 67, menu_item_id: null, quantity: 1 }
+        ]);
+        const plan = planChoiceIngredientSave('c1', [], rows);
+        expect(plan.inserts).toEqual([
+            { choice_id: 'c1', stock_item_id: null, linked_menu_item_id: 67, menu_item_id: null, quantity: 1 }
+        ]);
     });
 });

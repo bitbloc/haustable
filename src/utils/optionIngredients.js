@@ -20,7 +20,13 @@ const toNum = (v) => {
     return Number.isFinite(n) ? n : NaN;
 };
 
-const scopeKey = (row) => `${row.menu_item_id ?? 'all'}:${row.stock_item_id}`;
+const scopeKey = (row) => {
+    const scope = row.menu_item_id ?? 'all';
+    const target = row.linked_menu_item_id != null
+        ? `menu:${row.linked_menu_item_id}`
+        : `stock:${row.stock_item_id}`;
+    return `${scope}:${target}`;
+};
 
 /**
  * Parse a raw string typed into an option ingredient amount field.
@@ -68,20 +74,23 @@ export const validateChoiceIngredients = (draft = []) => {
     const rows = [];
     for (const d of draft) {
         const quantity = signedQuantity(d.sign, d.amount);
-        if (!d.stock_item_id) {
-            errors[d.key] = 'เลือกวัตถุดิบ';
+        const hasStock = Boolean(d.stock_item_id);
+        const hasLinkedMenu = d.linked_menu_item_id !== null && d.linked_menu_item_id !== undefined && d.linked_menu_item_id !== '';
+        if (!hasStock && !hasLinkedMenu) {
+            errors[d.key] = 'เลือกวัตถุดิบหรือเมนู';
         } else if (!Number.isFinite(quantity) || quantity === 0) {
             errors[d.key] = 'ใส่จำนวนมากกว่า 0';
         } else {
             const row = {
                 id: d.id || null,
-                stock_item_id: d.stock_item_id,
+                stock_item_id: hasStock ? d.stock_item_id : null,
+                ...(hasLinkedMenu ? { linked_menu_item_id: Number(d.linked_menu_item_id) } : {}),
                 menu_item_id: d.menu_item_id ?? null,
                 quantity
             };
             const k = scopeKey(row);
             if (seen.has(k)) {
-                errors[d.key] = 'วัตถุดิบนี้ซ้ำในขอบเขตเดียวกัน';
+                errors[d.key] = hasLinkedMenu ? 'เมนูนี้ซ้ำในขอบเขตเดียวกัน' : 'วัตถุดิบนี้ซ้ำในขอบเขตเดียวกัน';
             } else {
                 seen.set(k, true);
                 rows.push(row);
@@ -103,11 +112,20 @@ export const planChoiceIngredientSave = (choiceId, existing = [], rows = []) => 
     const inserts = [];
     for (const r of rows) {
         const old = r.id ? before.get(r.id) : null;
-        const payload = { choice_id: choiceId, stock_item_id: r.stock_item_id, menu_item_id: r.menu_item_id, quantity: r.quantity };
+        const payload = {
+            choice_id: choiceId,
+            stock_item_id: r.stock_item_id ?? null,
+            ...(r.linked_menu_item_id != null || (old && old.linked_menu_item_id != null)
+                ? { linked_menu_item_id: r.linked_menu_item_id ?? null }
+                : {}),
+            menu_item_id: r.menu_item_id,
+            quantity: r.quantity
+        };
         if (!old) {
             inserts.push(payload);
         } else if (
-            old.stock_item_id !== r.stock_item_id ||
+            (old.stock_item_id ?? null) !== (r.stock_item_id ?? null) ||
+            (old.linked_menu_item_id ?? null) !== (r.linked_menu_item_id ?? null) ||
             (old.menu_item_id ?? null) !== (r.menu_item_id ?? null) ||
             Number(old.quantity) !== r.quantity
         ) {
@@ -117,13 +135,24 @@ export const planChoiceIngredientSave = (choiceId, existing = [], rows = []) => 
     return { deletes, updates, inserts };
 };
 
-/** Short summary for a choice card: "+1 ช็อต", "2 รายการ". */
-export const summarizeChoiceIngredients = (rows = [], itemsById = new Map()) => {
+/** Short summary for a choice card: "+1 ช็อต", "+1 ที่ ชาไทย (ร้อน,เย็น)", "2 วัตถุดิบ". */
+export const summarizeChoiceIngredients = (rows = [], itemsById = new Map(), menusById = new Map()) => {
     if (!rows.length) return '';
-    if (rows.length > 1) return `${rows.length} วัตถุดิบ`;
+    if (rows.length > 1) {
+        const hasMenu = rows.some(r => r.linked_menu_item_id != null);
+        const hasStock = rows.some(r => r.stock_item_id != null);
+        if (hasMenu && !hasStock) return `${rows.length} เมนู`;
+        if (hasMenu && hasStock) return `${rows.length} รายการ`;
+        return `${rows.length} วัตถุดิบ`;
+    }
     const r = rows[0];
-    const item = itemsById.get(r.stock_item_id);
     const q = Number(r.quantity);
+    if (r.linked_menu_item_id != null) {
+        const menu = menusById.get(Number(r.linked_menu_item_id)) || r.linked_menu;
+        const menuName = menu?.name || `เมนู #${r.linked_menu_item_id}`;
+        return `${q > 0 ? '+' : '−'}${Math.abs(q)} ที่ สูตรเมนู: ${menuName}`.replace(/\s+/g, ' ').trim();
+    }
+    const item = itemsById.get(r.stock_item_id);
     const unit = item?.usage_unit || item?.unit || '';
     const name = item?.name || 'วัตถุดิบ';
     return `${q > 0 ? '+' : '−'}${Math.abs(q)} ${unit} ${name}`.replace(/\s+/g, ' ').trim();
