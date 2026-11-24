@@ -665,14 +665,39 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
 
+    // Restaurant structured data (JSON-LD) for Google Search; hours follow the store-hours setting
+    const restaurantLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Restaurant',
+        name: 'In the haus (ร้านในบ้าน)',
+        alternateName: ['ร้านในบ้าน', 'ในบ้าน นครพนม', 'In the haus'],
+        url: 'https://haustable.vercel.app/link',
+        image: OG_IMAGE_URL,
+        telephone: '+66985284217',
+        servesCuisine: ['Southern Thai', 'Thai', 'Coffee'],
+        acceptsReservations: 'https://haustable.vercel.app/booking',
+        address: { '@type': 'PostalAddress', streetAddress: '788/1 ถนนสุนทรวิจิตร ตำบลในเมือง', addressLocality: 'อำเภอเมืองนครพนม', addressRegion: 'นครพนม', postalCode: '48000', addressCountry: 'TH' },
+        geo: { '@type': 'GeoCoordinates', latitude: 17.390079, longitude: 104.792933 }
+    }
+    if (hoursSplit) {
+        restaurantLd.openingHoursSpecification = [{
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+            opens: hoursSplit[1].replace('.', ':'),
+            closes: hoursSplit[2].replace('.', ':')
+        }]
+    }
+    const restaurantLdJson = JSON.stringify(restaurantLd).replace(/</g, '\\u003c')
+
     return `<!doctype html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>${shopName} | อาหารใต้รสชัด ริมโขง นครพนม</title>
-    <meta name="description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · มีที่จอดรถสะดวก">
+    <title>ร้านอาหารนครพนม ริมโขง | ในบ้าน (In the haus) อาหารใต้และคาเฟ่</title>
+    <meta name="description" content="ร้านอาหารและคาเฟ่ริมโขงในเมืองนครพนม ห่างลานพญานาค 2 นาที อาหารใต้รสชัด มีเมนูไม่เผ็ด กาแฟและเครื่องดื่ม เปิดทุกวัน ${hoursMain} มีที่จอดรถ ไม่จองก็มาได้">
     <link rel="canonical" href="https://haustable.vercel.app/link">
+    <script type="application/ld+json">${restaurantLdJson}</script>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="apple-touch-icon" href="/apple-touch-icon-inbaan.png">
     <meta name="theme-color" content="#41032A">
