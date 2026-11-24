@@ -1047,6 +1047,25 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .fc-cap { position: absolute; margin: 0; max-width: 62%; color: var(--cream); font-size: var(--text-md); font-weight: 500; line-height: 1.35; text-shadow: 0 1px 8px oklch(21.78% 0 0 / 0.45); }
         .fc-nb { white-space: nowrap; }
         .fc-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+        /* Sliding selected tab: added by JS on the first animated switch; until then the selected tab itself is cream */
+        .set-tabs { position: relative; }
+        .set-tab { position: relative; z-index: 1; }
+        .set-tab-ind { position: absolute; top: 0; left: 0; z-index: 0; background: var(--color-paper); border-radius: var(--radius); pointer-events: none; }
+        .set-tabs.has-ind .set-tab[aria-selected="true"] { background: transparent; }
+        /* Food card arrows: mouse screens only (phones swipe); text arrows, no icons */
+        .fc-meta-fine, .fc-nav-btns { display: none; }
+        @media (hover: hover) and (pointer: fine) {
+            .fc-meta-touch { display: none; }
+            .fc-meta-fine { display: inline; }
+            .fc-head { align-items: center; padding-top: var(--space-4); padding-bottom: var(--space-2); }
+            .fc-nav { display: flex; align-items: center; gap: var(--space-3); }
+            .fc-nav-btns { display: flex; }
+            .fc-nav-btns button { width: 48px; height: 48px; border: 1px solid var(--color-rule); background: transparent; color: var(--color-ink); font-family: var(--font-mono); font-size: var(--text-lg); cursor: pointer; transition: background-color var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out); }
+            .fc-nav-btns button + button { margin-left: -1px; }
+            .fc-nav-btns button:hover:not(:disabled) { background: var(--color-paper-2); }
+            .fc-nav-btns button:disabled { opacity: 0.35; cursor: default; }
+        }
+        .fc-strip:focus-visible { outline: 2px solid var(--brand-plum); outline-offset: -2px; }
 
         /* Menu rows */
         .item-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-rule); }
@@ -1378,12 +1397,16 @@ function generateStandaloneLandingHtml(data, opts = {}) {
 
         <!-- ─── SECTION 1: MENU ─── -->
         <div id="sec-menu">
-            <div class="section-header">
+            <div class="section-header fc-head">
                 <h2 class="section-title">${tt('จานเด่นของร้าน', 'Signature dishes')}</h2>
-                <span class="section-meta">${tt('ปัดดูได้ 9 จาน', 'Swipe through 9 dishes', '滑动查看 9 道菜', 'ປັດເບິ່ງໄດ້ 9 ຈານ')}</span>
+                <div class="fc-nav">
+                    <span class="section-meta fc-meta-touch">${tt('ปัดดูได้ 9 จาน', 'Swipe through 9 dishes', '滑动查看 9 道菜', 'ປັດເບິ່ງໄດ້ 9 ຈານ')}</span>
+                    <span class="section-meta fc-meta-fine">${tt('9 จาน', '9 dishes', '9 道菜', '9 ຈານ')}</span>
+                    <div class="fc-nav-btns"><button type="button" class="fc-prev" aria-label="จานก่อนหน้า / Previous dish">←</button><button type="button" class="fc-next" aria-label="จานถัดไป / Next dish">→</button></div>
+                </div>
             </div>
             <section class="fc" aria-label="${escapeHtml('จานเด่นของร้าน')}">
-                <div class="fc-strip">${renderFoodCards(fcLoading)}</div>
+                <div class="fc-strip" tabindex="0" aria-label="จานเด่นของร้าน 9 จาน">${renderFoodCards(fcLoading)}</div>
             </section>
 
             ${bookletImages.length > 0 ? `
@@ -1556,22 +1579,86 @@ function generateStandaloneLandingHtml(data, opts = {}) {
 
         // ─── FIRST-TIME SET CHOOSER (tabs by party size) ───
         const starterCard = document.getElementById('starter-card');
+        // ─── MOTION (motion.dev, mini WAAPI build) ───
+        // One cached import for the set chooser and the food cards. Nothing on /link waits for it: until it arrives
+        // (or if it fails, or the guest prefers reduced motion) every state change is the plain CSS one.
+        const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let motionAnimate = null, motionLoading = null;
+        function loadMotion() {
+            if (!motionLoading) {
+                motionLoading = import('https://cdn.jsdelivr.net/npm/motion@12.23.26/mini/+esm').then(function(m) { motionAnimate = m.animate; return m.animate; });
+            }
+            return motionLoading;
+        }
+        const EASE_OUT = [0.16, 1, 0.3, 1];
+        let setSwitchGen = 0;
+        // Set chooser: the cream tab slides from the old tab to the new one, the new set enters from the side that was tapped,
+        // and the old set fades out first and faster. Runs only on a tap, never on the first paint.
+        function animateSetSwitch(animate, fromTab, toTab, fromPanel, toPanel, swap) {
+            const gen = ++setSwitchGen;
+            const tabs = toTab.parentNode;
+            const dir = fromTab && (fromTab.compareDocumentPosition(toTab) & Node.DOCUMENT_POSITION_FOLLOWING) ? 1 : -1;
+            let ind = tabs.querySelector('.set-tab-ind');
+            if (!ind) { ind = document.createElement('span'); ind.className = 'set-tab-ind'; ind.setAttribute('aria-hidden', 'true'); tabs.appendChild(ind); }
+            tabs.classList.add('has-ind');
+            ind.style.left = toTab.offsetLeft + 'px';
+            ind.style.width = toTab.offsetWidth + 'px';
+            ind.style.height = toTab.offsetHeight + 'px';
+            if (fromTab) animate(ind, { transform: ['translateX(' + (fromTab.offsetLeft - toTab.offsetLeft) + 'px)', 'translateX(0)'] }, { duration: 0.18, ease: EASE_OUT });
+            const enter = function() {
+                if (gen !== setSwitchGen) return;
+                swap();
+                animate(toPanel, { opacity: [0, 1], transform: ['translateX(' + (dir * 16) + 'px)', 'translateX(0)'] }, { duration: 0.18, ease: EASE_OUT });
+            };
+            if (fromPanel && !fromPanel.hidden) {
+                // The timer is a backstop: with no rendering frames (a background tab) the fade never finishes, but the set must still switch
+                let swapped = false;
+                const next = function() { if (swapped) return; swapped = true; fromPanel.style.opacity = ''; enter(); };
+                animate(fromPanel, { opacity: [1, 0] }, { duration: 0.09, ease: 'easeOut' }).finished.then(next);
+                setTimeout(next, 140);
+            } else enter();
+        }
         function selectSetGroup(key, silent) {
             if (!starterCard) return;
-            let found = false;
-            starterCard.querySelectorAll('.set-panel').forEach(function(p) {
-                const on = p.dataset.group === key;
-                const wasHidden = p.hidden;
-                p.hidden = !on;
-                p.classList.remove('entering');
-                if (on && wasHidden && !silent) { void p.offsetWidth; p.classList.add('entering'); }
-                if (on) found = true;
-            });
-            if (!found) return;
+            const toPanel = starterCard.querySelector('.set-panel[data-group="' + key + '"]');
+            if (!toPanel) return;
+            const fromPanel = starterCard.querySelector('.set-panel:not([hidden])');
+            const fromTab = starterCard.querySelector('.set-tab[aria-selected="true"]');
+            const toTab = starterCard.querySelector('.set-tab[data-group="' + key + '"]');
             starterCard.querySelectorAll('.set-tab').forEach(function(t) {
                 t.setAttribute('aria-selected', String(t.dataset.group === key));
             });
+            const swap = function() {
+                starterCard.querySelectorAll('.set-panel').forEach(function(p) {
+                    const on = p === toPanel;
+                    const wasHidden = p.hidden;
+                    p.hidden = !on;
+                    p.style.opacity = '';
+                    p.classList.remove('entering');
+                    if (on && wasHidden && !silent && !motionAnimate) { void p.offsetWidth; p.classList.add('entering'); }
+                });
+            };
+            if (!silent && motionAnimate && !REDUCED_MOTION && toTab && fromPanel !== toPanel) animateSetSwitch(motionAnimate, fromTab, toTab, fromPanel, toPanel, swap);
+            else { setSwitchGen++; swap(); if (toTab) placeSetIndicator(toTab); }
             if (!silent) logAdEvent('select_starter_set');
+        }
+        // Keeps the sliding tab under the selected tab after a switch without motion (silent or reduced motion)
+        function placeSetIndicator(toTab) {
+            const ind = toTab.parentNode.querySelector('.set-tab-ind');
+            if (!ind) return;
+            ind.style.left = toTab.offsetLeft + 'px';
+            ind.style.width = toTab.offsetWidth + 'px';
+            ind.style.transform = '';
+        }
+        // Fetch Motion as soon as a guest reaches for the tabs, so the first tap already slides
+        if (starterCard && !REDUCED_MOTION) {
+            const tabsEl = starterCard.querySelector('.set-tabs');
+            const warm = function() { loadMotion().catch(function() {}); };
+            if (tabsEl) ['pointerenter', 'touchstart', 'focusin'].forEach(function(ev) { tabsEl.addEventListener(ev, warm, { once: true, passive: true }); });
+            window.addEventListener('resize', function() {
+                const sel = starterCard.querySelector('.set-tab[aria-selected="true"]');
+                if (sel) placeSetIndicator(sel);
+            }, { passive: true });
         }
         function handleStarterClick(e, target) {
             logAdEvent('click_starter_set');
@@ -1686,25 +1773,53 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         };
         setLang.sync();
 
+        // ─── FOOD CARDS: ARROWS FOR MOUSE USERS ───
+        // A mouse cannot swipe the strip, so mouse screens get ← → in the header (and the arrow keys on the strip).
+        // One press moves one card; native smooth scroll keeps the snap points exact.
+        (function() {
+            const strip = document.querySelector('.fc-strip');
+            const prev = document.querySelector('.fc-prev'), next = document.querySelector('.fc-next');
+            if (!strip || !prev || !next) return;
+            const step = function() {
+                const c = strip.querySelector('.fc-card');
+                return c ? c.getBoundingClientRect().width + (parseFloat(getComputedStyle(strip).columnGap) || 0) : strip.clientWidth;
+            };
+            const go = function(d) { strip.scrollBy({ left: d * step(), behavior: REDUCED_MOTION ? 'auto' : 'smooth' }); };
+            const sync = function() {
+                prev.disabled = strip.scrollLeft <= 1;
+                next.disabled = strip.scrollLeft >= strip.scrollWidth - strip.clientWidth - 1;
+            };
+            prev.addEventListener('click', function() { go(-1); });
+            next.addEventListener('click', function() { go(1); });
+            strip.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+                else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+            });
+            strip.addEventListener('scroll', sync, { passive: true });
+            sync();
+        })();
+
         // ─── FOOD CARDS: THE WORD RISES FROM BEHIND THE DISH ───
         // Cards are settled in the HTML, so no JS, reduced motion and a failed import all show the finished card.
-        // Motion (motion.dev, the mini WAAPI build, ~23 KB over the wire) loads only when the strip is about a screen away;
+        // Motion (shared loadMotion, ~23 KB over the wire) loads when the strip is about a screen away;
         // cards already on screen then stay as they are (the first paint is never animated).
         // The word rises each time a card comes into view and folds back when it leaves (owner 2026-11-24).
         (function() {
             const strip = document.querySelector('.fc-strip');
-            if (!strip || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            if (!strip || !('IntersectionObserver' in window) || REDUCED_MOTION) return;
             const EASE = [0.16, 1, 0.3, 1];
             // The push-in is slow drift, not an entrance: a softer ease-out so the scale does not jump in the first second
             const DRIFT = [0.33, 1, 0.68, 1];
             // The breath moves on screen and back, so it eases in and out
             const BREATHE = [0.45, 0, 0.55, 1];
+            // The fold moves on screen, so it eases in and out; short enough to stay quicker than the rise
+            const FOLD = [0.45, 0, 0.2, 1];
             // Tempo follows the word: sharp words snap up, soft words rise slowly and breathe once
             const TEMPO = { sharp: { dur: 0.4, stagger: 0.07, breathe: 0 }, even: { dur: 0.6, stagger: 0.1, breathe: 0 }, soft: { dur: 0.87, stagger: 0.17, breathe: 4 } };
             const near = new IntersectionObserver(function(entries) {
                 if (!entries.some(function(en) { return en.isIntersecting; })) return;
                 near.disconnect();
-                import('https://cdn.jsdelivr.net/npm/motion@12.23.26/mini/+esm').then(function(m) { start(m.animate); }).catch(function() {});
+                loadMotion().then(start).catch(function() {});
             }, { rootMargin: '100% 0px' });
             near.observe(strip);
 
@@ -1717,15 +1832,15 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                     state.set(card, { shown: onScreen, runs: [], gen: 0 });
                     if (!onScreen) letters(card).forEach(function(l) { l.style.transform = sunk(l); });
                 });
-                // Enter at three quarters in view (a swipe has mostly settled); leave below a quarter (the card is nearly gone),
-                // so the word never sinks while someone is still looking at it
+                // Enter at three quarters in view (a swipe has mostly settled); leave below half, while the card is still
+                // visible, so the word is seen folding back instead of vanishing
                 const seen = new IntersectionObserver(function(entries) {
                     entries.forEach(function(en) {
                         const s = state.get(en.target);
                         if (en.intersectionRatio >= 0.75 && !s.shown) { s.shown = true; play(animate, en.target, s); }
-                        else if (en.intersectionRatio < 0.25 && s.shown) { s.shown = false; leave(animate, en.target, s); }
+                        else if (en.intersectionRatio < 0.5 && s.shown) { s.shown = false; leave(animate, en.target, s); }
                     });
-                }, { threshold: [0, 0.25, 0.75] });
+                }, { threshold: [0, 0.5, 0.75] });
                 state.forEach(function(s, card) { seen.observe(card); });
             }
 
@@ -1766,11 +1881,12 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                 });
             }
 
-            // Exit is quicker than the entrance and all at once: the word folds back behind the dish, ready to rise again
+            // Exit is quicker than the entrance: the word folds back behind the dish from its last letter, ready to rise again
             function leave(animate, card, s) {
                 halt(s);
-                run(animate, s, card.querySelector('.fc-scene'), 'scale(1)', { duration: 0.2, ease: EASE });
-                letters(card).forEach(function(l) { run(animate, s, l, sunk(l), { duration: 0.2, ease: EASE }); });
+                run(animate, s, card.querySelector('.fc-scene'), 'scale(1)', { duration: 0.32, ease: FOLD });
+                const ls = letters(card);
+                ls.forEach(function(l, i) { run(animate, s, l, sunk(l), { duration: 0.32, delay: (ls.length - 1 - i) * 0.03, ease: FOLD }); });
             }
         })();
 
