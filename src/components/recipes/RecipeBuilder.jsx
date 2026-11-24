@@ -855,6 +855,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const [availableItems, setAvailableItems] = useState([]);
     const [parentItem, setParentItem] = useState(null);
     const [loading, setLoading] = useState(true);
+    // The saved recipe could not be read: saving now would replace it with what is on screen
+    const [loadFailed, setLoadFailed] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [itemFilterType, setItemFilterType] = useState('all'); // 'all' | 'raw' | 'base'
     
@@ -919,14 +921,16 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     const loadData = async () => {
         setLoading(true);
+        setLoadFailed(false);
         try {
             // 1. Fetch Existing Recipe Ingredients
             const queryField = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
-            const { data: recipeData } = await supabase
+            const { data: recipeData, error: recipeErr } = await supabase
                 .from('recipe_ingredients')
                 .select(`*, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(*)`)
                 .eq(queryField, parentId)
                 .order('layer_order');
+            if (recipeErr) throw recipeErr;
 
             if (recipeData) {
                 const mapped = recipeData.map(r => {
@@ -985,6 +989,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
         } catch (err) {
             console.error(err);
+            setLoadFailed(true);
+            toast.error('โหลดสูตรไม่สำเร็จ ยังบันทึกไม่ได้ กรุณาปิดแล้วเปิดใหม่', { duration: 8000 });
         } finally {
             setLoading(false);
         }
@@ -1061,6 +1067,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     };
 
     const handleSave = async () => {
+        if (loadFailed) {
+            toast.error('โหลดสูตรเดิมไม่สำเร็จ จึงยังบันทึกไม่ได้ (กันสูตรเดิมถูกแทนที่) กรุณาปิดแล้วเปิดใหม่');
+            return;
+        }
         if (isPrep && !hasYield) {
             toast.error('กรุณาระบุปริมาณที่ได้ต่อ 1 สูตร ก่อนบันทึก');
             return;
@@ -1081,41 +1091,44 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             }));
 
             if (parentType === 'menu') {
-                let rpcSucceeded = false;
-                try {
-                    const { data: rpcData, error: rpcError } = await supabase.rpc('save_menu_recipe', {
-                        p_menu_id: parentId,
-                        p_ingredients: payloadItems
-                    });
-                    if (!rpcError && rpcData && rpcData.success !== false) {
-                        rpcSucceeded = true;
-                    }
-                } catch { /* ignore fallback */ }
-
-                if (!rpcSucceeded) {
-                    const queryField = 'parent_menu_item_id';
-                    await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
-                    if (payloadItems.length > 0) {
-                        const payloads = payloadItems.map(p => ({ [queryField]: parentId, ...p }));
-                        const { error: insErr } = await supabase.from('recipe_ingredients').insert(payloads);
-                        if (insErr && /order_scope|PGRST204/i.test(insErr.message || '')) {
-                            const legacyPayloads = payloadItems.map(({ order_scope: _s, ...rest }) => ({ [queryField]: parentId, ...rest }));
-                            await supabase.from('recipe_ingredients').insert(legacyPayloads);
-                        } else if (insErr) {
-                            throw insErr;
-                        }
-                    }
+                // One transaction on the server: a refused save leaves the old recipe as it was.
+                const { data: rpcData, error: rpcError } = await supabase.rpc('save_menu_recipe', {
+                    p_menu_id: parentId,
+                    p_ingredients: payloadItems
+                });
+                if (rpcError) throw rpcError;
+                if (rpcData && rpcData.success === false) {
+                    throw new Error(rpcData.error || 'save_menu_recipe failed');
                 }
 
                 if (currentPrice !== undefined && currentPrice !== null && !isNaN(parseFloat(currentPrice))) {
-                    await supabase.from('menu_items').update({ price: parseFloat(currentPrice) }).eq('id', parentId);
+                    const { error: priceErr } = await supabase.from('menu_items').update({ price: parseFloat(currentPrice) }).eq('id', parentId);
+                    if (priceErr) throw priceErr;
                 }
             } else {
+                // New lines go in before the old ones come out, so a failure never leaves
+                // the recipe empty.
                 const queryField = 'parent_stock_item_id';
-                await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
+                const { data: oldRows, error: oldErr } = await supabase
+                    .from('recipe_ingredients').select('id').eq(queryField, parentId);
+                if (oldErr) throw oldErr;
+                const oldIds = (oldRows || []).map(r => r.id);
+
+                let newIds = [];
                 if (payloadItems.length > 0) {
                     const payloads = payloadItems.map(p => ({ [queryField]: parentId, ...p }));
-                    await supabase.from('recipe_ingredients').insert(payloads);
+                    const { data: inserted, error: insErr } = await supabase
+                        .from('recipe_ingredients').insert(payloads).select('id');
+                    if (insErr) throw insErr;
+                    newIds = (inserted || []).map(r => r.id);
+                }
+                if (oldIds.length > 0) {
+                    const { error: delErr } = await supabase.from('recipe_ingredients').delete().in('id', oldIds);
+                    if (delErr) {
+                        // Old lines are still there: take the new copies back out, or every line is doubled.
+                        if (newIds.length > 0) await supabase.from('recipe_ingredients').delete().in('id', newIds);
+                        throw delErr;
+                    }
                 }
                 // What one making of this recipe is, and what it costs
                 const legacyFields = isPrep
