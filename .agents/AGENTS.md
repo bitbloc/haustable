@@ -84,6 +84,10 @@ Converted exactly from the brand hex values. Neutrals are tinted toward plum (hu
 - 120-180ms, `transform` and `opacity` only (never height, margin or layout properties).
 - No bounce or overshoot. Nothing loops (no pulsing, no ticking every second unless it is the last minutes of a real countdown).
 - **One exception: the customer display background** (`src/pos/CfdMotif.jsx`, owner decision 2026-11-17). On idle, Southern-Thai words ("หรอย", "จังฮู้", "จริตจัด", "ใต้ชัดๆ") ride four thin plum lines around the ในบ้าน wordmark; in use, one small dot rides each line behind the cards. It loops slowly (13-23 s per pass), moves only by CSS `transform` keyframes so the compositor runs it (measured ~0% main thread with the CPU throttled 6x; SVG `animateMotion` was ~35%), and rests still under `prefers-reduced-motion`. No shadows, filters or icons on the riders. Nowhere else loops.
+- **Exception: /link showcase motion** (owner decisions 2026-11-24, `api/link.js`). Two places may run longer and use the photo filter, because they show food rather than answer a tap on a control:
+  - **Food cards**: the taste word rises behind the dish when a card is in view (0.4-0.87 s per letter group by tempo) and folds back when it leaves (0.32 s); the scene pushes in 1 → 1.035 over 6 s. Only on swipe or scroll, never by itself.
+  - **Set chooser photo stage**: on a tap, the new set photo enters from the side with a blur of at most 12 px, a scale of at most 1.08 and a fade, while the old photo leaves the other way; at most 0.45 s, ease `cubic-bezier(0.2, 0.8, 0.2, 1)`. Blur only on the photo, never on text. The text around it keeps the 120-180 ms rule.
+  - Both use Motion (motion.dev, `motion/mini`, WAAPI) loaded on demand, run on the compositor (`transform`, `opacity`, `filter`), never on the first paint, and are still under reduced motion.
 - Always honour `prefers-reduced-motion: reduce` (no motion, instant state changes).
 - The first paint is never animated.
 
