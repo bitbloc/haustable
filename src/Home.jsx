@@ -134,7 +134,7 @@ export default function Home({ session }) {
                             {Array.from({ length: 8 }).map((_, i) => (
                                 <div key={i} className="flex items-center gap-3">
                                     <span className="bg-black text-[var(--on-plum-2)] px-1.5 py-0.2 font-mono text-[9px] font-bold tracking-widest">
-                                        // {announcementHeadline}
+                                        {announcementHeadline}
                                     </span>
                                     <span>{announcementText}</span>
                                     <span className="w-1.5 h-1.5 bg-black mx-2" />
@@ -174,14 +174,14 @@ export default function Home({ session }) {
                                     to="/member-card"
                                     className="flex-shrink-0 font-mono text-[10px] font-black px-3.5 py-2 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:opacity-90 transition-opacity"
                                 >
-                                    [ CARD QR ➔ ]
+                                    CARD QR ➔
                                 </Link>
                             </div>
                         ) : (
                             <div className="p-4 bg-[var(--color-hallmark-paper)] flex items-center justify-between gap-3">
                                 <div className="flex flex-col min-w-0">
                                     <span className="font-mono text-[10px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                                        [ VIP MEMBERSHIP // REWARDS ]
+                                        VIP MEMBERSHIP REWARDS
                                     </span>
                                     <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-tight mt-0.5">
                                         สะสมแต้ม xhaus รับสิทธิพิเศษและของขวัญวันเกิด
@@ -192,7 +192,7 @@ export default function Home({ session }) {
                                     onClick={() => setShowAuthModal(true)}
                                     className="flex-shrink-0 font-mono text-[10px] font-black px-3.5 py-2 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:opacity-90 transition-opacity cursor-pointer"
                                 >
-                                    [ SIGN IN ➔ ]
+                                    SIGN IN ➔
                                 </button>
                             </div>
                         )}
@@ -214,7 +214,7 @@ export default function Home({ session }) {
                     <div className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-xl overflow-hidden font-[var(--font-body)]">
                         <div className="flex items-center justify-between p-3.5 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                                [ INSTRUMENT PANEL // DETAILS ]
+                                INSTRUMENT PANEL DETAILS
                             </span>
                             <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                 HAUS STATUS
@@ -224,7 +224,7 @@ export default function Home({ session }) {
                         <div className="p-4 flex flex-col gap-3 font-mono text-[12px] text-[var(--color-hallmark-ink)]">
                             <div className="flex items-center justify-between">
                                 <span className="text-[var(--color-hallmark-ink-muted)] font-bold flex-shrink-0">
-                                    [ TIME ]
+                                    TIME
                                 </span>
                                 <span className="font-bold text-right">
                                     {settings?.link_hours || getStoreHours().label}
@@ -232,7 +232,7 @@ export default function Home({ session }) {
                             </div>
                             <div className="flex items-start justify-between">
                                 <span className="text-[var(--color-hallmark-ink-muted)] font-bold flex-shrink-0 mt-0.5">
-                                    [ LOC ]
+                                    LOC
                                 </span>
                                 <span className="font-bold text-right pl-4 leading-relaxed">
                                     {settings?.link_location_text || "ริมแม่น้ำโขง · นครพนม (ใกล้ลานพญาศรีสัตตนาคราช)"}
@@ -240,7 +240,7 @@ export default function Home({ session }) {
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-[var(--color-hallmark-ink-muted)] font-bold flex-shrink-0">
-                                    [ TEL ]
+                                    TEL
                                 </span>
                                 <a 
                                     href="tel:0985284217"
@@ -261,7 +261,7 @@ export default function Home({ session }) {
                                 onClick={handleDirectionsClick}
                                 className="p-3 text-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] transition-colors flex items-center justify-center gap-1.5"
                             >
-                                <span>[ DIRECTIONS ➔ ]</span>
+                                <span>DIRECTIONS ➔</span>
                             </a>
                             <a
                                 href="https://lin.ee/EuzwG7c"
@@ -270,7 +270,7 @@ export default function Home({ session }) {
                                 onClick={handleLineClick}
                                 className="p-3 text-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] transition-colors flex items-center justify-center gap-1.5"
                             >
-                                <span>[ LINE OA ➔ ]</span>
+                                <span>LINE OA ➔</span>
                             </a>
                         </div>
                     </div>
@@ -280,7 +280,7 @@ export default function Home({ session }) {
                         <div className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-xl overflow-hidden font-[var(--font-body)]">
                             <div className="flex items-center justify-between p-3.5 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                 <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                                    [ 01 // SIGNATURE DISHES ]
+                                    01 SIGNATURE DISHES
                                 </span>
                                 <span className="font-mono text-[10px] text-[var(--color-brand)] font-bold">
                                     RECOMMENDED
@@ -319,7 +319,7 @@ export default function Home({ session }) {
                                                     to="/pickup" 
                                                     className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] underline"
                                                 >
-                                                    [ ORDER ]
+                                                    ORDER
                                                 </Link>
                                             </div>
                                         </div>
@@ -347,7 +347,7 @@ export default function Home({ session }) {
                     <div className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-xl overflow-hidden p-4 flex flex-col gap-3 font-[var(--font-body)]">
                         <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                             <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                                [ 02 // HOW IT WORKS ]
+                                02 HOW IT WORKS
                             </span>
                             <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                 4 SIMPLE STEPS
@@ -412,7 +412,7 @@ export default function Home({ session }) {
                     <div className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-xl overflow-hidden p-4 flex flex-col gap-3 font-[var(--font-body)]">
                         <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                             <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                                [ 03 // FREQUENTLY ASKED ]
+                                03 FREQUENTLY ASKED
                             </span>
                             <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                 Q & A
@@ -430,7 +430,7 @@ export default function Home({ session }) {
                                         >
                                             <span className="pr-2">{item.q}</span>
                                             <span className="font-mono text-[10px] font-extrabold text-[var(--color-hallmark-ink-muted)] flex-shrink-0">
-                                                {isOpen ? '[ - ]' : '[ + ]'}
+                                                {isOpen ? '−' : '+'}
                                             </span>
                                         </button>
                                         
@@ -469,7 +469,7 @@ export default function Home({ session }) {
                                     </span>
                                 </div>
                                 <span className="font-mono text-[10px] font-extrabold underline">
-                                    [ VIEW STATUS ➔ ]
+                                    VIEW STATUS ➔
                                 </span>
                             </button>
                         </div>
