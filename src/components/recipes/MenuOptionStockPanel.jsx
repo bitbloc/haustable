@@ -6,6 +6,7 @@ import { displayUnit } from '../../utils/stockCount';
 import {
     parseOptionAmountInput,
     planChoiceIngredientSave,
+    signedQuantity,
     stepOptionAmount,
     validateChoiceIngredients
 } from '../../utils/optionIngredients';
@@ -22,6 +23,7 @@ const MENU_RESULTS = 3;
 
 const unitLabel = (u) => displayUnit(u);
 const fmt = (n) => Number(Number(n).toFixed(2)).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+const baht = (n) => Math.abs(Number(n)).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 let seq = 0;
 const key = () => `opt_${++seq}`;
 
@@ -37,7 +39,7 @@ const key = () => `opt_${++seq}`;
  *
  * The parent's save button also saves what is still unsaved here (ref: validate / saveAll).
  */
-const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, stockItems = [], recipe = [], onSweetenerChanged }, ref) {
+const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, stockItems = [], recipe = [], unitCostOf = null, onSweetenerChanged }, ref) {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [groups, setGroups] = useState([]);
@@ -112,6 +114,11 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
 
     const toggleSweetener = async (item) => {
         const next = !item.is_sweetener;
+        // Saved at once and for every menu that uses the item: ask before it changes
+        const question = next
+            ? `นับ "${item.name}" เป็นสารให้ความหวาน?\n\nมีผลทันทีกับทุกเมนูที่ใช้วัตถุดิบนี้ ปริมาณที่ตัดสต๊อกจะคูณตามระดับความหวานที่ลูกค้าเลือก (ไม่หวาน = ไม่ตัดเลย)`
+            : `เลิกนับ "${item.name}" เป็นสารให้ความหวาน?\n\nมีผลทันทีกับทุกเมนูที่ใช้วัตถุดิบนี้ ปริมาณที่ตัดสต๊อกจะเท่าสูตรเสมอ`;
+        if (!window.confirm(question)) return;
         const { error } = await supabase.from('stock_items').update({ is_sweetener: next }).eq('id', item.id);
         if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message); return; }
         onSweetenerChanged?.(item.id, next);
@@ -396,6 +403,10 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                                 return <div key={r.id} className="tabular-nums">{sign}{fmt(Math.abs(r.quantity))} {unitLabel(it?.usage_unit)} {it?.name || ''}</div>;
                                                             })}
                                                         </div>
+                                                    ) : Number(c.price_modifier) > 0 ? (
+                                                        <p className="text-[13px] leading-6 font-medium text-[var(--brand-plum)]">
+                                                            คิดเงินเพิ่ม <span className="tabular-nums">฿{fmt(c.price_modifier)}</span> แต่ยังไม่ตัดสต๊อก
+                                                        </p>
                                                     ) : (
                                                         <p className={`text-[13px] leading-6 ${NEUTRAL}`}>ไม่ตัดสต๊อกเพิ่ม</p>
                                                     )
@@ -410,6 +421,9 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                             const unit = isLinkedMenu ? 'ที่' : unitLabel(it?.usage_unit || it?.unit);
                                                             const rowName = isLinkedMenu ? `สูตรเมนู: ${linkedMenu?.name || `#${r.linked_menu_item_id}`}` : (it?.name || 'วัตถุดิบ');
                                                             const err = rowErrors[r.key];
+                                                            // What this row adds to (or takes off) the cost of one serving
+                                                            const signed = signedQuantity(r.sign, r.amount);
+                                                            const rowCost = !isLinkedMenu && unitCostOf && Number.isFinite(signed) ? unitCostOf(r.stock_item_id) * signed : null;
                                                             return (
                                                                 <div key={r.key} className="py-2 first:pt-0 last:pb-0 flex flex-wrap items-center gap-x-3 gap-y-2">
                                                                     <div className={`order-1 flex-1 min-w-0 text-sm leading-6 break-words ${INK}`}>{rowName}</div>
@@ -473,6 +487,11 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                                                 </button>
                                                                             </div>
                                                                             <span className={`w-12 shrink-0 text-[13px] leading-5 ${NEUTRAL}`}>{unit}</span>
+                                                                            {rowCost !== null && rowCost !== 0 && (
+                                                                                <span className={`w-16 shrink-0 text-right text-[13px] leading-5 font-semibold tabular-nums ${INK}`} title="ต้นทุนที่ตัวเลือกนี้เพิ่มหรือลดต่อ 1 ที่">
+                                                                                    {rowCost < 0 ? '−' : '+'}฿{baht(rowCost)}
+                                                                                </span>
+                                                                            )}
                                                                         </div>
                                                                     </div>
 

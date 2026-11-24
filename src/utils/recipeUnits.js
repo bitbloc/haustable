@@ -86,6 +86,9 @@ export const planUsageUnitChange = (rows = [], oldUnit, newUnit) => {
     if (!from || !to || from === to) return { updates: [], manual: 0 };
     const updates = [];
     let manual = 0;
+    // The label 'unit' reads as "the ingredient's own unit" (rowUnit), so a row left in
+    // pieces under it would pass as grams unseen. Pieces are written 'pcs' instead.
+    const reviewLabel = from === 'unit' ? 'pcs' : from;
     for (const row of rows) {
         const rowFrom = norm(row.unit) && norm(row.unit) !== 'unit' ? norm(row.unit) : from;
         if (rowFrom !== from) continue; // already labelled with some other unit; the check handles it
@@ -94,7 +97,7 @@ export const planUsageUnitChange = (rows = [], oldUnit, newUnit) => {
             updates.push({ id: row.id, quantity: fix.quantity, unit: to });
         } else {
             manual += 1;
-            updates.push({ id: row.id, quantity: Number(row.quantity) || 0, unit: from });
+            updates.push({ id: row.id, quantity: Number(row.quantity) || 0, unit: reviewLabel });
         }
     }
     return { updates, manual };

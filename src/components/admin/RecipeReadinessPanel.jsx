@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
 import { logStaffActivity } from '../../utils/auditLogger';
 import { suggestRecipesForMenu, summarizeReadiness, unitsSoldByMenu } from '../../utils/recipeReadiness';
+import { recomputeAllShadow } from '../../utils/stockShadowRecompute';
 
 const DAYS = 30;
 const PAGE = 1000;
@@ -54,6 +55,32 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
     const [error, setError] = useState(null);
     const [expanded, setExpanded] = useState(false);
     const [linkingId, setLinkingId] = useState(null);
+    // Recompute of past sales: null = idle, otherwise { done, total } days
+    const [recompute, setRecompute] = useState(null);
+
+    // Sold lines keep the usage of the day they were sold; this rewrites the last 30 days
+    // of every menu with the recipes and option rules as they are now.
+    const handleRecomputeAll = async () => {
+        if (recompute) return;
+        const question = `คำนวณยอดใช้สต๊อกของบิล ${DAYS} วันที่ผ่านมาใหม่ ด้วยสูตรและตัวเลือกปัจจุบันของทุกเมนู?\n\nใช้เมื่อลงสูตรหรือแก้สูตรที่ผิดเสร็จแล้ว ถ้ามีเมนูที่เปลี่ยนสูตรจริงระหว่างเดือน บิลเก่าของเมนูนั้นจะถูกคิดด้วยสูตรใหม่ด้วย`;
+        if (!window.confirm(question)) return;
+        setRecompute({ done: 0, total: DAYS });
+        const res = await recomputeAllShadow(DAYS, (done, total) => setRecompute({ done, total }));
+        setRecompute(null);
+        if (!res.ok) {
+            toast.error(`คำนวณย้อนหลังหยุดที่วันที่ ${res.daysDone + 1} จาก ${res.days}: ${res.message}`, { duration: 8000 });
+            return;
+        }
+        logStaffActivity('stock', 'shadow_recompute', {
+            reason: `คำนวณยอดใช้ย้อนหลัง ${DAYS} วันใหม่ทุกเมนู`,
+            metadata: { module: 'stock', days: DAYS, lines: res.lines, errors: res.errors }
+        });
+        if (res.errors > 0) {
+            toast.warning(`คำนวณใหม่ ${res.lines.toLocaleString()} รายการขาย มี ${res.errors.toLocaleString()} รายการที่คำนวณไม่ได้`, { duration: 8000 });
+        } else {
+            toast.success(`คำนวณยอดใช้ใหม่ ${res.lines.toLocaleString()} รายการขายใน ${DAYS} วัน`);
+        }
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -143,7 +170,23 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
 
             {/* Coverage bar */}
             <div className="h-1 bg-[var(--color-paper-2)]" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label="สัดส่วนยอดขายที่มีสูตร">
-                <div className="h-full bg-[var(--color-ink)] transition-[width] duration-300" style={{ width: `${Math.min(pct, 100)}%` }} />
+                <div className="h-full bg-[var(--color-ink)]" style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+
+            {/* Past sales: recompute with today's recipes */}
+            <div className="border-t border-[var(--color-rule)] px-4 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p className="flex-1 min-w-[16rem] font-sans text-[13px] leading-5 text-[var(--color-muted)] text-pretty">
+                    บิลที่ขายไปแล้วคิดยอดใช้ตามสูตรของวันที่ขาย ลงหรือแก้สูตรเสร็จแล้วกดคำนวณใหม่
+                </p>
+                <button
+                    type="button"
+                    onClick={handleRecomputeAll}
+                    disabled={!!recompute}
+                    className="admin-btn h-9"
+                    aria-live="polite"
+                >
+                    {recompute ? `กำลังคำนวณ ${recompute.done}/${recompute.total} วัน` : `คำนวณ ${DAYS} วันย้อนหลังใหม่`}
+                </button>
             </div>
 
             {/* Missing list */}
@@ -176,7 +219,7 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
                                             disabled={!!linkingId}
                                             onClick={() => handleLink(item, recipe)}
                                             title={`ใช้สูตร ${recipe.name} 1 ที่ต่อการขาย 1 ที่`}
-                                            className="px-2 py-1 border border-[var(--color-ink)] bg-[var(--color-paper)] font-sans text-[12px] leading-5 font-bold text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] disabled:opacity-40 transition-colors cursor-pointer max-w-full text-left"
+                                            className="px-2 py-1 border border-[var(--color-ink)] bg-[var(--color-paper)] font-sans text-[12px] leading-5 font-bold text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] disabled:opacity-40 transition-colors cursor-pointer max-w-full text-left focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                         >
                                             {busy ? 'กำลังผูก...' : <>ผูก <span className="font-normal">{recipe.name}</span></>}
                                         </button>
@@ -185,7 +228,7 @@ export default function RecipeReadinessPanel({ menuItems = [], onOpenRecipe, onL
                                 <button
                                     type="button"
                                     onClick={() => onOpenRecipe?.(item)}
-                                    className="px-2 py-1 border border-[var(--color-rule)] bg-[var(--color-paper-2)] font-sans text-[12px] leading-5 font-bold text-[var(--color-muted)] hover:bg-[var(--color-paper-3)] transition-colors cursor-pointer whitespace-nowrap"
+                                    className="px-2 py-1 border border-[var(--color-rule)] bg-[var(--color-paper-2)] font-sans text-[12px] leading-5 font-bold text-[var(--color-muted)] hover:bg-[var(--color-paper-3)] transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]"
                                 >
                                     สร้างสูตร
                                 </button>
