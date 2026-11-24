@@ -1,4 +1,5 @@
 // Food cards on /link (owner 2026-11-24): layer positions for the 9 type-in-scene cards, as % of the 1080x1446 card.
+// captionBreak marks where a long Thai dish name may wrap (Thai has no spaces; the browser would split inside a phrase).
 // Generated from the content project's link-cards/loop/loop.json. Files (720 px WebP) live in public-assets/link/cards/.
 // The leading underscore keeps Vercel from treating this file as a function.
 export const LINK_CARDS = {
@@ -42,6 +43,7 @@ export const LINK_CARDS = {
    "id": "02-kuakling",
    "word": "ถึงใจ",
    "caption": "คั่วกลิ้งผักแนม",
+  "captionBreak": "คั่วกลิ้ง|ผักแนม",
    "photoTop": 0,
    "photoH": 112.033,
    "base": 36.774,
@@ -77,6 +79,7 @@ export const LINK_CARDS = {
    "id": "03-massaman",
    "word": "ละมุน",
    "caption": "แกงมัสมั่นเนื้อน่องลาย",
+  "captionBreak": "แกงมัสมั่น|เนื้อน่องลาย",
    "photoTop": -8.544,
    "photoH": 112.033,
    "base": 36.607,
@@ -159,6 +162,7 @@ export const LINK_CARDS = {
    "id": "05-gaengsom",
    "word": "จี๊ด",
    "caption": "แกงส้มปลาสำลี",
+  "captionBreak": "แกงส้ม|ปลาสำลี",
    "photoTop": -3.376,
    "photoH": 112.033,
    "base": 41.234,
@@ -182,6 +186,7 @@ export const LINK_CARDS = {
    "id": "06-kiewwan",
    "word": "หอมมัน",
    "caption": "แกงเขียวหวานเนื้อน่องลาย",
+  "captionBreak": "แกงเขียวหวาน|เนื้อน่องลาย",
    "photoTop": -0.083,
    "photoH": 112.033,
    "base": 39.4,
@@ -223,6 +228,7 @@ export const LINK_CARDS = {
    "id": "07-bolognese",
    "word": "เต็มคำ",
    "caption": "สปาเก็ตตี้โบโลเนส",
+  "captionBreak": "สปาเก็ตตี้|โบโลเนส",
    "photoTop": -12.004,
    "photoH": 112.033,
    "base": 44.401,
@@ -264,6 +270,7 @@ export const LINK_CARDS = {
    "id": "08-yumcashew",
    "word": "กรุบ",
    "caption": "ยำเม็ดมะม่วงหิมพานต์",
+  "captionBreak": "ยำ|เม็ดมะม่วงหิมพานต์",
    "photoTop": -3.126,
    "photoH": 112.033,
    "base": 36.732,

@@ -526,6 +526,8 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         // First card: eager (it can be the largest image of the first screen); the rest load as they near the strip's edge
         const load = k === 0 ? fcLoading : 'loading="lazy"'
         const th = escapeHtml(c.caption)
+        // Thai name wraps only at its phrase break: each phrase stays whole, <wbr> allows the break between them
+        const thHtml = c.captionBreak ? c.captionBreak.split('|').map(p => `<span class="fc-nb">${escapeHtml(p)}</span>`).join('<wbr>') : th
         const en = dishAlt('name_en', c.caption) || th
         const letters = c.slices.map((s, i) => {
             // inside the word box (height = the word's base line), so the box clips letters rising through that line
@@ -539,7 +541,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                         <div class="fc-word" aria-hidden="true" style="height:${fcPct(c.base)}">${letters}</div>
                         <img class="fc-dish" src="${src('dish')}" alt="" ${load} decoding="async" width="720" height="1080" style="top:${fcPct(c.photoTop)}">
                     </div>
-                    <figcaption class="fc-cap" style="left:${fcPct(LINK_CARDS.capX)};bottom:${fcPct(LINK_CARDS.capBottom)}"><span class="fc-vh" lang="th">${escapeHtml(c.word)} · </span>${tt(th, en, dishAlt('name_zh', c.caption), dishAlt('name_lo', c.caption))}</figcaption>
+                    <figcaption class="fc-cap" style="left:${fcPct(LINK_CARDS.capX)};bottom:${fcPct(LINK_CARDS.capBottom)}"><span class="fc-vh" lang="th">${escapeHtml(c.word)} · </span>${tt(thHtml, en, dishAlt('name_zh', c.caption), dishAlt('name_lo', c.caption))}</figcaption>
                     <img class="fc-logo" src="${LINK_CARDS_BASE}logo-naibaan-cream.webp" alt="" loading="lazy" decoding="async" width="240" height="130" style="right:${fcPct(fcLogo.right)};top:${fcPct(fcLogo.top)};width:${fcPct(fcLogo.w)};height:auto">
                 </figure>`
     }).join('')
@@ -1043,6 +1045,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .fc-photo, .fc-dish { left: 0; width: 100%; height: auto; }
         .fc-word { left: 0; top: 0; width: 100%; overflow: hidden; }
         .fc-cap { position: absolute; margin: 0; max-width: 62%; color: var(--cream); font-size: var(--text-md); font-weight: 500; line-height: 1.5; text-shadow: 0 1px 8px oklch(21.78% 0 0 / 0.45); }
+        .fc-nb { white-space: nowrap; }
         .fc-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
         /* Menu rows */
@@ -1687,16 +1690,21 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         // Cards are settled in the HTML, so no JS, reduced motion and a failed import all show the finished card.
         // Motion (motion.dev, the mini WAAPI build, ~23 KB over the wire) loads only when the strip is about a screen away;
         // cards already on screen then stay as they are (the first paint is never animated).
+        // A card plays once it is three quarters in view, so a swipe has mostly settled before the word rises.
         (function() {
             const strip = document.querySelector('.fc-strip');
             if (!strip || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
             const EASE = [0.16, 1, 0.3, 1];
+            // The push-in is slow drift, not an entrance: a softer ease-out so the scale does not jump in the first second
+            const DRIFT = [0.33, 1, 0.68, 1];
+            // The breath moves on screen and back, so it eases in and out
+            const BREATHE = [0.45, 0, 0.55, 1];
             // Tempo follows the word: sharp words snap up, soft words rise slowly and breathe once
             const TEMPO = { sharp: { dur: 0.4, stagger: 0.07, breathe: 0 }, even: { dur: 0.6, stagger: 0.1, breathe: 0 }, soft: { dur: 0.87, stagger: 0.17, breathe: 4 } };
             const near = new IntersectionObserver(function(entries) {
                 if (!entries.some(function(en) { return en.isIntersecting; })) return;
                 near.disconnect();
-                import('https://cdn.jsdelivr.net/npm/framer-motion@12.23.26/dom/mini/+esm').then(function(m) { start(m.animate); }).catch(function() {});
+                import('https://cdn.jsdelivr.net/npm/motion@12.23.26/mini/+esm').then(function(m) { start(m.animate); }).catch(function() {});
             }, { rootMargin: '100% 0px' });
             near.observe(strip);
 
@@ -1715,19 +1723,19 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                         seen.unobserve(en.target);
                         play(animate, en.target);
                     });
-                }, { threshold: 0.55 });
+                }, { threshold: 0.75 });
                 cards.forEach(function(card) { seen.observe(card); });
             }
 
             function play(animate, card) {
                 const t = TEMPO[card.dataset.tempo] || TEMPO.even;
-                animate(card.querySelector('.fc-scene'), { transform: ['scale(1)', 'scale(1.035)'] }, { duration: 6, ease: EASE });
+                animate(card.querySelector('.fc-scene'), { transform: ['scale(1)', 'scale(1.035)'] }, { duration: 6, ease: DRIFT });
                 card.querySelectorAll('.fc-word img').forEach(function(l, i) {
                     const rise = animate(l, { transform: ['translateY(' + l.dataset.rise + '%)', 'translateY(0)'] }, { duration: t.dur, delay: 0.08 + i * t.stagger, ease: EASE });
                     if (!t.breathe) return;
                     // one slow breath after landing, then still: nothing on /link loops
                     rise.finished.then(function() {
-                        animate(l, { transform: ['translateY(0)', 'translateY(-' + t.breathe + 'px)', 'translateY(0)'] }, { duration: 2.4, ease: 'ease-in-out' });
+                        animate(l, { transform: ['translateY(0)', 'translateY(-' + t.breathe + 'px)', 'translateY(0)'] }, { duration: 2.4, ease: BREATHE });
                     });
                 });
             }
