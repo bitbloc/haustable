@@ -199,10 +199,11 @@ export default function DataPurgePanel() {
                 p_reset_stock_qty: resetStockQty
             });
 
-            if (error) {
-                // If RPC fails (e.g. not created yet in SQL editor), perform fallback deletion
-                console.warn('RPC execution returned error, attempting direct fallback operations:', error);
-                await executeDirectFallback(activeModal.id, resetStockQty);
+            // The server checks the role and the passcode. A refusal is a refusal: nothing is
+            // deleted from here instead, and no success is shown.
+            if (error) throw error;
+            if (data && data.success === false) {
+                throw new Error(data.error || data.message || 'purge_system_data refused');
             }
 
             showToast(`✅ ล้างข้อมูลหมวด "${activeModal.title}" เรียบร้อยแล้ว!`, 'success');
@@ -215,42 +216,6 @@ export default function DataPurgePanel() {
             showToast(`❌ เกิดข้อผิดพลาด: ${err.message || err}`, 'error');
         } finally {
             setIsPurging(false);
-        }
-    };
-
-    // Client-side fallback deletion
-    const executeDirectFallback = async (categoryId, shouldResetStock) => {
-        if (categoryId === 'orders' || categoryId === 'all_operational') {
-            await supabase.from('order_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('payment_slips_registry').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        }
-        if (categoryId === 'shifts' || categoryId === 'all_operational') {
-            await supabase.from('pos_audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('pos_shifts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        }
-        if (categoryId === 'stock' || categoryId === 'all_operational') {
-            await supabase.from('stock_transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (shouldResetStock) {
-                await supabase.from('stock_items').update({ current_quantity: 0 }).neq('id', '00000000-0000-0000-0000-000000000000');
-            }
-        }
-        if (categoryId === 'activities' || categoryId === 'all_operational') {
-            await supabase.from('song_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('leaderboard').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('arcade_rewards_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('haus_checkins').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        }
-        if (categoryId === 'crm_balances') {
-            await supabase.from('profiles').update({
-                xhaus_balance: 10.00,
-                total_earned_xhaus: 10.00,
-                total_redeemed_xhaus: 0.00,
-                drink_stamp_count: 0,
-                free_drink_quota: 0,
-                total_drinks_purchased: 0,
-                current_tier: 'Haus Common'
-            }).neq('id', '00000000-0000-0000-0000-000000000000');
         }
     };
 
