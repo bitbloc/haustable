@@ -1044,7 +1044,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .fc-scene img, .fc-word, .fc-word img, .fc-logo { position: absolute; display: block; max-width: none; }
         .fc-photo, .fc-dish { left: 0; width: 100%; height: auto; }
         .fc-word { left: 0; top: 0; width: 100%; overflow: hidden; }
-        .fc-cap { position: absolute; margin: 0; max-width: 62%; color: var(--cream); font-size: var(--text-md); font-weight: 500; line-height: 1.5; text-shadow: 0 1px 8px oklch(21.78% 0 0 / 0.45); }
+        .fc-cap { position: absolute; margin: 0; max-width: 62%; color: var(--cream); font-size: var(--text-md); font-weight: 500; line-height: 1.35; text-shadow: 0 1px 8px oklch(21.78% 0 0 / 0.45); }
         .fc-nb { white-space: nowrap; }
         .fc-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
