@@ -480,7 +480,9 @@ export default function StockCountPage() {
                 p_performed_by: performedBy,
                 p_note: null,
                 p_blind: !showSystem,
-                p_shop_day: shopDay
+                // The shop day now, not when the page was opened: a sheet left open past
+                // 05:00 must not be filed under yesterday
+                p_shop_day: shopDayOf(new Date())
             });
             if (error) throw error;
 

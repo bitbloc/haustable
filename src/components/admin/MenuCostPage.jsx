@@ -6,6 +6,7 @@ import { calculateRecipeCost } from '../../utils/costUtils';
 import { buildLiveCostResolver } from '../../utils/recipeGraph';
 import RecipeReadinessPanel from './RecipeReadinessPanel';
 import RecipeUnitCheckPanel from './RecipeUnitCheckPanel';
+import CostAnomalyPanel from './CostAnomalyPanel';
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 import './MenuCostPage.css';
@@ -122,6 +123,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     profit,
                     margin,
                     costPercent,
+                    costLines: breakdown.ingredients,
                     ingredientCount: ingredients.length,
                     hasRecipe: ingredients.length > 0
                 };
@@ -431,6 +433,14 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                         if (menu) handleOpenRecipe(menu);
                     }}
                     onFixed={() => loadData(false)}
+                />
+
+                <CostAnomalyPanel
+                    menuItems={menuItems}
+                    onOpenRecipe={(m) => {
+                        const menu = menuItems.find(x => x.id === m.id);
+                        if (menu) handleOpenRecipe(menu);
+                    }}
                 />
 
                 {/* 4 Strategic F&B KPI Cards (Dieter Rams Tabular Structure) */}

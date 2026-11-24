@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { AdminFilterChips, AdminSearch, AdminToolbar } from '../../components/admin/AdminKit'
 import { supabase } from '../../lib/supabaseClient'
+import { fetchMenuMaterialCost } from '../../utils/menuCost'
 import { Plus, Edit2, Trash2, X, Image as ImageIcon, GripVertical, Search, Copy, LayoutGrid, List } from 'lucide-react'
 import { DndContext, closestCorners, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { arrayMove, SortableContext, rectSortingStrategy, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
@@ -634,30 +635,10 @@ export default function MenuItemList() {
             material_cost: 0
         })
 
-        // Fetch Material Cost from Recipe
+        // Material cost from the recipe: same figure as the Menu Cost page (bases at today's
+        // prices, takeaway-only packaging left out of the dine-in cost)
         try {
-            const { data: recipeIng } = await supabase
-                .from('recipe_ingredients')
-                .select(`
-                    quantity,
-                    unit,
-                    ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
-                        cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
-                    )
-                `)
-                .eq('parent_menu_item_id', item.id)
-
-            let calculatedMatCost = 0
-            if (recipeIng && recipeIng.length > 0) {
-                calculatedMatCost = recipeIng.reduce((sum, ri) => {
-                    if (!ri.ingredient) return sum
-                    const price = ri.ingredient.cost_price || 0
-                    const packSize = ri.ingredient.pack_size || 1
-                    const totalUnits = packSize * (ri.ingredient.conversion_factor || 1) * ((ri.ingredient.yield_percent || 100) / 100)
-                    const unitCost = totalUnits > 0 ? price / totalUnits : 0
-                    return sum + (unitCost * (ri.quantity || 0))
-                }, 0)
-            }
+            const { cost: calculatedMatCost } = await fetchMenuMaterialCost(supabase, item.id)
             setFormData(prev => ({ ...prev, material_cost: calculatedMatCost }))
         } catch (err) {
             console.warn('Cost fetch error:', err)
