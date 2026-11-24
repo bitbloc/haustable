@@ -1690,7 +1690,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         // Cards are settled in the HTML, so no JS, reduced motion and a failed import all show the finished card.
         // Motion (motion.dev, the mini WAAPI build, ~23 KB over the wire) loads only when the strip is about a screen away;
         // cards already on screen then stay as they are (the first paint is never animated).
-        // A card plays once it is three quarters in view, so a swipe has mostly settled before the word rises.
+        // The word rises each time a card comes into view and folds back when it leaves (owner 2026-11-24).
         (function() {
             const strip = document.querySelector('.fc-strip');
             if (!strip || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -1710,34 +1710,67 @@ function generateStandaloneLandingHtml(data, opts = {}) {
 
             function start(animate) {
                 const vh = window.innerHeight, vw = window.innerWidth;
-                const cards = Array.prototype.slice.call(strip.querySelectorAll('.fc-card')).filter(function(card) {
+                const state = new Map();
+                strip.querySelectorAll('.fc-card').forEach(function(card) {
                     const r = card.getBoundingClientRect();
-                    return !(r.top < vh && r.bottom > 0 && r.left < vw && r.right > 0);
+                    const onScreen = r.top < vh && r.bottom > 0 && r.left < vw && r.right > 0;
+                    state.set(card, { shown: onScreen, runs: [], gen: 0 });
+                    if (!onScreen) letters(card).forEach(function(l) { l.style.transform = sunk(l); });
                 });
-                cards.forEach(function(card) {
-                    card.querySelectorAll('.fc-word img').forEach(function(l) { l.style.transform = 'translateY(' + l.dataset.rise + '%)'; });
-                });
+                // Enter at three quarters in view (a swipe has mostly settled); leave below a quarter (the card is nearly gone),
+                // so the word never sinks while someone is still looking at it
                 const seen = new IntersectionObserver(function(entries) {
                     entries.forEach(function(en) {
-                        if (!en.isIntersecting) return;
-                        seen.unobserve(en.target);
-                        play(animate, en.target);
+                        const s = state.get(en.target);
+                        if (en.intersectionRatio >= 0.75 && !s.shown) { s.shown = true; play(animate, en.target, s); }
+                        else if (en.intersectionRatio < 0.25 && s.shown) { s.shown = false; leave(animate, en.target, s); }
                     });
-                }, { threshold: 0.75 });
-                cards.forEach(function(card) { seen.observe(card); });
+                }, { threshold: [0, 0.25, 0.75] });
+                state.forEach(function(s, card) { seen.observe(card); });
             }
 
-            function play(animate, card) {
+            function letters(card) { return Array.prototype.slice.call(card.querySelectorAll('.fc-word img')); }
+            function sunk(l) { return 'translateY(' + l.dataset.rise + '%)'; }
+            // Stop what is running and hold each element where it is, so a quick swipe back turns around without a jump
+            function halt(s) {
+                s.gen++;
+                s.runs.forEach(function(r) {
+                    const at = getComputedStyle(r.el).transform;
+                    r.anim.stop();
+                    r.el.style.transform = at === 'none' ? '' : at;
+                });
+                s.runs = [];
+            }
+            function run(animate, s, el, to, opts) {
+                const from = getComputedStyle(el).transform;
+                const anim = animate(el, { transform: [from === 'none' ? 'translateY(0)' : from, to] }, opts);
+                s.runs.push({ el: el, anim: anim });
+                return anim;
+            }
+
+            function play(animate, card, s) {
+                halt(s);
                 const t = TEMPO[card.dataset.tempo] || TEMPO.even;
-                animate(card.querySelector('.fc-scene'), { transform: ['scale(1)', 'scale(1.035)'] }, { duration: 6, ease: DRIFT });
-                card.querySelectorAll('.fc-word img').forEach(function(l, i) {
-                    const rise = animate(l, { transform: ['translateY(' + l.dataset.rise + '%)', 'translateY(0)'] }, { duration: t.dur, delay: 0.08 + i * t.stagger, ease: EASE });
+                const gen = s.gen;
+                run(animate, s, card.querySelector('.fc-scene'), 'scale(1.035)', { duration: 6, ease: DRIFT });
+                letters(card).forEach(function(l, i) {
+                    const rise = run(animate, s, l, 'translateY(0)', { duration: t.dur, delay: 0.08 + i * t.stagger, ease: EASE });
                     if (!t.breathe) return;
                     // one slow breath after landing, then still: nothing on /link loops
                     rise.finished.then(function() {
-                        animate(l, { transform: ['translateY(0)', 'translateY(-' + t.breathe + 'px)', 'translateY(0)'] }, { duration: 2.4, ease: BREATHE });
+                        if (s.gen !== gen) return;
+                        run(animate, s, l, 'translateY(-' + t.breathe + 'px)', { duration: 1.2, ease: BREATHE }).finished.then(function() {
+                            if (s.gen === gen) run(animate, s, l, 'translateY(0)', { duration: 1.2, ease: BREATHE });
+                        });
                     });
                 });
+            }
+
+            // Exit is quicker than the entrance and all at once: the word folds back behind the dish, ready to rise again
+            function leave(animate, card, s) {
+                halt(s);
+                run(animate, s, card.querySelector('.fc-scene'), 'scale(1)', { duration: 0.2, ease: EASE });
+                letters(card).forEach(function(l) { run(animate, s, l, sunk(l), { duration: 0.2, ease: EASE }); });
             }
         })();
 
