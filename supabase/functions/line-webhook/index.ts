@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { buildStockSummaryMessage, remainingText } from "./stockSummary.ts"
+import { handleReceiptEvents } from "./receipt.ts"
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,469 +79,10 @@ async function verifySignature(body: string, signature: string, secret: string) 
   const signatureBuffer = await crypto.subtle.sign('HMAC', key, bodyBuffer)
   const base64Signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
 
-  return base64Signature === signature
-}
-
-async function fetchExchangeRate(fromCurrency: string = 'USD'): Promise<number> {
-  const norm = (fromCurrency || 'USD').toUpperCase().trim();
-  if (norm === 'THB' || norm === 'บาท') return 1.0;
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-    const resp = await fetch(`https://api.exchangerate-api.com/v4/latest/${norm}`, {
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (resp.ok) {
-      const data = await resp.json();
-      const rate = Number(data?.rates?.THB);
-      if (rate && rate > 0) {
-        console.log(`[ExchangeRate] Live rate for ${norm}->THB from exchangerate-api: ${rate}`);
-        return rate;
-      }
-    }
-  } catch (err) {
-    console.warn(`[ExchangeRate] primary API failed for ${norm}:`, err);
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-    const resp = await fetch(`https://open.er-api.com/v6/latest/${norm}`, {
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (resp.ok) {
-      const data = await resp.json();
-      const rate = Number(data?.rates?.THB);
-      if (rate && rate > 0) {
-        console.log(`[ExchangeRate] Live rate for ${norm}->THB from open.er-api: ${rate}`);
-        return rate;
-      }
-    }
-  } catch (err) {
-    console.warn(`[ExchangeRate] secondary API failed for ${norm}:`, err);
-  }
-
-  // Reliable fallback rates if network fails
-  const fallbackRates: Record<string, number> = {
-    'USD': 33.50,
-    'EUR': 36.50,
-    'SGD': 25.50,
-    'JPY': 0.22,
-    'GBP': 43.50,
-    'CNY': 4.70
-  };
-  const fallback = fallbackRates[norm] || 33.50;
-  console.log(`[ExchangeRate] Using fallback rate for ${norm}->THB: ${fallback}`);
-  return fallback;
-}
-
-async function scanReceiptImageWithGemini(
-  base64ImagesInput: string | string[],
-  apiKey: string,
-  preferredModel: string = 'gemini-flash-latest'
-): Promise<any> {
-  const imagesArray = Array.isArray(base64ImagesInput) ? base64ImagesInput : [base64ImagesInput];
-  const isMultiPage = imagesArray.length > 1;
-
-  const imageParts = imagesArray.map(b64 => {
-    const match = b64.match(/^data:([^;]+);base64,(.+)$/);
-    const mimeType = match ? match[1] : 'image/jpeg';
-    const rawBase64 = match ? match[2] : b64;
-    return {
-      inline_data: {
-        mime_type: mimeType,
-        data: rawBase64
-      }
-    };
-  });
-
-  const systemInstruction = `
-You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
-You are provided with ${imagesArray.length} image(s) sent by staff/management via LINE chat. ${isMultiPage ? `These ${imagesArray.length} images are part of a SINGLE multi-page receipt set, tax invoice set, or bill + transfer slip combination (e.g. Page 1, Page 2 of the same Makro/Lotus bill, or invoice + bank slip).` : ''}
-Analyze all provided images TOGETHER as a single cohesive expense record.
-
-CRITICAL INSTRUCTIONS FOR HORIZONTAL / ROTATED / SIDEWAYS PHOTOS (แนวนอน / ตะแคงข้าง 90° / 270° / กลับหัว 180°):
-- Staff members taking photos on smartphones frequently send receipts in HORIZONTAL (แนวนอน / landscape), ROTATED SIDEWAYS (90° clockwise or counter-clockwise), or angled orientation.
-- You MUST automatically detect the text orientation, rotate your reading perspective mentally, and scan all 4 directions (horizontal, vertical, rotated).
-- Any photo showing a paper receipt, thermal cash slip, Makro / Lotus / Big C / 7-Eleven bill, PTT gas receipt, utility bill, cooking gas receipt, market cash voucher, or bank transfer slip IS ALWAYS AN EXPENSE RECEIPT ("is_receipt": true).
-- NEVER fail, return is_receipt: false, or return 0.00 simply because the photo was taken horizontally or sideways.
-
-Extract and return ONLY a valid JSON object matching this schema:
-{
-  "is_receipt": true, // Set to true for ANY bill, slip, invoice, receipt, or transaction voucher in any orientation. Set to false ONLY for random unrelated photos (e.g. selfie, food plate without bill, meme, cat, sticker).
-  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่าบริการ Supabase Pro Plan')",
-  "currency": "THB", // Currency detected: 'THB' (default for Thai receipts/bills), 'USD' (if $, USD, US Dollar, US$), 'EUR', 'SGD', 'JPY', 'GBP'
-  "original_amount": 0.00, // Grand total payable in the original document currency (e.g. 26.75 for $26.75 USD)
-  "amount": 0.00, // Grand total payable amount (search for 'Total', 'Amount paid', 'ยอดสุทธิ', 'ยอดรวม', 'รวมทั้งสิ้น', 'จำนวนเงิน', 'BAHT', 'THB', '$', 'USD' in any orientation)
-  "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing or year in Buddhist Era (2569 -> 2026), convert to Gregorian YYYY-MM-DD. If missing, use today's date
-  "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
-  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'Supabase Pte. Ltd.', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
-  "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
-  "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
-  "vat_included": true, // Boolean: true if VAT/Tax is included in the bill (like Makro, gas stations, power bills, Supabase Tax 7%), false otherwise
-  "payment_method": "TRANSFER", // DEFAULT IS ALWAYS 'TRANSFER'. Use 'CASH' only if explicitly marked as cash payment, or 'CREDIT' if marked as credit card.
-  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'Supabase Pro Plan $25.00 + Tax 7% $1.75 = $26.75 USD', 'หมูสามชั้น 3kg, นม 4 แกลลอน')",
-  "confidence": 0.95 // Confidence score from 0.0 to 1.0
-}
-
-CRITICAL RULES FOR FOREIGN CURRENCY & DOLLAR RECEIPTS ($ / USD):
-- Foreign tech, developer, and cloud invoices (e.g. Supabase, Vercel, GitHub, OpenAI, Midjourney, Figma, Google Workspace, AWS, Adobe, Namecheap) are billed in US Dollars ($ / USD).
-- If the document displays '$', 'USD', or 'US Dollar':
-  * Set "currency": "USD"
-  * Set "original_amount": <amount in USD as positive number, e.g. 26.75>
-  * Set "amount": <amount in USD as positive number, e.g. 26.75>
-  * Set "category": "software_service"
-  * In "notes", include the original USD breakdown (e.g. 'Supabase Pro Plan $25.00 + Tax 7% $1.75 = $26.75 USD')
-- If the document is in another foreign currency (EUR, SGD, JPY, GBP), set "currency" and "original_amount" accordingly.
-- If the document is standard Thai currency (฿, บาท, THB), set "currency": "THB" and "original_amount" to the Baht amount.
-
-Category Rules:
-- Cooking Gas / LPG / Gas Tanks (แก๊สหุงต้ม, แก๊สครัว, ถังแก๊ส, เวิลด์แก๊ส, สยามแก๊ส, ปตท.แก๊ส, ร้านส่งแก๊ส, ค่าเติมแก๊ส) -> 'utilities'
-- Electricity / Water / Internet (MEA/PEA การไฟฟ้า, MWA/PWA การประปา, True, AIS, 3BB, NT) -> 'utilities'
-- Vehicle Fuel & Logistics (ค่าน้ำมันรถ, ดีเซล, เบนซิน, แก๊สรถยนต์, ปั๊ม ปตท., บางจาก, Shell, Caltex, Lalamove, Grab, Lineman, Flash, Kerry) -> 'fuel_logistics'
-- Fresh Food / Market / Ingredients / Ice (Makro, Lotus, Big C, CJ More, ตลาดสด, ตลาดไท, โรงน้ำแข็ง, น้ำแข็งหลอด, เนื้อสัตว์, ผักผลไม้, นม, ไข่ไก่, ซอส, เมล็ดกาแฟ, ไซรัป) -> 'raw_material'
-- Marketing & Ads (Facebook, TikTok, Instagram, Google Ads, LINE Ads, ป้ายโฆษณา) -> 'marketing'
-- Rent & Premises (ค่าเช่าร้าน, ค่าเช่าพื้นที่, ค่าเช่าที่ดิน, เงินมัดจำ) -> 'rent'
-- Staff Wages (ค่าแรง, เงินเดือน, ค่าจ้างพาร์ทไทม์, โอที) -> 'staff_wages'
-- Equipment & Packaging (แก้วกาแฟ, ฝา, หลอด, ถุงหิ้ว, ถุงขยะ, กล่องอาหาร, ทิชชู่, น้ำยาล้างจาน, อุปกรณ์ครัว) -> 'equipment_supplies'
-- Maintenance & Repairs (ช่างไฟ, ช่างประปา, ล้างแอร์, ซ่อมตู้เย็น, HomePro, ไทวัสดุ, ดูโฮม) -> 'maintenance'
-- Software & Subscriptions (Supabase, Vercel, Spotify, Canva, POS, ระบบรายเดือน, Cloud, AI tools) -> 'software_service'
-
-Special Rules for Online Ads & Google Ads Statement (ใบแจ้งยอด Google Ads / Facebook Ads):
-- In "Google Statement" / "Google Ads" monthly account statements:
-  * Look for "การชำระเงินทั้งหมดที่ได้รับ" (Total payments received / e.g. -฿5,389.12) — this is the ACTUAL cash/credit card amount billed and paid in this billing cycle. Extract this absolute positive number (e.g. 5389.12) as "amount".
-  * If payments received is 0, use "กิจกรรมใหม่ทั้งหมด" (Total new activity / actual ad spend incurred during the month).
-  * ABSOLUTELY FORBIDDEN: NEVER extract "ยอดเงินสุดท้ายในสกุลเงิน THB" (Ending balance / carryover balance) or "ยอดเงินเริ่มต้น" (Beginning balance) as the "amount".
-  * Set vendor_name to "Google Ads", category to "marketing", doc_type to "receipt_voucher".
-
-Multi-Page Rules:
-- If multiple pages have separate line items, combine all line items into the 'notes' field.
-- Do NOT double-count totals across pages if one page is a subtotal and another is the grand total. Extract only the single final payable amount.
-- If one page is an invoice and another is a bank transfer slip, verify that the amounts match, use the invoice vendor and tax details, and set payment_method to 'TRANSFER'.
-
-Payment Method Rules:
-- DEFAULT: 'TRANSFER' (Mobile banking, PromptPay QR, KPlus, SCB Easy, Krungthai NEXT, KKP, ttb, Bank Transfer slip, etc.)
-- Use 'CASH' ONLY if the bill explicitly states cash payment / จ่ายเงินสด.
-- Use 'CREDIT' ONLY if the bill explicitly states credit/debit card payment / รูดบัตร.
-`;
-
-  const requestBody = {
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { text: `Please analyze these ${imagesArray.length} receipt/invoice/slip image(s) together as one single cohesive document set and extract structured expense and tax information in Thai.` },
-          ...imageParts
-        ]
-      }
-    ],
-    system_instruction: {
-      parts: [{ text: systemInstruction }]
-    },
-    generationConfig: {
-      response_mime_type: 'application/json',
-      temperature: 0.1
-    }
-  };
-
-  const candidateModels = Array.from(new Set([
-    preferredModel,
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
-    'gemini-3.8-flash',
-    'gemini-4-argon',
-    'gemini-3.7-flash',
-    'gemini-pro-latest'
-  ]));
-
-  let lastError: any = null;
-
-  for (const model of candidateModels) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      let response: Response;
-      try {
-        response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify(requestBody)
-        });
-      } catch (fetchErr: any) {
-        clearTimeout(timeout);
-        lastError = fetchErr;
-        continue;
-      }
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.warn(`[Gemini ${model}] failed with status ${response.status}:`, errText);
-        if (response.status === 402) {
-          throw new Error('Gemini API Error: 402 Prepayment credits depleted');
-        }
-        if (response.status === 404 || errText.toLowerCase().includes('not found')) {
-          continue;
-        }
-        lastError = new Error(`Gemini API Error: ${errText}`);
-        continue;
-      }
-
-      const resJson = await response.json();
-      const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) continue;
-
-      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      return parsed;
-    } catch (err) {
-      lastError = err;
-    }
-  }
-
-  throw lastError || new Error('Failed to scan receipt with Gemini AI');
-}
-
-function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount: number = 1, conversionInfo: any = null) {
-  const categoryLabels: Record<string, string> = {
-    'raw_material': '🛒 วัตถุดิบ & ของสด (MAKRO/ตลาด)',
-    'marketing': '📣 ค่ายิงแอด & การตลาด',
-    'fuel_logistics': '⛽ ค่าน้ำมัน & ค่าส่งของ',
-    'utilities': '⚡ ค่าน้ำ / ไฟ / แก๊ส / เน็ต',
-    'rent': '🏠 ค่าเช่าสถานที่',
-    'staff_wages': '👥 ค่าจ้าง / เงินเดือน',
-    'equipment_supplies': '📦 ของใช้ & บรรจุภัณฑ์',
-    'maintenance': '🔧 ซ่อมบำรุง & ตกแต่ง',
-    'software_service': '💻 ค่าบริการ & ซอฟต์แวร์',
-    'other': '📌 อื่นๆ / เบ็ดเตล็ด'
-  };
-
-  const docTypeLabels: Record<string, string> = {
-    'tax_invoice': 'ใบกำกับภาษีเต็มรูป (TAX INVOICE)',
-    'cash_bill': 'บิลเงินสด (CASH BILL)',
-    'receipt_voucher': 'ใบสำคัญรับเงิน (VOUCHER)',
-    'slip_only': 'สลิปโอนเงิน (TRANSFER SLIP)'
-  };
-
-  const categoryText = categoryLabels[expense.category] || expense.category;
-  const docTypeText = docTypeLabels[expense.doc_type] || expense.doc_type;
-  const vendorDisplay = (expense.vendor_name || 'ไม่ระบุร้านค้า').toUpperCase();
-  const amountStr = `฿${Number(expense.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const headerTitle = pageCount > 1 ? `RECEIPT RECORDED · ${pageCount} PAGES (AI)` : "RECEIPT RECORDED (AI)";
-  const headerSubtitle = pageCount > 1 
-    ? `เอกสารชุด ${pageCount} แผ่น (วิเคราะห์รวมเป็น 1 บิล)` 
-    : (conversionInfo ? `ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ · แปลง ${conversionInfo.currency} เป็นบาท` : "ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ");
-
-  const detailRows: any[] = [];
-
-  if (pageCount > 1) {
-    detailRows.push({
-      type: "box",
-      layout: "horizontal",
-      contents: [
-        { type: "text", text: "จำนวนหน้าเอกสาร", color: "#666666", size: "xs", flex: 4 },
-        { type: "text", text: `${pageCount} แผ่น (ชุดเดียวกัน)`, color: "#2D804E", size: "xs", weight: "bold", align: "end", flex: 4 }
-      ]
-    });
-  }
-
-  detailRows.push(
-    {
-      type: "box",
-      layout: "horizontal",
-      margin: pageCount > 1 ? "sm" : "none",
-      contents: [
-        { type: "text", text: "หมวดหมู่", color: "#666666", size: "xs", flex: 3 },
-        { type: "text", text: categoryText, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5, wrap: true }
-      ]
-    },
-    {
-      type: "box",
-      layout: "horizontal",
-      margin: "sm",
-      contents: [
-        { type: "text", text: "วันที่เอกสาร", color: "#666666", size: "xs", flex: 3 },
-        { type: "text", text: dateFormatted, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5 }
-      ]
-    },
-    {
-      type: "box",
-      layout: "horizontal",
-      margin: "sm",
-      contents: [
-        { type: "text", text: "ประเภทเอกสาร", color: "#666666", size: "xs", flex: 3 },
-        { type: "text", text: docTypeText, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5, wrap: true }
-      ]
-    }
-  );
-
-  // If currency was auto-converted from USD / foreign currency, show original amount and rate
-  if (conversionInfo && conversionInfo.currency && conversionInfo.currency !== 'THB') {
-    detailRows.push(
-      {
-        type: "box",
-        layout: "horizontal",
-        margin: "sm",
-        contents: [
-          { type: "text", text: "ยอดเดิม (สกุลเงิน)", color: "#78736A", size: "xs", flex: 4 },
-          { type: "text", text: `${conversionInfo.symbol || ''}${Number(conversionInfo.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${conversionInfo.currency}`, color: "#C85A32", size: "xs", weight: "bold", align: "end", flex: 4 }
-        ]
-      },
-      {
-        type: "box",
-        layout: "horizontal",
-        margin: "sm",
-        contents: [
-          { type: "text", text: "อัตราแลกเปลี่ยน", color: "#78736A", size: "xs", flex: 4 },
-          { type: "text", text: `~${Number(conversionInfo.rate || 0).toFixed(2)} บาท / ${conversionInfo.currency}`, color: "#2D804E", size: "xs", weight: "bold", align: "end", flex: 4 }
-        ]
-      }
-    );
-  }
-
-  if (expense.vat_included && expense.vat_amount > 0) {
-    detailRows.push({
-      type: "box",
-      layout: "horizontal",
-      margin: "sm",
-      contents: [
-        { type: "text", text: "ภาษีมูลค่าเพิ่ม (VAT 7%)", color: "#666666", size: "xs", flex: 4 },
-        { type: "text", text: `฿${Number(expense.vat_amount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: "#2D804E", size: "xs", weight: "bold", align: "end", flex: 4 }
-      ]
-    });
-  }
-
-  if (expense.vendor_tax_id) {
-    detailRows.push({
-      type: "box",
-      layout: "horizontal",
-      margin: "sm",
-      contents: [
-        { type: "text", text: "เลขผู้เสียภาษี", color: "#78736A", size: "xs", flex: 3 },
-        { type: "text", text: expense.vendor_tax_id, color: "#1E1B18", size: "xs", weight: "bold", align: "end", flex: 5 }
-      ]
-    });
-  }
-
-  if (expense.payment_method) {
-    const payMap: Record<string, string> = {
-      'TRANSFER': 'โอนเงิน (TRANSFER)',
-      'CASH': 'เงินสด (CASH)',
-      'CREDIT': 'บัตรเครดิต (CREDIT)'
-    };
-    detailRows.push({
-      type: "box",
-      layout: "horizontal",
-      margin: "sm",
-      contents: [
-        { type: "text", text: "วิธีชำระเงิน", color: "#78736A", size: "xs", flex: 3 },
-        { type: "text", text: payMap[expense.payment_method] || expense.payment_method, color: "#1E1B18", size: "xs", weight: "bold", align: "end", flex: 5 }
-      ]
-    });
-  }
-
-  if (expense.notes) {
-    detailRows.push({
-      type: "box",
-      layout: "vertical",
-      margin: "md",
-      backgroundColor: "#F4F1EA",
-      cornerRadius: "sm",
-      paddingAll: "sm",
-      contents: [
-        { type: "text", text: "รายการสินค้า / หมายเหตุ:", color: "#78736A", size: "xxs", weight: "bold" },
-        { type: "text", text: expense.notes, color: "#1E1B18", size: "xs", wrap: true, margin: "xs" }
-      ]
-    });
-  }
-
-  return {
-    type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: "#F4F1EA",
-      paddingAll: "20px",
-      contents: [
-        { type: "text", text: headerTitle, weight: "bold", color: "#1E1B18", size: "sm" },
-        { type: "text", text: headerSubtitle, color: "#78736A", size: "xs", margin: "xs" }
-      ]
-    },
-    body: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: "#FBF9F5",
-      paddingAll: "20px",
-      contents: [
-        // Status indicator
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            {
-              type: "box",
-              layout: "vertical",
-              width: "4px",
-              backgroundColor: "#4A6B3D",
-              cornerRadius: "sm",
-              contents: []
-            },
-            {
-              type: "box",
-              layout: "vertical",
-              margin: "md",
-              contents: [
-                { 
-                  type: "text", 
-                  text: pageCount > 1 
-                    ? `บันทึกชุดเอกสาร (${pageCount} แผ่น) เข้าหลังบ้านเรียบร้อยแล้ว` 
-                    : (conversionInfo ? `บันทึกและแปลงค่าเงิน ${conversionInfo.currency} เรียบร้อยแล้ว` : "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว"), 
-                  color: "#4A6B3D", 
-                  weight: "bold", 
-                  size: "xs" 
-                },
-                { type: "text", text: vendorDisplay, weight: "bold", color: "#1E1B18", size: "sm", margin: "xs", wrap: true },
-                { type: "text", text: expense.title || 'ค่าใช้จ่ายร้าน', color: "#78736A", size: "xs", margin: "xs", wrap: true }
-              ]
-            }
-          ]
-        },
-        { type: "separator", margin: "md", color: "#E6E1D6" },
-        // Total Amount stark box
-        {
-          type: "box",
-          layout: "horizontal",
-          margin: "md",
-          backgroundColor: "#F4F1EA",
-          cornerRadius: "md",
-          paddingAll: "md",
-          contents: [
-            { type: "text", text: "ยอดสุทธิ", weight: "bold", size: "sm", color: "#1E1B18", gravity: "center", flex: 4 },
-            { type: "text", text: amountStr, weight: "bold", size: "lg", color: "#C85A32", align: "end", gravity: "center", flex: 6 }
-          ]
-        },
-        { type: "separator", margin: "md", color: "#E6E1D6" },
-        ...detailRows,
-        { type: "separator", margin: "md", color: "#E6E1D6" },
-        {
-          type: "text",
-          text: "ตรวจสอบและดูภาพสลิปต้นฉบับได้ที่เมนู บัญชีและภาษี (Admin Tax Hub)",
-          color: "#A09B90",
-          size: "xxs",
-          align: "center",
-          margin: "md",
-          wrap: true
-        }
-      ]
-    }
-  };
+  if (base64Signature.length !== signature.length) return false
+  let diff = 0
+  for (let i = 0; i < signature.length; i++) diff |= base64Signature.charCodeAt(i) ^ signature.charCodeAt(i)
+  return diff === 0
 }
 
 // ==========================================
@@ -762,17 +306,17 @@ function createTrafficPredictorFlexMessage(
 
   // Render Daypart Rows (Hallmark Zero-Icon Minimalist Badges)
   const daypartRows = (dayparts || []).map((dp: any, idx: number) => {
-    let statusBg = "#F4F1EA";
-    let statusColor = "#78736A";
+    let statusBg = "#ECE4E7";
+    let statusColor = "#635B5F";
     let statusText = "FORECAST";
 
     if (dp.status === 'passed') {
-      statusBg = "#E8F0E4";
-      statusColor = "#4A6B3D";
+      statusBg = "#ECE4E7";
+      statusColor = "#41032A";
       statusText = "PASSED";
     } else if (dp.status === 'active') {
-      statusBg = "#FDEBD0";
-      statusColor = "#B45309";
+      statusBg = "#ECE4E7";
+      statusColor = "#41032A";
       statusText = "LIVE ACTIVE";
     }
 
@@ -790,8 +334,8 @@ function createTrafficPredictorFlexMessage(
           layout: "vertical",
           flex: 6,
           contents: [
-            { type: "text", text: dp.title, size: "xs", weight: "bold", color: "#1E1B18" },
-            { type: "text", text: dp.timeLabel, size: "xxs", color: "#78736A" }
+            { type: "text", text: dp.title, size: "xs", weight: "bold", color: "#1A1A1A" },
+            { type: "text", text: dp.timeLabel, size: "xxs", color: "#635B5F" }
           ]
         },
         {
@@ -799,8 +343,8 @@ function createTrafficPredictorFlexMessage(
           layout: "vertical",
           flex: 3,
           contents: [
-            { type: "text", text: paxDisplay, size: "xs", weight: "bold", color: "#1E1B18", align: "end" },
-            { type: "text", text: `เทียบฐาน ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}`, size: "xxs", color: dp.diffPct >= 0 ? "#4A6B3D" : "#888888", align: "end" }
+            { type: "text", text: paxDisplay, size: "xs", weight: "bold", color: "#1A1A1A", align: "end" },
+            { type: "text", text: `เทียบฐาน ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}`, size: "xxs", color: dp.diffPct >= 0 ? "#41032A" : "#635B5F", align: "end" }
           ]
         },
         {
@@ -834,15 +378,15 @@ function createTrafficPredictorFlexMessage(
     header: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#1E1B18",
+      backgroundColor: "#41032A",
       paddingAll: "18px",
       contents: [
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "HAUS PRO FORECAST // FAST DIGEST", size: "xxs", weight: "bold", color: "#C85A32", flex: 8 },
-            { type: "text", text: `[${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#E6E1D6", align: "end", flex: 4, gravity: "center" }
+            { type: "text", text: "HAUS PRO FORECAST // FAST DIGEST", size: "xxs", weight: "bold", color: "#D0B5C1", flex: 8 },
+            { type: "text", text: `[${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#D0B5C1", align: "end", flex: 4, gravity: "center" }
           ]
         },
         {
@@ -850,7 +394,7 @@ function createTrafficPredictorFlexMessage(
           text: `พยากรณ์ทราฟฟิก & สรุปข้อมูลฉับไว · ${dateTitleStr}`,
           size: "sm",
           weight: "bold",
-          color: "#FBF9F5",
+          color: "#F6F2EA",
           margin: "xs"
         }
       ]
@@ -858,16 +402,16 @@ function createTrafficPredictorFlexMessage(
     body: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#FBF9F5",
+      backgroundColor: "#F6F2EA",
       paddingAll: "16px",
       contents: [
         // 1. HIGHLIGHT DIGEST BOX: ณ ปัจจุบัน & คาดการณ์ช่วงถัดไป (อ่านจบใน 3 วิ)
         {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#F4F1EA",
+          backgroundColor: "#ECE4E7",
           cornerRadius: "sm",
-          borderColor: "#E6E1D6",
+          borderColor: "#D4CBCF",
           borderWidth: "1px",
           paddingAll: "14px",
           contents: [
@@ -875,19 +419,19 @@ function createTrafficPredictorFlexMessage(
               type: "box",
               layout: "horizontal",
               contents: [
-                { type: "text", text: `SNAPSHOT ปัจจุบัน [${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#C85A32", flex: 7 },
+                { type: "text", text: `SNAPSHOT ปัจจุบัน [${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#41032A", flex: 7 },
                 {
                   type: "text",
                   text: `${dayPacePct >= 0 ? `+${dayPacePct}%` : `${dayPacePct}%`} PACING`,
                   size: "xxs",
                   weight: "bold",
-                  color: dayPacePct >= 0 ? "#4A6B3D" : "#9E2D2D",
+                  color: dayPacePct >= 0 ? "#1A1A1A" : "#41032A",
                   align: "end",
                   flex: 5
                 }
               ]
             },
-            { type: "separator", margin: "sm", color: "#E6E1D6" },
+            { type: "separator", margin: "sm", color: "#D4CBCF" },
             {
               type: "box",
               layout: "horizontal",
@@ -898,9 +442,9 @@ function createTrafficPredictorFlexMessage(
                   layout: "vertical",
                   flex: 6,
                   contents: [
-                    { type: "text", text: "ลูกค้าจริงสะสมขณะนี้:", size: "xxs", color: "#78736A" },
-                    { type: "text", text: `${totalActualPax} ท่าน`, size: "lg", weight: "bold", color: "#1E1B18" },
-                    { type: "text", text: `ชำระแล้ว ${totalActualBills} บิล`, size: "xxs", color: "#78736A" }
+                    { type: "text", text: "ลูกค้าจริงสะสมขณะนี้:", size: "xxs", color: "#635B5F" },
+                    { type: "text", text: `${totalActualPax} ท่าน`, size: "lg", weight: "bold", color: "#1A1A1A" },
+                    { type: "text", text: `ชำระแล้ว ${totalActualBills} บิล`, size: "xxs", color: "#635B5F" }
                   ]
                 },
                 {
@@ -909,21 +453,21 @@ function createTrafficPredictorFlexMessage(
                   flex: 6,
                   alignItems: "flex-end",
                   contents: [
-                    { type: "text", text: `คาดการณ์ 1-2 ชม. ข้างหน้า:`, size: "xxs", color: "#78736A" },
-                    { type: "text", text: `~${nextHoursInfo.forecastPax} ท่าน`, size: "lg", weight: "bold", color: "#C85A32" },
-                    { type: "text", text: `(${nextHoursInfo.label})`, size: "xxs", color: "#78736A" }
+                    { type: "text", text: `คาดการณ์ 1-2 ชม. ข้างหน้า:`, size: "xxs", color: "#635B5F" },
+                    { type: "text", text: `~${nextHoursInfo.forecastPax} ท่าน`, size: "lg", weight: "bold", color: "#41032A" },
+                    { type: "text", text: `(${nextHoursInfo.label})`, size: "xxs", color: "#635B5F" }
                   ]
                 }
               ]
             },
-            { type: "separator", margin: "sm", color: "#E6E1D6" },
+            { type: "separator", margin: "sm", color: "#D4CBCF" },
             {
               type: "box",
               layout: "horizontal",
               margin: "sm",
               contents: [
-                { type: "text", text: "คาดการณ์ยอดปิดวัน:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 5 },
-                { type: "text", text: `~${forecastedClosingPax} ท่าน (${forecastedClosingPaxLow}-${forecastedClosingPaxHigh})`, size: "xxs", weight: "bold", color: "#1E1B18", align: "end", flex: 7 }
+                { type: "text", text: "คาดการณ์ยอดปิดวัน:", size: "xxs", weight: "bold", color: "#1A1A1A", flex: 5 },
+                { type: "text", text: `~${forecastedClosingPax} ท่าน (${forecastedClosingPaxLow}-${forecastedClosingPaxHigh})`, size: "xxs", weight: "bold", color: "#1A1A1A", align: "end", flex: 7 }
               ]
             },
             {
@@ -931,8 +475,8 @@ function createTrafficPredictorFlexMessage(
               layout: "horizontal",
               margin: "xs",
               contents: [
-                { type: "text", text: "ชั่วโมงลูกค้าสูงสุด (Peak):", size: "xxs", weight: "bold", color: "#C85A32", flex: 5 },
-                { type: "text", text: `${peakHourLabel} (~${peakPaxVal} คน | โหลด ${peakCapacityLoad}%)`, size: "xxs", color: "#C85A32", align: "end", flex: 7 }
+                { type: "text", text: "ชั่วโมงลูกค้าสูงสุด (Peak):", size: "xxs", weight: "bold", color: "#41032A", flex: 5 },
+                { type: "text", text: `${peakHourLabel} (~${peakPaxVal} คน | โหลด ${peakCapacityLoad}%)`, size: "xxs", color: "#41032A", align: "end", flex: 7 }
               ]
             }
           ]
@@ -942,8 +486,8 @@ function createTrafficPredictorFlexMessage(
         {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#FFFDF7",
-          borderColor: "#E8DEC8",
+          backgroundColor: "#F6F2EA",
+          borderColor: "#D4CBCF",
           borderWidth: "1px",
           cornerRadius: "sm",
           paddingAll: "12px",
@@ -953,11 +497,11 @@ function createTrafficPredictorFlexMessage(
               type: "box",
               layout: "horizontal",
               contents: [
-                { type: "text", text: "SAI MU & ACTION // เสริมดวง & สิ่งที่ต้องทำทันที", size: "xxs", weight: "bold", color: "#B45309", flex: 8 },
-                { type: "text", text: `[${saiMuData.dayName}]`, size: "xxs", weight: "bold", color: "#78736A", align: "end", flex: 4 }
+                { type: "text", text: "SAI MU & ACTION // เสริมดวง & สิ่งที่ต้องทำทันที", size: "xxs", weight: "bold", color: "#41032A", flex: 8 },
+                { type: "text", text: `[${saiMuData.dayName}]`, size: "xxs", weight: "bold", color: "#635B5F", align: "end", flex: 4 }
               ]
             },
-            { type: "separator", margin: "sm", color: "#E8DEC8" },
+            { type: "separator", margin: "sm", color: "#D4CBCF" },
             {
               type: "box",
               layout: "vertical",
@@ -968,50 +512,50 @@ function createTrafficPredictorFlexMessage(
                   type: "box",
                   layout: "horizontal",
                   contents: [
-                    { type: "text", text: "ฤกษ์ดูดทรัพย์:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
-                    { type: "text", text: aiAnalysis.sai_mu_oracle.auspicious_window, size: "xxs", color: "#B45309", weight: "bold", flex: 9, wrap: true }
+                    { type: "text", text: "ฤกษ์ดูดทรัพย์:", size: "xxs", weight: "bold", color: "#1A1A1A", flex: 3 },
+                    { type: "text", text: aiAnalysis.sai_mu_oracle.auspicious_window, size: "xxs", color: "#41032A", weight: "bold", flex: 9, wrap: true }
                   ]
                 },
                 {
                   type: "box",
                   layout: "horizontal",
                   contents: [
-                    { type: "text", text: "สีมงคล / เลี่ยง:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
-                    { type: "text", text: `${saiMuData.luckyColors} (เลี่ยง: ${saiMuData.unluckyColor})`, size: "xxs", color: "#4A6B3D", weight: "bold", flex: 9, wrap: true }
+                    { type: "text", text: "สีมงคล / เลี่ยง:", size: "xxs", weight: "bold", color: "#1A1A1A", flex: 3 },
+                    { type: "text", text: `${saiMuData.luckyColors} (เลี่ยง: ${saiMuData.unluckyColor})`, size: "xxs", color: "#41032A", weight: "bold", flex: 9, wrap: true }
                   ]
                 },
                 {
                   type: "box",
                   layout: "horizontal",
                   contents: [
-                    { type: "text", text: "ทิศรับเงิน:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
-                    { type: "text", text: `${saiMuData.luckyDirection} (เสริมพลัง: ${saiMuData.element})`, size: "xxs", color: "#1E1B18", flex: 9, wrap: true }
+                    { type: "text", text: "ทิศรับเงิน:", size: "xxs", weight: "bold", color: "#1A1A1A", flex: 3 },
+                    { type: "text", text: `${saiMuData.luckyDirection} (เสริมพลัง: ${saiMuData.element})`, size: "xxs", color: "#1A1A1A", flex: 9, wrap: true }
                   ]
                 },
                 {
                   type: "box",
                   layout: "horizontal",
                   contents: [
-                    { type: "text", text: "ทริคหน้าร้าน:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
-                    { type: "text", text: aiAnalysis.sai_mu_oracle.sai_mu_hack, size: "xxs", color: "#555555", flex: 9, wrap: true }
+                    { type: "text", text: "ทริคหน้าร้าน:", size: "xxs", weight: "bold", color: "#1A1A1A", flex: 3 },
+                    { type: "text", text: aiAnalysis.sai_mu_oracle.sai_mu_hack, size: "xxs", color: "#524A4E", flex: 9, wrap: true }
                   ]
                 },
-                { type: "separator", margin: "xs", color: "#E8DEC8" },
+                { type: "separator", margin: "xs", color: "#D4CBCF" },
                 {
                   type: "box",
                   layout: "horizontal",
                   margin: "xs",
                   contents: [
-                    { type: "text", text: "ครัวและบาร์:", size: "xxs", weight: "bold", color: "#C85A32", flex: 3 },
-                    { type: "text", text: aiAnalysis.operational_advice.kitchen_bar, size: "xxs", color: "#1E1B18", flex: 9, wrap: true }
+                    { type: "text", text: "ครัวและบาร์:", size: "xxs", weight: "bold", color: "#41032A", flex: 3 },
+                    { type: "text", text: aiAnalysis.operational_advice.kitchen_bar, size: "xxs", color: "#1A1A1A", flex: 9, wrap: true }
                   ]
                 },
                 {
                   type: "box",
                   layout: "horizontal",
                   contents: [
-                    { type: "text", text: "จัดโต๊ะ/บริการ:", size: "xxs", weight: "bold", color: "#C85A32", flex: 3 },
-                    { type: "text", text: aiAnalysis.operational_advice.floor_service, size: "xxs", color: "#1E1B18", flex: 9, wrap: true }
+                    { type: "text", text: "จัดโต๊ะ/บริการ:", size: "xxs", weight: "bold", color: "#41032A", flex: 3 },
+                    { type: "text", text: aiAnalysis.operational_advice.floor_service, size: "xxs", color: "#1A1A1A", flex: 9, wrap: true }
                   ]
                 }
               ]
@@ -1025,7 +569,7 @@ function createTrafficPredictorFlexMessage(
           layout: "horizontal",
           margin: "sm",
           contents: [
-            { type: "text", text: "DAYPARTS TIMELINE // 4 ช่วงเวลาของวัน", size: "xxs", weight: "bold", color: "#78736A", flex: 1 }
+            { type: "text", text: "DAYPARTS TIMELINE // 4 ช่วงเวลาของวัน", size: "xxs", weight: "bold", color: "#635B5F", flex: 1 }
           ]
         },
         ...daypartRows
@@ -1034,7 +578,7 @@ function createTrafficPredictorFlexMessage(
     footer: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#FBF9F5",
+      backgroundColor: "#F6F2EA",
       paddingAll: "14px",
       spacing: "xs",
       contents: [
@@ -1052,7 +596,7 @@ function createTrafficPredictorFlexMessage(
                 label: "ยอดขายสด (STSALES)",
                 text: "stsales"
               },
-              color: "#F4F1EA"
+              color: "#ECE4E7"
             },
             {
               type: "button",
@@ -1063,7 +607,7 @@ function createTrafficPredictorFlexMessage(
                 label: "บิลล่าสุด (STBILL)",
                 text: "stbill"
               },
-              color: "#F4F1EA"
+              color: "#ECE4E7"
             },
             {
               type: "button",
@@ -1074,7 +618,7 @@ function createTrafficPredictorFlexMessage(
                 label: "ออเดอร์ครัว (STORDER)",
                 text: "storder"
               },
-              color: "#F4F1EA"
+              color: "#ECE4E7"
             }
           ]
         }
@@ -1099,35 +643,32 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 1. Get LINE Configuration
-    const { data: channelSecretData } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'line_channel_secret').single()
-    const { data: channelTokenData } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'line_channel_access_token').single()
-
-    if (!channelSecretData?.value || !channelTokenData?.value) {
+    // 1. LINE configuration (one query)
+    const { data: lineRows } = await supabaseAdmin
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['line_channel_secret', 'line_channel_access_token'])
+    const lineCfg: Record<string, string> = Object.fromEntries((lineRows || []).map((r: any) => [r.key, r.value]))
+    const CHANNEL_SECRET = lineCfg.line_channel_secret
+    const CHANNEL_ACCESS_TOKEN = lineCfg.line_channel_access_token
+    if (!CHANNEL_SECRET || !CHANNEL_ACCESS_TOKEN) {
       console.error('LINE configuration missing in app_settings')
       return new Response('Config error', { status: 500 })
     }
 
-    const CHANNEL_SECRET = channelSecretData.value
-    const CHANNEL_ACCESS_TOKEN = channelTokenData.value
-
-    // 2. Verify Signature
+    // 2. Verify signature (no request bodies or secrets in logs: they carry user IDs and tokens)
     const body = await req.text()
-    console.log('Request Body:', body)
-    console.log('Signature Header:', signature)
-    console.log('Channel Secret (first 5):', CHANNEL_SECRET.substring(0, 5))
-
-    const isValid = await verifySignature(body, signature, CHANNEL_SECRET)
-    console.log('Signature Valid:', isValid)
-
-    if (!isValid) {
+    if (!(await verifySignature(body, signature, CHANNEL_SECRET))) {
       console.error('Invalid LINE signature')
       return new Response('Invalid signature', { status: 401 })
     }
 
-    const { events } = JSON.parse(body)
-    console.log('Events:', JSON.stringify(events))
+    const { events = [] } = JSON.parse(body)
+    console.log('Events:', events.map((e: any) => `${e.type}/${e.message?.type || '-'}${e.deliveryContext?.isRedelivery ? '/redelivery' : ''}`).join(', '))
 
+    // 3. Answer LINE at once and keep working in the background. Receipt OCR can take
+    //    tens of seconds; holding the HTTP request that long makes LINE time out and redeliver.
+    const processEvents = async () => {
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
         const text = event.message.text.trim().toLowerCase()
@@ -1142,7 +683,7 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               replyToken: event.replyToken,
-              messages: [{ type: 'text', text: 'Pong! 🏓\n(Webhook is working)' }]
+              messages: [{ type: 'text', text: 'Pong! \n(Webhook is working)' }]
             }),
           })
           continue
@@ -1201,22 +742,22 @@ Deno.serve(async (req) => {
                     layout: "vertical",
                     contents: [
                       { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: dateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: dateStr.toUpperCase(), color: "#635B5F", size: "xs", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    contents: [{ type: "text", text: "ALL INVENTORY QUANTITIES WITHIN LIMITS", color: "#2D804E", size: "xs", align: "center", weight: "bold" }]
+                    contents: [{ type: "text", text: "ALL INVENTORY QUANTITIES WITHIN LIMITS", color: "#41032A", size: "xs", align: "center", weight: "bold" }]
                   },
                   styles: {
                     header: {
-                      backgroundColor: "#F4F4F3",
+                      backgroundColor: "#F6F2EA",
                       separator: true,
-                      separatorColor: "#E2E2E0"
+                      separatorColor: "#D4CBCF"
                     },
                     body: {
-                      backgroundColor: "#FFFFFF"
+                      backgroundColor: "#F6F2EA"
                     }
                   }
                 }
@@ -1230,8 +771,8 @@ Deno.serve(async (req) => {
                    layout: "horizontal",
                    margin: "sm",
                    contents: [
-                       { type: "text", text: "ITEM DETAILS", color: "#888888", size: "xxs", weight: "bold", flex: 1 },
-                       { type: "text", text: "REMAINING", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 1 }
+                       { type: "text", text: "ITEM DETAILS", color: "#635B5F", size: "xxs", weight: "bold", flex: 1 },
+                       { type: "text", text: "REMAINING", color: "#635B5F", size: "xxs", weight: "bold", align: "end", flex: 1 }
                    ]
                };
 
@@ -1241,21 +782,21 @@ Deno.serve(async (req) => {
                  const min = Number(item.min_stock_threshold) || 0
                  const reorder = Number(item.reorder_point) || 0
                  
-                 let indicatorBarColor = '#2D804E';
-                 let rowBgColor = '#FFFFFF';
-                 let statusEmoji = '🟢 OK';
+                 let indicatorBarColor = '#41032A';
+                 let rowBgColor = '#F6F2EA';
+                 let statusEmoji = 'OK';
                  if (current <= EPSILON) { 
-                     statusEmoji = '⚫ OUT';
-                     indicatorBarColor = '#4B4B4B';
-                     rowBgColor = '#F5F5F5';
+                     statusEmoji = 'OUT';
+                     indicatorBarColor = '#1A1A1A';
+                     rowBgColor = '#F6F2EA';
                  } else if (min > 0 && current <= min + EPSILON) { 
-                     statusEmoji = '🔴 CRIT';
-                     indicatorBarColor = '#E63946';
-                     rowBgColor = '#FFEBEB';
+                     statusEmoji = 'CRIT';
+                     indicatorBarColor = '#41032A';
+                     rowBgColor = '#ECE4E7';
                  } else if (reorder > 0 && current <= reorder + EPSILON) { 
-                     statusEmoji = '🟠 WARN';
-                     indicatorBarColor = '#F4A261';
-                     rowBgColor = '#FFF6EB';
+                     statusEmoji = 'WARN';
+                     indicatorBarColor = '#41032A';
+                     rowBgColor = '#ECE4E7';
                  }
 
                  currentItems.push({
@@ -1333,7 +874,7 @@ Deno.serve(async (req) => {
                              paddingAll: "20px",
                              contents: [
                                  { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-                                 { type: "text", text: `${dateStr.toUpperCase()} (PAGE ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
+                                 { type: "text", text: `${dateStr.toUpperCase()} (PAGE ${bubbles.length + 1})`, color: "#635B5F", size: "xs", margin: "xs" }
                              ]
                          },
                          body: {
@@ -1344,12 +885,12 @@ Deno.serve(async (req) => {
                          },
                          styles: {
                              header: {
-                                 backgroundColor: "#F4F4F3",
+                                 backgroundColor: "#F6F2EA",
                                  separator: true,
-                                 separatorColor: "#E2E2E0"
+                                 separatorColor: "#D4CBCF"
                              },
                              body: {
-                                 backgroundColor: "#FFFFFF"
+                                 backgroundColor: "#F6F2EA"
                              }
                          }
                      })
@@ -1369,8 +910,8 @@ Deno.serve(async (req) => {
                }
                if (bubbles.length < totalBubblesBuy) {
                    const lastB = bubbles[bubbles.length - 1];
-                   lastB.body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
-                   lastB.body.contents.push({ type: "text", text: `...(แสดงได้ ${bubbles.length} จาก ${totalBubblesBuy} หน้า)`, color: "#9E2D2D", size: "xs", margin: "md", align: "center", wrap: true });
+                   lastB.body.contents.push({ type: "separator", margin: "md", color: "#D4CBCF" });
+                   lastB.body.contents.push({ type: "text", text: `...(แสดงได้ ${bubbles.length} จาก ${totalBubblesBuy} หน้า)`, color: "#41032A", size: "xs", margin: "md", align: "center", wrap: true });
                    // recalculate after adding truncation text
                    flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
                }
@@ -1391,7 +932,7 @@ Deno.serve(async (req) => {
                  await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] })
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] })
                 })
               }
             }
@@ -1400,7 +941,7 @@ Deno.serve(async (req) => {
             await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการซื้อของ: ' + err.message }] })
+              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการซื้อของ: ' + err.message }] })
             })
           }
           continue
@@ -1418,7 +959,7 @@ Deno.serve(async (req) => {
             
             let dbStart, dbEnd;
             let dateStr = "";
-            let headerTitle = "📦 อัพเดทสต๊อก";
+            let headerTitle = "อัพเดทสต๊อก";
 
             if (isHour) {
                dbEnd = now.toISOString();
@@ -1490,7 +1031,7 @@ Deno.serve(async (req) => {
 
             // Construct Reply
             let messages = []
-            messages.push(buildStockSummaryMessage(transactions || [], headerTitle.replace(/^📦s*/, ""), dateStr))
+            messages.push(buildStockSummaryMessage(transactions || [], headerTitle.replace(/^s*/, ""), dateStr))
 
             console.log(`Sending Stock Reply (${messages.length} bubbles)`)
 
@@ -1517,7 +1058,7 @@ Deno.serve(async (req) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
                   },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nError: ${txt.substring(0, 100)}` }] }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nError: ${txt.substring(0, 100)}` }] }),
                 })
                 if (!pushResp.ok) console.error('LINE Push Failed:', await pushResp.text())
               }
@@ -1532,7 +1073,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ เกิดข้อความผิดพลาดในการดึงข้อมูลสต็อก: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อความผิดพลาดในการดึงข้อมูลสต็อก: ' + err.message }]
               }),
             })
           }
@@ -1581,7 +1122,7 @@ Deno.serve(async (req) => {
             let flexContents = [];
 
             if (attendances.length === 0 && leaves.length === 0) {
-               flexContents.push({ type: "text", text: "NO RECORDED TRANSACTIONS FOR TODAY", color: "#888888", size: "xs", align: "center", weight: "bold" });
+               flexContents.push({ type: "text", text: "NO RECORDED TRANSACTIONS FOR TODAY", color: "#635B5F", size: "xs", align: "center", weight: "bold" });
             } else {
                if (attendances.length > 0) {
                   flexContents.push({ type: "text", text: "SHIFT RECORDINGS", weight: "bold", color: "#1A1A1A", size: "sm", margin: "md" });
@@ -1591,9 +1132,9 @@ Deno.serve(async (req) => {
                       layout: "horizontal",
                       margin: "sm",
                       contents: [
-                          { type: "text", text: "EMPLOYEE", color: "#888888", size: "xxs", weight: "bold", flex: 4 },
-                          { type: "text", text: "CLOCK IN", color: "#888888", size: "xxs", weight: "bold", flex: 3 },
-                          { type: "text", text: "CLOCK OUT", color: "#888888", size: "xxs", weight: "bold", flex: 3 }
+                          { type: "text", text: "EMPLOYEE", color: "#635B5F", size: "xxs", weight: "bold", flex: 4 },
+                          { type: "text", text: "CLOCK IN", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 },
+                          { type: "text", text: "CLOCK OUT", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 }
                       ]
                   };
                   flexContents.push(attendanceHeader);
@@ -1637,7 +1178,7 @@ Deno.serve(async (req) => {
                              { type: "text", text: outTxt, color: "#1A1A1A", size: "xs", flex: 3 }
                          ]
                      })
-                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" })
                   })
                }
 
@@ -1649,16 +1190,16 @@ Deno.serve(async (req) => {
                       layout: "horizontal",
                       margin: "sm",
                       contents: [
-                          { type: "text", text: "EMPLOYEE", color: "#888888", size: "xxs", weight: "bold", flex: 3 },
-                          { type: "text", text: "REASON", color: "#888888", size: "xxs", weight: "bold", flex: 4 },
-                          { type: "text", text: "STATUS", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                          { type: "text", text: "EMPLOYEE", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 },
+                          { type: "text", text: "REASON", color: "#635B5F", size: "xxs", weight: "bold", flex: 4 },
+                          { type: "text", text: "STATUS", color: "#635B5F", size: "xxs", weight: "bold", align: "end", flex: 3 }
                       ]
                   };
                   flexContents.push(leaveHeader);
                   flexContents.push({ type: "separator", margin: "sm", color: "#1A1A1A" });
 
                   leaves.forEach((leave: any, i: number, arr: any[]) => {
-                     const statusColor = leave.status === 'approved' ? '#2D804E' : (leave.status === 'pending' ? '#9E672D' : '#9E2D2D')
+                     const statusColor = leave.status === 'approved' ? '#41032A' : (leave.status === 'pending' ? '#41032A' : '#B42318')
                      const statusText = leave.status === 'approved' ? 'APPROVED' : (leave.status === 'pending' ? 'PENDING' : 'REJECTED')
                      
                      flexContents.push({
@@ -1667,35 +1208,35 @@ Deno.serve(async (req) => {
                          margin: "md",
                          contents: [
                              { type: "text", text: leave.employee_name.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", flex: 3, wrap: true },
-                             { type: "text", text: leave.reason || '-', color: "#666666", size: "xs", flex: 4, wrap: true },
+                             { type: "text", text: leave.reason || '-', color: "#635B5F", size: "xs", flex: 4, wrap: true },
                              { type: "text", text: statusText, color: statusColor, size: "xs", weight: "bold", align: "end", flex: 3 }
                          ]
                      })
-                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" })
                   })
                }
             }
 
             const messagesPayload = [{
                 type: "flex",
-                altText: `🧑‍💼 ATTENDANCE REPORT: ${titleDateStr}`,
+                altText: `ATTENDANCE REPORT: ${titleDateStr}`,
                 contents: {
                     type: "bubble",
                     size: "mega",
                     header: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#F4F1EA",
+                        backgroundColor: "#ECE4E7",
                         paddingAll: "20px",
                         contents: [
-                            { type: "text", text: "ATTENDANCE SUMMARY", weight: "bold", color: "#1E1B18", size: "sm" },
-                            { type: "text", text: titleDateStr.toUpperCase(), color: "#78736A", size: "xs", margin: "xs" }
+                            { type: "text", text: "ATTENDANCE SUMMARY", weight: "bold", color: "#1A1A1A", size: "sm" },
+                            { type: "text", text: titleDateStr.toUpperCase(), color: "#635B5F", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#FBF9F5",
+                        backgroundColor: "#F6F2EA",
                         paddingAll: "20px",
                         contents: flexContents
                     }
@@ -1723,7 +1264,7 @@ Deno.serve(async (req) => {
                  await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] }),
                 })
               }
             }
@@ -1737,7 +1278,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลพนักงานได้: ' + apiErr.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลพนักงานได้: ' + apiErr.message }]
               }),
             })
           }
@@ -1766,11 +1307,11 @@ Deno.serve(async (req) => {
             if (error) throw error
 
             const translateStatus = (status: string) => {
-              if (status === 'pending') return { text: 'รอรับออเดอร์', color: '#E63946', emoji: '⏳' }
-              if (status === 'confirmed') return { text: 'กำลังปรุง', color: '#C85A32', emoji: '🍳' }
-              if (status === 'seated') return { text: 'นั่งที่โต๊ะ', color: '#4A6B3D', emoji: '🪑' }
-              if (status === 'ready') return { text: 'พร้อมเสิร์ฟ', color: '#2D804E', emoji: '🟢' }
-              return { text: status.toUpperCase(), color: '#78736A', emoji: '📌' }
+              if (status === 'pending') return { text: 'รอรับออเดอร์', color: '#41032A' }
+              if (status === 'confirmed') return { text: 'กำลังปรุง', color: '#41032A' }
+              if (status === 'seated') return { text: 'นั่งที่โต๊ะ', color: '#41032A' }
+              if (status === 'ready') return { text: 'พร้อมเสิร์ฟ', color: '#41032A' }
+              return { text: status.toUpperCase(), color: '#635B5F' }
             }
 
             const formatOptions = (options: any) => {
@@ -1792,28 +1333,28 @@ Deno.serve(async (req) => {
                   replyToken: event.replyToken,
                   messages: [{
                     type: "flex",
-                    altText: "📦 ออเดอร์ปัจจุบัน: ไม่มีออเดอร์ค้างอยู่",
+                    altText: "ออเดอร์ปัจจุบัน: ไม่มีออเดอร์ค้างอยู่",
                     contents: {
                       type: "bubble",
                       size: "mega",
                       header: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#F4F1EA",
+                        backgroundColor: "#ECE4E7",
                         paddingAll: "20px",
                         contents: [
-                          { type: "text", text: "ALL ACTIVE ORDERS", weight: "bold", color: "#C85A32", size: "xs" },
-                          { type: "text", text: "สรุปออเดอร์ทุกโต๊ะในร้าน", weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
+                          { type: "text", text: "ALL ACTIVE ORDERS", weight: "bold", color: "#41032A", size: "xs" },
+                          { type: "text", text: "สรุปออเดอร์ทุกโต๊ะในร้าน", weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                         ]
                       },
                       body: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#FBF9F5",
+                        backgroundColor: "#F6F2EA",
                         paddingAll: "24px",
                         contents: [
-                          { type: "text", text: "ไม่มีออเดอร์ค้างอยู่ในขณะนี้ 🟢", color: "#2D804E", size: "sm", align: "center", weight: "bold" },
-                          { type: "text", text: "ทุกโต๊ะเช็คบิลเรียบร้อย หรือยังไม่มีการเปิดบิลใหม่", color: "#78736A", size: "xs", align: "center", margin: "sm", wrap: true }
+                          { type: "text", text: "ไม่มีออเดอร์ค้างอยู่ในขณะนี้", color: "#41032A", size: "sm", align: "center", weight: "bold" },
+                          { type: "text", text: "ทุกโต๊ะเช็คบิลเรียบร้อย หรือยังไม่มีการเปิดบิลใหม่", color: "#635B5F", size: "xs", align: "center", margin: "sm", wrap: true }
                         ]
                       }
                     }
@@ -1845,8 +1386,8 @@ Deno.serve(async (req) => {
             bookings.forEach((b: any, bIdx: number) => {
               const isPickup = b.booking_type === 'pickup'
               const tblName = isPickup
-                ? `🛍️ TAKEAWAY (${b.pickup_contact_name || b.customer_note || 'ลูกค้า'})`
-                : `🪑 ${b.tables_layout?.table_name || 'WALK-IN'}`
+                ? `TAKEAWAY (${b.pickup_contact_name || b.customer_note || 'ลูกค้า'})`
+                : `${b.tables_layout?.table_name || 'WALK-IN'}`
               
               const statusObj = translateStatus(b.status)
               const bAmt = Number(b.total_amount || b.total_price || 0)
@@ -1870,8 +1411,8 @@ Deno.serve(async (req) => {
                   layout: "horizontal",
                   margin: "xs",
                   contents: [
-                    { type: "text", text: `${qty}x ${name}${optStr}`, size: "xs", color: "#1E1B18", flex: 7, wrap: true },
-                    { type: "text", text: `฿${(qty * price).toFixed(2)}`, size: "xs", color: "#78736A", align: "end", flex: 3 }
+                    { type: "text", text: `${qty}x ${name}${optStr}`, size: "xs", color: "#1A1A1A", flex: 7, wrap: true },
+                    { type: "text", text: `฿${(qty * price).toFixed(2)}`, size: "xs", color: "#635B5F", align: "end", flex: 3 }
                   ]
                 }
               })
@@ -1879,7 +1420,7 @@ Deno.serve(async (req) => {
               tableBlocks.push({
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#FBF9F5",
+                backgroundColor: "#F6F2EA",
                 cornerRadius: "md",
                 paddingAll: "md",
                 margin: "md",
@@ -1888,8 +1429,8 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: tblName, weight: "bold", size: "sm", color: "#1E1B18", flex: 7, wrap: true },
-                      { type: "text", text: `฿${bAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#C85A32", align: "end", flex: 3 }
+                      { type: "text", text: tblName, weight: "bold", size: "sm", color: "#1A1A1A", flex: 7, wrap: true },
+                      { type: "text", text: `฿${bAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#41032A", align: "end", flex: 3 }
                     ]
                   },
                   {
@@ -1897,23 +1438,23 @@ Deno.serve(async (req) => {
                     layout: "horizontal",
                     margin: "xs",
                     contents: [
-                      { type: "text", text: `${statusObj.emoji} ${statusObj.text} · สั่งเมื่อ ${orderTimeStr}`, size: "xxs", weight: "bold", color: statusObj.color, flex: 8 },
-                      { type: "text", text: `${b.pax || 1} PAX`, size: "xxs", color: "#78736A", align: "end", flex: 2 }
+                      { type: "text", text: `${statusObj.text} · สั่งเมื่อ ${orderTimeStr}`, size: "xxs", weight: "bold", color: statusObj.color, flex: 8 },
+                      { type: "text", text: `${b.pax || 1} PAX`, size: "xxs", color: "#635B5F", align: "end", flex: 2 }
                     ]
                   },
-                  { type: "separator", margin: "sm", color: "#E6E1D6" },
+                  { type: "separator", margin: "sm", color: "#D4CBCF" },
                   {
                     type: "box",
                     layout: "vertical",
                     margin: "sm",
                     spacing: "xs",
-                    contents: itemsList.length > 0 ? itemsList : [{ type: "text", text: "ไม่มีรายการอาหาร", size: "xxs", color: "#888888" }]
+                    contents: itemsList.length > 0 ? itemsList : [{ type: "text", text: "ไม่มีรายการอาหาร", size: "xxs", color: "#635B5F" }]
                   }
                 ]
               })
 
               if (bIdx < bookings.length - 1) {
-                tableBlocks.push({ type: "separator", margin: "sm", color: "#E6E1D6" })
+                tableBlocks.push({ type: "separator", margin: "sm", color: "#D4CBCF" })
               }
             })
 
@@ -1924,8 +1465,8 @@ Deno.serve(async (req) => {
               layout: "horizontal",
               margin: "xs",
               contents: [
-                { type: "text", text: `• ${name}`, size: "xs", color: "#1E1B18", flex: 8, wrap: true },
-                { type: "text", text: `${qty} ที่`, size: "xs", weight: "bold", color: "#C85A32", align: "end", flex: 2 }
+                { type: "text", text: `• ${name}`, size: "xs", color: "#1A1A1A", flex: 8, wrap: true },
+                { type: "text", text: `${qty} ที่`, size: "xs", weight: "bold", color: "#41032A", align: "end", flex: 2 }
               ]
             }))
 
@@ -1939,30 +1480,30 @@ Deno.serve(async (req) => {
               header: {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#F4F1EA",
+                backgroundColor: "#ECE4E7",
                 paddingAll: "20px",
                 contents: [
                   {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: "ALL ACTIVE TABLES", size: "xs", weight: "bold", color: "#C85A32", flex: 7 },
-                      { type: "text", text: "PAGE 1/2", size: "xxs", color: "#78736A", align: "end", flex: 3 }
+                      { type: "text", text: "ALL ACTIVE TABLES", size: "xs", weight: "bold", color: "#41032A", flex: 7 },
+                      { type: "text", text: "PAGE 1/2", size: "xxs", color: "#635B5F", align: "end", flex: 3 }
                     ]
                   },
-                  { type: "text", text: `สรุปออเดอร์สด (${bookings.length} โต๊ะกำลังทาน)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs", wrap: true }
+                  { type: "text", text: `สรุปออเดอร์สด (${bookings.length} โต๊ะกำลังทาน)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs", wrap: true }
                 ]
               },
               body: {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#F4F1EA",
+                backgroundColor: "#ECE4E7",
                 paddingAll: "16px",
                 contents: [
                   {
                     type: "box",
                     layout: "horizontal",
-                    backgroundColor: "#1E1B18",
+                    backgroundColor: "#1A1A1A",
                     cornerRadius: "md",
                     paddingAll: "12px",
                     contents: [
@@ -1971,8 +1512,8 @@ Deno.serve(async (req) => {
                         layout: "vertical",
                         flex: 6,
                         contents: [
-                          { type: "text", text: "ยอดรวมทุกโต๊ะ (ยังไม่เช็คบิล)", size: "xxs", color: "#A09B90" },
-                          { type: "text", text: `${bookings.length} โต๊ะ · รวม ${totalPax} ท่าน`, size: "xs", weight: "bold", color: "#FBF9F5", margin: "xs" }
+                          { type: "text", text: "ยอดรวมทุกโต๊ะ (ยังไม่เช็คบิล)", size: "xxs", color: "#BEB4B9" },
+                          { type: "text", text: `${bookings.length} โต๊ะ · รวม ${totalPax} ท่าน`, size: "xs", weight: "bold", color: "#F6F2EA", margin: "xs" }
                         ]
                       },
                       {
@@ -1980,14 +1521,14 @@ Deno.serve(async (req) => {
                         text: `฿${totalUnpaidAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`,
                         size: "md",
                         weight: "bold",
-                        color: "#C85A32",
+                        color: "#F6F2EA",
                         align: "end",
                         flex: 4,
                         gravity: "center"
                       }
                     ]
                   },
-                  { type: "separator", margin: "md", color: "#E6E1D6" },
+                  { type: "separator", margin: "md", color: "#D4CBCF" },
                   ...tableBlocks
                 ]
               }
@@ -2000,44 +1541,44 @@ Deno.serve(async (req) => {
               header: {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#1E1B18",
+                backgroundColor: "#41032A",
                 paddingAll: "20px",
                 contents: [
                   {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: "KITCHEN & BAR QUEUE", size: "xs", weight: "bold", color: "#C85A32", flex: 7 },
-                      { type: "text", text: "PAGE 2/2", size: "xxs", color: "#A09B90", align: "end", flex: 3 }
+                      { type: "text", text: "KITCHEN & BAR QUEUE", size: "xs", weight: "bold", color: "#D0B5C1", flex: 7 },
+                      { type: "text", text: "PAGE 2/2", size: "xxs", color: "#D0B5C1", align: "end", flex: 3 }
                     ]
                   },
-                  { type: "text", text: "สรุปจำนวนจานที่ต้องเตรียมทั้งหมด", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs", wrap: true }
+                  { type: "text", text: "สรุปจำนวนจานที่ต้องเตรียมทั้งหมด", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs", wrap: true }
                 ]
               },
               body: {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#FBF9F5",
+                backgroundColor: "#F6F2EA",
                 paddingAll: "20px",
                 contents: [
-                  { type: "text", text: "🍳 รวมจำนวนจานอาหารทุกโต๊ะในร้าน", size: "xxs", weight: "bold", color: "#78736A" },
-                  { type: "separator", margin: "sm", color: "#E6E1D6" },
+                  { type: "text", text: "รวมจำนวนจานอาหารทุกโต๊ะในร้าน", size: "xxs", weight: "bold", color: "#635B5F" },
+                  { type: "separator", margin: "sm", color: "#D4CBCF" },
                   {
                     type: "box",
                     layout: "vertical",
                     margin: "md",
                     spacing: "xs",
-                    contents: kitchenRows.length > 0 ? kitchenRows : [{ type: "text", text: "ไม่มีรายการอาหาร", size: "xs", color: "#888888" }]
+                    contents: kitchenRows.length > 0 ? kitchenRows : [{ type: "text", text: "ไม่มีรายการอาหาร", size: "xs", color: "#635B5F" }]
                   },
-                  { type: "separator", margin: "lg", color: "#E6E1D6" },
-                  { type: "text", text: `รวมเมนูที่ต้องทำทั้งหมด ${sortedKitchenQueue.reduce((s, [, q]) => s + q, 0)} ที่`, size: "xs", weight: "bold", color: "#1E1B18", align: "center", margin: "md" }
+                  { type: "separator", margin: "lg", color: "#D4CBCF" },
+                  { type: "text", text: `รวมเมนูที่ต้องทำทั้งหมด ${sortedKitchenQueue.reduce((s, [, q]) => s + q, 0)} ที่`, size: "xs", weight: "bold", color: "#1A1A1A", align: "center", margin: "md" }
                 ]
               }
             })
 
             const flexPayload = {
               type: "flex",
-              altText: `🍳 สรุปออเดอร์ทุกโต๊ะ (${bookings.length} โต๊ะ: ฿${totalUnpaidAmt.toLocaleString('th-TH')})`,
+              altText: `สรุปออเดอร์ทุกโต๊ะ (${bookings.length} โต๊ะ: ฿${totalUnpaidAmt.toLocaleString('th-TH')})`,
               contents: {
                 type: "carousel",
                 contents: bubbles
@@ -2068,7 +1609,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ: ' + err.message }]
               })
             })
           }
@@ -2133,27 +1674,27 @@ Deno.serve(async (req) => {
             if (sortedItems.length === 0) {
               messages.push({
                 type: "flex",
-                altText: `🏆 5 อันดับเมนูฮิตวันนี้: ${titleDateStr}`,
+                altText: `5 อันดับเมนูฮิตวันนี้: ${titleDateStr}`,
                 contents: {
                   type: "bubble",
                   size: "mega",
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#F4F1EA",
+                    backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#C85A32", size: "xs" },
-                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
+                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#FBF9F5",
+                    backgroundColor: "#F6F2EA",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "ยังไม่มีรายการสั่งอาหารในวันนี้ 📭", color: "#78736A", size: "sm", align: "center", weight: "bold" }
+                      { type: "text", text: "ยังไม่มีรายการสั่งอาหารในวันนี้", color: "#635B5F", size: "sm", align: "center", weight: "bold" }
                     ]
                   }
                 }
@@ -2164,8 +1705,8 @@ Deno.serve(async (req) => {
 
               sortedItems.forEach((item, index) => {
                 const percent = maxQty > 0 ? Math.round((item.quantity / maxQty) * 100) : 0
-                const rankColors = ["#C85A32", "#D97B54", "#4A6B3D", "#78736A", "#A09B90"]
-                const rankColor = rankColors[index] || "#78736A"
+                const rankColors = ["#41032A", "#41032A", "#41032A", "#635B5F", "#635B5F"]
+                const rankColor = rankColors[index] || "#635B5F"
 
                 flexContents.push({
                   type: "box",
@@ -2184,7 +1725,7 @@ Deno.serve(async (req) => {
                           backgroundColor: rankColor,
                           cornerRadius: "4px",
                           contents: [
-                            { type: "text", text: String(index + 1), color: "#FBF9F5", size: "xs", weight: "bold", align: "center", gravity: "center" }
+                            { type: "text", text: String(index + 1), color: "#F6F2EA", size: "xs", weight: "bold", align: "center", gravity: "center" }
                           ]
                         },
                         {
@@ -2192,7 +1733,7 @@ Deno.serve(async (req) => {
                           text: item.name.toUpperCase(),
                           weight: "bold",
                           size: "sm",
-                          color: "#1E1B18",
+                          color: "#1A1A1A",
                           margin: "md",
                           gravity: "center",
                           flex: 7
@@ -2202,7 +1743,7 @@ Deno.serve(async (req) => {
                           text: `${item.quantity} ที่`,
                           weight: "bold",
                           size: "sm",
-                          color: "#C85A32",
+                          color: "#41032A",
                           align: "end",
                           gravity: "center",
                           flex: 3
@@ -2214,7 +1755,7 @@ Deno.serve(async (req) => {
                       layout: "horizontal",
                       margin: "sm",
                       height: "6px",
-                      backgroundColor: "#E6E1D6",
+                      backgroundColor: "#D4CBCF",
                       cornerRadius: "sm",
                       contents: [
                         {
@@ -2231,30 +1772,30 @@ Deno.serve(async (req) => {
                 })
 
                 if (index < sortedItems.length - 1) {
-                  flexContents.push({ type: "separator", margin: "md", color: "#E6E1D6" })
+                  flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" })
                 }
               })
 
               messages.push({
                 type: "flex",
-                altText: `🏆 5 อันดับเมนูฮิตวันนี้: ${titleDateStr}`,
+                altText: `5 อันดับเมนูฮิตวันนี้: ${titleDateStr}`,
                 contents: {
                   type: "bubble",
                   size: "mega",
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#F4F1EA",
+                    backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#C85A32", size: "xs" },
-                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
+                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#FBF9F5",
+                    backgroundColor: "#F6F2EA",
                     paddingAll: "20px",
                     contents: flexContents
                   }
@@ -2284,7 +1825,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการคำนวณเมนูฮิต: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการคำนวณเมนูฮิต: ' + err.message }]
               })
             })
           }
@@ -2398,7 +1939,7 @@ Deno.serve(async (req) => {
             let flexContents = [];
             
             if (results.length === 0) {
-               flexContents.push({ type: "text", text: "NO PRICES FOUND FOR KEYWORD", color: "#888888", size: "xs", align: "center", weight: "bold" });
+               flexContents.push({ type: "text", text: "NO PRICES FOUND FOR KEYWORD", color: "#635B5F", size: "xs", align: "center", weight: "bold" });
             } else {
                const displayItems = results.slice(0, 5)
                displayItems.forEach((r: any, i: number, arr: any[]) => {
@@ -2409,7 +1950,7 @@ Deno.serve(async (req) => {
                         layout: "horizontal", 
                         contents: [
                           { type: "text", text: r.title.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, flex: 7 },
-                          { type: "text", text: r.prices && r.prices.length > 0 ? `฿${r.prices[0]}` : "-", weight: "bold", size: "sm", color: "#9E2D2D", align: "end", flex: 3 }
+                          { type: "text", text: r.prices && r.prices.length > 0 ? `฿${r.prices[0]}` : "-", weight: "bold", size: "sm", color: "#41032A", align: "end", flex: 3 }
                         ]
                       }
                   ];
@@ -2417,14 +1958,14 @@ Deno.serve(async (req) => {
                   if (r.prices && r.prices.length > 1) {
                       const otherPrices = r.prices.slice(1).map((p: number) => `฿${p}`).join(', ');
                       contents.push({
-                         type: "text", text: `RANGE: ${otherPrices}`, color: "#666666", size: "xs", margin: "xs"
+                         type: "text", text: `RANGE: ${otherPrices}`, color: "#635B5F", size: "xs", margin: "xs"
                       });
                   }
 
                   contents.push({
                       type: "text",
                       text: r.snippet,
-                      color: "#666666",
+                      color: "#635B5F",
                       size: "xs",
                       wrap: true,
                       margin: "sm"
@@ -2434,7 +1975,7 @@ Deno.serve(async (req) => {
                       contents.push({
                           type: "text",
                           text: `SOURCE: ${r.domain.toUpperCase()}`,
-                          color: "#aaaaaa",
+                          color: "#635B5F",
                           size: "xxs",
                           margin: "xs",
                           weight: "bold"
@@ -2448,18 +1989,18 @@ Deno.serve(async (req) => {
                       contents: contents
                   });
 
-                  if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
+                  if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" });
                })
                
                if (results.length > 5) {
-                   flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
-                   flexContents.push({ type: "text", text: `(SHOWN 5 OF ${results.length} ENTRIES)`, color: "#888888", size: "xs", align: "center", margin: "md" });
+                   flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" });
+                   flexContents.push({ type: "text", text: `(SHOWN 5 OF ${results.length} ENTRIES)`, color: "#635B5F", size: "xs", align: "center", margin: "md" });
                }
             }
 
             const messagesPayload = [{
                 type: "flex",
-                altText: `🔍 PRICE INDEX: ${keyword}`,
+                altText: `PRICE INDEX: ${keyword}`,
                 contents: {
                     type: "bubble",
                     size: "mega",
@@ -2468,7 +2009,7 @@ Deno.serve(async (req) => {
                         layout: "vertical",
                         contents: [
                             { type: "text", text: "PRICE INDEX", weight: "bold", color: "#1A1A1A", size: "sm" },
-                            { type: "text", text: `SEARCH: "${keyword.toUpperCase()}"`, color: "#666666", size: "xs", margin: "xs" }
+                            { type: "text", text: `SEARCH: "${keyword.toUpperCase()}"`, color: "#635B5F", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -2479,12 +2020,12 @@ Deno.serve(async (req) => {
                     },
                     styles: {
                         header: {
-                            backgroundColor: "#F4F4F3",
+                            backgroundColor: "#F6F2EA",
                             separator: true,
-                            separatorColor: "#E2E2E0"
+                            separatorColor: "#D4CBCF"
                         },
                         body: {
-                            backgroundColor: "#FFFFFF"
+                            backgroundColor: "#F6F2EA"
                         }
                     }
                 }
@@ -2518,7 +2059,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลราคากลางได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลราคากลางได้: ' + err.message }]
               }),
             })
           }
@@ -2560,28 +2101,28 @@ Deno.serve(async (req) => {
             if (!expenses || expenses.length === 0) {
               messages.push({
                 type: "flex",
-                altText: `🧾 สรุปค่าใช้จ่ายวันนี้ (${titleDateStr}): ยังไม่มีรายการ`,
+                altText: `สรุปค่าใช้จ่ายวันนี้ (${titleDateStr}): ยังไม่มีรายการ`,
                 contents: {
                   type: "bubble",
                   size: "mega",
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#F4F1EA",
+                    backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#C85A32", size: "xs" },
-                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
+                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#FBF9F5",
+                    backgroundColor: "#F6F2EA",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "ยังไม่มีการบันทึกค่าใช้จ่ายในวันนี้ 📭", color: "#78736A", size: "sm", align: "center", weight: "bold" },
-                      { type: "text", text: "ส่งภาพสลิป/ใบเสร็จเข้ามาในกลุ่มเพื่อบันทึกอัตโนมัติได้ทันที", color: "#A09B90", size: "xs", align: "center", margin: "sm", wrap: true }
+                      { type: "text", text: "ยังไม่มีการบันทึกค่าใช้จ่ายในวันนี้", color: "#635B5F", size: "sm", align: "center", weight: "bold" },
+                      { type: "text", text: "ส่งภาพสลิป/ใบเสร็จเข้ามาในกลุ่มเพื่อบันทึกอัตโนมัติได้ทันที", color: "#635B5F", size: "xs", align: "center", margin: "sm", wrap: true }
                     ]
                   }
                 }
@@ -2604,8 +2145,8 @@ Deno.serve(async (req) => {
                       layout: "vertical",
                       flex: 7,
                       contents: [
-                        { type: "text", text: vendor.toUpperCase(), weight: "bold", size: "xs", color: "#1E1B18", wrap: true },
-                        { type: "text", text: title, size: "xxs", color: "#78736A", wrap: true, margin: "xs" }
+                        { type: "text", text: vendor.toUpperCase(), weight: "bold", size: "xs", color: "#1A1A1A", wrap: true },
+                        { type: "text", text: title, size: "xxs", color: "#635B5F", wrap: true, margin: "xs" }
                       ]
                     },
                     {
@@ -2613,7 +2154,7 @@ Deno.serve(async (req) => {
                       text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       weight: "bold",
                       size: "sm",
-                      color: "#C85A32",
+                      color: "#41032A",
                       align: "end",
                       gravity: "center",
                       flex: 3
@@ -2622,16 +2163,16 @@ Deno.serve(async (req) => {
                 })
 
                 if (index < Math.min(expenses.length, 8) - 1) {
-                  flexContents.push({ type: "separator", margin: "md", color: "#E6E1D6" })
+                  flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" })
                 }
               })
 
               if (expenses.length > 8) {
-                flexContents.push({ type: "separator", margin: "md", color: "#E6E1D6" })
+                flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" })
                 flexContents.push({
                   type: "text",
                   text: `...แสดง 8 จากทั้งหมด ${expenses.length} รายการ`,
-                  color: "#A09B90",
+                  color: "#635B5F",
                   size: "xxs",
                   align: "center",
                   margin: "sm"
@@ -2640,30 +2181,30 @@ Deno.serve(async (req) => {
 
               messages.push({
                 type: "flex",
-                altText: `🧾 สรุปค่าใช้จ่ายวันนี้ (${titleDateStr}): ฿${totalAmount.toLocaleString('th-TH')}`,
+                altText: `สรุปค่าใช้จ่ายวันนี้ (${titleDateStr}): ฿${totalAmount.toLocaleString('th-TH')}`,
                 contents: {
                   type: "bubble",
                   size: "mega",
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#F4F1EA",
+                    backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#C85A32", size: "xs" },
-                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
+                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#FBF9F5",
+                    backgroundColor: "#F6F2EA",
                     paddingAll: "20px",
                     contents: [
                       {
                         type: "box",
                         layout: "horizontal",
-                        backgroundColor: "#F4F1EA",
+                        backgroundColor: "#ECE4E7",
                         cornerRadius: "md",
                         paddingAll: "md",
                         contents: [
@@ -2672,8 +2213,8 @@ Deno.serve(async (req) => {
                             layout: "vertical",
                             flex: 5,
                             contents: [
-                              { type: "text", text: "ยอดรวมค่าใช้จ่ายวันนี้", weight: "bold", size: "xs", color: "#1E1B18" },
-                              { type: "text", text: `(${expenses.length} รายการ)`, color: "#78736A", size: "xxs", margin: "xs" }
+                              { type: "text", text: "ยอดรวมค่าใช้จ่ายวันนี้", weight: "bold", size: "xs", color: "#1A1A1A" },
+                              { type: "text", text: `(${expenses.length} รายการ)`, color: "#635B5F", size: "xxs", margin: "xs" }
                             ]
                           },
                           {
@@ -2681,15 +2222,15 @@ Deno.serve(async (req) => {
                             text: `฿${totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                             weight: "bold",
                             size: "lg",
-                            color: "#C85A32",
+                            color: "#41032A",
                             align: "end",
                             gravity: "center",
                             flex: 5
                           }
                         ]
                       },
-                      { type: "separator", margin: "md", color: "#E6E1D6" },
-                      { type: "text", text: "รายการที่บันทึกวันนี้", weight: "bold", size: "xs", color: "#78736A", margin: "md" },
+                      { type: "separator", margin: "md", color: "#D4CBCF" },
+                      { type: "text", text: "รายการที่บันทึกวันนี้", weight: "bold", size: "xs", color: "#635B5F", margin: "md" },
                       ...flexContents
                     ]
                   }
@@ -2715,7 +2256,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย: ' + err.message }]
               })
             })
           }
@@ -2778,37 +2319,37 @@ Deno.serve(async (req) => {
 
             const salesFlex = {
               type: "flex",
-              altText: `📊 สรุปยอดขายวันนี้ (${titleDateStr}): ฿${totalSales.toLocaleString('th-TH')}`,
+              altText: `สรุปยอดขายวันนี้ (${titleDateStr}): ฿${totalSales.toLocaleString('th-TH')}`,
               contents: {
                 type: "bubble",
                 size: "mega",
                 header: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#F4F1EA",
+                  backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
                     {
                       type: "box",
                       layout: "horizontal",
                       contents: [
-                        { type: "text", text: "HAUS POS", weight: "bold", size: "md", color: "#1E1B18", flex: 6 },
-                        { type: "text", text: "LIVE SALES", weight: "bold", size: "xxs", color: "#C85A32", align: "end", flex: 4, gravity: "center" }
+                        { type: "text", text: "HAUS POS", weight: "bold", size: "md", color: "#1A1A1A", flex: 6 },
+                        { type: "text", text: "LIVE SALES", weight: "bold", size: "xxs", color: "#41032A", align: "end", flex: 4, gravity: "center" }
                       ]
                     },
-                    { type: "text", text: `รายงานยอดขายประจำวัน · ${titleDateStr}`, size: "xxs", color: "#78736A", margin: "xs" }
+                    { type: "text", text: `รายงานยอดขายประจำวัน · ${titleDateStr}`, size: "xxs", color: "#635B5F", margin: "xs" }
                   ]
                 },
                 body: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#FBF9F5",
+                  backgroundColor: "#F6F2EA",
                   paddingAll: "20px",
                   contents: [
                     {
                       type: "box",
                       layout: "vertical",
-                      backgroundColor: "#F4F1EA",
+                      backgroundColor: "#ECE4E7",
                       cornerRadius: "md",
                       paddingAll: "14px",
                       contents: [
@@ -2816,13 +2357,13 @@ Deno.serve(async (req) => {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "ยอดขายสุทธิ (ไม่รวมเงินทอน)", size: "xs", color: "#78736A", flex: 6, gravity: "center" },
+                            { type: "text", text: "ยอดขายสุทธิ (ไม่รวมเงินทอน)", size: "xs", color: "#635B5F", flex: 6, gravity: "center" },
                             {
                               type: "text",
                               text: `฿${totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                               size: "lg",
                               weight: "bold",
-                              color: "#1E1B18",
+                              color: "#1A1A1A",
                               align: "end",
                               flex: 6,
                               gravity: "center"
@@ -2834,13 +2375,13 @@ Deno.serve(async (req) => {
                           layout: "horizontal",
                           margin: "xs",
                           contents: [
-                            { type: "text", text: `${completed.length} บิลชำระแล้ว · เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล`, size: "xxs", color: "#4A6B3D", flex: 1 }
+                            { type: "text", text: `${completed.length} บิลชำระแล้ว · เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล`, size: "xxs", color: "#41032A", flex: 1 }
                           ]
                         }
                       ]
                     },
-                    { type: "separator", margin: "lg", color: "#E6E1D6" },
-                    { type: "text", text: "BREAKDOWN ช่องทางชำระเงิน", size: "xxs", weight: "bold", color: "#78736A", margin: "md" },
+                    { type: "separator", margin: "lg", color: "#D4CBCF" },
+                    { type: "text", text: "BREAKDOWN ช่องทางชำระเงิน", size: "xxs", weight: "bold", color: "#635B5F", margin: "md" },
                     {
                       type: "box",
                       layout: "vertical",
@@ -2851,48 +2392,48 @@ Deno.serve(async (req) => {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "📱 PromptPay / QR / โอน", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${qrSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: "PromptPay / QR / โอน", size: "xs", color: "#1A1A1A", flex: 7 },
+                            { type: "text", text: `฿${qrSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                           ]
                         },
                         {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "💵 เงินสด Cash", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${cashSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: "เงินสด Cash", size: "xs", color: "#1A1A1A", flex: 7 },
+                            { type: "text", text: `฿${cashSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                           ]
                         },
                         {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "💳 บัตรเครดิต Credit Card", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${creditSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: "บัตรเครดิต Credit Card", size: "xs", color: "#1A1A1A", flex: 7 },
+                            { type: "text", text: `฿${creditSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                           ]
                         }
                       ]
                     },
                     ...(totalDiscounts > 0 ? [
-                      { type: "separator", margin: "md", color: "#E6E1D6" },
+                      { type: "separator", margin: "md", color: "#D4CBCF" },
                       {
                         type: "box",
                         layout: "horizontal",
                         margin: "sm",
                         contents: [
-                          { type: "text", text: "🏷️ ยอดส่วนลดโปรโมชั่น/แต้ม", size: "xs", color: "#78736A", flex: 7 },
-                          { type: "text", text: `-฿${totalDiscounts.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#9E2D2D", align: "end", flex: 3 }
+                          { type: "text", text: "ยอดส่วนลดโปรโมชั่น/แต้ม", size: "xs", color: "#635B5F", flex: 7 },
+                          { type: "text", text: `-฿${totalDiscounts.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#41032A", align: "end", flex: 3 }
                         ]
                       }
                     ] : []),
-                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    { type: "separator", margin: "md", color: "#D4CBCF" },
                     {
                       type: "box",
                       layout: "horizontal",
                       margin: "sm",
                       contents: [
-                        { type: "text", text: `🪑 ยอดค้างในร้าน (${activeUnpaid.length} โต๊ะ)`, size: "xs", color: "#78736A", flex: 7 },
-                        { type: "text", text: `฿${activeUnpaidAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#C85A32", align: "end", flex: 3 }
+                        { type: "text", text: `ยอดค้างในร้าน (${activeUnpaid.length} โต๊ะ)`, size: "xs", color: "#635B5F", flex: 7 },
+                        { type: "text", text: `฿${activeUnpaidAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#41032A", align: "end", flex: 3 }
                       ]
                     },
                     ...(voided.length > 0 ? [
@@ -2901,8 +2442,8 @@ Deno.serve(async (req) => {
                         layout: "horizontal",
                         margin: "xs",
                         contents: [
-                          { type: "text", text: `⚠️ บิลยกเลิก Void (${voided.length} รายการ)`, size: "xxs", color: "#888888", flex: 7 },
-                          { type: "text", text: "ตรวจสอบพิมพ์: stvoid", size: "xxs", color: "#888888", align: "end", flex: 5 }
+                          { type: "text", text: `บิลยกเลิก Void (${voided.length} รายการ)`, size: "xxs", color: "#635B5F", flex: 7 },
+                          { type: "text", text: "ตรวจสอบพิมพ์: stvoid", size: "xxs", color: "#635B5F", align: "end", flex: 5 }
                         ]
                       }
                     ] : [])
@@ -2926,7 +2467,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงยอดขายได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงยอดขายได้: ' + err.message }]
               })
             })
           }
@@ -3318,7 +2859,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถประมวลผลการทำนายได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถประมวลผลการทำนายได้: ' + err.message }]
               })
             })
           }
@@ -3348,7 +2889,7 @@ Deno.serve(async (req) => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
                 body: JSON.stringify({
                   replyToken: event.replyToken,
-                  messages: [{ type: 'text', text: '📭 ยังไม่มีรายการบิลที่ชำระเงินสำเร็จในระบบ' }]
+                  messages: [{ type: 'text', text: 'ยังไม่มีรายการบิลที่ชำระเงินสำเร็จในระบบ' }]
                 })
               })
               continue
@@ -3357,7 +2898,7 @@ Deno.serve(async (req) => {
             const billRows: any[] = []
             bills.forEach((b: any, idx: number) => {
               const billNo = `#${getShortBookingId(b)}`
-              const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? '🛍️ TAKEAWAY' : '🪑 WALK-IN')
+              const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'TAKEAWAY' : 'WALK-IN')
               
               let timeStr = ''
               try {
@@ -3381,7 +2922,7 @@ Deno.serve(async (req) => {
               billRows.push({
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#FBF9F5",
+                backgroundColor: "#F6F2EA",
                 cornerRadius: "md",
                 paddingAll: "md",
                 margin: "md",
@@ -3390,8 +2931,8 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: billNo, weight: "bold", size: "sm", color: "#1E1B18", flex: 6 },
-                      { type: "text", text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#C85A32", align: "end", flex: 4 }
+                      { type: "text", text: billNo, weight: "bold", size: "sm", color: "#1A1A1A", flex: 6 },
+                      { type: "text", text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#41032A", align: "end", flex: 4 }
                     ]
                   },
                   {
@@ -3399,15 +2940,15 @@ Deno.serve(async (req) => {
                     layout: "horizontal",
                     margin: "xs",
                     contents: [
-                      { type: "text", text: `${tableName} · ${timeStr}`, size: "xxs", color: "#78736A", flex: 7 },
-                      { type: "text", text: payMethod, size: "xxs", weight: "bold", color: "#4A6B3D", align: "end", flex: 3 }
+                      { type: "text", text: `${tableName} · ${timeStr}`, size: "xxs", color: "#635B5F", flex: 7 },
+                      { type: "text", text: payMethod, size: "xxs", weight: "bold", color: "#41032A", align: "end", flex: 3 }
                     ]
                   },
                   {
                     type: "text",
                     text: `${itemsBrief}${moreItems}` || 'ไม่มีรายละเอียดสินค้า',
                     size: "xxs",
-                    color: "#A09B90",
+                    color: "#635B5F",
                     margin: "xs",
                     wrap: true
                   }
@@ -3415,30 +2956,30 @@ Deno.serve(async (req) => {
               })
 
               if (idx < bills.length - 1) {
-                billRows.push({ type: "separator", margin: "sm", color: "#E6E1D6" })
+                billRows.push({ type: "separator", margin: "sm", color: "#D4CBCF" })
               }
             })
 
             const billsFlex = {
               type: "flex",
-              altText: `🧾 รายการบิลล่าสุด ${bills.length} รายการ`,
+              altText: `รายการบิลล่าสุด ${bills.length} รายการ`,
               contents: {
                 type: "bubble",
                 size: "mega",
                 header: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#F4F1EA",
+                  backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "RECENT COMPLETED BILLS", size: "xs", weight: "bold", color: "#C85A32" },
-                    { type: "text", text: `รายการบิลล่าสุดในระบบ (${bills.length} บิลล่าสุด)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs", wrap: true }
+                    { type: "text", text: "RECENT COMPLETED BILLS", size: "xs", weight: "bold", color: "#41032A" },
+                    { type: "text", text: `รายการบิลล่าสุดในระบบ (${bills.length} บิลล่าสุด)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs", wrap: true }
                   ]
                 },
                 body: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#F4F1EA",
+                  backgroundColor: "#ECE4E7",
                   paddingAll: "16px",
                   contents: billRows
                 }
@@ -3460,7 +3001,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงรายการบิลล่าสุดได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายการบิลล่าสุดได้: ' + err.message }]
               })
             })
           }
@@ -3510,7 +3051,7 @@ Deno.serve(async (req) => {
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
                   body: JSON.stringify({
                     replyToken: event.replyToken,
-                    messages: [{ type: 'text', text: `❌ ไม่พบข้อมูลโต๊ะ "${targetTableKeyword}" ในระบบร้าน` }]
+                    messages: [{ type: 'text', text: `ไม่พบข้อมูลโต๊ะ "${targetTableKeyword}" ในระบบร้าน` }]
                   })
                 })
                 continue
@@ -3526,54 +3067,54 @@ Deno.serve(async (req) => {
                   type: "box",
                   layout: "horizontal",
                   contents: [
-                    { type: "text", text: `${it.quantity}x ${it.menu_items?.name || 'Item'}`, size: "xs", color: "#1E1B18", flex: 7, wrap: true },
-                    { type: "text", text: `฿${(it.quantity * it.price_at_time).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                    { type: "text", text: `${it.quantity}x ${it.menu_items?.name || 'Item'}`, size: "xs", color: "#1A1A1A", flex: 7, wrap: true },
+                    { type: "text", text: `฿${(it.quantity * it.price_at_time).toFixed(2)}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                   ]
                 }))
               }
 
               const singleTableFlex = {
                 type: "flex",
-                altText: `🪑 สถานะ ${matchedTable.table_name}: ${isOccupied ? `มีลูกค้านั่ง (฿${totalAmt.toLocaleString('th-TH')})` : 'โต๊ะว่าง 🟢'}`,
+                altText: `สถานะ ${matchedTable.table_name}: ${isOccupied ? `มีลูกค้านั่ง (฿${totalAmt.toLocaleString('th-TH')})` : 'โต๊ะว่าง'}`,
                 contents: {
                   type: "bubble",
                   size: "mega",
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: isOccupied ? "#F4F1EA" : "#EAF4EC",
+                    backgroundColor: isOccupied ? "#ECE4E7" : "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "TABLE STATUS", size: "xs", weight: "bold", color: isOccupied ? "#C85A32" : "#2D804E" },
-                      { type: "text", text: matchedTable.table_name.toUpperCase(), size: "lg", weight: "bold", color: "#1E1B18", margin: "xs" },
-                      { type: "text", text: isOccupied ? `สถานะ: มีลูกค้านั่ง (${activeBkg.pax || 1} ท่าน)` : "สถานะ: โต๊ะว่างพร้อมให้บริการ 🟢", size: "xs", color: isOccupied ? "#78736A" : "#2D804E", margin: "xs" }
+                      { type: "text", text: "TABLE STATUS", size: "xs", weight: "bold", color: isOccupied ? "#41032A" : "#41032A" },
+                      { type: "text", text: matchedTable.table_name.toUpperCase(), size: "lg", weight: "bold", color: "#1A1A1A", margin: "xs" },
+                      { type: "text", text: isOccupied ? `สถานะ: มีลูกค้านั่ง (${activeBkg.pax || 1} ท่าน)` : "สถานะ: โต๊ะว่างพร้อมให้บริการ", size: "xs", color: isOccupied ? "#635B5F" : "#41032A", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#FBF9F5",
+                    backgroundColor: "#F6F2EA",
                     paddingAll: "20px",
                     contents: isOccupied ? [
                       {
                         type: "box",
                         layout: "horizontal",
                         contents: [
-                          { type: "text", text: "ยอดบิลปัจจุบัน", size: "sm", weight: "bold", color: "#1E1B18", flex: 6 },
-                          { type: "text", text: `฿${totalAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "lg", weight: "bold", color: "#C85A32", align: "end", flex: 4 }
+                          { type: "text", text: "ยอดบิลปัจจุบัน", size: "sm", weight: "bold", color: "#1A1A1A", flex: 6 },
+                          { type: "text", text: `฿${totalAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "lg", weight: "bold", color: "#41032A", align: "end", flex: 4 }
                         ]
                       },
-                      { type: "separator", margin: "md", color: "#E6E1D6" },
-                      { type: "text", text: "รายการที่สั่ง", size: "xxs", weight: "bold", color: "#78736A", margin: "md" },
+                      { type: "separator", margin: "md", color: "#D4CBCF" },
+                      { type: "text", text: "รายการที่สั่ง", size: "xxs", weight: "bold", color: "#635B5F", margin: "md" },
                       {
                         type: "box",
                         layout: "vertical",
                         margin: "sm",
                         spacing: "xs",
-                        contents: itemRows.length > 0 ? itemRows : [{ type: "text", text: "ยังไม่มีรายการอาหาร", size: "xs", color: "#888888" }]
+                        contents: itemRows.length > 0 ? itemRows : [{ type: "text", text: "ยังไม่มีรายการอาหาร", size: "xs", color: "#635B5F" }]
                       }
                     ] : [
-                      { type: "text", text: "โต๊ะนี้พร้อมเปิดบิลใหม่ได้ทันทีผ่านหน้าจอ POS หรือลูกค้าสแกน QR Code ประจำโต๊ะ", size: "xs", color: "#78736A", wrap: true }
+                      { type: "text", text: "โต๊ะนี้พร้อมเปิดบิลใหม่ได้ทันทีผ่านหน้าจอ POS หรือลูกค้าสแกน QR Code ประจำโต๊ะ", size: "xs", color: "#635B5F", wrap: true }
                     ]
                   }
                 }
@@ -3603,33 +3144,33 @@ Deno.serve(async (req) => {
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: `${occ ? '🪑' : '🟢'} ${t.table_name}`, size: "xs", weight: "bold", color: occ ? "#1E1B18" : "#4A6B3D", flex: 6 },
-                  { type: "text", text: occ ? `฿${amt.toFixed(0)} (${bkg.pax || 1}P)` : 'ว่าง', size: "xs", weight: "bold", color: occ ? "#C85A32" : "#78736A", align: "end", flex: 4 }
+                  { type: "text", text: `${t.table_name}`, size: "xs", weight: "bold", color: occ ? "#1A1A1A" : "#41032A", flex: 6 },
+                  { type: "text", text: occ ? `฿${amt.toFixed(0)} (${bkg.pax || 1}P)` : 'ว่าง', size: "xs", weight: "bold", color: occ ? "#41032A" : "#635B5F", align: "end", flex: 4 }
                 ]
               }
             })
 
             const allTablesFlex = {
               type: "flex",
-              altText: `🪑 สรุปโต๊ะอาหาร (${occupiedCount}/${allTbls.length} โต๊ะที่นั่ง)`,
+              altText: `สรุปโต๊ะอาหาร (${occupiedCount}/${allTbls.length} โต๊ะที่นั่ง)`,
               contents: {
                 type: "bubble",
                 size: "mega",
                 header: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#F4F1EA",
+                  backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "ALL TABLES OVERVIEW", size: "xs", weight: "bold", color: "#C85A32" },
-                    { type: "text", text: `ภาพรวมโต๊ะอาหาร (${occupiedCount} จาก ${allTbls.length} โต๊ะมีลูกค้า)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs" },
-                    { type: "text", text: `ยอดบิลที่ยังไม่เช็คบิลรวม: ฿${totalTblAmt.toLocaleString('th-TH')}`, size: "xxs", color: "#78736A", margin: "xs" }
+                    { type: "text", text: "ALL TABLES OVERVIEW", size: "xs", weight: "bold", color: "#41032A" },
+                    { type: "text", text: `ภาพรวมโต๊ะอาหาร (${occupiedCount} จาก ${allTbls.length} โต๊ะมีลูกค้า)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs" },
+                    { type: "text", text: `ยอดบิลที่ยังไม่เช็คบิลรวม: ฿${totalTblAmt.toLocaleString('th-TH')}`, size: "xxs", color: "#635B5F", margin: "xs" }
                   ]
                 },
                 body: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#FBF9F5",
+                  backgroundColor: "#F6F2EA",
                   paddingAll: "20px",
                   contents: [
                     {
@@ -3638,8 +3179,8 @@ Deno.serve(async (req) => {
                       spacing: "sm",
                       contents: tableRows
                     },
-                    { type: "separator", margin: "md", color: "#E6E1D6" },
-                    { type: "text", text: "💡 ดูเฉพาะโต๊ะพิมพ์: โต๊ะ [ชื่อโต๊ะ] เช่น โต๊ะ 3", size: "xxs", color: "#888888", align: "center", margin: "md" }
+                    { type: "separator", margin: "md", color: "#D4CBCF" },
+                    { type: "text", text: "ดูเฉพาะโต๊ะพิมพ์: โต๊ะ [ชื่อโต๊ะ] เช่น โต๊ะ 3", size: "xxs", color: "#635B5F", align: "center", margin: "md" }
                   ]
                 }
               }
@@ -3660,7 +3201,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงสถานะโต๊ะได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงสถานะโต๊ะได้: ' + err.message }]
               })
             })
           }
@@ -3688,7 +3229,7 @@ Deno.serve(async (req) => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
                 body: JSON.stringify({
                   replyToken: event.replyToken,
-                  messages: [{ type: 'text', text: '📭 ยังไม่มีประวัติการเปิดกะในระบบ POS' }]
+                  messages: [{ type: 'text', text: 'ยังไม่มีประวัติการเปิดกะในระบบ POS' }]
                 })
               })
               continue
@@ -3721,39 +3262,39 @@ Deno.serve(async (req) => {
 
             const shiftFlex = {
               type: "flex",
-              altText: `📊 ข้อมูลกะ POS ล่าสุด (${isOpen ? 'กะกำลังเปิดอยู่ 🟢' : 'ปิดกะแล้ว 🔒'})`,
+              altText: `ข้อมูลกะ POS ล่าสุด (${isOpen ? 'กะกำลังเปิดอยู่' : 'ปิดกะแล้ว'})`,
               contents: {
                 type: "bubble",
                 size: "mega",
                 header: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: isOpen ? "#1E1B18" : "#333333",
+                  backgroundColor: "#41032A",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "POS SHIFT STATUS", size: "xs", weight: "bold", color: "#C85A32" },
-                    { type: "text", text: isOpen ? "กะที่กำลังทำงานอยู่ (ACTIVE 🟢)" : "กะล่าสุด (CLOSED 🔒)", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs" },
-                    { type: "text", text: `พนักงาน: ${currentShift.staff_name || 'Staff'} · เปิดเมื่อ: ${openTimeStr}`, size: "xxs", color: "#A09B90", margin: "xs" }
+                    { type: "text", text: "POS SHIFT STATUS", size: "xs", weight: "bold", color: "#D0B5C1" },
+                    { type: "text", text: isOpen ? "กะที่กำลังทำงานอยู่ (ACTIVE)" : "กะล่าสุด (CLOSED)", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs" },
+                    { type: "text", text: `พนักงาน: ${currentShift.staff_name || 'Staff'} · เปิดเมื่อ: ${openTimeStr}`, size: "xxs", color: "#D0B5C1", margin: "xs" }
                   ]
                 },
                 body: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#FBF9F5",
+                  backgroundColor: "#F6F2EA",
                   paddingAll: "20px",
                   contents: [
                     {
                       type: "box",
                       layout: "horizontal",
-                      backgroundColor: "#F4F1EA",
+                      backgroundColor: "#ECE4E7",
                       cornerRadius: "md",
                       paddingAll: "14px",
                       contents: [
-                        { type: "text", text: "ยอดขายรวมในกะ", size: "xs", color: "#78736A", flex: 5, gravity: "center" },
-                        { type: "text", text: `฿${Number(currentShift.total_sales || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "lg", weight: "bold", color: "#1E1B18", align: "end", flex: 5 }
+                        { type: "text", text: "ยอดขายรวมในกะ", size: "xs", color: "#635B5F", flex: 5, gravity: "center" },
+                        { type: "text", text: `฿${Number(currentShift.total_sales || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "lg", weight: "bold", color: "#1A1A1A", align: "end", flex: 5 }
                       ]
                     },
-                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    { type: "separator", margin: "md", color: "#D4CBCF" },
                     {
                       type: "box",
                       layout: "vertical",
@@ -3764,29 +3305,29 @@ Deno.serve(async (req) => {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "💵 เงินสด Cash", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${cashSales.toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: "เงินสด Cash", size: "xs", color: "#1A1A1A", flex: 7 },
+                            { type: "text", text: `฿${cashSales.toFixed(2)}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                           ]
                         },
                         {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "📱 PromptPay / โอน", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${Number(currentShift.qr_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: "PromptPay / โอน", size: "xs", color: "#1A1A1A", flex: 7 },
+                            { type: "text", text: `฿${Number(currentShift.qr_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                           ]
                         },
                         {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "💳 บัตรเครดิต Credit", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${Number(currentShift.credit_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: "บัตรเครดิต Credit", size: "xs", color: "#1A1A1A", flex: 7 },
+                            { type: "text", text: `฿${Number(currentShift.credit_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 3 }
                           ]
                         }
                       ]
                     },
-                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    { type: "separator", margin: "md", color: "#D4CBCF" },
                     {
                       type: "box",
                       layout: "vertical",
@@ -3797,32 +3338,32 @@ Deno.serve(async (req) => {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "เงินทอนตั้งต้น", size: "xs", color: "#78736A", flex: 6 },
-                            { type: "text", text: `฿${openingFloat.toFixed(2)}`, size: "xs", color: "#1E1B18", align: "end", flex: 4 }
+                            { type: "text", text: "เงินทอนตั้งต้น", size: "xs", color: "#635B5F", flex: 6 },
+                            { type: "text", text: `฿${openingFloat.toFixed(2)}`, size: "xs", color: "#1A1A1A", align: "end", flex: 4 }
                           ]
                         },
                         ...(totalIn > 0 ? [{
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "เงินนำเข้าลิ้นชัก (+)", size: "xs", color: "#4A6B3D", flex: 6 },
-                            { type: "text", text: `+฿${totalIn.toFixed(2)}`, size: "xs", color: "#4A6B3D", align: "end", flex: 4 }
+                            { type: "text", text: "เงินนำเข้าลิ้นชัก (+)", size: "xs", color: "#41032A", flex: 6 },
+                            { type: "text", text: `+฿${totalIn.toFixed(2)}`, size: "xs", color: "#41032A", align: "end", flex: 4 }
                           ]
                         }] : []),
                         ...(totalOut > 0 ? [{
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "เงินนำออกลิ้นชัก (-)", size: "xs", color: "#C85A32", flex: 6 },
-                            { type: "text", text: `-฿${totalOut.toFixed(2)}`, size: "xs", color: "#C85A32", align: "end", flex: 4 }
+                            { type: "text", text: "เงินนำออกลิ้นชัก (-)", size: "xs", color: "#41032A", flex: 6 },
+                            { type: "text", text: `-฿${totalOut.toFixed(2)}`, size: "xs", color: "#41032A", align: "end", flex: 4 }
                           ]
                         }] : []),
                         {
                           type: "box",
                           layout: "horizontal",
                           contents: [
-                            { type: "text", text: "เงินที่ควรมีในลิ้นชัก", size: "xs", weight: "bold", color: "#1E1B18", flex: 6 },
-                            { type: "text", text: `฿${expectedCash.toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 4 }
+                            { type: "text", text: "เงินที่ควรมีในลิ้นชัก", size: "xs", weight: "bold", color: "#1A1A1A", flex: 6 },
+                            { type: "text", text: `฿${expectedCash.toFixed(2)}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 4 }
                           ]
                         },
                         ...(closedCash !== null ? [
@@ -3830,16 +3371,16 @@ Deno.serve(async (req) => {
                             type: "box",
                             layout: "horizontal",
                             contents: [
-                              { type: "text", text: "จำนวนจริงในลิ้นชัก", size: "xs", weight: "bold", color: "#1E1B18", flex: 6 },
-                              { type: "text", text: `฿${closedCash.toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 4 }
+                              { type: "text", text: "จำนวนจริงในลิ้นชัก", size: "xs", weight: "bold", color: "#1A1A1A", flex: 6 },
+                              { type: "text", text: `฿${closedCash.toFixed(2)}`, size: "xs", weight: "bold", color: "#1A1A1A", align: "end", flex: 4 }
                             ]
                           },
                           {
                             type: "box",
                             layout: "horizontal",
                             contents: [
-                              { type: "text", text: Math.abs(difference) < 0.01 ? "ส่วนต่าง (ตรงยอดพอดี)" : ">> ส่วนต่าง", size: "xs", weight: "bold", color: Math.abs(difference) < 0.01 ? "#4A6B3D" : "#C85A32", flex: 6 },
-                              { type: "text", text: `${difference > 0 ? '+' : ''}฿${difference.toFixed(2)}`, size: "xs", weight: "bold", color: Math.abs(difference) < 0.01 ? "#4A6B3D" : "#C85A32", align: "end", flex: 4 }
+                              { type: "text", text: Math.abs(difference) < 0.01 ? "ส่วนต่าง (ตรงยอดพอดี)" : ">> ส่วนต่าง", size: "xs", weight: "bold", color: Math.abs(difference) < 0.01 ? "#41032A" : "#41032A", flex: 6 },
+                              { type: "text", text: `${difference > 0 ? '+' : ''}฿${difference.toFixed(2)}`, size: "xs", weight: "bold", color: Math.abs(difference) < 0.01 ? "#41032A" : "#41032A", align: "end", flex: 4 }
                             ]
                           }
                         ] : [])
@@ -3865,105 +3406,10 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลกะ POS ได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลกะ POS ได้: ' + err.message }]
               })
             })
           }
-          continue
-        }
-
-        // --- NEW: Command Help Menu (คำสั่ง / help / เมนู) ---
-        if (text === 'คำสั่ง' || text === 'help' || text === 'เมนู' || text === 'sthelp') {
-          const helpFlex = {
-            type: "flex",
-            altText: "📖 รายการคำสั่งระบบ IN THE HAUS POS",
-            contents: {
-              type: "bubble",
-              size: "mega",
-              header: {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#1E1B18",
-                paddingAll: "20px",
-                contents: [
-                  { type: "text", text: "HAUS POS CHATBOT", size: "xs", weight: "bold", color: "#C85A32" },
-                  { type: "text", text: "คำสั่งดูรายงานและจัดการร้าน", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs" },
-                  { type: "text", text: "พิมพ์คำสั่งเหล่านี้ในกลุ่ม LINE ได้ตลอด 24 ชม.", size: "xxs", color: "#A09B90", margin: "xs" }
-                ]
-              },
-              body: {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FBF9F5",
-                paddingAll: "20px",
-                spacing: "md",
-                contents: [
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "📊 ยอดขาย", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
-                      { type: "text", text: "สรุปยอดขายสุทธิวันนี้ แยกช่องทางชำระเงิน", size: "xs", color: "#78736A", flex: 6, wrap: true }
-                    ]
-                  },
-                  { type: "separator", color: "#E6E1D6" },
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "⏱️ กะ / ปิดกะ", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
-                      { type: "text", text: "ดูสถานะกะ ยอดเงินสดในลิ้นชัก และส่วนต่าง", size: "xs", color: "#78736A", flex: 6, wrap: true }
-                    ]
-                  },
-                  { type: "separator", color: "#E6E1D6" },
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "🧾 บิล", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
-                      { type: "text", text: "ดูรายการบิลที่ชำระเงินล่าสุด 6 บิล", size: "xs", color: "#78736A", flex: 6, wrap: true }
-                    ]
-                  },
-                  { type: "separator", color: "#E6E1D6" },
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "🪑 โต๊ะ", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
-                      { type: "text", text: "ดูสถานะโต๊ะอาหารทั้งหมด หรือ โต๊ะ [เลข]", size: "xs", color: "#78736A", flex: 6, wrap: true }
-                    ]
-                  },
-                  { type: "separator", color: "#E6E1D6" },
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "📑 ค่าใช้จ่าย", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
-                      { type: "text", text: "ดูสรุปรายจ่ายวันนี้ที่บันทึกเข้าระบบ", size: "xs", color: "#78736A", flex: 6, wrap: true }
-                    ]
-                  },
-                  { type: "separator", color: "#E6E1D6" },
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "📸 ถ่ายรูปสลิป", weight: "bold", size: "sm", color: "#2D804E", flex: 4 },
-                      { type: "text", text: "ส่งภาพใบเสร็จ/บิลซื้อของ AI บันทึกบัญชีให้อัตโนมัติ", size: "xs", color: "#78736A", flex: 6, wrap: true }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
-
-          await fetch('https://api.line.me/v2/bot/message/reply', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-            body: JSON.stringify({
-              replyToken: event.replyToken,
-              messages: [helpFlex]
-            })
-          })
           continue
         }
 
@@ -3996,7 +3442,7 @@ Deno.serve(async (req) => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
                 body: JSON.stringify({
                   replyToken: event.replyToken,
-                  messages: [{ type: 'text', text: '✅ วันนี้ไม่มีรายการบิลที่ถูกยกเลิก (No Void Bills Today)' }]
+                  messages: [{ type: 'text', text: 'วันนี้ไม่มีรายการบิลที่ถูกยกเลิก (No Void Bills Today)' }]
                 })
               })
               continue
@@ -4016,7 +3462,7 @@ Deno.serve(async (req) => {
                 type: "box",
                 layout: "vertical",
                 margin: "md",
-                backgroundColor: "#F4F1EA",
+                backgroundColor: "#ECE4E7",
                 cornerRadius: "md",
                 paddingAll: "md",
                 contents: [
@@ -4024,38 +3470,38 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: `#${billNo} · ${tbl}`, weight: "bold", size: "xs", color: "#1E1B18", flex: 7 },
-                      { type: "text", text: `฿${amt.toFixed(2)}`, weight: "bold", size: "xs", color: "#9E2D2D", align: "end", flex: 3 }
+                      { type: "text", text: `#${billNo} · ${tbl}`, weight: "bold", size: "xs", color: "#1A1A1A", flex: 7 },
+                      { type: "text", text: `฿${amt.toFixed(2)}`, weight: "bold", size: "xs", color: "#B42318", align: "end", flex: 3 }
                     ]
                   },
-                  { type: "text", text: `เหตุผล: ${reason}`, size: "xxs", color: "#78736A", margin: "xs", wrap: true }
+                  { type: "text", text: `เหตุผล: ${reason}`, size: "xxs", color: "#635B5F", margin: "xs", wrap: true }
                 ]
               })
 
-              if (idx < voidedData.length - 1) voidRows.push({ type: "separator", margin: "sm", color: "#E6E1D6" })
+              if (idx < voidedData.length - 1) voidRows.push({ type: "separator", margin: "sm", color: "#D4CBCF" })
             })
 
             const voidFlex = {
               type: "flex",
-              altText: `⚠️ บิลยกเลิกวันนี้ (${voidedData.length} บิล: ฿${totalVoidAmt.toFixed(2)})`,
+              altText: `บิลยกเลิกวันนี้ (${voidedData.length} บิล: ฿${totalVoidAmt.toFixed(2)})`,
               contents: {
                 type: "bubble",
                 size: "mega",
                 header: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#F4F1EA",
+                  backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "VOID BILLS AUDIT", size: "xs", weight: "bold", color: "#9E2D2D" },
-                    { type: "text", text: `รายงานบิลยกเลิกประจำวัน (${voidedData.length} รายการ)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs" },
-                    { type: "text", text: `ยอดเงินที่ยกเลิกรวม: ฿${totalVoidAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xxs", color: "#78736A", margin: "xs" }
+                    { type: "text", text: "VOID BILLS AUDIT", size: "xs", weight: "bold", color: "#B42318" },
+                    { type: "text", text: `รายงานบิลยกเลิกประจำวัน (${voidedData.length} รายการ)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs" },
+                    { type: "text", text: `ยอดเงินที่ยกเลิกรวม: ฿${totalVoidAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xxs", color: "#635B5F", margin: "xs" }
                   ]
                 },
                 body: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#FBF9F5",
+                  backgroundColor: "#F6F2EA",
                   paddingAll: "16px",
                   contents: voidRows
                 }
@@ -4077,7 +3523,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงรายงานบิลยกเลิกได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายงานบิลยกเลิกได้: ' + err.message }]
               })
             })
           }
@@ -4085,71 +3531,71 @@ Deno.serve(async (req) => {
         }
 
         // --- NEW: Command Help Menu (sthelp / คำสั่ง / คู่มือ / help) ---
-        if (text === 'sthelp' || text === 'คำสั่ง' || text === 'คู่มือ' || text === 'help') {
+        if (text === 'sthelp' || text === 'คำสั่ง' || text === 'คู่มือ' || text === 'help' || text === 'เมนู') {
           const helpFlex = {
             type: "flex",
-            altText: "📖 คู่มือคำสั่งบอท IN THE HAUS",
+            altText: "คู่มือคำสั่งบอท IN THE HAUS",
             contents: {
               type: "bubble",
               size: "mega",
               header: {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#1E1B18",
+                backgroundColor: "#41032A",
                 paddingAll: "20px",
                 contents: [
-                  { type: "text", text: "IN THE HAUS · COMMAND MANUAL", size: "xs", weight: "bold", color: "#C85A32" },
-                  { type: "text", text: "สารบัญคำสั่งบอทสั่งงาน", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs" }
+                  { type: "text", text: "IN THE HAUS · COMMAND MANUAL", size: "xs", weight: "bold", color: "#D0B5C1" },
+                  { type: "text", text: "สารบัญคำสั่งบอทสั่งงาน", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs" }
                 ]
               },
               body: {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#FBF9F5",
+                backgroundColor: "#F6F2EA",
                 paddingAll: "20px",
                 contents: [
-                  { type: "text", text: "🍽️ หมวด POS & ออเดอร์หน้าร้าน", size: "xxs", weight: "bold", color: "#C85A32" },
+                  { type: "text", text: "หมวด POS & ออเดอร์หน้าร้าน", size: "xxs", weight: "bold", color: "#41032A" },
                   {
                     type: "box",
                     layout: "vertical",
                     margin: "xs",
                     spacing: "xs",
                     contents: [
-                      { type: "text", text: "• stsales หรือ ยอดขาย : สรุปยอดขายหน้าร้านวันนี้", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• stpredict หรือ ทำนาย : พยากรณ์ลูกค้าต่อชั่วโมง & ทริคสายมู AI", size: "xs", color: "#C85A32", weight: "bold" },
-                      { type: "text", text: "• stbill หรือ บิลล่าสุด : ดู 6 บิลที่ชำระเงินล่าสุด", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• storder : ดูออเดอร์สดที่กำลังทำในครัว", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• sttable หรือ โต๊ะ 3 : ดูสถานะโต๊ะและยอดค้าง", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• stshift หรือ กะ : ดูสถานะกะ POS และเงินในลิ้นชัก", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• sthero : 5 อันดับเมนูขายดีประจำวัน", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• stvoid : ตรวจสอบบิลที่ถูกยกเลิกในวันนี้", size: "xs", color: "#1E1B18" }
+                      { type: "text", text: "• stsales หรือ ยอดขาย : สรุปยอดขายหน้าร้านวันนี้", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• stpredict หรือ ทำนาย : พยากรณ์ลูกค้าต่อชั่วโมง & ทริคสายมู AI", size: "xs", color: "#41032A", wrap: true, weight: "bold" },
+                      { type: "text", text: "• stbill หรือ บิลล่าสุด : ดู 6 บิลที่ชำระเงินล่าสุด", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• storder : ดูออเดอร์สดที่กำลังทำในครัว", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• sttable หรือ โต๊ะ 3 : ดูสถานะโต๊ะและยอดค้าง", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• stshift หรือ กะ : ดูสถานะกะ POS และเงินในลิ้นชัก", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• sthero : 5 อันดับเมนูขายดีประจำวัน", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• stvoid : ตรวจสอบบิลที่ถูกยกเลิกในวันนี้", size: "xs", color: "#1A1A1A", wrap: true }
                     ]
                   },
-                  { type: "separator", margin: "md", color: "#E6E1D6" },
-                  { type: "text", text: "📦 หมวดสต็อก & ค่าใช้จ่าย", size: "xxs", weight: "bold", color: "#4A6B3D", margin: "md" },
+                  { type: "separator", margin: "md", color: "#D4CBCF" },
+                  { type: "text", text: "หมวดสต็อก & ค่าใช้จ่าย", size: "xxs", weight: "bold", color: "#41032A", margin: "md" },
                   {
                     type: "box",
                     layout: "vertical",
                     margin: "xs",
                     spacing: "xs",
                     contents: [
-                      { type: "text", text: "• stbuy : รายการสินค้าที่ต้องซื้อ/ของหมด", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• stday : ประวัติการตัดสต็อกวันนี้", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• stexp : สรุปรายจ่ายร้านวันนี้", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• ราคา [ชื่อสินค้า] : ค้นหาราคากลางของสินค้า", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• ส่งภาพสลิป/บิล : สแกนบันทึกบัญชี AI อัตโนมัติ", size: "xs", color: "#1E1B18" }
+                      { type: "text", text: "• stbuy : รายการสินค้าที่ต้องซื้อ/ของหมด", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• stday : ประวัติการตัดสต็อกวันนี้", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• stexp : สรุปรายจ่ายร้านวันนี้", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• ราคา [ชื่อสินค้า] : ค้นหาราคากลางของสินค้า", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• ส่งภาพสลิป/บิล : สแกนบันทึกบัญชี AI อัตโนมัติ", size: "xs", color: "#1A1A1A", wrap: true }
                     ]
                   },
-                  { type: "separator", margin: "md", color: "#E6E1D6" },
-                  { type: "text", text: "🧑‍💼 หมวดพนักงาน & ระบบ", size: "xxs", weight: "bold", color: "#78736A", margin: "md" },
+                  { type: "separator", margin: "md", color: "#D4CBCF" },
+                  { type: "text", text: "หมวดพนักงาน & ระบบ", size: "xxs", weight: "bold", color: "#635B5F", margin: "md" },
                   {
                     type: "box",
                     layout: "vertical",
                     margin: "xs",
                     spacing: "xs",
                     contents: [
-                      { type: "text", text: "• staff : สรุปเวลาเข้า-ออกงานและการลา", size: "xs", color: "#1E1B18" },
-                      { type: "text", text: "• ping : เช็คสถานะการเชื่อมต่อบอท", size: "xs", color: "#1E1B18" }
+                      { type: "text", text: "• staff : สรุปเวลาเข้า-ออกงานและการลา", size: "xs", color: "#1A1A1A", wrap: true },
+                      { type: "text", text: "• ping : เช็คสถานะการเชื่อมต่อบอท", size: "xs", color: "#1A1A1A", wrap: true }
                     ]
                   }
                 ]
@@ -4170,313 +3616,16 @@ Deno.serve(async (req) => {
       }
     } // End of per-event text loop
 
-    // --- Image Message Handler for Receipt OCR & Auto Expense Recording (Supports Multi-Page Batches) ---
-    const imageEvents = events.filter((e: any) => e.type === 'message' && e.message?.type === 'image')
-    if (imageEvents.length > 0) {
-      const groupedImages: { [key: string]: any[] } = {}
-      imageEvents.forEach((ev: any) => {
-        const key = ev.source?.groupId || ev.source?.roomId || ev.source?.userId || 'default'
-        if (!groupedImages[key]) groupedImages[key] = []
-        groupedImages[key].push(ev)
-      })
+    // Receipt photos / PDF files -> Gemini OCR -> store_expenses (see receipt.ts)
+    await handleReceiptEvents(events, CHANNEL_ACCESS_TOKEN, supabaseAdmin)
+    } // end processEvents
 
-      for (const [sourceKey, evList] of Object.entries(groupedImages)) {
-        const pageCount = evList.length
-        console.log(`Processing receipt batch for ${sourceKey}: ${pageCount} image(s)`)
-
-        try {
-          // 1. Download all images in parallel
-          const downloadPromises = evList.map(async (ev: any, idx: number) => {
-            const messageId = ev.message.id
-            const lineImgUrl = `https://api-data.line.me/v2/bot/message/${messageId}/content`
-            const imgResp = await fetch(lineImgUrl, {
-              headers: { 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` }
-            })
-
-            if (!imgResp.ok) {
-              const errTxt = await imgResp.text()
-              console.error(`Failed to download image ${messageId} from LINE API:`, errTxt)
-              return null
-            }
-
-            const imageBuffer = await imgResp.arrayBuffer()
-            const imageBytes = new Uint8Array(imageBuffer)
-
-            // Convert to Base64 (Chunked to prevent stack overflow)
-            let binary = ''
-            const len = imageBytes.byteLength
-            const chunkSize = 8192
-            for (let i = 0; i < len; i += chunkSize) {
-              const chunk = imageBytes.subarray(i, Math.min(i + chunkSize, len))
-              binary += String.fromCharCode.apply(null, chunk as any)
-            }
-            const base64Image = btoa(binary)
-
-            // Upload to Supabase Storage (receipts bucket)
-            const now = new Date()
-            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
-            const folder = thNow.toISOString().slice(0, 7)
-            const fileName = `${folder}/${Date.now()}_${idx}_${messageId}.jpg`
-            let receiptImageUrl = ''
-
-            try {
-              const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
-                .from('receipts')
-                .upload(fileName, imageBytes, {
-                  contentType: 'image/jpeg',
-                  upsert: true
-                })
-
-              if (!uploadErr && uploadData) {
-                const { data: urlData } = supabaseAdmin.storage.from('receipts').getPublicUrl(fileName)
-                receiptImageUrl = urlData?.publicUrl || ''
-              } else if (uploadErr) {
-                console.error('Receipt upload error to Supabase Storage:', uploadErr)
-              }
-            } catch (stErr) {
-              console.error('Storage upload exception:', stErr)
-            }
-
-            return {
-              base64: base64Image,
-              imageUrl: receiptImageUrl,
-              replyToken: ev.replyToken,
-              source: ev.source
-            }
-          })
-
-          const downloadedItems = (await Promise.all(downloadPromises)).filter(Boolean) as any[]
-          if (downloadedItems.length === 0) continue
-
-          const base64List = downloadedItems.map(d => d.base64)
-          const imageUrlList = downloadedItems.map(d => d.imageUrl).filter(Boolean)
-          const receiptImageUrl = imageUrlList.length > 0 ? imageUrlList.join(',') : null
-          const latestItem = downloadedItems[downloadedItems.length - 1]
-          const replyToken = latestItem.replyToken
-
-          // 2. Retrieve Gemini API Key & Preferred Model
-          let geminiApiKey = Deno.env.get('GEMINI_API_KEY') || ''
-          if (!geminiApiKey) {
-            const { data: keyRow } = await supabaseAdmin
-              .from('app_settings')
-              .select('value')
-              .eq('key', 'gemini_api_key')
-              .maybeSingle()
-            geminiApiKey = keyRow?.value || ''
-          }
-
-          let preferredModel = 'gemini-flash-latest'
-          const { data: modelRow } = await supabaseAdmin
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'gemini_model')
-            .maybeSingle()
-          if (modelRow?.value) preferredModel = modelRow.value
-
-          if (!geminiApiKey) {
-            console.warn('Gemini API key is not configured in app_settings or environment.')
-            continue
-          }
-
-          // 3. Call Gemini AI Vision OCR with all images in batch
-          const ocrResult = await scanReceiptImageWithGemini(base64List, geminiApiKey, preferredModel)
-          console.log('Gemini OCR Multi-Page Result:', JSON.stringify(ocrResult))
-
-          const rawAmount = Number(ocrResult?.amount) || 0
-          const hasReceiptIndicator = ocrResult?.is_receipt === true || rawAmount > 0 || (ocrResult?.vendor_name && ocrResult?.vendor_name !== 'ไม่ระบุ')
-
-          if (!ocrResult || !hasReceiptIndicator || rawAmount <= 0) {
-            console.log('Image(s) not recognized as valid expense receipt or amount <= 0. Skipping.')
-            continue
-          }
-
-          // --- Automatic Currency Conversion (e.g. USD / Dollar to THB) ---
-          let detectedCurrency = String(ocrResult.currency || 'THB').toUpperCase().trim()
-          let originalAmount = Number(ocrResult.original_amount) || rawAmount
-          const textBlob = `${ocrResult.title || ''} ${ocrResult.notes || ''} ${ocrResult.vendor_name || ''}`
-
-          // Detect USD if AI returned THB but text clearly contains dollar signs or foreign tech vendors
-          if (detectedCurrency === 'THB' && (textBlob.includes('$') || /\bUSD\b|\bdollar\b/i.test(textBlob))) {
-            if (!ocrResult.vendor_tax_id || textBlob.includes('$')) {
-              detectedCurrency = 'USD'
-            }
-          }
-
-          let amount = rawAmount
-          let conversionInfo: any = null
-
-          if (detectedCurrency !== 'THB' && originalAmount > 0) {
-            const rate = await fetchExchangeRate(detectedCurrency)
-            amount = parseFloat((originalAmount * rate).toFixed(2))
-            const currencySymbol = detectedCurrency === 'USD' ? '$' : (detectedCurrency === 'EUR' ? '€' : (detectedCurrency === 'GBP' ? '£' : ''))
-            conversionInfo = {
-              currency: detectedCurrency,
-              symbol: currencySymbol,
-              originalAmount: originalAmount,
-              rate: rate
-            }
-            console.log(`[Currency] Auto-converted ${originalAmount} ${detectedCurrency} to ฿${amount} THB (rate: ${rate})`)
-          }
-
-          let vatAmount = 0
-          if (ocrResult.vat_included) {
-            vatAmount = parseFloat(((amount * 7) / 107).toFixed(2))
-          }
-
-          const now = new Date()
-          const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
-          const rawDate = ocrResult.expense_date || thNow.toISOString().slice(0, 10)
-          let title = ocrResult.title || 'ค่าใช้จ่ายร้าน'
-          if (pageCount > 1 && !title.includes('ชุด') && !title.includes('แผ่น')) {
-            title = `${title} (ชุด ${pageCount} แผ่น)`
-          }
-          const category = ocrResult.category || (detectedCurrency !== 'THB' ? 'software_service' : 'raw_material')
-          const vendorName = ocrResult.vendor_name || 'ไม่ระบุ'
-          const vendorTaxId = (ocrResult.vendor_tax_id || '').replace(/\D/g, '') || null
-          const docType = ocrResult.doc_type || 'tax_invoice'
-          const paymentMethod = ocrResult.payment_method || 'TRANSFER'
-          let notes = ocrResult.notes || ''
-
-          if (conversionInfo && !notes.includes(conversionInfo.currency) && !notes.includes(conversionInfo.rate.toFixed(2))) {
-            const conversionNote = `แปลงอัตโนมัติจาก ${conversionInfo.symbol}${conversionInfo.originalAmount.toFixed(2)} ${conversionInfo.currency} @ ${conversionInfo.rate.toFixed(2)} บาท/${conversionInfo.currency}`
-            notes = notes ? `${notes} · ${conversionNote}` : conversionNote
-          }
-
-          // 4. Insert into store_expenses table
-          const { data: inserted, error: insertErr } = await supabaseAdmin
-            .from('store_expenses')
-            .insert([{
-              expense_date: rawDate,
-              title: title,
-              category: category,
-              vendor_name: vendorName,
-              vendor_tax_id: vendorTaxId,
-              doc_type: docType,
-              amount: amount,
-              vat_included: ocrResult.vat_included ?? true,
-              vat_amount: vatAmount,
-              receipt_image_url: receiptImageUrl,
-              payment_method: paymentMethod,
-              notes: notes,
-              created_at: new Date().toISOString()
-            }])
-            .select()
-            .single()
-
-          if (insertErr) {
-            console.error('Error inserting into store_expenses:', insertErr)
-            throw insertErr
-          }
-
-          console.log('Successfully inserted multi-page store_expense:', inserted?.id)
-
-          // 5. Format Date for Display
-          let dateFormatted = rawDate
-          try {
-            const d = new Date(rawDate)
-            dateFormatted = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
-          } catch {
-            dateFormatted = rawDate
-          }
-
-          // 6. Build Flex Message Response
-          const flexBubble = createReceiptFlexMessage(inserted || {
-            expense_date: rawDate,
-            title,
-            category,
-            vendor_name: vendorName,
-            vendor_tax_id: vendorTaxId,
-            doc_type: docType,
-            amount,
-            vat_included: ocrResult.vat_included ?? true,
-            vat_amount: vatAmount,
-            payment_method: paymentMethod,
-            notes
-          }, dateFormatted, pageCount, conversionInfo)
-
-          // 7. Reply to LINE Group / User
-          const replyResp = await fetch('https://api.line.me/v2/bot/message/reply', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-            },
-            body: JSON.stringify({
-              replyToken: replyToken,
-              messages: [{
-                type: 'flex',
-                altText: `🧾 บันทึกค่าใช้จ่าย: ${vendorName} (฿${amount.toLocaleString('th-TH')})`,
-                contents: flexBubble
-              }]
-            }),
-          })
-
-          if (!replyResp.ok) {
-            const errTxt = await replyResp.text()
-            console.error('Failed to send LINE reply for receipt:', errTxt)
-            const targetId = latestItem.source?.groupId || latestItem.source?.roomId || latestItem.source?.userId
-            if (targetId) {
-              await fetch('https://api.line.me/v2/bot/message/push', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                },
-                body: JSON.stringify({
-                  to: targetId,
-                  messages: [{
-                    type: 'flex',
-                    altText: `🧾 บันทึกค่าใช้จ่าย: ${vendorName} (฿${amount.toLocaleString('th-TH')})`,
-                    contents: flexBubble
-                  }]
-                })
-              })
-            }
-          }
-        } catch (batchErr: any) {
-          console.error('Error in batch image receipt handler:', batchErr)
-          const targetId = latestItem?.source?.groupId || latestItem?.source?.roomId || latestItem?.source?.userId
-          const isQuota = String(batchErr?.message || '').includes('402') || String(batchErr?.message || '').includes('RESOURCE_EXHAUSTED')
-          const isRateLimit = String(batchErr?.message || '').includes('429') || String(batchErr?.message || '').includes('quota')
-          let errorText = `⚠️ บอท Yuzu ไม่สามารถอ่านบิลได้: เกิดข้อผิดพลาดในระบบ AI (${batchErr?.message || 'Unknown error'})`
-          if (isQuota) {
-            errorText = `⚠️ บอท Yuzu ไม่สามารถอ่านบิลได้:\nเครดิต Gemini API ใน Google AI Studio หมดอายุ/ยอดเงินคงเหลือหมด (Prepayment credits depleted)\nโปรดตรวจสอบหรือเติมเครดิตในระบบ`
-          } else if (isRateLimit) {
-            errorText = `⚠️ บอท Yuzu ไม่สามารถอ่านบิลได้:\nการเรียกใช้งาน Gemini API เกินขีดจำกัดชั่วคราว (Rate limit exceeded) กรุณาลองใหม่อีกครั้งใน 1-2 นาที`
-          }
-
-          try {
-            const errResp = await fetch('https://api.line.me/v2/bot/message/reply', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-              },
-              body: JSON.stringify({
-                replyToken: replyToken,
-                messages: [{ type: 'text', text: errorText }]
-              })
-            })
-            if (!errResp.ok && targetId) {
-              await fetch('https://api.line.me/v2/bot/message/push', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                },
-                body: JSON.stringify({
-                  to: targetId,
-                  messages: [{ type: 'text', text: errorText }]
-                })
-              })
-            }
-          } catch (lineErr) {
-            console.error('Failed to notify LINE about receipt scanning error:', lineErr)
-          }
-        }
-      }
+    const work = processEvents().catch((err) => console.error('Webhook processing error:', err))
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+      EdgeRuntime.waitUntil(work)
+    } else {
+      await work // local serve without EdgeRuntime
     }
-
     return new Response('OK', { headers: corsHeaders })
   } catch (err) {
     console.error('Global Webhook Error:', err)

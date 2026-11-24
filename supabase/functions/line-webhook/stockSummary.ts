@@ -8,6 +8,8 @@
  * Pure module (no Deno APIs) so the unit tests can run it under vitest.
  */
 
+import { BRAND } from "./brand.ts"
+
 export type StockTx = {
   quantity_change: number | string | null
   transaction_type: string | null
@@ -29,17 +31,18 @@ export type StockTx = {
 /** The units an item is counted and used in; pieces when a crate or pack holds countable things. */
 export type StockUnits = { unit?: string | null; pack_unit?: string | null; usage_unit?: string | null; conversion_factor?: number | string | null }
 
+// Brand v2 (brand.ts). Low stock is plum, not red: red is kept for errors only.
 const C = {
-  ink: '#1E1918',
-  muted: '#5A5452',
-  neutral: '#7C7472',
-  rule: '#D6CFCC',
-  paper: '#F8F4F2',
-  accent: '#B8432F',
-  ok: '#4E6B3A',      // olive banana-leaf
-  warn: '#B7791F',
-  crit: '#B8432F',
-  out: '#5A5452',
+  ink: BRAND.charcoal,
+  muted: BRAND.muted,
+  neutral: BRAND.neutral,
+  rule: BRAND.rule,
+  paper: BRAND.cream,
+  accent: BRAND.plum,
+  ok: BRAND.neutral,
+  warn: BRAND.charcoal,
+  crit: BRAND.plum,
+  out: BRAND.muted,
 }
 
 const EPS = 0.0001
