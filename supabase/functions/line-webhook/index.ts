@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { buildStockSummaryMessage, remainingText } from "./stockSummary.ts"
+import { buildStockSummaryMessage, buildRestockMessage, remainingText } from "./stockSummary.ts"
 import { handleReceiptEvents } from "./receipt.ts"
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
@@ -703,7 +703,7 @@ Deno.serve(async (req) => {
 
             let query = supabaseAdmin
               .from('stock_items')
-              .select('name, unit, pack_unit, usage_unit, conversion_factor, current_quantity, min_stock_threshold, reorder_point, updated_at')
+              .select('id, name, category, unit, pack_unit, usage_unit, conversion_factor, current_quantity, min_stock_threshold, reorder_point, updated_at')
               .order('name', { ascending: true })
 
             if (isBuyback) {
@@ -718,206 +718,8 @@ Deno.serve(async (req) => {
 
             if (error) throw error
 
-            const EPSILON = 0.0001;
-            const itemsToBuy = items.filter((item: any) => {
-               const qty = Number(item.current_quantity) || 0;
-               const min = Number(item.min_stock_threshold) || 0;
-               const reorder = Number(item.reorder_point) || 0;
-               return (qty <= EPSILON) || (min > 0 && qty <= min + EPSILON) || (reorder > 0 && qty <= reorder + EPSILON);
-            });
-
-            console.log(`Found ${itemsToBuy.length} items to buy`)
-
-            const headerTitle = isBuyback ? "RESTOCK LIST (24H)" : "RESTOCK LIST (3 DAYS)";
-            let messages = [];
-
-            if (itemsToBuy.length === 0) {
-              messages.push({
-                type: "flex",
-                altText: headerTitle,
-                contents: {
-                  type: "bubble",
-                  header: {
-                    type: "box",
-                    layout: "vertical",
-                    contents: [
-                      { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: dateStr.toUpperCase(), color: "#635B5F", size: "xs", margin: "xs" }
-                    ]
-                  },
-                  body: {
-                    type: "box",
-                    layout: "vertical",
-                    contents: [{ type: "text", text: "ALL INVENTORY QUANTITIES WITHIN LIMITS", color: "#41032A", size: "xs", align: "center", weight: "bold" }]
-                  },
-                  styles: {
-                    header: {
-                      backgroundColor: "#F6F2EA",
-                      separator: true,
-                      separatorColor: "#D4CBCF"
-                    },
-                    body: {
-                      backgroundColor: "#F6F2EA"
-                    }
-                  }
-                }
-              })
-            } else {
-               const bubbles: any[] = []
-               let currentItems: any[] = []
-               
-               const tableHeader = {
-                   type: "box",
-                   layout: "horizontal",
-                   margin: "sm",
-                   contents: [
-                       { type: "text", text: "ITEM DETAILS", color: "#635B5F", size: "xxs", weight: "bold", flex: 1 },
-                       { type: "text", text: "REMAINING", color: "#635B5F", size: "xxs", weight: "bold", align: "end", flex: 1 }
-                   ]
-               };
-
-               itemsToBuy.forEach((item: any, index: number) => {
-                 const itemName = item.name || 'Unknown Item'
-                 const current = Number(item.current_quantity) || 0
-                 const min = Number(item.min_stock_threshold) || 0
-                 const reorder = Number(item.reorder_point) || 0
-                 
-                 let indicatorBarColor = '#41032A';
-                 let rowBgColor = '#F6F2EA';
-                 let statusEmoji = 'OK';
-                 if (current <= EPSILON) { 
-                     statusEmoji = 'OUT';
-                     indicatorBarColor = '#1A1A1A';
-                     rowBgColor = '#F6F2EA';
-                 } else if (min > 0 && current <= min + EPSILON) { 
-                     statusEmoji = 'CRIT';
-                     indicatorBarColor = '#41032A';
-                     rowBgColor = '#ECE4E7';
-                 } else if (reorder > 0 && current <= reorder + EPSILON) { 
-                     statusEmoji = 'WARN';
-                     indicatorBarColor = '#41032A';
-                     rowBgColor = '#ECE4E7';
-                 }
-
-                 currentItems.push({
-                     type: "box",
-                     layout: "horizontal",
-                     backgroundColor: rowBgColor,
-                     cornerRadius: "md",
-                     paddingAll: "md",
-                     margin: "sm",
-                     contents: [
-                         // Left indicator bar
-                         {
-                             type: "box",
-                             layout: "vertical",
-                             width: "4px",
-                             backgroundColor: indicatorBarColor,
-                             cornerRadius: "sm",
-                             contents: []
-                         },
-                         // Item Name
-                         {
-                             type: "text",
-                             text: itemName,
-                             weight: "bold",
-                             size: "sm",
-                             color: "#1A1A1A",
-                             wrap: true,
-                             flex: 5,
-                             gravity: "center",
-                             margin: "md"
-                         },
-                         // Right quantity & status details
-                         {
-                             type: "box",
-                             layout: "vertical",
-                             flex: 5,
-                             margin: "md",
-                             contents: [
-                                 {
-                                     type: "text",
-                                     text: remainingText(current, item),
-                                     color: "#1A1A1A",
-                                     size: "sm",
-                                     weight: "bold",
-                                     align: "end",
-                                     wrap: true
-                                 },
-                                 {
-                                     type: "text",
-                                     text: statusEmoji,
-                                     color: indicatorBarColor,
-                                     size: "xxs",
-                                     weight: "bold",
-                                     margin: "xs",
-                                     align: "end"
-                                 }
-                             ]
-                         }
-                     ]
-                 })
-
-                 if (currentItems.length >= 8 || index === itemsToBuy.length - 1) {
-                     const bodyContents = [
-                         tableHeader,
-                         { type: "separator", margin: "md", color: "#1A1A1A" },
-                         ...currentItems
-                     ];
-
-                     bubbles.push({
-                         type: "bubble",
-                         size: "mega",
-                         header: {
-                             type: "box",
-                             layout: "vertical",
-                             paddingAll: "20px",
-                             contents: [
-                                 { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-                                 { type: "text", text: `${dateStr.toUpperCase()} (PAGE ${bubbles.length + 1})`, color: "#635B5F", size: "xs", margin: "xs" }
-                             ]
-                         },
-                         body: {
-                             type: "box",
-                             layout: "vertical",
-                             paddingAll: "20px",
-                             contents: bodyContents
-                         },
-                         styles: {
-                             header: {
-                                 backgroundColor: "#F6F2EA",
-                                 separator: true,
-                                 separatorColor: "#D4CBCF"
-                             },
-                             body: {
-                                 backgroundColor: "#F6F2EA"
-                             }
-                         }
-                     })
-                     currentItems = []
-                 }
-               })
-               
-               // LINE Carousel max 12 bubbles, but also need to respect 50KB Flex content limit
-               if (bubbles.length > 12) bubbles.length = 12;
-               const totalBubblesBuy = bubbles.length;
-               let flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
-               let flexSizeBuy = new TextEncoder().encode(JSON.stringify(flexContentBuy)).length;
-               while (flexSizeBuy > 49000 && bubbles.length > 1) {
-                   bubbles.pop();
-                   flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
-                   flexSizeBuy = new TextEncoder().encode(JSON.stringify(flexContentBuy)).length;
-               }
-               if (bubbles.length < totalBubblesBuy) {
-                   const lastB = bubbles[bubbles.length - 1];
-                   lastB.body.contents.push({ type: "separator", margin: "md", color: "#D4CBCF" });
-                   lastB.body.contents.push({ type: "text", text: `...(แสดงได้ ${bubbles.length} จาก ${totalBubblesBuy} หน้า)`, color: "#41032A", size: "xs", margin: "md", align: "center", wrap: true });
-                   // recalculate after adding truncation text
-                   flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
-               }
-               console.log(`Flex stbuy: ${bubbles.length}/${totalBubblesBuy} bubbles, ${flexSizeBuy} bytes`);
-               messages.push({ type: "flex", altText: headerTitle, contents: flexContentBuy });
-            }
+            const periodTitle = isBuyback ? 'ของที่ต้องซื้อ (24 ชม.)' : 'ของที่ต้องซื้อ (3 วัน)'
+            const messages = [buildRestockMessage(items || [], periodTitle, dateStr)]
 
             const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
@@ -1031,7 +833,7 @@ Deno.serve(async (req) => {
 
             // Construct Reply
             let messages = []
-            messages.push(buildStockSummaryMessage(transactions || [], headerTitle.replace(/^s*/, ""), dateStr))
+            messages.push(buildStockSummaryMessage(transactions || [], headerTitle, dateStr))
 
             console.log(`Sending Stock Reply (${messages.length} bubbles)`)
 
