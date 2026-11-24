@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AdminFilterChips } from '../admin/AdminKit';
 import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
@@ -772,7 +772,7 @@ function SortableLayer({ id, ingredient, quantity, unit, orderScope = 'all', all
             </div>
 
             {/* Order scope, quantity, cost and delete stay together; on narrow screens they drop below the name */}
-            <div className="ml-auto flex flex-wrap items-center gap-2 flex-shrink-0">
+            <div className="ml-auto max-w-full flex flex-wrap items-center justify-end gap-2">
             {allowOrderScope && (
                 <div
                     className="inline-flex border border-[var(--color-rule)] divide-x divide-[var(--color-rule)] flex-shrink-0"
@@ -838,7 +838,7 @@ function SortableLayer({ id, ingredient, quantity, unit, orderScope = 'all', all
             <button 
                 type="button" 
                 onClick={() => onDelete(id)} 
-                className="p-1 text-[var(--color-neutral)] hover:text-red-700 cursor-pointer flex-shrink-0"
+                className="p-1 text-[var(--color-neutral)] hover:text-[var(--error-red)] cursor-pointer flex-shrink-0"
                 title="ลบส่วนผสมนี้"
             >
                 <Trash2 size={14} />
@@ -891,6 +891,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     });
 
     const sensors = useSensors(useSensor(PointerSensor));
+
+    // Option stock rules live in their own panel; the save button below saves them too
+    const optionPanelRef = useRef(null);
 
     const handleStartEditName = () => {
         if (parentItem) {
@@ -1080,6 +1083,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 return;
             }
         }
+        // An option row left incomplete stops the save before anything is written
+        if (optionPanelRef.current && !optionPanelRef.current.validate()) {
+            return;
+        }
         setLoading(true);
         try {
             const payloadItems = ingredients.map((ing, idx) => ({
@@ -1167,6 +1174,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
             // History: one snapshot per save that changed something (never blocks the save)
             await saveRecipeVersion({ parentType, parentId, ingredients, totalCost });
+
+            // Option stock rules still open in the panel go with this save; if one fails the
+            // builder stays open so it is not lost.
+            const optionsSaved = optionPanelRef.current ? await optionPanelRef.current.saveAll() : true;
+            if (!optionsSaved) {
+                toast.warning('บันทึกสูตรแล้ว แต่ตัวเลือกบางรายการยังไม่ได้บันทึก ตรวจรายการที่ขึ้นสีแดงแล้วกดบันทึกอีกครั้ง', { duration: 8000 });
+                return;
+            }
 
             toast.success('บันทึกสูตรเรียบร้อย');
             onClose();
@@ -1381,7 +1396,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     }, [pickableItems, searchTerm, ingredients, itemFilterType]);
 
     return (
-        <div className="fixed inset-0 z-[70] bg-[var(--color-paper)] flex flex-col md:flex-row font-sans text-[var(--color-ink)] animate-in fade-in">
+        <div className="fixed inset-0 z-[70] bg-[var(--color-paper)] flex flex-col md:flex-row font-sans text-[var(--color-ink)]">
             {/* Sub-Modals */}
             {editingStockItem && (
                 <EditStockModal 
@@ -1481,7 +1496,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     </div>
 
                     {/* Quick Tools & Total Cost readout */}
-                    <div className="flex items-center gap-2 tabular-nums text-xs flex-shrink-0">
+                    <div className="max-w-full flex flex-wrap items-center gap-2 tabular-nums text-xs">
                         <button
                             onClick={() => setIsHistoryOpen(true)}
                             className="admin-btn h-9"
@@ -1643,7 +1658,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 )}
 
                 {/* Layer Stack Items */}
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 pb-28 md:pb-4">
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 pb-6 md:pb-4">
                     {ingredients.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] p-8 tabular-nums text-xs text-center space-y-2">
                             <Layers className="w-12 h-12 opacity-30 text-[var(--color-neutral)]" />
@@ -1685,8 +1700,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                     {/* Hot/iced, sweetness and other options: what they change in stock, for this menu */}
                     {parentType === 'menu' && parentId && (
-                        <div className="pt-3">
+                        <div className="pt-6">
                             <MenuOptionStockPanel
+                                ref={optionPanelRef}
                                 menuId={parentId}
                                 stockItems={availableItems}
                                 recipe={ingredients}
@@ -1694,18 +1710,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                             />
                         </div>
                     )}
-                </div>
-
-                {/* Mobile Floating Drawer Trigger */}
-                <div className="md:hidden fixed bottom-16 right-4 z-30">
-                    <button 
-                        type="button"
-                        onClick={() => setIsMobilePickerOpen(true)}
-                        className="admin-btn is-primary h-9"
-                    >
-                        <Plus size={16} />
-                        <span>เพิ่มวัตถุดิบ</span>
-                    </button>
                 </div>
 
                 {/* Unified Price Simulator (Bottom of Stack) */}
@@ -1719,6 +1723,17 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                 {/* Bottom Action Bar */}
                 <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex justify-end gap-2 z-20 tabular-nums text-xs">
+                    {/* Phones: the ingredient list opens from here (it sat on top of the price bar before) */}
+                    <div className="md:hidden mr-auto">
+                        <button
+                            type="button"
+                            onClick={() => setIsMobilePickerOpen(true)}
+                            className="admin-btn h-9"
+                        >
+                            <Plus size={16} aria-hidden="true" />
+                            <span>เพิ่มวัตถุดิบ</span>
+                        </button>
+                    </div>
                     <button 
                         type="button"
                         onClick={onClose} 
@@ -1739,7 +1754,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
             {/* Right Column: Ingredients Palette (Responsive Drawer on Mobile) */}
             <aside className={`
-                fixed inset-0 z-40 bg-[var(--color-paper)] flex flex-col md:static md:w-[380px] lg:w-[420px] md:shadow-none transition-transform duration-200 border-l border-[var(--color-rule)]
+                fixed inset-0 z-40 bg-[var(--color-paper)] flex flex-col md:static md:w-[380px] lg:w-[420px] md:shadow-none transition-transform duration-200 motion-reduce:transition-none border-l border-[var(--color-rule)]
                 ${isMobilePickerOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
             `}>
                 {/* Palette Header */}
