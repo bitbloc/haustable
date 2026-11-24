@@ -935,26 +935,34 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .sets-menu-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: var(--space-1); font-size: var(--text-md); font-weight: 600; color: var(--color-paper); text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 4px; transition: text-decoration-color var(--dur) var(--ease-out); }
         .sets-menu-link:hover { text-decoration-color: var(--color-paper); }
         .sets-walkin::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2-light); flex-shrink: 0; }
-        .set-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; padding: 0 var(--space-4); }
-        .set-tab { min-height: 56px; padding: var(--space-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3; background: var(--color-field-2); color: var(--color-on-ink-2); border-radius: var(--radius); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
-        .set-tab:hover { background: var(--color-field-3); color: var(--color-paper); }
-        .set-tab-label { font-size: var(--text-lg); font-weight: 700; white-space: nowrap; }
-        .set-tab-count { font-size: var(--text-xs); }
+        /* Set chooser (owner 2026-11-24, after the MotionBlurLinkIndex reference): the party sizes as an index list, then a
+           fixed photo stage showing the chosen set, then that group's sets as rows. Stage and details never change height when switching. */
+        .set-stage { position: relative; margin: var(--space-3) var(--space-4) 0; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--radius); background: var(--color-paper-3); isolation: isolate; }
+        .set-stage-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; opacity: 0; visibility: hidden; }
+        .set-stage-img[data-on] { opacity: 1; visibility: visible; }
+        .set-stage-empty { background: var(--color-paper-3); cursor: default; }
+        .set-stage-count { position: absolute; left: var(--space-3); top: var(--space-3); z-index: 2; padding: var(--space-1) var(--space-2); font-size: var(--text-xs); line-height: 1.4; letter-spacing: 0.06em; color: var(--cream); background: var(--brand-plum); border-radius: var(--radius); pointer-events: none; }
+        .set-tabs { position: relative; display: flex; flex-direction: column; gap: 2px; padding: var(--space-1) var(--space-4) 0; }
+        .set-tab { position: relative; z-index: 1; min-height: 48px; padding: var(--space-1) var(--space-3); display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 24px; align-items: center; column-gap: var(--space-3); text-align: left; line-height: 1.3; background: transparent; color: var(--color-on-ink-2); border-radius: var(--radius); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .set-tab:hover { background: var(--color-field-2); color: var(--color-paper); }
+        .set-tab-n { font-size: var(--text-xs); letter-spacing: 0.06em; }
+        .set-tab-label { font-size: var(--text-lg); font-weight: 700; white-space: nowrap; color: var(--color-paper); }
+        .set-tab-count { font-size: var(--text-sm); white-space: nowrap; }
+        .set-tab-arrow { justify-self: end; opacity: 0.55; transition: transform var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out); }
+        @media (hover: hover) and (pointer: fine) { .set-tab:hover .set-tab-arrow { transform: translateX(3px); opacity: 1; } }
         .set-tab[aria-selected="true"] { background: var(--color-paper); color: var(--color-ink); }
-        .set-panel { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4) 0; }
-        .set-panel[hidden] { display: none; }
-        .set-feature { background: var(--color-paper); color: var(--color-ink); border-radius: var(--radius); overflow: hidden; }
-        .set-feature-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--color-paper-3); cursor: zoom-in; }
-        .set-feature-body { padding: var(--space-4); }
-        .set-feature-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; }
-        .set-feature .set-name { font-size: var(--text-xl); line-height: 1.35; }
-        .set-feature .set-price .num { font-size: 28px; line-height: 1.15; }
-        .set-feature .set-dishes { font-size: var(--text-md); color: var(--color-ink-2); margin-top: var(--space-2); }
-        .set-feature .set-pp { color: var(--color-muted); }
+        .set-tab[aria-selected="true"] .set-tab-label { color: var(--color-ink); }
+        .set-tab[aria-selected="true"] .set-tab-arrow { opacity: 1; }
+        /* Sliding selected row: added by JS on the first animated switch; until then the selected row itself is cream */
+        .set-tab-ind { position: absolute; top: 0; left: 0; z-index: 0; background: var(--color-paper); border-radius: var(--radius); pointer-events: none; }
+        .set-tabs.has-ind .set-tab[aria-selected="true"] { background: transparent; }
+        .set-details { display: grid; }
+        .set-panel { grid-area: 1 / 1; display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4) 0; visibility: hidden; opacity: 0; }
+        .set-panel[data-on] { visibility: visible; opacity: 1; }
         .set-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3); background: var(--color-field-2); border-radius: var(--radius); }
         .set-row > .set-thumb, .set-row > .set-thumb-empty { grid-row: span 2; }
         .set-row-body { grid-column: 2 / -1; margin-top: calc(var(--space-1) * -1); }
-        .set-thumb { width: 64px; height: 64px; object-fit: cover; background: var(--color-field-3); cursor: zoom-in; }
+        .set-thumb { width: 64px; height: 64px; object-fit: cover; background: var(--color-field-3); }
         .set-thumb-empty { width: 64px; height: 64px; background: var(--color-field-3); }
         .set-name { font-size: var(--text-lg); font-weight: 700; line-height: 1.4; }
         .set-row .set-tag { background: var(--color-paper); color: var(--brand-plum); }
@@ -973,12 +981,6 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .set-more a { color: var(--color-paper); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
         .set-more a:hover { text-decoration-color: var(--color-paper); }
         @media (min-width: 480px) { .sets-title { font-size: 36px; } }
-        @media (prefers-reduced-motion: no-preference) {
-            /* Only when the guest switches tabs: the first paint (and the LCP photo inside it) is never faded in */
-            .set-panel.entering:not([hidden]) { animation: set-in 180ms var(--ease-out); }
-            @keyframes set-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-        }
-
         /* Heat meter: three cells + label (light variants on the dark tiles) */
         .heat { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--text-xs); font-weight: 600; line-height: 1; color: var(--color-accent); white-space: nowrap; }
         .heat-cells { display: inline-flex; gap: 2px; }
@@ -987,6 +989,20 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .heat.h0 { color: var(--color-accent-2); }
         .set-row .heat { color: var(--color-accent-light); }
         .set-row .heat.h0 { color: var(--color-accent-2-light); }
+        /* Each set is a row; the chosen one is cream like the chosen party size, and its photo is on the stage */
+        .set-row { cursor: pointer; transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+        .set-row:hover { background: var(--color-field-3); }
+        .set-row:active { transform: scale(0.99); transition-duration: 90ms; }
+        .set-row:focus-visible { outline: 2px solid var(--color-paper); outline-offset: 2px; }
+        .set-row .set-name { color: var(--color-paper); }
+        .set-row .set-thumb { cursor: pointer; }
+        .set-row[aria-pressed="true"] { background: var(--color-paper); color: var(--color-ink); cursor: default; }
+        .set-row[aria-pressed="true"] .set-name { color: var(--color-ink); }
+        .set-row[aria-pressed="true"] .set-dishes { color: var(--color-ink-2); }
+        .set-row[aria-pressed="true"] .set-pp { color: var(--color-muted); }
+        .set-row[aria-pressed="true"] .set-tag { background: var(--color-accent); color: var(--color-paper); }
+        .set-row[aria-pressed="true"] .heat { color: var(--color-accent); }
+        .set-row[aria-pressed="true"] .heat.h0 { color: var(--color-accent-2); }
 
         /* Link rows (customer photos, booklet, connect) */
         .row-link { min-height: 52px; padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); font-size: var(--text-md); font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
@@ -1047,11 +1063,6 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .fc-cap { position: absolute; margin: 0; max-width: 62%; color: var(--cream); font-size: var(--text-md); font-weight: 500; line-height: 1.35; text-shadow: 0 1px 8px oklch(21.78% 0 0 / 0.45); }
         .fc-nb { white-space: nowrap; }
         .fc-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-        /* Sliding selected tab: added by JS on the first animated switch; until then the selected tab itself is cream */
-        .set-tabs { position: relative; }
-        .set-tab { position: relative; z-index: 1; }
-        .set-tab-ind { position: absolute; top: 0; left: 0; z-index: 0; background: var(--color-paper); border-radius: var(--radius); pointer-events: none; }
-        .set-tabs.has-ind .set-tab[aria-selected="true"] { background: transparent; }
         /* Food card arrows: mouse screens only (phones swipe); text arrows, no icons */
         .fc-meta-fine, .fc-nav-btns { display: none; }
         @media (hover: hover) and (pointer: fine) {
@@ -1301,27 +1312,26 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
-                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === initialGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span></button>`).join('')}
+                ${setGroups.map((g, gi) => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === initialGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-n num">${String(gi + 1).padStart(2, '0')}</span><span class="set-tab-label">${tt(`${g.key} คน`, peopleEn(g.key), `${g.key} 人`, `${g.key} ຄົນ`)}</span><span class="set-tab-count">${tt(`${g.rows.length} ชุด`, `${g.rows.length} sets`, `${g.rows.length} 款套餐`, `${g.rows.length} ຊຸດ`)}</span><span class="set-tab-arrow arrow" aria-hidden="true">→</span></button>`).join('')}
             </div>` : ''}
+            <!-- Photo stage: one photo per set, stacked; the chosen set's photo shows. Fixed 16:10 box, so switching never moves the page. -->
+            <div class="set-stage">
+                ${setGroups.map(g => g.rows.map((r, i) => {
+                    const on = g.key === initialGroup && i === 0
+                    return r.feature
+                        ? `<img class="set-stage-img" data-group="${g.key}" data-set="${i}"${on ? ' data-on' : ''} src="${r.feature}" srcset="${r.featureSm} 480w, ${r.feature} 720w" sizes="${SET_FEATURE_SIZES}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${on ? 'eager' : 'lazy'}"${on ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">`
+                        : `<span class="set-stage-img set-stage-empty" data-group="${g.key}" data-set="${i}"${on ? ' data-on' : ''} aria-hidden="true"></span>`
+                }).join('')).join('')}
+                <span class="set-stage-count num" aria-hidden="true"><span class="set-stage-n">1</span> / <span class="set-stage-total">${((setGroups.find(g => g.key === initialGroup) || { rows: [] }).rows.length) || 1}</span></span>
+            </div>
+            <!-- Every group's sets share one grid cell: the box is as tall as the longest group, so switching never changes the height.
+                 Each set is a row; tapping a row puts its photo on the stage. -->
+            <div class="set-details">
             ${setGroups.map(g => `
-            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === initialGroup ? '' : ' hidden'}>
-                ${g.rows.map((r, i) => i === 0 ? `
-                <article class="set-feature">
-                    ${r.feature ? `<img class="set-feature-img" src="${r.feature}" srcset="${r.featureSm} 480w, ${r.feature} 720w" sizes="${SET_FEATURE_SIZES}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === initialGroup ? 'eager' : 'lazy'}"${g.key === initialGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
-                    <div class="set-feature-body">
-                        <div class="set-feature-top">
-                            <h3 class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</h3>
-                            <div class="set-price">
-                                <span class="num">฿${r.price}</span>
-                                ${r.perPerson ? `<span class="set-pp">${tt(escapeHtml(r.perPerson), escapeHtml(r.perPersonEn), escapeHtml(r.perPersonZh), escapeHtml(r.perPersonLo))}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="set-dishes">${tt(phrasesHtml(r.dishes, '•', ' • '), phrasesHtml(r.dishesEn, '•', ' • '), r.dishesZh && phrasesHtml(r.dishesZh, '•', ' • '), r.dishesLo && phrasesHtml(r.dishesLo, '•', ' • '))}</div>
-                        ${r.heat}
-                    </div>
-                </article>` : `
-                <div class="set-row">
-                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="${g.key === initialGroup ? 'eager' : 'lazy'}" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
+            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}" data-sel="0"${g.key === initialGroup ? ' data-on' : ' inert'}>
+                ${g.rows.map((r, i) => `
+                <div class="set-row" role="button" tabindex="0" aria-pressed="${i === 0}" data-set="${i}" onclick="selectSet('${g.key}', ${i})" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectSet('${g.key}', ${i}); }">
+                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="" width="64" height="64" loading="${g.key === initialGroup ? 'eager' : 'lazy'}" decoding="async">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
                     <div class="set-name">${tt(setTitleHtml(r.title), setTitleHtml(r.titleEn), r.titleZh && setTitleHtml(r.titleZh), r.titleLo && setTitleHtml(r.titleLo))}${r.starter ? `<span class="set-tag">${tt('เริ่มที่ชุดนี้', 'Start here')}</span>` : ''}</div>
                     <div class="set-price">
                         <span class="num">฿${r.price}</span>
@@ -1333,6 +1343,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                     </div>
                 </div>`).join('')}
             </div>`).join('')}
+            </div>
             <div class="set-ctas">
                 <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">${tt('นำทางมาร้าน', 'Get directions')}</a>
                 <a href="tel:+66985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">${tt('โทรสอบถาม', 'Call us')}</a>
@@ -1591,70 +1602,132 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             return motionLoading;
         }
         const EASE_OUT = [0.16, 1, 0.3, 1];
+        const STAGE_EASE = [0.2, 0.8, 0.2, 1];
         let setSwitchGen = 0;
-        // Set chooser: the cream tab slides from the old tab to the new one, the new set enters from the side that was tapped,
-        // and the old set fades out first and faster. Runs only on a tap, never on the first paint.
-        function animateSetSwitch(animate, fromTab, toTab, fromPanel, toPanel, swap) {
-            const gen = ++setSwitchGen;
-            const tabs = toTab.parentNode;
-            const dir = fromTab && (fromTab.compareDocumentPosition(toTab) & Node.DOCUMENT_POSITION_FOLLOWING) ? 1 : -1;
-            let ind = tabs.querySelector('.set-tab-ind');
-            if (!ind) { ind = document.createElement('span'); ind.className = 'set-tab-ind'; ind.setAttribute('aria-hidden', 'true'); tabs.appendChild(ind); }
-            tabs.classList.add('has-ind');
-            ind.style.left = toTab.offsetLeft + 'px';
-            ind.style.width = toTab.offsetWidth + 'px';
-            ind.style.height = toTab.offsetHeight + 'px';
-            if (fromTab) animate(ind, { transform: ['translateX(' + (fromTab.offsetLeft - toTab.offsetLeft) + 'px)', 'translateX(0)'] }, { duration: 0.18, ease: EASE_OUT });
-            const enter = function() {
-                if (gen !== setSwitchGen) return;
-                swap();
-                animate(toPanel, { opacity: [0, 1], transform: ['translateX(' + (dir * 16) + 'px)', 'translateX(0)'] }, { duration: 0.18, ease: EASE_OUT });
-            };
-            if (fromPanel && !fromPanel.hidden) {
-                // The timer is a backstop: with no rendering frames (a background tab) the fade never finishes, but the set must still switch
-                let swapped = false;
-                const next = function() { if (swapped) return; swapped = true; fromPanel.style.opacity = ''; enter(); };
-                animate(fromPanel, { opacity: [1, 0] }, { duration: 0.09, ease: 'easeOut' }).finished.then(next);
-                setTimeout(next, 140);
-            } else enter();
+        // Set chooser (owner 2026-11-24, after the MotionBlurLinkIndex reference). Order on screen: party sizes, then the photo
+        // stage, then that group's sets. The stage always shows the chosen set's photo: a party size picks its group (and the
+        // set chosen there before, else its starter set), a set row picks that set. Nothing changes height.
+        function stageCross(animate, fromImg, toImg, dir) {
+            if (fromImg && fromImg !== toImg) {
+                fromImg.style.visibility = 'visible';
+                animate(fromImg, { opacity: [1, 0], transform: ['translateX(0) scale(1)', 'translateX(' + (-dir * 32) + 'px) scale(1.04)'], filter: ['blur(0px)', 'blur(10px)'] }, { duration: 0.45, ease: STAGE_EASE });
+            }
+            if (toImg && toImg !== fromImg) animate(toImg, { opacity: [0, 1], transform: ['translateX(' + (dir * 40) + 'px) scale(1.08)', 'translateX(0) scale(1)'], filter: ['blur(12px)', 'blur(0px)'] }, { duration: 0.45, ease: STAGE_EASE });
         }
+        // If frames stall (a background tab, a busy phone), jump every part to its end state so nothing is left half-switched
+        function settleLater(gen, els) {
+            setTimeout(function() {
+                if (gen !== setSwitchGen) return;
+                els.forEach(function(el) {
+                    if (!el) return;
+                    if (el.getAnimations) el.getAnimations().forEach(function(a) { try { a.finish(); } catch (e) {} });
+                    el.style.visibility = '';
+                });
+            }, 600);
+        }
+        function stageImg(group, idx) { return starterCard.querySelector('.set-stage-img[data-group="' + group + '"][data-set="' + idx + '"]'); }
+        // Shows one set: stage photo, counter, pressed row. Clears any inline motion styles first.
+        function showSet(group, idx) {
+            const panel = starterCard.querySelector('.set-panel[data-group="' + group + '"]');
+            const img = stageImg(group, idx);
+            starterCard.querySelectorAll('.set-stage-img').forEach(function(el) {
+                el.toggleAttribute('data-on', el === img);
+                el.style.opacity = ''; el.style.visibility = ''; el.style.transform = ''; el.style.filter = '';
+            });
+            if (panel) {
+                panel.dataset.sel = String(idx);
+                panel.querySelectorAll('.set-row').forEach(function(r) { r.setAttribute('aria-pressed', String(r.dataset.set === String(idx))); });
+                const n = starterCard.querySelector('.set-stage-n'), total = starterCard.querySelector('.set-stage-total');
+                if (n) n.textContent = String(idx + 1);
+                if (total) total.textContent = String(panel.querySelectorAll('.set-row').length);
+            }
+            if (img && img.loading === 'lazy') img.loading = 'eager';
+        }
+        function canAnimate(silent) { return !silent && motionAnimate && !REDUCED_MOTION; }
+
         function selectSetGroup(key, silent) {
             if (!starterCard) return;
             const toPanel = starterCard.querySelector('.set-panel[data-group="' + key + '"]');
             if (!toPanel) return;
-            const fromPanel = starterCard.querySelector('.set-panel:not([hidden])');
-            const fromTab = starterCard.querySelector('.set-tab[aria-selected="true"]');
+            const fromPanel = starterCard.querySelector('.set-panel[data-on]');
+            const fromImg = starterCard.querySelector('.set-stage-img[data-on]');
             const toTab = starterCard.querySelector('.set-tab[data-group="' + key + '"]');
-            starterCard.querySelectorAll('.set-tab').forEach(function(t) {
-                t.setAttribute('aria-selected', String(t.dataset.group === key));
+            const fromTab = starterCard.querySelector('.set-tab[aria-selected="true"]');
+            const idx = Number(toPanel.dataset.sel || 0);
+            const toImg = stageImg(key, idx);
+            const animate = canAnimate(silent) && fromPanel !== toPanel ? motionAnimate : null;
+            const gen = ++setSwitchGen;
+
+            starterCard.querySelectorAll('.set-panel').forEach(function(p) {
+                const on = p === toPanel;
+                p.toggleAttribute('data-on', on);
+                p.inert = !on;
+                p.style.opacity = ''; p.style.visibility = '';
             });
-            const swap = function() {
-                starterCard.querySelectorAll('.set-panel').forEach(function(p) {
-                    const on = p === toPanel;
-                    const wasHidden = p.hidden;
-                    p.hidden = !on;
-                    p.style.opacity = '';
-                    p.classList.remove('entering');
-                    if (on && wasHidden && !silent && !motionAnimate) { void p.offsetWidth; p.classList.add('entering'); }
-                });
-            };
-            if (!silent && motionAnimate && !REDUCED_MOTION && toTab && fromPanel !== toPanel) animateSetSwitch(motionAnimate, fromTab, toTab, fromPanel, toPanel, swap);
-            else { setSwitchGen++; swap(); if (toTab) placeSetIndicator(toTab); }
+            starterCard.querySelectorAll('.set-tab').forEach(function(t) { t.setAttribute('aria-selected', String(t.dataset.group === key)); });
+            showSet(key, idx);
+            if (toTab) placeSetIndicator(toTab);
+
+            if (animate && toTab) {
+                const dir = fromTab && (fromTab.compareDocumentPosition(toTab) & Node.DOCUMENT_POSITION_FOLLOWING) ? 1 : -1;
+                const tabs = toTab.parentNode;
+                let ind = tabs.querySelector('.set-tab-ind');
+                if (!ind) { ind = document.createElement('span'); ind.className = 'set-tab-ind'; ind.setAttribute('aria-hidden', 'true'); tabs.appendChild(ind); }
+                tabs.classList.add('has-ind');
+                placeSetIndicator(toTab);
+                if (fromTab) animate(ind, { transform: ['translateY(' + (fromTab.offsetTop - toTab.offsetTop) + 'px)', 'translateY(0)'] }, { duration: 0.18, ease: EASE_OUT });
+                stageCross(animate, fromImg, toImg, dir);
+                if (fromPanel) {
+                    fromPanel.style.visibility = 'visible';
+                    animate(fromPanel, { opacity: [1, 0] }, { duration: 0.12, ease: 'easeOut' });
+                }
+                animate(toPanel, { opacity: [0, 1] }, { duration: 0.18, delay: 0.06, ease: 'easeOut' });
+                settleLater(gen, [ind, fromImg, toImg, fromPanel, toPanel]);
+            }
             if (!silent) logAdEvent('select_starter_set');
         }
-        // Keeps the sliding tab under the selected tab after a switch without motion (silent or reduced motion)
+
+        // A set row: put that set's photo on the stage (new photo in from the side of the row order)
+        function selectSet(group, idx) {
+            if (!starterCard) return;
+            const panel = starterCard.querySelector('.set-panel[data-group="' + group + '"]');
+            if (!panel || !panel.hasAttribute('data-on')) return;
+            const cur = Number(panel.dataset.sel || 0);
+            if (cur === idx) return;
+            const fromImg = starterCard.querySelector('.set-stage-img[data-on]');
+            const toImg = stageImg(group, idx);
+            const gen = ++setSwitchGen;
+            showSet(group, idx);
+            if (canAnimate(false)) {
+                stageCross(motionAnimate, fromImg, toImg, idx > cur ? 1 : -1);
+                settleLater(gen, [fromImg, toImg]);
+            }
+            logAdEvent('select_set_item');
+        }
+
+        // Keeps the sliding row under the selected party size (after a switch without motion, or a resize)
         function placeSetIndicator(toTab) {
             const ind = toTab.parentNode.querySelector('.set-tab-ind');
             if (!ind) return;
             ind.style.left = toTab.offsetLeft + 'px';
+            ind.style.top = toTab.offsetTop + 'px';
             ind.style.width = toTab.offsetWidth + 'px';
+            ind.style.height = toTab.offsetHeight + 'px';
             ind.style.transform = '';
         }
-        // Fetch Motion as soon as a guest reaches for the tabs, so the first tap already slides
-        if (starterCard && !REDUCED_MOTION) {
-            const tabsEl = starterCard.querySelector('.set-tabs');
-            const warm = function() { loadMotion().catch(function() {}); };
-            if (tabsEl) ['pointerenter', 'touchstart', 'focusin'].forEach(function(ev) { tabsEl.addEventListener(ev, warm, { once: true, passive: true }); });
+        // When a finger reaches the chooser: fetch Motion and load and decode every set photo, so the first tap already crosses over
+        // (a photo decoded on its first show holds the cross-over still for a few frames)
+        if (starterCard) {
+            const warm = function() {
+                if (!REDUCED_MOTION) loadMotion().catch(function() {});
+                starterCard.querySelectorAll('img.set-stage-img').forEach(function(img) {
+                    img.loading = 'eager';
+                    if (img.decode) img.decode().catch(function() {});
+                });
+            };
+            starterCard.querySelectorAll('.set-tabs, .set-details').forEach(function(el) {
+                ['pointerenter', 'touchstart', 'focusin'].forEach(function(ev) { el.addEventListener(ev, warm, { once: true, passive: true }); });
+            });
             window.addEventListener('resize', function() {
                 const sel = starterCard.querySelector('.set-tab[aria-selected="true"]');
                 if (sel) placeSetIndicator(sel);
@@ -1678,7 +1751,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
                 const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value);
                 // The server already picked the group; this only corrects a page served from the CDN cache across the window edge
                 const inLunch = now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4]);
-                const shown = (starterCard.querySelector('.set-panel:not([hidden])') || {}).dataset;
+                const shown = (starterCard.querySelector('.set-panel[data-on]') || {}).dataset;
                 const target = inLunch ? '1' : starterCard.dataset.default;
                 if (target && shown && shown.group !== target) selectSetGroup(target, true);
             } catch(e) {}
