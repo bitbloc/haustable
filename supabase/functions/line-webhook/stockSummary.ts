@@ -31,18 +31,21 @@ export type StockTx = {
 /** The units an item is counted and used in; pieces when a crate or pack holds countable things. */
 export type StockUnits = { unit?: string | null; pack_unit?: string | null; usage_unit?: string | null; conversion_factor?: number | string | null }
 
-// Brand v2 (brand.ts). Low stock is plum, not red: red is kept for errors only.
+// Brand v2 (brand.ts): plum header, cream body, charcoal ink.
+// Out and low stock are plum, reorder is charcoal. Red is kept for errors only.
 const C = {
   ink: BRAND.charcoal,
   muted: BRAND.muted,
   neutral: BRAND.neutral,
   rule: BRAND.rule,
   paper: BRAND.cream,
-  accent: BRAND.plum,
+  plum: BRAND.plum,
+  onPlum: BRAND.cream,
+  onPlum2: BRAND.onPlum2,
   ok: BRAND.neutral,
   warn: BRAND.charcoal,
   crit: BRAND.plum,
-  out: BRAND.muted,
+  out: BRAND.plum,
 }
 
 const EPS = 0.0001
@@ -260,7 +263,7 @@ function activityText(s: ItemSummary): string {
   return parts.join(' · ') || 'ไม่มีการเปลี่ยนแปลง'
 }
 
-function itemRow(s: ItemSummary) {
+function itemRow(s: ItemSummary, detail: string = activityText(s)) {
   const st = STATUS[s.status]
   return {
     type: 'box',
@@ -272,13 +275,13 @@ function itemRow(s: ItemSummary) {
       {
         type: 'box', layout: 'vertical', flex: 6, contents: [
           { type: 'text', text: s.name.slice(0, 80) || '-', size: 'sm', weight: 'bold', color: C.ink, wrap: true },
-          { type: 'text', text: activityText(s), size: 'xxs', color: C.neutral, wrap: true, margin: 'xs' },
+          { type: 'text', text: detail, size: 'xs', color: C.neutral, wrap: true, margin: 'xs' },
         ],
       },
       {
         type: 'box', layout: 'vertical', flex: 4, contents: [
           { type: 'text', text: remainingText(s.current, s.units), size: 'sm', weight: 'bold', color: s.status === 'ok' ? C.ink : st.color, align: 'end', wrap: true },
-          ...(st.label ? [{ type: 'text', text: st.label, size: 'xxs', weight: 'bold', color: st.color, align: 'end', margin: 'xs' }] : []),
+          ...(st.label && st.label !== remainingText(s.current, s.units) ? [{ type: 'text', text: st.label, size: 'xs', weight: 'bold', color: st.color, align: 'end', margin: 'xs' }] : []),
         ],
       },
     ],
@@ -290,22 +293,22 @@ function bubble(title: string, subtitle: string, body: any[], tag = 'STOCK') {
     type: 'bubble',
     size: 'mega',
     header: {
-      type: 'box', layout: 'vertical', paddingAll: '20px', paddingBottom: '14px', backgroundColor: C.paper,
+      type: 'box', layout: 'vertical', paddingAll: '20px', backgroundColor: C.plum,
       contents: [
-        { type: 'text', text: tag, size: 'xxs', weight: 'bold', color: C.accent },
-        { type: 'text', text: title, size: 'lg', weight: 'bold', color: C.ink, margin: 'sm', wrap: true },
-        { type: 'text', text: subtitle || '-', size: 'xs', color: C.neutral, margin: 'xs', wrap: true },
+        { type: 'text', text: title, size: 'lg', weight: 'bold', color: C.onPlum, wrap: true },
+        { type: 'text', text: subtitle || '-', size: 'sm', color: C.onPlum2, margin: 'sm', wrap: true },
+        { type: 'text', text: tag, size: 'xxs', color: C.onPlum2, margin: 'md' },
       ],
     },
-    body: { type: 'box', layout: 'vertical', paddingAll: '20px', paddingTop: '8px', contents: body },
-    styles: { header: { separator: true, separatorColor: C.rule } },
+    body: { type: 'box', layout: 'vertical', paddingAll: '20px', paddingTop: '8px', backgroundColor: C.paper, contents: body },
+    styles: { header: { separator: false }, body: { separator: false } },
   }
 }
 
 const columnHead = {
   type: 'box', layout: 'horizontal', margin: 'md', contents: [
-    { type: 'text', text: 'รายการ', size: 'xxs', weight: 'bold', color: C.neutral, flex: 6, offsetStart: '15px' },
-    { type: 'text', text: 'คงเหลือตอนนี้', size: 'xxs', weight: 'bold', color: C.neutral, flex: 4, align: 'end' },
+    { type: 'text', text: 'รายการ', size: 'xs', color: C.neutral, flex: 6, offsetStart: '15px' },
+    { type: 'text', text: 'คงเหลือตอนนี้', size: 'xs', color: C.neutral, flex: 4, align: 'end' },
   ],
 }
 
@@ -335,14 +338,14 @@ export function buildStockSummaryMessage(transactions: StockTx[], periodTitle: s
   const overviewBody: any[] = [
     {
       type: 'box', layout: 'horizontal', margin: 'md', contents: [
-        stat(String(all.length), 'รายการที่ขยับ', C.ink),
+        stat(String(all.length), 'ทั้งหมด', C.ink),
         stat(String(count('out')), 'หมด', C.out),
         stat(String(count('low')), 'เหลือน้อย', C.crit),
         stat(String(count('reorder')), 'ควรสั่ง', C.warn),
       ],
     },
     { type: 'separator', margin: 'lg', color: C.rule },
-    { type: 'text', text: 'แยกตามหมวด', size: 'xxs', weight: 'bold', color: C.neutral, margin: 'lg' },
+    { type: 'text', text: 'แยกตามหมวด', size: 'xs', color: C.neutral, margin: 'lg' },
     ...groups.map(g => ({
       type: 'box', layout: 'horizontal', margin: 'sm', contents: [
         { type: 'text', text: g.label, size: 'sm', color: C.ink, flex: 7 },
@@ -353,10 +356,10 @@ export function buildStockSummaryMessage(transactions: StockTx[], periodTitle: s
   if (attention.length) {
     overviewBody.push(
       { type: 'separator', margin: 'lg', color: C.rule },
-      { type: 'text', text: 'ต้องดูแล', size: 'xxs', weight: 'bold', color: C.accent, margin: 'lg' },
-      ...attention.slice(0, 10).map(itemRow),
+      { type: 'text', text: 'ต้องดูแล', size: 'xs', weight: 'bold', color: C.plum, margin: 'lg' },
+      ...attention.slice(0, 10).map(s => itemRow(s)),
     )
-    if (attention.length > 10) overviewBody.push({ type: 'text', text: `และอีก ${attention.length - 10} รายการ`, size: 'xxs', color: C.neutral, margin: 'md' })
+    if (attention.length > 10) overviewBody.push({ type: 'text', text: `และอีก ${attention.length - 10} รายการ`, size: 'xs', color: C.neutral, margin: 'md' })
   }
 
   const bubbles: any[] = [bubble(periodTitle, dateStr, overviewBody, 'STOCK SUMMARY')]
@@ -366,7 +369,7 @@ export function buildStockSummaryMessage(transactions: StockTx[], periodTitle: s
     for (let p = 0; p < pages; p++) {
       const slice = g.items.slice(p * ITEMS_PER_BUBBLE, (p + 1) * ITEMS_PER_BUBBLE)
       const title = pages > 1 ? `${g.label} (${p + 1}/${pages})` : g.label
-      bubbles.push(bubble(title, `${g.items.length} รายการ · ${dateStr}`, [columnHead, { type: 'separator', margin: 'sm', color: C.rule }, ...slice.map(itemRow)], 'STOCK'))
+      bubbles.push(bubble(title, `${g.items.length} รายการ · ${dateStr}`, [columnHead, { type: 'separator', margin: 'sm', color: C.rule }, ...slice.map(s => itemRow(s))], 'STOCK'))
     }
   }
 
@@ -377,7 +380,7 @@ export function buildStockSummaryMessage(transactions: StockTx[], periodTitle: s
   if (shown.length < bubbles.length) {
     shown[shown.length - 1].body.contents.push(
       { type: 'separator', margin: 'lg', color: C.rule },
-      { type: 'text', text: `แสดง ${shown.length} จาก ${bubbles.length} หน้า (ข้อจำกัดของ LINE) ดูทั้งหมดได้ในหน้าสต็อกบนเว็บ`, size: 'xxs', color: C.neutral, wrap: true, margin: 'md' },
+      { type: 'text', text: `แสดง ${shown.length} จาก ${bubbles.length} หน้า (ข้อจำกัดของ LINE) ดูทั้งหมดได้ในหน้าสต็อกบนเว็บ`, size: 'xs', color: C.neutral, wrap: true, margin: 'md' },
     )
   }
 
@@ -392,7 +395,80 @@ function stat(value: string, label: string, color: string) {
   return {
     type: 'box', layout: 'vertical', flex: 1, contents: [
       { type: 'text', text: value, size: 'xl', weight: 'bold', color, align: 'center' },
-      { type: 'text', text: label, size: 'xxs', color: C.neutral, align: 'center', margin: 'xs' },
+      { type: 'text', text: label, size: 'xs', color: C.neutral, align: 'center', margin: 'xs' },
     ],
+  }
+}
+
+export type RestockItem = NonNullable<StockTx['stock_items']>
+
+/**
+ * Shopping list for stbuy / stbuyback: items that are out, low or at the reorder point,
+ * grouped by category like the stock summary, most urgent first.
+ */
+export function buildRestockMessage(items: RestockItem[], periodTitle: string, dateStr: string) {
+  const need = (items || []).filter(it => stockStatus(it) !== 'ok')
+  if (need.length === 0) {
+    return {
+      type: 'flex',
+      altText: `${periodTitle} · ไม่มีของต้องซื้อ`,
+      contents: bubble(periodTitle, dateStr, [
+        { type: 'text', text: 'ไม่มีของต้องซื้อ ทุกรายการยังอยู่เหนือจุดสั่ง', size: 'sm', color: C.ink, wrap: true, margin: 'md' },
+      ], 'RESTOCK'),
+    }
+  }
+
+  // Reuse summarize() so grouping and ordering match the stock summary exactly
+  const groups = summarize(need.map(it => ({ quantity_change: 0, transaction_type: 'restock', stock_items: it })))
+  const all = groups.flatMap(g => g.items)
+  const byKey = new Map(need.map(it => [String(it.id || it.name || ''), it]))
+  const detail = (s: ItemSummary) => {
+    const it = byKey.get(s.key)
+    const reorder = Number(it?.reorder_point) || 0
+    const min = Number(it?.min_stock_threshold) || 0
+    if (reorder > 0) return `จุดสั่ง ${remainingText(reorder, s.units)}`
+    if (min > 0) return `ขั้นต่ำ ${remainingText(min, s.units)}`
+    return 'ยังไม่ได้ตั้งจุดสั่ง'
+  }
+  const count = (st: Status) => all.filter(s => s.status === st).length
+
+  const bubbles: any[] = []
+  for (const g of groups) {
+    const pages = Math.ceil(g.items.length / ITEMS_PER_BUBBLE)
+    for (let p = 0; p < pages; p++) {
+      const slice = g.items.slice(p * ITEMS_PER_BUBBLE, (p + 1) * ITEMS_PER_BUBBLE)
+      const title = pages > 1 ? `${g.label} (${p + 1}/${pages})` : g.label
+      const body: any[] = []
+      if (bubbles.length === 0) {
+        body.push(
+          {
+            type: 'box', layout: 'horizontal', margin: 'md', contents: [
+              stat(String(count('out')), 'หมด', C.out),
+              stat(String(count('low')), 'เหลือน้อย', C.crit),
+              stat(String(count('reorder')), 'ควรสั่ง', C.warn),
+            ],
+          },
+          { type: 'separator', margin: 'lg', color: C.rule },
+        )
+      }
+      body.push(columnHead, { type: 'separator', margin: 'sm', color: C.rule }, ...slice.map(s => itemRow(s, detail(s))))
+      bubbles.push(bubble(title, `${periodTitle} · ${dateStr}`, body, 'RESTOCK'))
+    }
+  }
+
+  let shown = bubbles.slice(0, MAX_BUBBLES)
+  const size = (b: any[]) => new TextEncoder().encode(JSON.stringify({ type: 'carousel', contents: b })).length
+  while (shown.length > 1 && size(shown) > 49000) shown = shown.slice(0, -1)
+  if (shown.length < bubbles.length) {
+    shown[shown.length - 1].body.contents.push(
+      { type: 'separator', margin: 'lg', color: C.rule },
+      { type: 'text', text: `แสดง ${shown.length} จาก ${bubbles.length} หน้า (ข้อจำกัดของ LINE) ดูทั้งหมดได้ในหน้าสต็อกบนเว็บ`, size: 'xs', color: C.neutral, wrap: true, margin: 'md' },
+    )
+  }
+
+  return {
+    type: 'flex',
+    altText: `${periodTitle} · ต้องซื้อ ${all.length} รายการ`.slice(0, 400),
+    contents: shown.length === 1 ? shown[0] : { type: 'carousel', contents: shown },
   }
 }

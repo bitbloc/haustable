@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-    quarterText, remainingText, changeText, unitLabel, categoryKey, summarize, buildStockSummaryMessage,
+    quarterText, remainingText, changeText, unitLabel, categoryKey, summarize, buildStockSummaryMessage, buildRestockMessage,
 } from '../../../supabase/functions/line-webhook/stockSummary.ts'
 
 const tx = (name, category, change, type, current, extra = {}) => ({
@@ -106,5 +106,36 @@ describe('summary card', () => {
         const msg = buildStockSummaryMessage(many, 'อัพเดทสต๊อกวันนี้', 'x')
         expect(msg.contents.contents.length).toBeLessThanOrEqual(12)
         expect(new TextEncoder().encode(JSON.stringify(msg.contents)).length).toBeLessThanOrEqual(49000)
+    })
+})
+
+describe('restock card (stbuy)', () => {
+    const item = (name, category, qty, extra = {}) => ({ id: name, name, category, unit: 'bottle', current_quantity: qty, min_stock_threshold: extra.min || 0, reorder_point: extra.reorder || 0 })
+
+    it('lists only what needs buying, grouped by category, most urgent first', () => {
+        const msg = buildRestockMessage([
+            item('Gin', 'bar', 0),
+            item('Tonic', 'bar', 3, { reorder: 4 }),
+            item('Rum', 'bar', 1, { min: 2 }),
+            item('Vodka', 'bar', 9, { reorder: 2 }),
+            item('Pork', 'meat', 0),
+        ], 'ของที่ต้องซื้อ (3 วัน)', '24 พฤศจิกายน 2569')
+        const all = texts(msg.contents)
+        expect(all).not.toContain('Vodka')
+        expect(all).toContain('จุดสั่ง 4 ขวด')
+        expect(all).toContain('ขั้นต่ำ 2 ขวด')
+        expect(all).toContain('ควรสั่ง')
+        expect(all.indexOf('Gin')).toBeLessThan(all.indexOf('Rum'))
+        expect(all.indexOf('Rum')).toBeLessThan(all.indexOf('Tonic'))
+        expect(msg.contents.contents.map(b => b.header.contents[0].text)).toEqual(['บาร์', 'เนื้อสัตว์'])
+        expect(msg.altText).toContain('ต้องซื้อ 4 รายการ')
+        expect(all.every(t => typeof t === 'string' && t.length > 0)).toBe(true)
+        expect(JSON.stringify(msg)).not.toMatch(/\p{Extended_Pictographic}/u)
+    })
+
+    it('says so when nothing needs buying', () => {
+        const msg = buildRestockMessage([item('Vodka', 'bar', 9, { reorder: 2 })], 'ของที่ต้องซื้อ (24 ชม.)', 'x')
+        expect(msg.contents.type).toBe('bubble')
+        expect(texts(msg.contents)).toContain('ไม่มีของต้องซื้อ ทุกรายการยังอยู่เหนือจุดสั่ง')
     })
 })
