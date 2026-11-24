@@ -723,77 +723,12 @@ export default function LandingPageSettingsTab({
                 </label>
             </div>
 
-            {/* Signature Dishes Manager (3 Slots) */}
-            <div className="space-y-4 border-t border-[var(--color-rule)] pt-6">
-                <div>
-                    <h3 className="text-xs tabular-nums font-bold text-[var(--color-ink)]">
-                        Signature Dishes (เมนูแนะนำ 3 จาน)
-                    </h3>
-                    <p className="text-[13px] tabular-nums text-[var(--color-neutral)]">
-                        หากไม่ระบุ ระบบจะไม่แสดงส่วนนี้ในหน้า /link
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[1, 2, 3].map((n) => (
-                        <div
-                            key={n}
-                            className="space-y-2 bg-[var(--color-paper)] p-3.5 rounded-xl border border-[var(--color-rule)]"
-                        >
-                            <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
-                                {settings[`link_sig_img_${n}`] ? (
-                                    <img
-                                        src={safeTimestampUrl(settings[`link_sig_img_${n}`], timestamp)}
-                                        className="w-full h-full object-cover"
-                                        alt={`Sig ${n}`}
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] tabular-nums text-xs">
-                                        จานที่ #{n}
-                                    </div>
-                                )}
-                            </div>
-                            <label className="block cursor-pointer">
-                                <div className="text-center text-xs tabular-nums font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-1.5 border border-dashed border-[var(--color-rule)] rounded-lg">
-                                    {uploading[`link_sig_img_${n}`] ? 'กำลังอัปโหลด...' : 'เลือกรูปภาพ'}
-                                </div>
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => uploadImage(e.target.files[0], `link_sig_img_${n}`)}
-                                />
-                            </label>
-                            <input
-                                type="text"
-                                value={settings[`link_sig_name_${n}`] || ''}
-                                onChange={(e) => handleSave(`link_sig_name_${n}`, e.target.value)}
-                                placeholder="ชื่อเมนู"
-                                className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-[var(--color-ink)] text-xs font-bold outline-none focus:border-[var(--color-ink)]"
-                            />
-                            <input
-                                type="text"
-                                value={settings[`link_sig_price_${n}`] || ''}
-                                onChange={(e) => handleSave(`link_sig_price_${n}`, e.target.value)}
-                                placeholder="ราคา (บาท)"
-                                className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-[var(--color-ink)] text-xs tabular-nums outline-none focus:border-[var(--color-ink)]"
-                            />
-                            {settings[`link_sig_img_${n}`] && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleSave(`link_sig_img_${n}`, '');
-                                        handleSave(`link_sig_name_${n}`, '');
-                                        handleSave(`link_sig_price_${n}`, '');
-                                    }}
-                                    className="text-xs tabular-nums text-[var(--color-accent)] hover:underline w-full text-center py-1 cursor-pointer"
-                                >
-                                    ลบข้อมูลจานนี้
-                                </button>
-                            )}
-                        </div>
-                    ))}
-                </div>
+            {/* Signature dishes: replaced on /link by the 9 food cards (owner 2026-11-24). link_sig_* stays in settings, unused. */}
+            <div className="space-y-1 border-t border-[var(--color-rule)] pt-6">
+                <h3 className="text-xs font-bold text-[var(--color-ink)]">จานเด่นของร้าน (การ์ดอาหาร 9 ใบ)</h3>
+                <p className="text-[13px] text-[var(--color-neutral)]">
+                    หน้า /link ใช้การ์ดอาหาร 9 ใบแทนรูปจานเด่น 3 จานเดิมแล้ว การ์ดยังแก้จากหน้านี้ไม่ได้ ชื่อจานภาษาอื่นดึงจากเมนู
+                </p>
             </div>
 
             {/* Atmosphere Images Manager (10 Slots) */}

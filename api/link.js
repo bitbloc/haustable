@@ -1,11 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
+import { LINK_CARDS } from './_link-cards.js'
 
 const supabaseUrl = 'https://lxfavbzmebqqsffgyyph.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZmF2YnptZWJxcXNmZmd5eXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0MjI5MTMsImV4cCI6MjA4MDk5ODkxM30.oMFT06OnUFzrmGjGpW12jizbxvwcwFeKV7r6HykrLfI'
 
 const supabase = createClient(supabaseUrl, supabaseKey)
+
+// Food card layers (720 px WebP). LINK_CARDS_BASE overrides it for local QA before upload.
+const LINK_CARDS_BASE = process.env.LINK_CARDS_BASE || `${supabaseUrl}/storage/v1/object/public/public-assets/link/cards/`
 
 // In-memory cache for all page data (Settings, Menu Items, Categories, Checkins)
 let cachedPageData = null
@@ -507,42 +511,40 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     const logoUrl = settings.link_logo_url || DEFAULT_SETTINGS.link_logo_url
 
     // Signatures (Optimized strictly for mobile viewport: 160px CSS width * 1.5x DPR = 240px to eliminate oversized image warning)
-    const sig1Img = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 240, 65)
-    const sig1Img2x = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 320, 65)
-    const sig2Img = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 200, 65)
-    const sig2Img2x = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 300, 65)
-    const sig3Img = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 200, 65)
-    const sig3Img2x = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 300, 65)
-    const sig1Name = escapeHtml(settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
-    const sig2Name = escapeHtml(settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
-    const sig3Name = escapeHtml(settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
-    // Signature English name: link_sig_name_en_N, else the single dish (never a set) whose Thai name starts the same
-    const sigEn = (i, name) => {
-        if (settings[`link_sig_name_en_${i}`]) return escapeHtml(settings[`link_sig_name_en_${i}`])
-        const n = String(name || '').replace(/\s*\(.*\)\s*/, '').trim()
-        const dishes = menuItems.filter(m => m.name_en && !/^set\b|เซต/i.test(String(m.name || '')))
-        const hit = n && (dishes.find(m => String(m.name).trim() === String(name).trim()) || dishes.find(m => String(m.name).startsWith(n)))
-        return escapeHtml(hit ? hit.name_en : (DEFAULT_SETTINGS[`link_sig_name_en_${i}`] || name))
-    }
-    // Chinese / Lao signature name: link_sig_name_<lang>_N, else the same dish's translated menu name, else the English name
-    const sigAlt = (lang, i, name) => {
-        if (settings[`link_sig_name_${lang}_${i}`]) return escapeHtml(settings[`link_sig_name_${lang}_${i}`])
-        const field = `name_${lang}`
-        const n = String(name || '').replace(/\s*\(.*\)\s*/, '').trim()
+    // Food cards (owner 2026-11-24): 9 type-in-scene cards replace the 3 signature dishes (link_sig_* stays in settings, unused).
+    // Dish name in en/zh/lo from the menu: exact Thai name, else the single dish (never a set) whose Thai name starts the same.
+    const dishAlt = (field, name) => {
         const dishes = menuItems.filter(m => m[field] && !/^set\b|เซต/i.test(String(m.name || '')))
-        const hit = n && (dishes.find(m => String(m.name).trim() === String(name).trim()) || dishes.find(m => String(m.name).startsWith(n)))
-        return escapeHtml(hit ? hit[field] : (DEFAULT_SETTINGS[`link_sig_name_${lang}_${i}`] || ''))
+        const hit = dishes.find(m => String(m.name).trim() === name) || dishes.find(m => String(m.name).startsWith(name))
+        return hit ? escapeHtml(hit[field]) : ''
     }
-    const sigNames = [1, 2, 3].map(i => {
-        const name = settings[`link_sig_name_${i}`] || DEFAULT_SETTINGS[`link_sig_name_${i}`]
-        return { zh: sigAlt('zh', i, name), lo: sigAlt('lo', i, name) }
-    })
-    const sig1NameEn = sigEn(1, settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
-    const sig2NameEn = sigEn(2, settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
-    const sig3NameEn = sigEn(3, settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
-    const sig1Price = escapeHtml(settings.link_sig_price_1 || "159")
-    const sig2Price = escapeHtml(settings.link_sig_price_2 || "139")
-    const sig3Price = escapeHtml(settings.link_sig_price_3 || "299")
+    const FC_TEMPO = { 'รสจัด': 'sharp', 'จี๊ด': 'sharp', 'กรุบ': 'sharp', 'ซี้ด': 'sharp', 'ละมุน': 'soft', 'หวานนัว': 'soft', 'หอมมัน': 'soft' }
+    const fcPct = v => `${v}%`
+    const fcLogo = LINK_CARDS.logo
+    const renderFoodCards = fcLoading => LINK_CARDS.cards.map((c, k) => {
+        const src = name => `${LINK_CARDS_BASE}${c.id}-${name}.webp`
+        // First card: eager (it can be the largest image of the first screen); the rest load as they near the strip's edge
+        const load = k === 0 ? fcLoading : 'loading="lazy"'
+        const th = escapeHtml(c.caption)
+        // Thai name wraps only at its phrase break: each phrase stays whole, <wbr> allows the break between them
+        const thHtml = c.captionBreak ? c.captionBreak.split('|').map(p => `<span class="fc-nb">${escapeHtml(p)}</span>`).join('<wbr>') : th
+        const en = dishAlt('name_en', c.caption) || th
+        const letters = c.slices.map((s, i) => {
+            // inside the word box (height = the word's base line), so the box clips letters rising through that line
+            const top = (s[1] / c.base) * 100, h = (s[3] / c.base) * 100
+            const rise = ((c.base - s[1]) / s[3]) * 100 + 4
+            return `<img src="${src('w' + i)}" alt="" ${load} decoding="async" width="${Math.round(s[2] * 7.2)}" height="${Math.round(s[3] * 10.8 * 0.6667)}" data-rise="${rise.toFixed(1)}" style="left:${fcPct(s[0])};top:${fcPct(top.toFixed(3))};width:${fcPct(s[2])};height:${fcPct(h.toFixed(3))}">`
+        }).join('')
+        return `<figure class="fc-card" data-tempo="${FC_TEMPO[c.word] || 'even'}">
+                    <div class="fc-scene" style="transform-origin:50% ${c.dishCy}%">
+                        <img class="fc-photo" src="${src('photo')}" alt="" ${load} decoding="async" width="720" height="1080" style="top:${fcPct(c.photoTop)}">
+                        <div class="fc-word" aria-hidden="true" style="height:${fcPct(c.base)}">${letters}</div>
+                        <img class="fc-dish" src="${src('dish')}" alt="" ${load} decoding="async" width="720" height="1080" style="top:${fcPct(c.photoTop)}">
+                    </div>
+                    <figcaption class="fc-cap" style="left:${fcPct(LINK_CARDS.capX)};bottom:${fcPct(LINK_CARDS.capBottom)}"><span class="fc-vh" lang="th">${escapeHtml(c.word)} · </span>${tt(thHtml, en, dishAlt('name_zh', c.caption), dishAlt('name_lo', c.caption))}</figcaption>
+                    <img class="fc-logo" src="${LINK_CARDS_BASE}logo-naibaan-cream.webp" alt="" loading="lazy" decoding="async" width="240" height="130" style="right:${fcPct(fcLogo.right)};top:${fcPct(fcLogo.top)};width:${fcPct(fcLogo.w)};height:auto">
+                </figure>`
+    }).join('')
 
     // Contact Links
     const lineUrl = escapeHtml(settings.link_url_1 || DEFAULT_SETTINGS.link_url_1)
@@ -616,15 +618,15 @@ function generateStandaloneLandingHtml(data, opts = {}) {
     // Chosen here rather than in the browser so the visible feature photo is the one preloaded as LCP.
     const initialGroup = (setGroups.some(g => g.key === '1') && inTimeWindow(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)) ? '1' : defaultGroup
     const initialSet = (setGroups.find(g => g.key === initialGroup) || { rows: [] }).rows[0]
-    // Largest image in the first mobile screen: the visible set photo, else the first signature dish.
+    // Largest image in the first mobile screen: the visible set photo, else the first food card's photo.
     // The preload carries the same srcset/sizes as the <img> so the browser fetches the file it will show.
     const SET_FEATURE_SIZES = '(max-width: 560px) calc(100vw - 32px), 528px'
-    const SIG_SIZES = '(max-width: 480px) 33vw, 160px'
+    const fcPhoto1 = `${LINK_CARDS_BASE}${LINK_CARDS.cards[0].id}-photo.webp`
     const lcpImage = initialSet && initialSet.feature
         ? { href: initialSet.feature, srcset: `${initialSet.featureSm} 480w, ${initialSet.feature} 720w`, sizes: SET_FEATURE_SIZES }
-        : { href: sig1Img, srcset: `${sig1Img} 240w, ${sig1Img2x} 320w`, sizes: SIG_SIZES }
-    // With the set chooser on top, the signature photos sit below the first screen and must not compete with it
-    const sigLoading = initialSet ? 'loading="lazy"' : 'fetchpriority="high" loading="eager"'
+        : { href: fcPhoto1, srcset: `${fcPhoto1} 720w`, sizes: '(max-width: 480px) 82vw, 380px' }
+    // With the set chooser on top, the food cards sit below the first screen and must not compete with it
+    const fcLoading = initialSet ? 'loading="lazy"' : 'fetchpriority="high" loading="eager"'
 
     // Recommended Specialties: food only (merch stays in the full menu) and no sets (they live in the chooser)
     const hiddenCategoryNames = String(settings.link_hide_categories || DEFAULT_SETTINGS.link_hide_categories)
@@ -1032,18 +1034,19 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .section-header.sub .section-title { font-size: var(--text-xl); }
         .section-meta { font-size: var(--text-xs); color: var(--color-label); white-space: nowrap; }
 
-        /* Signature dishes */
-        .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
-        .sig-card { display: flex; flex-direction: column; cursor: zoom-in; min-width: 0; }
-        .sig-card + .sig-card { border-left: 1px solid var(--color-rule); }
-        .sig-img-wrap { aspect-ratio: 1 / 1; overflow: hidden; background: var(--color-paper-2); border-bottom: 1px solid var(--color-rule); contain: paint layout; }
-        .sig-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
-        .sig-body { padding: var(--space-3); display: flex; flex-direction: column; flex: 1; gap: var(--space-1); }
-        .sig-name { font-size: var(--text-sm); font-weight: 600; line-height: 1.45; }
-        .sig-price { font-size: var(--text-sm); color: var(--color-muted); }
-        .sig-card:first-child .sig-body { padding-left: var(--space-4); }
-        .sig-card:last-child .sig-body { padding-right: var(--space-4); }
-        .sig-body .heat { margin-top: auto; padding-top: var(--space-1); }
+        /* Food cards (owner 2026-11-24): photo, the taste word behind the dish, the dish cut-out in front.
+           Native scroll-snap strip; the next card peeks so people know to swipe. Positions are % of the 1080x1446 card. */
+        .fc { border-bottom: 1px solid var(--color-rule); padding: var(--space-4) 0; }
+        .fc-strip { display: flex; gap: var(--space-2); overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 var(--space-4); scroll-padding: 0 var(--space-4); scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+        .fc-strip::-webkit-scrollbar { display: none; }
+        .fc-card { position: relative; flex: 0 0 82%; max-width: 380px; aspect-ratio: 1080 / 1446; margin: 0; overflow: hidden; scroll-snap-align: start; background: var(--charcoal-2); contain: layout paint; }
+        .fc-scene { position: absolute; inset: 0; }
+        .fc-scene img, .fc-word, .fc-word img, .fc-logo { position: absolute; display: block; max-width: none; }
+        .fc-photo, .fc-dish { left: 0; width: 100%; height: auto; }
+        .fc-word { left: 0; top: 0; width: 100%; overflow: hidden; }
+        .fc-cap { position: absolute; margin: 0; max-width: 62%; color: var(--cream); font-size: var(--text-md); font-weight: 500; line-height: 1.35; text-shadow: 0 1px 8px oklch(21.78% 0 0 / 0.45); }
+        .fc-nb { white-space: nowrap; }
+        .fc-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
         /* Menu rows */
         .item-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-rule); }
@@ -1141,16 +1144,16 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         .booklet-nav button { min-height: 40px; padding: var(--space-2) var(--space-3); color: var(--color-paper); font-weight: 600; border: 1px solid var(--color-muted); border-radius: var(--radius); }
 
         /* Press feedback: everything tappable answers the thumb */
-        .row-link, .sig-card, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-cell { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
+        .row-link, .sticky-btn, .item-row.zoomable, .gallery-item, .tab-btn, .loc-map-btn, .set-tab, .lang-cell { transition-property: background-color, color, box-shadow, transform; transition-duration: var(--dur); transition-timing-function: var(--ease-out); }
         /* Press lands fast (90ms) and lets go at the normal speed, so the thumb feels it */
         .row-link:active, .sticky-btn:active, .item-row.zoomable:active, .tab-btn:active, .loc-map-btn:active, .set-tab:active, .lang-cell:active { transform: scale(0.97); transition-duration: 90ms; }
         /* Full-width buttons keep their gentler scale (0.97 of 560px is too big a jump), but land as fast */
         .set-btn:active, .full-menu-btn:active { transition-duration: 90ms; }
-        .sig-img-wrap img, .gallery-item img { transition: transform 600ms var(--ease-out), opacity 180ms var(--ease-out); }
+        .gallery-item img { transition: transform 600ms var(--ease-out), opacity 180ms var(--ease-out); }
         /* Hover zoom only where there is a real hover; on phones it fired after a tap */
-        @media (hover: hover) { .sig-card:hover .sig-img-wrap img, .gallery-item:hover img { transform: scale(1.04); } }
+        @media (hover: hover) { .gallery-item:hover img { transform: scale(1.04); } }
         /* Photos still loading fade in on arrival over the paper-2 placeholder (class is added by script only) */
-        .sig-img-wrap img.img-wait, .gallery-item img.img-wait { opacity: 0; }
+        .gallery-item img.img-wait { opacity: 0; }
         .row-link:hover .arrow { transform: translateX(3px); }
         .row-link .arrow { transition: transform var(--dur) var(--ease-out); }
 
@@ -1377,40 +1380,11 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         <div id="sec-menu">
             <div class="section-header">
                 <h2 class="section-title">${tt('จานเด่นของร้าน', 'Signature dishes')}</h2>
-                <span class="section-meta">${tt('แตะรูปเพื่อขยาย', 'Tap to enlarge')}</span>
+                <span class="section-meta">${tt('ปัดดูได้ 9 จาน', 'Swipe through 9 dishes', '滑动查看 9 道菜', 'ປັດເບິ່ງໄດ້ 9 ຈານ')}</span>
             </div>
-            <div class="sig-grid">
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 800)}')">
-                    <div class="sig-img-wrap">
-                        <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="${SIG_SIZES}" alt="${sig1Name}" ${sigLoading} decoding="async" width="160" height="160">
-                    </div>
-                    <div class="sig-body">
-                        <div class="sig-name">${tt(sig1Name, sig1NameEn, sigNames[0].zh, sigNames[0].lo)}</div>
-                        <div class="sig-price num">฿${sig1Price}</div>
-                        ${heatHtml(spiceRange(settings.link_sig_name_1 || DEFAULT_SETTINGS.link_sig_name_1, spiceMap))}
-                    </div>
-                </div>
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
-                    <div class="sig-img-wrap">
-                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="${SIG_SIZES}" alt="${sig2Name}" ${sigLoading} decoding="async" width="160" height="160">
-                    </div>
-                    <div class="sig-body">
-                        <div class="sig-name">${tt(sig2Name, sig2NameEn, sigNames[1].zh, sigNames[1].lo)}</div>
-                        <div class="sig-price num">฿${sig2Price}</div>
-                        ${heatHtml(spiceRange(settings.link_sig_name_2 || DEFAULT_SETTINGS.link_sig_name_2, spiceMap))}
-                    </div>
-                </div>
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
-                    <div class="sig-img-wrap">
-                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="${SIG_SIZES}" alt="${sig3Name}" ${sigLoading} decoding="async" width="160" height="160">
-                    </div>
-                    <div class="sig-body">
-                        <div class="sig-name">${tt(sig3Name, sig3NameEn, sigNames[2].zh, sigNames[2].lo)}</div>
-                        <div class="sig-price num">฿${sig3Price}</div>
-                        ${heatHtml(spiceRange(settings.link_sig_name_3 || DEFAULT_SETTINGS.link_sig_name_3, spiceMap))}
-                    </div>
-                </div>
-            </div>
+            <section class="fc" aria-label="${escapeHtml('จานเด่นของร้าน')}">
+                <div class="fc-strip">${renderFoodCards(fcLoading)}</div>
+            </section>
 
             ${bookletImages.length > 0 ? `
             <button type="button" class="row-link as-button" onclick="openBooklet()">
@@ -1664,7 +1638,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             }, { rootMargin: '0px 0px -8% 0px' });
             const fold = window.innerHeight;
             // One style, few targets: headings and photos only. Rows, facts and the footer just scroll in.
-            document.querySelectorAll('.section-header, .sig-card, .gallery-item').forEach(function(el) {
+            document.querySelectorAll('.section-header, .gallery-item').forEach(function(el) {
                 if (el.getBoundingClientRect().top < fold) return;
                 const sibs = Array.prototype.indexOf.call(el.parentNode.children, el);
                 el.style.setProperty('--d', (sibs % 3) * 40 + 'ms');
@@ -1676,7 +1650,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         // ─── LAZY PHOTOS FADE IN ───
         // Only photos still loading are touched, so nothing is hidden without JS or when already cached
         (function() {
-            document.querySelectorAll('.gallery-item img[loading="lazy"], .sig-img-wrap img[loading="lazy"]').forEach(function(img) {
+            document.querySelectorAll('.gallery-item img[loading="lazy"]').forEach(function(img) {
                 if (img.complete) return;
                 img.classList.add('img-wait');
                 const done = function() { img.classList.remove('img-wait'); };
@@ -1711,6 +1685,61 @@ function generateStandaloneLandingHtml(data, opts = {}) {
             document.querySelectorAll('.lang-cell').forEach(function(b) { b.setAttribute('aria-pressed', String(b.dataset.lang === cur)); });
         };
         setLang.sync();
+
+        // ─── FOOD CARDS: THE WORD RISES FROM BEHIND THE DISH ───
+        // Cards are settled in the HTML, so no JS, reduced motion and a failed import all show the finished card.
+        // Motion (motion.dev, the mini WAAPI build, ~23 KB over the wire) loads only when the strip is about a screen away;
+        // cards already on screen then stay as they are (the first paint is never animated).
+        // A card plays once it is three quarters in view, so a swipe has mostly settled before the word rises.
+        (function() {
+            const strip = document.querySelector('.fc-strip');
+            if (!strip || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const EASE = [0.16, 1, 0.3, 1];
+            // The push-in is slow drift, not an entrance: a softer ease-out so the scale does not jump in the first second
+            const DRIFT = [0.33, 1, 0.68, 1];
+            // The breath moves on screen and back, so it eases in and out
+            const BREATHE = [0.45, 0, 0.55, 1];
+            // Tempo follows the word: sharp words snap up, soft words rise slowly and breathe once
+            const TEMPO = { sharp: { dur: 0.4, stagger: 0.07, breathe: 0 }, even: { dur: 0.6, stagger: 0.1, breathe: 0 }, soft: { dur: 0.87, stagger: 0.17, breathe: 4 } };
+            const near = new IntersectionObserver(function(entries) {
+                if (!entries.some(function(en) { return en.isIntersecting; })) return;
+                near.disconnect();
+                import('https://cdn.jsdelivr.net/npm/motion@12.23.26/mini/+esm').then(function(m) { start(m.animate); }).catch(function() {});
+            }, { rootMargin: '100% 0px' });
+            near.observe(strip);
+
+            function start(animate) {
+                const vh = window.innerHeight, vw = window.innerWidth;
+                const cards = Array.prototype.slice.call(strip.querySelectorAll('.fc-card')).filter(function(card) {
+                    const r = card.getBoundingClientRect();
+                    return !(r.top < vh && r.bottom > 0 && r.left < vw && r.right > 0);
+                });
+                cards.forEach(function(card) {
+                    card.querySelectorAll('.fc-word img').forEach(function(l) { l.style.transform = 'translateY(' + l.dataset.rise + '%)'; });
+                });
+                const seen = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(en) {
+                        if (!en.isIntersecting) return;
+                        seen.unobserve(en.target);
+                        play(animate, en.target);
+                    });
+                }, { threshold: 0.75 });
+                cards.forEach(function(card) { seen.observe(card); });
+            }
+
+            function play(animate, card) {
+                const t = TEMPO[card.dataset.tempo] || TEMPO.even;
+                animate(card.querySelector('.fc-scene'), { transform: ['scale(1)', 'scale(1.035)'] }, { duration: 6, ease: DRIFT });
+                card.querySelectorAll('.fc-word img').forEach(function(l, i) {
+                    const rise = animate(l, { transform: ['translateY(' + l.dataset.rise + '%)', 'translateY(0)'] }, { duration: t.dur, delay: 0.08 + i * t.stagger, ease: EASE });
+                    if (!t.breathe) return;
+                    // one slow breath after landing, then still: nothing on /link loops
+                    rise.finished.then(function() {
+                        animate(l, { transform: ['translateY(0)', 'translateY(-' + t.breathe + 'px)', 'translateY(0)'] }, { duration: 2.4, ease: BREATHE });
+                    });
+                });
+            }
+        })();
 
         // ─── OPEN / CLOSED STATUS (Asia/Bangkok, from the hours text) ───
         // Named so the live countdown can refresh it the moment the shop opens or closes.
