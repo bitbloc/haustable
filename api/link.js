@@ -674,6 +674,7 @@ function generateStandaloneLandingHtml(data, opts = {}) {
         url: 'https://haustable.vercel.app/link',
         image: OG_IMAGE_URL,
         telephone: '+66985284217',
+        priceRange: '฿150–350',
         servesCuisine: ['Southern Thai', 'Thai', 'Coffee'],
         acceptsReservations: 'https://haustable.vercel.app/booking',
         address: { '@type': 'PostalAddress', streetAddress: '788/1 ถนนสุนทรวิจิตร ตำบลในเมือง', addressLocality: 'อำเภอเมืองนครพนม', addressRegion: 'นครพนม', postalCode: '48000', addressCountry: 'TH' },
