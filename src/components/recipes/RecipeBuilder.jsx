@@ -26,6 +26,7 @@ import RecipeHistoryModal from './RecipeHistoryModal';
 import MakroPriceSheet from '../stock/MakroPriceSheet';
 import MenuOptionStockPanel from './MenuOptionStockPanel';
 import { makroPickPatch, describeMakroPick } from '../../utils/makroUnits';
+import { recomputeMenuShadow, RECOMPUTE_DAYS } from '../../utils/stockShadowRecompute';
 
 // Price, size and photo from makro.pro, shared by the edit and quick-add windows below
 function MakroPickButton({ term, current, unitsUnset, onApply }) {
@@ -719,6 +720,11 @@ function SortableLayer({ id, ingredient, quantity, unit, orderScope = 'all', all
     const missingYield = !hasPortionYield(ingredient);
     const [qtyText, setQtyText] = useState(quantity === null || quantity === undefined ? '' : String(quantity));
     const scope = normalizeOrderScope(orderScope);
+    // Stock deduction reads the number as the ingredient's own unit, whatever the label says.
+    // A row still labelled in pieces on an ingredient measured in grams is taking 1 g, not 1 piece.
+    const usageUnit = String(ingredient.usage_unit || '').trim().toLowerCase();
+    const savedUnit = String(unit || '').trim().toLowerCase();
+    const unitMismatch = !!usageUnit && !!savedUnit && savedUnit !== 'unit' && savedUnit !== usageUnit;
 
     useEffect(() => {
         const parsed = parseFloat(String(qtyText).replace(',', '.'));
@@ -759,6 +765,11 @@ function SortableLayer({ id, ingredient, quantity, unit, orderScope = 'all', all
                 {missingYield && (
                     <div className="text-xs font-sans leading-5 text-[var(--brand-plum)]">
                         ยังไม่ได้ระบุปริมาณต่อสูตร ต้นทุนบรรทัดนี้ยังไม่ถูก
+                    </div>
+                )}
+                {unitMismatch && (
+                    <div className="text-[13px] font-sans font-medium leading-5 text-[var(--brand-plum)]" role="status">
+                        บันทึกไว้เป็น{displayUnit(unit)} แต่วัตถุดิบนี้ตวงเป็น{displayUnit(ingredient.usage_unit)} ตอนนี้ระบบตัดแค่ {quantity} {displayUnit(ingredient.usage_unit)} ใส่จำนวนใหม่เป็น{displayUnit(ingredient.usage_unit)}
                     </div>
                 )}
                 <button 
@@ -895,6 +906,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     // Option stock rules live in their own panel; the save button below saves them too
     const optionPanelRef = useRef(null);
 
+    // Sold lines keep the usage of the day they were sold. Ticked: this save also rewrites
+    // the last 30 days of this menu's sales with the recipe being saved.
+    const [applyToPast, setApplyToPast] = useState(false);
+
     const handleStartEditName = () => {
         if (parentItem) {
             setTempName(parentItem.name);
@@ -951,6 +966,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     };
                 });
                 setIngredients(mapped);
+                // A menu with no recipe yet: none of its past sales has any usage, so the
+                // first recipe is offered to them by default.
+                if (parentType === 'menu') setApplyToPast(mapped.length === 0);
             }
 
             // 2. Fetch Parent Info
@@ -1183,7 +1201,22 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 return;
             }
 
-            toast.success('บันทึกสูตรเรียบร้อย');
+            if (parentType === 'menu' && applyToPast) {
+                const past = await recomputeMenuShadow(parentId);
+                if (!past.ok) {
+                    toast.warning(`บันทึกสูตรแล้ว แต่คำนวณบิลย้อนหลังไม่สำเร็จ: ${past.message}`, { duration: 8000 });
+                    return;
+                }
+                logStaffActivity('stock', 'shadow_recompute', {
+                    reason: `คำนวณยอดใช้ย้อนหลัง ${RECOMPUTE_DAYS} วันด้วยสูตรใหม่: ${parentItem?.name || parentId}`,
+                    metadata: { module: 'stock', menu_item_id: parentId, name: parentItem?.name, days: RECOMPUTE_DAYS, lines: past.lines, errors: past.errors }
+                });
+                toast.success(past.lines > 0
+                    ? `บันทึกสูตรแล้ว และคำนวณยอดใช้ของ ${past.lines} รายการขายใน ${RECOMPUTE_DAYS} วันใหม่`
+                    : `บันทึกสูตรแล้ว ไม่มีรายการขายของเมนูนี้ใน ${RECOMPUTE_DAYS} วัน`);
+            } else {
+                toast.success('บันทึกสูตรเรียบร้อย');
+            }
             onClose();
         } catch (err) {
             console.error(err);
@@ -1688,7 +1721,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                             unitCost={unitCost}
                                             cost={unitCost * item.quantity}
                                             onDelete={(id) => setIngredients(prev => prev.filter(x => x.id !== id))}
-                                            onUpdate={(id, qty) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, quantity: qty } : x))}
+                                            onUpdate={(id, qty) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, quantity: qty, unit: x.ingredient?.usage_unit || x.unit } : x))}
                                             onUpdateScope={(id, nextScope) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, orderScope: nextScope } : x))}
                                             onEditStock={setEditingStockItem}
                                         />
@@ -1706,6 +1739,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                 menuId={parentId}
                                 stockItems={availableItems}
                                 recipe={ingredients}
+                                unitCostOf={(id) => calculateRealUnitCost(resolveItem(id, null))}
                                 onSweetenerChanged={(id, value) => setAvailableItems(prev => prev.map(i => i.id === id ? { ...i, is_sweetener: value } : i))}
                             />
                         </div>
@@ -1722,7 +1756,21 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
 
                 {/* Bottom Action Bar */}
-                <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex justify-end gap-2 z-20 tabular-nums text-xs">
+                <div className="p-3 border-t border-[var(--color-rule)] bg-[var(--color-paper)] flex flex-wrap items-center justify-end gap-x-2 gap-y-2 z-20 tabular-nums text-xs">
+                    {parentType === 'menu' && (
+                        <label className="basis-full md:basis-auto md:mr-auto py-2.5 flex items-start gap-2 cursor-pointer font-sans">
+                            <input
+                                type="checkbox"
+                                checked={applyToPast}
+                                onChange={e => setApplyToPast(e.target.checked)}
+                                className="mt-[3px] w-[18px] h-[18px] shrink-0 accent-[var(--color-ink)] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-plum)]"
+                            />
+                            <span className="flex flex-wrap items-baseline gap-x-2">
+                                <span className="text-sm leading-6 text-[var(--color-ink)]">ใช้สูตรนี้กับบิล {RECOMPUTE_DAYS} วันที่ผ่านมาด้วย</span>
+                                <span className="text-[13px] leading-6 text-[var(--color-neutral)]">ติ๊กเมื่อเพิ่งลงสูตร หรือแก้สูตรที่ผิด</span>
+                            </span>
+                        </label>
+                    )}
                     {/* Phones: the ingredient list opens from here (it sat on top of the price bar before) */}
                     <div className="md:hidden mr-auto">
                         <button

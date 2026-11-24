@@ -66,6 +66,30 @@ describe('planUsageUnitChange', () => {
         });
         expect(planUsageUnitChange(rows, 'g', 'g')).toEqual({ updates: [], manual: 0 });
     });
+
+    it('labels rows counted in pieces "pcs" when the ingredient moves to grams, so the check lists them', () => {
+        const rows = [
+            { id: 1, quantity: 1, unit: 'unit' },
+            { id: 2, quantity: 4, unit: null },
+            { id: 3, quantity: 30, unit: 'ml' }
+        ];
+        const plan = planUsageUnitChange(rows, 'unit', 'g');
+        expect(plan).toEqual({
+            updates: [
+                { id: 1, quantity: 1, unit: 'pcs' },
+                { id: 2, quantity: 4, unit: 'pcs' }
+            ],
+            manual: 2
+        });
+        // 'unit' would have read as grams; 'pcs' is listed for a person to fix
+        const lime = { id: 'lime', name: 'มะนาว', usage_unit: 'g' };
+        const issues = findRecipeUnitIssues(
+            [{ id: 1, parent_menu_item_id: 7, ingredient_id: 'lime', quantity: 1, unit: 'pcs' }],
+            new Map([['lime', lime]]),
+            new Map([[7, { id: 7, name: 'ชามะนาว' }]])
+        );
+        expect(issues.map(i => [i.from, i.to, i.fix.kind])).toEqual([['pcs', 'g', 'manual']]);
+    });
 });
 
 describe('แกลลอน is a jug of any size', () => {
