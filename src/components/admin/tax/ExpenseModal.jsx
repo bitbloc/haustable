@@ -175,7 +175,7 @@ export default function ExpenseModal({
         setAiScannedSuccess(false);
 
         try {
-            const data = await scanReceiptWithGemini(imagesParam, null, geminiModel);
+            const data = await scanReceiptWithGemini(imagesParam, geminiModel);
             
             // Auto-fill all fields
             if (data.title) setTitle(data.title);
@@ -216,7 +216,13 @@ export default function ExpenseModal({
             toast.error('กรุณาระบุ Gemini API Key');
             return;
         }
-        await saveGeminiApiKey(apiKeyInput.trim());
+        try {
+            await saveGeminiApiKey(apiKeyInput.trim());
+        } catch (err) {
+            toast.error('บันทึก Gemini API Key ไม่สำเร็จ: ' + (err.message || err));
+            return;
+        }
+        setApiKeyInput('');
         toast.success('บันทึก Gemini API Key เรียบร้อย');
         setShowApiKeyModal(false);
         if (receiptImage) {

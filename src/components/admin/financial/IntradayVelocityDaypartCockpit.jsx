@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) · slop: pass (1–58) */
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
-import { getGeminiApiKey, getGeminiPreferredModel } from '../../../utils/geminiOcrHelper'
+import { callGemini, getGeminiPreferredModel } from '../../../utils/geminiOcrHelper'
 import { toast } from 'sonner'
 
 // Helper: Extract Asia/Bangkok hour (0 - 23) reliably & high-performance (UTC+7, no DST)
@@ -1157,14 +1157,7 @@ export default function IntradayVelocityDaypartCockpit({
     const generateAiBriefing = async () => {
         setAiLoading(true)
         try {
-            const apiKey = await getGeminiApiKey()
             const preferredModel = await getGeminiPreferredModel() || 'gemini-4-argon'
-
-            if (!apiKey) {
-                toast.error('กรุณาตั้งค่า Gemini API Key ในระบบก่อนใช้งาน')
-                setAiLoading(false)
-                return
-            }
 
             // Extract detailed Ad & Search Intent intelligence
             const adMapsCount = adEvents.filter(e => ['click_directions', 'find_location', 'directions'].includes(e.event_name)).length
@@ -1246,27 +1239,30 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
             for (const model of candidateModels) {
                 try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: promptText }] }],
-                            generationConfig: { maxOutputTokens: 8192, temperature: 0.3 }
-                        })
+                    const response = await callGemini(model, {
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: { maxOutputTokens: 8192, temperature: 0.3 }
                     })
 
                     if (!response.ok) {
-                        const errData = await response.json().catch(() => ({}))
-                        const errMsg = errData?.error?.message || response.statusText
+                        const errMsg = response.error || `Model ${model} Error`
+                        if (errMsg === 'MISSING_API_KEY') {
+                            toast.error('กรุณาตั้งค่า Gemini API Key ในระบบก่อนใช้งาน')
+                            return
+                        }
                         if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
                             lastError = new Error(`[${model}] ${errMsg}`)
                             continue
                         }
+                        // Key refused or not allowed: every model fails the same way
+                        if ([401, 403].includes(response.status) || ['UNAUTHORIZED', 'FORBIDDEN'].includes(errMsg)) {
+                            lastError = new Error(errMsg)
+                            break
+                        }
                         throw new Error(errMsg)
                     }
 
-                    const result = await response.json()
-                    textOutput = result.candidates?.[0]?.content?.parts?.[0]?.text
+                    textOutput = response.data?.candidates?.[0]?.content?.parts?.[0]?.text
                     if (textOutput) break
                 } catch (e) {
                     lastError = e

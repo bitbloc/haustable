@@ -14,49 +14,48 @@ export const GEMINI_SUPPORTED_MODELS = [
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
 ];
 
-export async function getGeminiApiKey() {
-    // 1. Try env variable
-    if (import.meta.env.VITE_GEMINI_API_KEY) {
-        return import.meta.env.VITE_GEMINI_API_KEY;
-    }
-
-    // 2. Try localStorage
-    const localKey = localStorage.getItem('onhaus_gemini_api_key');
-    if (localKey && localKey.trim()) {
-        return localKey.trim();
-    }
-
-    // 3. Try app_settings in Supabase
-    try {
-        const { data, error } = await supabase
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'gemini_api_key')
-            .maybeSingle();
-
-        if (!error && data?.value) {
-            localStorage.setItem('onhaus_gemini_api_key', data.value);
-            return data.value;
-        }
-    } catch {
-        // Fallback
-    }
-
-    return null;
+// The Gemini key lives only on the server (edge function `gemini-proxy`).
+// Browsers never read it: Google suspended the old key's Cloud project on
+// 2026-11-26 after the key had been kept in localStorage and sent in URLs.
+// Remove any copy an admin device still holds from before.
+try {
+    localStorage.removeItem('onhaus_gemini_api_key');
+} catch {
+    // localStorage unavailable (private mode): nothing to clean
 }
 
-export async function saveGeminiApiKey(apiKey) {
-    if (!apiKey) return;
-    const cleanKey = apiKey.trim();
-    localStorage.setItem('onhaus_gemini_api_key', cleanKey);
-
-    try {
-        await supabase
-            .from('app_settings')
-            .upsert([{ key: 'gemini_api_key', value: cleanKey }]);
-    } catch {
-        // Fallback to local
+/**
+ * Call Gemini generateContent through the server.
+ * @returns {Promise<{ok: boolean, status: number, data?: object, error?: string}>}
+ */
+export async function callGemini(model, request) {
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+        body: { model, request }
+    });
+    if (error) {
+        let message = error.message || 'gemini-proxy error';
+        try {
+            const ctx = await error.context?.json?.();
+            if (ctx?.error) message = ctx.error;
+        } catch {
+            // keep message
+        }
+        return { ok: false, status: 0, error: message };
     }
+    return data || { ok: false, status: 0, error: 'EMPTY_RESPONSE' };
+}
+
+/**
+ * Save a new Gemini key. Write-only: the row is admin-only under RLS and
+ * nothing in the browser reads it back.
+ */
+export async function saveGeminiApiKey(apiKey) {
+    const cleanKey = (apiKey || '').trim();
+    if (!cleanKey) return;
+    const { error } = await supabase
+        .from('app_settings')
+        .upsert([{ key: 'gemini_api_key', value: cleanKey }], { onConflict: 'key' });
+    if (error) throw error;
 }
 
 export async function getGeminiPreferredModel() {
@@ -172,12 +171,7 @@ export function rotateImageBase64(base64Str, degrees = 90) {
  * @param {string} preferredModel - Optional model override
  * @returns {Promise<Object>} Parsed structured receipt data
  */
-export async function scanReceiptWithGemini(base64Image, customApiKey = null, preferredModel = null) {
-    const apiKey = customApiKey || (await getGeminiApiKey());
-    if (!apiKey) {
-        throw new Error('MISSING_API_KEY');
-    }
-
+export async function scanReceiptWithGemini(base64Image, preferredModel = null) {
     const rawArray = Array.isArray(base64Image) ? base64Image : parseReceiptUrls(base64Image);
     const resolvedImages = await Promise.all(
         rawArray.map(img => (typeof img === 'string' && img.startsWith('http') ? urlToBase64(img) : img))
@@ -316,34 +310,28 @@ Payment Method Rules:
     // Try models in cascade
     for (const model of candidateModels) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
+            const result = await callGemini(model, requestBody);
 
-            if (!response.ok) {
-                const errText = await response.text();
-                let errMsg = `Model ${model} Error`;
-                try {
-                    const errObj = JSON.parse(errText);
-                    errMsg = errObj?.error?.message || errText;
-                } catch {
-                    errMsg = errText;
+            if (!result.ok) {
+                const errMsg = result.error || `Model ${model} Error`;
+                if (errMsg === 'MISSING_API_KEY') throw new Error('MISSING_API_KEY');
+                // Key refused or caller not allowed: other models will fail the same way
+                if ([401, 403].includes(result.status) || ['UNAUTHORIZED', 'FORBIDDEN'].includes(errMsg)) {
+                    const fatal = new Error(errMsg);
+                    fatal.fatal = true;
+                    throw fatal;
                 }
 
                 // If 404 (model not found), continue cascade to next model
-                if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
+                if (result.status === 404 || errMsg.toLowerCase().includes('not found')) {
                     lastError = new Error(`[${model}] ` + errMsg);
                     continue;
                 }
-                
+
                 throw new Error(errMsg);
             }
 
-            const resJson = await response.json();
+            const resJson = result.data;
             const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!rawText) {
                 continue;
@@ -418,7 +406,7 @@ Payment Method Rules:
             return parsed;
         } catch (err) {
             lastError = err;
-            if (err.message?.includes('MISSING_API_KEY')) {
+            if (err.fatal || err.message?.includes('MISSING_API_KEY')) {
                 throw err;
             }
             // If it's a model not found error, loop continues
