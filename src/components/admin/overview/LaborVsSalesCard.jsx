@@ -58,7 +58,7 @@ export default function LaborVsSalesCard({ selectedDate }) {
                         <span className="block text-xs leading-5 text-[var(--color-neutral)]">วันที่เลือก</span>
                         <span className="block mt-1 text-2xl leading-8 font-semibold tabular-nums text-[var(--color-muted)]">{pct(d.day?.pct)}</span>
                         <span className="block mt-1 text-xs leading-5 text-[var(--color-neutral)] tabular-nums">
-                            {d.day ? `ค่าแรง ${baht(d.day.labor)} จากยอดขาย ${baht(d.day.sales)}` : 'ยังไม่มีข้อมูล'}
+                            {!d.day ? 'ยังไม่มีข้อมูล' : d.day.sales > 0 ? `ค่าแรง ${baht(d.day.labor)} จากยอดขาย ${baht(d.day.sales)}` : 'ยังไม่มียอดขายในวันนี้'}
                         </span>
                     </div>
                 </div>
