@@ -7,6 +7,9 @@ import { installShopLogoOnLineMessages } from "./brand.ts"
 installShopLogoOnLineMessages()
 import { claudeEnabled, generateWithClaude, CLAUDE_FAST_MODEL } from "../_shared/claude.ts"
 
+// Payment method labels as staff read them on cards (methodLabel stays English in code).
+const PAY_LABEL_TH: Record<string, string> = { CASH: 'เงินสด', PROMPTPAY: 'QR / โอน', CREDIT: 'บัตร', SPLIT: 'แยกจ่าย' }
+
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 
 const corsHeaders = {
@@ -409,13 +412,13 @@ function createTrafficPredictorFlexMessage(
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "HAUS PRO FORECAST // FAST DIGEST", size: "xxs", weight: "bold", color: "#D0B5C1", flex: 8 },
+            { type: "text", text: "พยากรณ์ลูกค้า", size: "xxs", weight: "bold", color: "#D0B5C1", flex: 8 },
             { type: "text", text: `[${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#D0B5C1", align: "end", flex: 4, gravity: "center" }
           ]
         },
         {
           type: "text",
-          text: `พยากรณ์ทราฟฟิก & สรุปข้อมูลฉับไว · ${dateTitleStr}`,
+          text: `สรุปและพยากรณ์ ${dateTitleStr}`,
           size: "sm",
           weight: "bold",
           color: "#F6F2EA",
@@ -443,10 +446,10 @@ function createTrafficPredictorFlexMessage(
               type: "box",
               layout: "horizontal",
               contents: [
-                { type: "text", text: `SNAPSHOT ปัจจุบัน [${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#41032A", flex: 7 },
+                { type: "text", text: `ข้อมูล ณ ${currentTimeFormatted}`, size: "xxs", weight: "bold", color: "#41032A", flex: 7 },
                 {
                   type: "text",
-                  text: `${dayPacePct >= 0 ? `+${dayPacePct}%` : `${dayPacePct}%`} PACING`,
+                  text: `${dayPacePct >= 0 ? `+${dayPacePct}%` : `${dayPacePct}%`} จากปกติ`,
                   size: "xxs",
                   weight: "bold",
                   color: dayPacePct >= 0 ? "#1A1A1A" : "#41032A",
@@ -521,7 +524,7 @@ function createTrafficPredictorFlexMessage(
               type: "box",
               layout: "horizontal",
               contents: [
-                { type: "text", text: "SAI MU & ACTION // เสริมดวง & สิ่งที่ต้องทำทันที", size: "xxs", weight: "bold", color: "#41032A", flex: 8 },
+                { type: "text", text: "เสริมดวงและสิ่งที่ต้องทำทันที", size: "xxs", weight: "bold", color: "#41032A", flex: 8 },
                 { type: "text", text: `[${saiMuData.dayName}]`, size: "xxs", weight: "bold", color: "#635B5F", align: "end", flex: 4 }
               ]
             },
@@ -593,7 +596,7 @@ function createTrafficPredictorFlexMessage(
           layout: "horizontal",
           margin: "sm",
           contents: [
-            { type: "text", text: "DAYPARTS TIMELINE // 4 ช่วงเวลาของวัน", size: "xxs", weight: "bold", color: "#635B5F", flex: 1 }
+            { type: "text", text: "4 ช่วงเวลาของวัน", size: "xxs", weight: "bold", color: "#635B5F", flex: 1 }
           ]
         },
         ...daypartRows
@@ -948,19 +951,19 @@ Deno.serve(async (req) => {
             let flexContents = [];
 
             if (attendances.length === 0 && leaves.length === 0) {
-               flexContents.push({ type: "text", text: "NO RECORDED TRANSACTIONS FOR TODAY", color: "#635B5F", size: "xs", align: "center", weight: "bold" });
+               flexContents.push({ type: "text", text: "วันนี้ยังไม่มีการลงเวลาหรือการลา", color: "#635B5F", size: "xs", align: "center", weight: "bold" });
             } else {
                if (attendances.length > 0) {
-                  flexContents.push({ type: "text", text: "SHIFT RECORDINGS", weight: "bold", color: "#1A1A1A", size: "sm", margin: "md" });
+                  flexContents.push({ type: "text", text: "ลงเวลาเข้า-ออก", weight: "bold", color: "#1A1A1A", size: "sm", margin: "md" });
                   
                   const attendanceHeader = {
                       type: "box",
                       layout: "horizontal",
                       margin: "sm",
                       contents: [
-                          { type: "text", text: "EMPLOYEE", color: "#635B5F", size: "xxs", weight: "bold", flex: 4 },
-                          { type: "text", text: "CLOCK IN", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 },
-                          { type: "text", text: "CLOCK OUT", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 }
+                          { type: "text", text: "พนักงาน", color: "#635B5F", size: "xxs", weight: "bold", flex: 4 },
+                          { type: "text", text: "เข้า", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 },
+                          { type: "text", text: "ออก", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 }
                       ]
                   };
                   flexContents.push(attendanceHeader);
@@ -1009,16 +1012,16 @@ Deno.serve(async (req) => {
                }
 
                if (leaves.length > 0) {
-                  flexContents.push({ type: "text", text: "ACTIVE LEAVES", weight: "bold", color: "#1A1A1A", size: "sm", margin: "xl" });
+                  flexContents.push({ type: "text", text: "ลางาน", weight: "bold", color: "#1A1A1A", size: "sm", margin: "xl" });
                   
                   const leaveHeader = {
                       type: "box",
                       layout: "horizontal",
                       margin: "sm",
                       contents: [
-                          { type: "text", text: "EMPLOYEE", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 },
-                          { type: "text", text: "REASON", color: "#635B5F", size: "xxs", weight: "bold", flex: 4 },
-                          { type: "text", text: "STATUS", color: "#635B5F", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                          { type: "text", text: "พนักงาน", color: "#635B5F", size: "xxs", weight: "bold", flex: 3 },
+                          { type: "text", text: "เหตุผล", color: "#635B5F", size: "xxs", weight: "bold", flex: 4 },
+                          { type: "text", text: "สถานะ", color: "#635B5F", size: "xxs", weight: "bold", align: "end", flex: 3 }
                       ]
                   };
                   flexContents.push(leaveHeader);
@@ -1055,8 +1058,8 @@ Deno.serve(async (req) => {
                         backgroundColor: "#ECE4E7",
                         paddingAll: "20px",
                         contents: [
-                            { type: "text", text: "ATTENDANCE SUMMARY", weight: "bold", color: "#1A1A1A", size: "sm" },
-                            { type: "text", text: titleDateStr.toUpperCase(), color: "#635B5F", size: "xs", margin: "xs" }
+                            { type: "text", text: "สรุปการเข้างาน", weight: "bold", color: "#1A1A1A", size: "sm" },
+                            { type: "text", text: titleDateStr, color: "#635B5F", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -1169,7 +1172,7 @@ Deno.serve(async (req) => {
                         backgroundColor: "#ECE4E7",
                         paddingAll: "20px",
                         contents: [
-                          { type: "text", text: "ALL ACTIVE ORDERS", weight: "bold", color: "#41032A", size: "xs" },
+                          { type: "text", text: "ออเดอร์", weight: "bold", color: "#41032A", size: "xs" },
                           { type: "text", text: "สรุปออเดอร์ทุกโต๊ะในร้าน", weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                         ]
                       },
@@ -1264,7 +1267,7 @@ Deno.serve(async (req) => {
                     layout: "horizontal",
                     margin: "xs",
                     contents: [
-                      { type: "text", text: `${statusObj.text} · สั่งเมื่อ ${orderTimeStr}`, size: "xxs", weight: "bold", color: statusObj.color, flex: 8 },
+                      { type: "text", text: `${statusObj.text}, สั่งเมื่อ ${orderTimeStr}`, size: "xxs", weight: "bold", color: statusObj.color, flex: 8 },
                       { type: "text", text: `${b.pax || 1} PAX`, size: "xxs", color: "#635B5F", align: "end", flex: 2 }
                     ]
                   },
@@ -1313,8 +1316,8 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: "ALL ACTIVE TABLES", size: "xs", weight: "bold", color: "#41032A", flex: 7 },
-                      { type: "text", text: "PAGE 1/2", size: "xxs", color: "#635B5F", align: "end", flex: 3 }
+                      { type: "text", text: "โต๊ะที่มีลูกค้า", size: "xs", weight: "bold", color: "#41032A", flex: 7 },
+                      { type: "text", text: "หน้า 1/2", size: "xxs", color: "#635B5F", align: "end", flex: 3 }
                     ]
                   },
                   { type: "text", text: `สรุปออเดอร์สด (${bookings.length} โต๊ะกำลังทาน)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs", wrap: true }
@@ -1339,7 +1342,7 @@ Deno.serve(async (req) => {
                         flex: 6,
                         contents: [
                           { type: "text", text: "ยอดรวมทุกโต๊ะ (ยังไม่เช็คบิล)", size: "xxs", color: "#BEB4B9" },
-                          { type: "text", text: `${bookings.length} โต๊ะ · รวม ${totalPax} ท่าน`, size: "xs", weight: "bold", color: "#F6F2EA", margin: "xs" }
+                          { type: "text", text: `${bookings.length} โต๊ะ, รวม ${totalPax} ท่าน`, size: "xs", weight: "bold", color: "#F6F2EA", margin: "xs" }
                         ]
                       },
                       {
@@ -1374,8 +1377,8 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: "KITCHEN & BAR QUEUE", size: "xs", weight: "bold", color: "#D0B5C1", flex: 7 },
-                      { type: "text", text: "PAGE 2/2", size: "xxs", color: "#D0B5C1", align: "end", flex: 3 }
+                      { type: "text", text: "คิวครัวและบาร์", size: "xs", weight: "bold", color: "#D0B5C1", flex: 7 },
+                      { type: "text", text: "หน้า 2/2", size: "xxs", color: "#D0B5C1", align: "end", flex: 3 }
                     ]
                   },
                   { type: "text", text: "สรุปจำนวนจานที่ต้องเตรียมทั้งหมด", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs", wrap: true }
@@ -1510,8 +1513,8 @@ Deno.serve(async (req) => {
                     backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#41032A", size: "xs" },
-                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
+                      { type: "text", text: "เมนูขายดี", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `5 อันดับเมนูขายดี ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
@@ -1614,8 +1617,8 @@ Deno.serve(async (req) => {
                     backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#41032A", size: "xs" },
-                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
+                      { type: "text", text: "เมนูขายดี", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `5 อันดับเมนูขายดี ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
@@ -1765,7 +1768,7 @@ Deno.serve(async (req) => {
             let flexContents = [];
             
             if (results.length === 0) {
-               flexContents.push({ type: "text", text: "NO PRICES FOUND FOR KEYWORD", color: "#635B5F", size: "xs", align: "center", weight: "bold" });
+               flexContents.push({ type: "text", text: "ไม่พบราคาของคำนี้", color: "#635B5F", size: "xs", align: "center", weight: "bold" });
             } else {
                const displayItems = results.slice(0, 5)
                displayItems.forEach((r: any, i: number, arr: any[]) => {
@@ -1775,7 +1778,7 @@ Deno.serve(async (req) => {
                         type: "box", 
                         layout: "horizontal", 
                         contents: [
-                          { type: "text", text: r.title.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, flex: 7 },
+                          { type: "text", text: r.title, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, flex: 7 },
                           { type: "text", text: r.prices && r.prices.length > 0 ? `฿${r.prices[0]}` : "-", weight: "bold", size: "sm", color: "#41032A", align: "end", flex: 3 }
                         ]
                       }
@@ -1784,7 +1787,7 @@ Deno.serve(async (req) => {
                   if (r.prices && r.prices.length > 1) {
                       const otherPrices = r.prices.slice(1).map((p: number) => `฿${p}`).join(', ');
                       contents.push({
-                         type: "text", text: `RANGE: ${otherPrices}`, color: "#635B5F", size: "xs", margin: "xs"
+                         type: "text", text: `ช่วงราคา: ${otherPrices}`, color: "#635B5F", size: "xs", margin: "xs"
                       });
                   }
 
@@ -1800,7 +1803,7 @@ Deno.serve(async (req) => {
                   if (r.domain) {
                       contents.push({
                           type: "text",
-                          text: `SOURCE: ${r.domain.toUpperCase()}`,
+                          text: `ที่มา: ${r.domain}`,
                           color: "#635B5F",
                           size: "xxs",
                           margin: "xs",
@@ -1820,7 +1823,7 @@ Deno.serve(async (req) => {
                
                if (results.length > 5) {
                    flexContents.push({ type: "separator", margin: "md", color: "#D4CBCF" });
-                   flexContents.push({ type: "text", text: `(SHOWN 5 OF ${results.length} ENTRIES)`, color: "#635B5F", size: "xs", align: "center", margin: "md" });
+                   flexContents.push({ type: "text", text: `แสดง 5 จาก ${results.length} รายการ`, color: "#635B5F", size: "xs", align: "center", margin: "md" });
                }
             }
 
@@ -1834,8 +1837,8 @@ Deno.serve(async (req) => {
                         type: "box",
                         layout: "vertical",
                         contents: [
-                            { type: "text", text: "PRICE INDEX", weight: "bold", color: "#1A1A1A", size: "sm" },
-                            { type: "text", text: `SEARCH: "${keyword.toUpperCase()}"`, color: "#635B5F", size: "xs", margin: "xs" }
+                            { type: "text", text: "ราคากลาง", weight: "bold", color: "#1A1A1A", size: "sm" },
+                            { type: "text", text: `ค้นหา: ${keyword}`, color: "#635B5F", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -1937,8 +1940,8 @@ Deno.serve(async (req) => {
                     backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#41032A", size: "xs" },
-                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
+                      { type: "text", text: "ค่าใช้จ่าย", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `รายงานค่าใช้จ่าย ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
@@ -2017,8 +2020,8 @@ Deno.serve(async (req) => {
                     backgroundColor: "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#41032A", size: "xs" },
-                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
+                      { type: "text", text: "ค่าใช้จ่าย", weight: "bold", color: "#41032A", size: "xs" },
+                      { type: "text", text: `รายงานค่าใช้จ่าย ${titleDateStr}`, weight: "bold", color: "#1A1A1A", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
@@ -2159,11 +2162,11 @@ Deno.serve(async (req) => {
                       type: "box",
                       layout: "horizontal",
                       contents: [
-                        { type: "text", text: "HAUS POS", weight: "bold", size: "md", color: "#1A1A1A", flex: 6 },
-                        { type: "text", text: "LIVE SALES", weight: "bold", size: "xxs", color: "#41032A", align: "end", flex: 4, gravity: "center" }
+                        { type: "text", text: "ยอดขายวันนี้", weight: "bold", size: "md", color: "#1A1A1A", flex: 6 },
+                        { type: "text", text: "สดจาก POS", weight: "bold", size: "xxs", color: "#41032A", align: "end", flex: 4, gravity: "center" }
                       ]
                     },
-                    { type: "text", text: `รายงานยอดขายประจำวัน · ${titleDateStr}`, size: "xxs", color: "#635B5F", margin: "xs" }
+                    { type: "text", text: `รายงานยอดขาย ${titleDateStr}`, size: "xxs", color: "#635B5F", margin: "xs" }
                   ]
                 },
                 body: {
@@ -2201,13 +2204,13 @@ Deno.serve(async (req) => {
                           layout: "horizontal",
                           margin: "xs",
                           contents: [
-                            { type: "text", text: `${completed.length} บิลชำระแล้ว · เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล`, size: "xxs", color: "#41032A", flex: 1 }
+                            { type: "text", text: `${completed.length} บิลชำระแล้ว, เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล`, size: "xxs", color: "#41032A", flex: 1 }
                           ]
                         }
                       ]
                     },
                     { type: "separator", margin: "lg", color: "#D4CBCF" },
-                    { type: "text", text: "BREAKDOWN ช่องทางชำระเงิน", size: "xxs", weight: "bold", color: "#635B5F", margin: "md" },
+                    { type: "text", text: "ช่องทางชำระเงิน", size: "xxs", weight: "bold", color: "#635B5F", margin: "md" },
                     {
                       type: "box",
                       layout: "vertical",
@@ -2533,10 +2536,10 @@ Deno.serve(async (req) => {
             const peakCapacityLoad = Math.min(100, Math.round((maxPax / totalSeats) * 100))
 
             const daypartDefs = [
-              { key: 'lunch', title: 'LUNCH RUSH', hours: [11, 12, 13], timeLabel: '11.00 - 14.00 น.' },
-              { key: 'afternoon', title: 'AFTERNOON CAFE', hours: [14, 15, 16], timeLabel: '14.00 - 17.00 น.' },
-              { key: 'dinner', title: 'PRIME DINNER', hours: [17, 18, 19, 20], timeLabel: '17.00 - 21.00 น.' },
-              { key: 'late', title: 'LATE NIGHT / BAR', hours: [21, 22, 23], timeLabel: '21.00 - 23.00 น.' }
+              { key: 'lunch', title: 'ช่วงกลางวัน', hours: [11, 12, 13], timeLabel: '11.00 - 14.00 น.' },
+              { key: 'afternoon', title: 'ช่วงบ่าย', hours: [14, 15, 16], timeLabel: '14.00 - 17.00 น.' },
+              { key: 'dinner', title: 'ช่วงเย็น', hours: [17, 18, 19, 20], timeLabel: '17.00 - 21.00 น.' },
+              { key: 'late', title: 'ช่วงดึก', hours: [21, 22, 23], timeLabel: '21.00 - 23.00 น.' }
             ]
 
             const dayparts = daypartDefs.map(dp => {
@@ -2766,8 +2769,8 @@ Deno.serve(async (req) => {
                     layout: "horizontal",
                     margin: "xs",
                     contents: [
-                      { type: "text", text: `${tableName} · ${timeStr}`, size: "xxs", color: "#635B5F", flex: 7 },
-                      { type: "text", text: payMethod, size: "xxs", weight: "bold", color: "#41032A", align: "end", flex: 3 }
+                      { type: "text", text: `${tableName}, ${timeStr}`, size: "xxs", color: "#635B5F", flex: 7 },
+                      { type: "text", text: PAY_LABEL_TH[payMethod] || payMethod, size: "xxs", weight: "bold", color: "#41032A", align: "end", flex: 3 }
                     ]
                   },
                   {
@@ -2798,7 +2801,7 @@ Deno.serve(async (req) => {
                   backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "RECENT COMPLETED BILLS", size: "xs", weight: "bold", color: "#41032A" },
+                    { type: "text", text: "บิลล่าสุด", size: "xs", weight: "bold", color: "#41032A" },
                     { type: "text", text: `รายการบิลล่าสุดในระบบ (${bills.length} บิลล่าสุด)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs", wrap: true }
                   ]
                 },
@@ -2911,8 +2914,8 @@ Deno.serve(async (req) => {
                     backgroundColor: isOccupied ? "#ECE4E7" : "#ECE4E7",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "TABLE STATUS", size: "xs", weight: "bold", color: isOccupied ? "#41032A" : "#41032A" },
-                      { type: "text", text: matchedTable.table_name.toUpperCase(), size: "lg", weight: "bold", color: "#1A1A1A", margin: "xs" },
+                      { type: "text", text: "สถานะโต๊ะ", size: "xs", weight: "bold", color: isOccupied ? "#41032A" : "#41032A" },
+                      { type: "text", text: matchedTable.table_name, size: "lg", weight: "bold", color: "#1A1A1A", margin: "xs" },
                       { type: "text", text: isOccupied ? `สถานะ: มีลูกค้านั่ง (${activeBkg.pax || 1} ท่าน)` : "สถานะ: โต๊ะว่างพร้อมให้บริการ", size: "xs", color: isOccupied ? "#635B5F" : "#41032A", margin: "xs" }
                     ]
                   },
@@ -2988,7 +2991,7 @@ Deno.serve(async (req) => {
                   backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "ALL TABLES OVERVIEW", size: "xs", weight: "bold", color: "#41032A" },
+                    { type: "text", text: "ภาพรวมโต๊ะ", size: "xs", weight: "bold", color: "#41032A" },
                     { type: "text", text: `ภาพรวมโต๊ะอาหาร (${occupiedCount} จาก ${allTbls.length} โต๊ะมีลูกค้า)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs" },
                     { type: "text", text: `ยอดบิลที่ยังไม่เช็คบิลรวม: ฿${totalTblAmt.toLocaleString('th-TH')}`, size: "xxs", color: "#635B5F", margin: "xs" }
                   ]
@@ -3098,9 +3101,9 @@ Deno.serve(async (req) => {
                   backgroundColor: "#41032A",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "POS SHIFT STATUS", size: "xs", weight: "bold", color: "#D0B5C1" },
-                    { type: "text", text: isOpen ? "กะที่กำลังทำงานอยู่ (ACTIVE)" : "กะล่าสุด (CLOSED)", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs" },
-                    { type: "text", text: `พนักงาน: ${currentShift.staff_name || 'Staff'} · เปิดเมื่อ: ${openTimeStr}`, size: "xxs", color: "#D0B5C1", margin: "xs" }
+                    { type: "text", text: "กะ POS", size: "xs", weight: "bold", color: "#D0B5C1" },
+                    { type: "text", text: isOpen ? "กะที่เปิดอยู่" : "กะล่าสุด (ปิดแล้ว)", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs" },
+                    { type: "text", text: `พนักงาน: ${currentShift.staff_name || 'Staff'}, เปิดเมื่อ: ${openTimeStr}`, size: "xxs", color: "#D0B5C1", margin: "xs" }
                   ]
                 },
                 body: {
@@ -3296,7 +3299,7 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: `#${billNo} · ${tbl}`, weight: "bold", size: "xs", color: "#1A1A1A", flex: 7 },
+                      { type: "text", text: `#${billNo}, ${tbl}`, weight: "bold", size: "xs", color: "#1A1A1A", flex: 7 },
                       { type: "text", text: `฿${amt.toFixed(2)}`, weight: "bold", size: "xs", color: "#B42318", align: "end", flex: 3 }
                     ]
                   },
@@ -3319,7 +3322,7 @@ Deno.serve(async (req) => {
                   backgroundColor: "#ECE4E7",
                   paddingAll: "20px",
                   contents: [
-                    { type: "text", text: "VOID BILLS AUDIT", size: "xs", weight: "bold", color: "#B42318" },
+                    { type: "text", text: "บิลยกเลิก", size: "xs", weight: "bold", color: "#B42318" },
                     { type: "text", text: `รายงานบิลยกเลิกประจำวัน (${voidedData.length} รายการ)`, size: "md", weight: "bold", color: "#1A1A1A", margin: "xs" },
                     { type: "text", text: `ยอดเงินที่ยกเลิกรวม: ฿${totalVoidAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xxs", color: "#635B5F", margin: "xs" }
                   ]
@@ -3370,7 +3373,7 @@ Deno.serve(async (req) => {
                 backgroundColor: "#41032A",
                 paddingAll: "20px",
                 contents: [
-                  { type: "text", text: "IN THE HAUS · COMMAND MANUAL", size: "xs", weight: "bold", color: "#D0B5C1" },
+                  { type: "text", text: "คู่มือคำสั่ง", size: "xs", weight: "bold", color: "#D0B5C1" },
                   { type: "text", text: "สารบัญคำสั่งบอทสั่งงาน", size: "md", weight: "bold", color: "#F6F2EA", margin: "xs" }
                 ]
               },

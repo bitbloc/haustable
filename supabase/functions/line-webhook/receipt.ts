@@ -450,7 +450,7 @@ export function createReceiptFlexMessage(
       paddingAll: '20px',
       contents: [
         { type: 'text', text: merged ? 'รวมรูปเข้าบิลเดิมแล้ว' : 'บันทึกค่าใช้จ่ายแล้ว', color: BRAND.cream, size: 'md', weight: 'bold' },
-        { type: 'text', text: merged ? 'SAME BILL · NOT RECORDED TWICE' : 'EXPENSE RECORDED · AI', color: BRAND.onPlum2, size: 'xxs', margin: 'sm' },
+        { type: 'text', text: merged ? 'บิลเดิม ไม่นับซ้ำ' : 'อ่านจากรูปด้วย AI', color: BRAND.onPlum2, size: 'xxs', margin: 'sm' },
       ],
     },
     body: {
@@ -797,7 +797,7 @@ export async function handleReceiptEvents(
       if (dateReplaced) notes = notes ? `${notes} (อ่านวันที่ในบิลไม่ได้ ใช้วันที่ส่งแทน)` : 'อ่านวันที่ในบิลไม่ได้ ใช้วันที่ส่งแทน'
       if (conversionInfo) {
         const note = `แปลงจาก ${conversionInfo.symbol}${originalAmount.toFixed(2)} ${currency} @ ${conversionInfo.rate.toFixed(2)} บาท/${currency}`
-        if (!notes.includes(note)) notes = notes ? `${notes} · ${note}` : note
+        if (!notes.includes(note)) notes = notes ? `${notes}; ${note}` : note
       }
 
       // Pages of the same LINE image set that arrived earlier without a total join this bill.
