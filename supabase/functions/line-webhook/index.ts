@@ -1,6 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { buildStockSummaryMessage, buildRestockMessage, remainingText } from "./stockSummary.ts"
 import { handleReceiptEvents } from "./receipt.ts"
+import { installShopLogoOnLineMessages } from "./brand.ts"
+
+// Every Flex card the bot sends gets the shop logo in its header corner (brand.ts).
+installShopLogoOnLineMessages()
+import { claudeEnabled, generateWithClaude, CLAUDE_FAST_MODEL } from "../_shared/claude.ts"
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 
@@ -26,6 +31,11 @@ function parseBookingPayment(b: any) {
     return { cash, qr, credit, methodLabel: 'SPLIT' };
   }
   
+  const method = String(b.payment_method || '').toLowerCase();
+  if (method === 'cash') return { cash: total, qr: 0, credit: 0, methodLabel: 'CASH' };
+  if (method === 'qr' || method === 'transfer' || method === 'promptpay') return { cash: 0, qr: total, credit: 0, methodLabel: 'PROMPTPAY' };
+  if (method === 'credit' || method === 'card') return { cash: 0, qr: 0, credit: total, methodLabel: 'CREDIT' };
+
   if (remark.includes('credit') || remark.includes('card') || remark.includes('บัตร')) {
     return { cash: 0, qr: 0, credit: total, methodLabel: 'CREDIT' };
   }
@@ -206,7 +216,19 @@ Return ONLY a valid JSON object matching this schema:
 }
 `;
 
-  if (apiKey) {
+  if (claudeEnabled()) {
+    try {
+      const json = await generateWithClaude({
+        contents: [{ role: 'user', parts: [{ text: promptText }] }],
+        generationConfig: { response_mime_type: 'application/json' },
+      }, { model: CLAUDE_FAST_MODEL, timeoutMs: 25_000, maxRetries: 0, feature: 'line:stpredict' })
+      const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      const parsed = JSON.parse(rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
+      if (parsed?.sai_mu_oracle && parsed?.operational_advice) return parsed
+    } catch (err: any) {
+      console.warn('[Claude Traffic AI] failed:', err?.message)
+    }
+  } else if (apiKey) {
     const candidateModels = Array.from(new Set([
       preferredModel,
       'gemini-flash-latest',
@@ -257,9 +279,9 @@ Return ONLY a valid JSON object matching this schema:
   }
 
   // Deterministic Fallback if Gemini fails or is unconfigured
-  const peakHourStr = summaryPayload.peakHour || '19.00 น.';
+  const peakHourStr = summaryPayload.peakHour || 'ช่วงที่ลูกค้าเข้าแน่นของวันนี้';
   const primeDinner = summaryPayload.dayparts?.find((d: any) => d.key === 'dinner');
-  const dinnerForecast = primeDinner ? primeDinner.forecastPax : 35;
+  const dinnerForecast = primeDinner && Number.isFinite(Number(primeDinner.forecastPax)) ? primeDinner.forecastPax : null;
   const adDirs = summaryPayload.adStats?.totalAdDirections || 0;
 
   return {
@@ -270,7 +292,9 @@ Return ONLY a valid JSON object matching this schema:
       sai_mu_hack: saiMu.saiMuHacks
     },
     operational_advice: {
-      kitchen_bar: `เตรียมสำรองสต็อกวัตถุดิบและพรีเซตเครื่องดื่มล่วงหน้าก่อน 17.30 น. เพื่อรองรับ ~${dinnerForecast} ท่านช่วง Prime Dinner`,
+      kitchen_bar: dinnerForecast !== null
+        ? `เตรียมสำรองสต็อกวัตถุดิบและพรีเซตเครื่องดื่มล่วงหน้าก่อน 17.30 น. เพื่อรองรับ ~${dinnerForecast} ท่านช่วง Prime Dinner`
+        : 'เตรียมสำรองสต็อกวัตถุดิบและพรีเซตเครื่องดื่มล่วงหน้าก่อน 17.30 น. (ยังไม่มีข้อมูลพอคาดจำนวนลูกค้าช่วงเย็น)',
       floor_service: `จัดโซนโต๊ะรองรับกลุ่ม Walk-in ควบคู่กับลูกค้าที่โทร/LINE จองโต๊ะล่วงหน้าเพื่อการระบายรอบโต๊ะที่รวดเร็ว`,
       marketing_ads: adDirs > 0
         ? `พบสัญญาณลูกค้าขอเส้นทางใน Google Maps ${adDirs} ครั้ง เตรียมทีมหน้าร้านต้อนรับกลุ่มที่กำลังเดินทางมา`
@@ -706,19 +730,19 @@ Deno.serve(async (req) => {
               .select('id, name, category, unit, pack_unit, usage_unit, conversion_factor, current_quantity, min_stock_threshold, reorder_point, updated_at')
               .order('name', { ascending: true })
 
+            // stbuy: every item below its reorder point, however long ago it was last touched
+            // (the 3-day window hid items that ran out earlier, fixed 2026-11-26).
+            // stbuyback: only items that moved in the last 24 hours.
             if (isBuyback) {
                const dayAgo = new Date(new Date().getTime() - (24 * 60 * 60 * 1000)).toISOString()
                query = query.gte('updated_at', dayAgo)
-            } else {
-               const threeDaysAgo = new Date(new Date().getTime() - (3 * 24 * 60 * 60 * 1000)).toISOString()
-               query = query.gte('updated_at', threeDaysAgo)
             }
 
             const { data: items, error } = await query
 
             if (error) throw error
 
-            const periodTitle = isBuyback ? 'ของที่ต้องซื้อ (24 ชม.)' : 'ของที่ต้องซื้อ (3 วัน)'
+            const periodTitle = isBuyback ? 'ของที่ต้องซื้อ (เปลี่ยนใน 24 ชม.)' : 'ของที่ต้องซื้อทั้งหมด'
             const messages = [buildRestockMessage(items || [], periodTitle, dateStr)]
 
             const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
@@ -734,7 +758,7 @@ Deno.serve(async (req) => {
                  await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] })
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nลองใหม่อีกครั้ง หรือดูในหลังบ้าน` }] })
                 })
               }
             }
@@ -743,7 +767,7 @@ Deno.serve(async (req) => {
             await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการซื้อของ: ' + err.message }] })
+              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการซื้อของ\nลองใหม่อีกครั้งในอีกสักครู่' }] })
             })
           }
           continue
@@ -860,7 +884,7 @@ Deno.serve(async (req) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
                   },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nError: ${txt.substring(0, 100)}` }] }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nลองใหม่อีกครั้ง หรือดูในหลังบ้าน` }] }),
                 })
                 if (!pushResp.ok) console.error('LINE Push Failed:', await pushResp.text())
               }
@@ -875,7 +899,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อความผิดพลาดในการดึงข้อมูลสต็อก: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงข้อมูลสต็อก\nลองใหม่อีกครั้งในอีกสักครู่' }]
               }),
             })
           }
@@ -1066,7 +1090,7 @@ Deno.serve(async (req) => {
                  await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nลองใหม่อีกครั้ง หรือดูในหลังบ้าน` }] }),
                 })
               }
             }
@@ -1080,7 +1104,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลพนักงานได้: ' + apiErr.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลพนักงานได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               }),
             })
           }
@@ -1411,7 +1435,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -1627,7 +1651,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการคำนวณเมนูฮิต: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการคำนวณเมนูฮิต\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -1861,7 +1885,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลราคากลางได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลราคากลางได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               }),
             })
           }
@@ -2058,7 +2082,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -2087,7 +2111,7 @@ Deno.serve(async (req) => {
 
             const { data: bookingsData, error: bookingsErr } = await supabaseAdmin
               .from('bookings')
-              .select('id, total_amount, discount_amount, staff_remark, payment_slip_url, status, booking_type, booking_time')
+              .select('id, total_amount, discount_amount, staff_remark, payment_method, payment_slip_url, status, booking_type, booking_time')
               .gte('booking_time', dbStart)
               .lte('booking_time', dbEnd)
 
@@ -2269,7 +2293,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงยอดขายได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงยอดขายได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -2661,7 +2685,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถประมวลผลการทำนายได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถประมวลผลการทำนายได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -2675,7 +2699,7 @@ Deno.serve(async (req) => {
             const { data: bills, error: billsErr } = await supabaseAdmin
               .from('bookings')
               .select(`
-                id, tracking_token, total_amount, discount_amount, staff_remark, payment_slip_url, status, booking_type, booking_time, created_at,
+                id, tracking_token, total_amount, discount_amount, staff_remark, payment_method, payment_slip_url, status, booking_type, booking_time, created_at,
                 pickup_contact_name, customer_note, tables_layout ( table_name ),
                 order_items ( quantity, price_at_time, menu_items(name) )
               `)
@@ -2803,7 +2827,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายการบิลล่าสุดได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายการบิลล่าสุดได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -3003,7 +3027,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงสถานะโต๊ะได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงสถานะโต๊ะได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -3208,7 +3232,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลกะ POS ได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลกะ POS ได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -3325,7 +3349,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายงานบิลยกเลิกได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายงานบิลยกเลิกได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
