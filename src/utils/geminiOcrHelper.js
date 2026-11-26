@@ -78,6 +78,32 @@ export async function saveGeminiPreferredModel(modelName) {
 
 import { parseReceiptUrls, urlToBase64 } from './receiptImageHelper';
 
+// Fields the receipt prompt asks for (see systemInstruction in scanReceiptWithGemini).
+const RECEIPT_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+        title: { type: 'STRING' },
+        currency: { type: 'STRING', enum: ['THB', 'USD', 'EUR', 'SGD', 'JPY', 'GBP'] },
+        original_amount: { type: 'NUMBER' },
+        amount: { type: 'NUMBER' },
+        expense_date: { type: 'STRING', description: 'YYYY-MM-DD, Gregorian year' },
+        category: {
+            type: 'STRING',
+            enum: ['raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages',
+                'equipment_supplies', 'maintenance', 'software_service', 'other']
+        },
+        vendor_name: { type: 'STRING' },
+        vendor_tax_id: { type: 'STRING' },
+        doc_type: { type: 'STRING', enum: ['tax_invoice', 'cash_bill', 'receipt_voucher', 'slip_only'] },
+        vat_included: { type: 'BOOLEAN' },
+        payment_method: { type: 'STRING', enum: ['TRANSFER', 'CASH', 'CREDIT'] },
+        notes: { type: 'STRING' },
+        confidence: { type: 'NUMBER' }
+    },
+    required: ['title', 'currency', 'original_amount', 'amount', 'expense_date', 'category', 'vendor_name',
+        'vendor_tax_id', 'doc_type', 'vat_included', 'payment_method', 'notes', 'confidence']
+};
+
 export { parseReceiptUrls, urlToBase64 };
 
 /**
@@ -285,7 +311,9 @@ Payment Method Rules:
         },
         generationConfig: {
             response_mime_type: 'application/json',
-            temperature: 0.1
+            temperature: 0.1,
+            // Enforced on Claude (structured outputs): the reply always parses in this shape.
+            responseSchema: RECEIPT_SCHEMA
         }
     };
 

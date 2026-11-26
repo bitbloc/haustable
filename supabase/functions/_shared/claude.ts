@@ -29,6 +29,32 @@ export class ClaudeCallError extends Error {
   }
 }
 
+// Gemini responseSchema (OpenAPI subset, often upper-case types) -> the JSON
+// Schema subset Claude structured outputs accept: lower-case types,
+// additionalProperties:false on every object, no numeric/length constraints.
+export function geminiSchemaToJsonSchema(s: any): any {
+  if (!s || typeof s !== 'object') return s
+  const type = String(s.type || '').toLowerCase()
+  const out: any = {}
+  if (s.description) out.description = s.description
+  if (Array.isArray(s.enum)) out.enum = s.enum
+  if (type === 'object') {
+    out.type = 'object'
+    out.properties = Object.fromEntries(
+      Object.entries(s.properties || {}).map(([k, v]) => [k, geminiSchemaToJsonSchema(v)]),
+    )
+    if (Array.isArray(s.required)) out.required = s.required
+    out.additionalProperties = false
+  } else if (type === 'array') {
+    out.type = 'array'
+    if (s.items) out.items = geminiSchemaToJsonSchema(s.items)
+  } else if (type) {
+    out.type = type
+  }
+  if (s.nullable && out.type) return { anyOf: [out, { type: 'null' }] }
+  return out
+}
+
 function toBlocks(parts: any[]): any[] {
   const blocks: any[] = []
   for (const p of parts || []) {
@@ -74,7 +100,12 @@ export async function generateWithClaude(
   let system = systemParts.map((p: any) => p?.text || '').filter(Boolean).join('\n\n')
   const gen = request?.generationConfig || {}
   const wantsJson = /json/i.test(String(gen.response_mime_type || gen.responseMimeType || ''))
-  if (wantsJson) {
+  const schema = gen.responseSchema || gen.response_schema
+  // With a schema, structured outputs guarantee parseable JSON in that shape.
+  const outputConfig = schema
+    ? { output_config: { format: { type: 'json_schema', schema: geminiSchemaToJsonSchema(schema) } } }
+    : {}
+  if (wantsJson && !schema) {
     system = `${system}\n\nReturn only the JSON object: no markdown fences, no text before or after it.`.trim()
   }
 
@@ -88,15 +119,27 @@ export async function generateWithClaude(
 
   const maxTokens = Math.min(Math.max(Number(gen.maxOutputTokens || gen.max_output_tokens) || 16000, 1024), 32000)
 
+  const params: any = {
+    model,
+    max_tokens: maxTokens,
+    ...(system ? { system } : {}),
+    messages,
+    ...fallbackParams,
+  }
   let response: any
   try {
-    response = await (client.beta.messages.create as any)({
-      model,
-      max_tokens: maxTokens,
-      ...(system ? { system } : {}),
-      messages,
-      ...fallbackParams,
-    })
+    try {
+      response = await (client.beta.messages.create as any)({ ...params, ...outputConfig })
+    } catch (err) {
+      // Schema rejected: retry once as plain JSON-by-instruction so the feature keeps working.
+      if (!schema || !(err instanceof Anthropic.BadRequestError)) throw err
+      console.warn('[Claude] structured output rejected, retrying without schema:', err.message)
+      response = await (client.beta.messages.create as any)({
+        ...params,
+        system: [params.system, 'Return only the JSON object: no markdown fences, no text before or after it.']
+          .filter(Boolean).join('\n\n'),
+      })
+    }
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       throw new ClaudeCallError(err.status ?? 0, err.message)
