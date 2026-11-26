@@ -12,6 +12,7 @@
 // Access:   signed-in admins only (public.is_admin()).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { claudeEnabled, generateWithClaude, ClaudeCallError } from '../_shared/claude.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,7 +63,18 @@ Deno.serve(async (req) => {
   if (!MODEL_RE.test(model)) return reply({ ok: false, error: 'BAD_MODEL' }, 400)
   if (!body?.request || typeof body.request !== 'object') return reply({ ok: false, error: 'BAD_REQUEST' }, 400)
 
-  // 3. Key: function secret first, then the admin-only app_settings row.
+  // 3. While the Google project is suspended, run the same request on Claude.
+  if (claudeEnabled()) {
+    try {
+      const data = await generateWithClaude(body.request)
+      return reply({ ok: true, status: 200, data, provider: 'claude' })
+    } catch (e) {
+      const err = e as ClaudeCallError
+      return reply({ ok: false, status: err.status ?? 0, error: err.message, provider: 'claude' })
+    }
+  }
+
+  // 4. Gemini key: function secret first, then the admin-only app_settings row.
   let apiKey = Deno.env.get('GEMINI_API_KEY') ?? ''
   if (!apiKey) {
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
@@ -71,7 +83,7 @@ Deno.serve(async (req) => {
   }
   if (!apiKey) return reply({ ok: false, status: 0, error: 'MISSING_API_KEY' })
 
-  // 4. Call Gemini. Key goes in a header, never in the URL.
+  // 5. Call Gemini. Key goes in a header, never in the URL.
   try {
     const resp = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
       method: 'POST',
