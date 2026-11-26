@@ -226,6 +226,62 @@ export function splitStockLoss(stock, report) {
     };
 }
 
+/**
+ * Labour cost from the HR system (edge function hr-labor-cost -> HR /api/payroll/summary).
+ * Totals and per-day labour only, no names. Admin only; resolves to null when unavailable
+ * (not an admin, key not set, HR down) so pages can simply hide the labour figures.
+ */
+export async function fetchHrLabor(ym) {
+    try {
+        const { data, error } = await supabase.functions.invoke('hr-labor-cost', { body: { month: ym } });
+        if (error || !data?.ok) {
+            console.warn('[hr-labor-cost]', error?.message || data?.error);
+            return null;
+        }
+        return data.data;
+    } catch (err) {
+        console.warn('[hr-labor-cost]', err?.message || err);
+        return null;
+    }
+}
+
+/** Paid sales per Bangkok day for one month: [{ date: 'YYYY-MM-DD', sales, bills }]. */
+export async function fetchMonthDailySales(ym) {
+    const bills = await fetchPaidBills(ym);
+    return summarizeSales(bills, ym).daily.map((d) => ({
+        date: `${ym}-${String(d.day).padStart(2, '0')}`,
+        sales: d.sales,
+        bills: d.bills,
+    }));
+}
+
+/**
+ * Labour as a share of sales: per day, plus averages that matter more than any one day
+ * (a quiet rainy day has full labour and few sales). Averages use days that had sales,
+ * up to and including `uptoDate`.
+ */
+export function laborVsSales(dailySales, hrLabor, uptoDate) {
+    if (!hrLabor?.byDay) return null;
+    const laborOf = new Map(hrLabor.byDay.map((d) => [d.date, d.labor]));
+    const days = dailySales
+        .filter((d) => d.date <= uptoDate)
+        .map((d) => ({ date: d.date, sales: d.sales, labor: laborOf.get(d.date) || 0 }))
+        .map((d) => ({ ...d, pct: d.sales > 0 ? Math.round((d.labor / d.sales) * 1000) / 10 : null }));
+    const avgOf = (list) => {
+        const withSales = list.filter((d) => d.sales > 0);
+        const sales = withSales.reduce((s, d) => s + d.sales, 0);
+        const labor = withSales.reduce((s, d) => s + d.labor, 0);
+        return sales > 0 ? { pct: Math.round((labor / sales) * 1000) / 10, days: withSales.length, labor: round2(labor), sales: round2(sales) } : null;
+    };
+    const day = days.find((d) => d.date === uptoDate) || null;
+    return {
+        day,
+        last7: avgOf(days.slice(-7)),
+        monthToDate: avgOf(days),
+        days,
+    };
+}
+
 /** Everything the page and the AI prompt need for one month. */
 export async function buildMonthlyOwnerReport(ym) {
     const prevYm = stepMonth(ym, -1);
@@ -261,7 +317,7 @@ export async function buildMonthlyOwnerReport(ym) {
         stock: null, // filled by fetchMonthlyStock
         notes: [
             ...(partialDays ? [`เดือนนี้ยังไม่จบ (ข้อมูล ${partialDays} จาก ${daysInMonth(ym)} วัน) การเทียบกับเดือนก่อนซึ่งครบเดือนจึงดูต่ำกว่าความจริง`] : []),
-            'ค่าแรงในรายงานนี้มาจากค่าใช้จ่ายหมวดเงินเดือนที่บันทึกในหลังบ้านเท่านั้น ยังไม่ได้ดึงจากระบบ HR',
+            'ค่าแรงมาจากระบบ HR (ค่าแรงรายวันเป็นค่าประมาณ ดูค่าเฉลี่ยเป็นหลัก) ถ้าอ่านระบบ HR ไม่ได้ จะเหลือเฉพาะค่าใช้จ่ายหมวดเงินเดือนที่บันทึกในหลังบ้าน',
             'ร้านไม่ได้จดทะเบียน VAT: ยอดทั้งหมดเป็นยอดรวม ไม่แยกภาษี',
         ],
     };
@@ -278,7 +334,7 @@ ${JSON.stringify(report)}
 รูปแบบคำตอบ (ภาษาไทย อ่านง่าย ไม่ใช้ markdown ตัวหนา ไม่ใช้อีโมจิ):
 1. สรุปเดือนนี้ใน 3 บรรทัด: ยอดขายสุทธิ เทียบเดือนก่อน และผลต่างยอดขายกับค่าใช้จ่ายที่บันทึก
 2. ยอดขาย: วันไหนในสัปดาห์ขายดี/เงียบ ค่าเฉลี่ยต่อหัวและต่อบิล สัดส่วนทานที่ร้านกับซื้อกลับ เมนูที่ทำเงินและเมนูที่กำไรต่ำ
-3. ต้นทุน: สัดส่วนวัตถุดิบและค่าแรงต่อยอดขาย หมวดค่าใช้จ่ายที่สูงผิดปกติ (ถ้ามี)
+3. ต้นทุน: สัดส่วนวัตถุดิบต่อยอดขาย ค่าแรงจาก hrLabor (ใช้ค่าเฉลี่ยทั้งเดือนและ 7 วันเป็นหลัก รายวันแกว่งตามยอดขายเป็นปกติ อย่าทำให้ตกใจ) และยอด salesMinusExpensesAndHrLabor หมวดค่าใช้จ่ายที่สูงผิดปกติ (ถ้ามี)
 4. สต็อก: ของที่หายเกินจากที่ควรใช้ (มูลค่าบาท) และของเสียที่ทิ้ง ถ้าไม่มีการนับ ให้บอกตรงๆ รายการใน stock.suspect คือตัวเลขที่น่าจะเกิดจากหน่วยหรือต้นทุนต่อหน่วยตั้งผิด ไม่ใช่ของหายจริง ให้แนะนำให้ตรวจการตั้งค่า อย่านับเป็นความเสียหาย
 5. สิ่งที่ควรทำเดือนหน้า 3 ข้อ เรียงจากคุ้มที่สุด แต่ละข้อบอกตัวเลขที่ใช้ตัดสินใจ
 
