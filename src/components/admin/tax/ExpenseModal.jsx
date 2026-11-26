@@ -27,8 +27,13 @@ import {
 import { 
     parseReceiptUrls, 
     joinReceiptUrls, 
-    compressImageFile, 
-    uploadReceiptToStorage 
+    compressImageFile,
+    uploadReceiptToStorage,
+    isPdfFile,
+    readFileAsDataUrl,
+    pdfFileToPageImages,
+    MAX_PDF_BYTES,
+    MAX_PDF_PAGES
 } from '../../../utils/receiptImageHelper';
 import { checkDuplicateExpense } from '../../../utils/duplicateDetector';
 import { toBangkokDateKey } from '../../../utils/thaiTaxHelper';
@@ -192,10 +197,10 @@ export default function ExpenseModal({
 
             if (data.conversion) {
                 setConversionNotice(data.conversion);
-                toast.success(`Gemini AI: แปลงค่าเงิน ${data.conversion.currency} เป็นบาทสำเร็จ: ฿${Number(data.amount || 0).toLocaleString()} (เรท ~${data.conversion.rate})`);
+                toast.success(`AI: แปลงค่าเงิน ${data.conversion.currency} เป็นบาทสำเร็จ: ฿${Number(data.amount || 0).toLocaleString()} (เรท ~${data.conversion.rate})`);
             } else {
                 setConversionNotice(null);
-                toast.success(`Gemini AI ประมวลผลสำเร็จ: ${data.vendor_name || 'บิล'} ฿${Number(data.amount || 0).toLocaleString()}`);
+                toast.success(`AI อ่านบิลสำเร็จ: ${data.vendor_name || 'บิล'} ฿${Number(data.amount || 0).toLocaleString()}`);
             }
 
             setAiScannedSuccess(true);
@@ -235,27 +240,50 @@ export default function ExpenseModal({
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
 
+        const tooBig = files.find(f => isPdfFile(f) && f.size > MAX_PDF_BYTES);
+        if (tooBig) {
+            toast.error(`ไฟล์ PDF ใหญ่เกิน ${MAX_PDF_BYTES / 1024 / 1024} MB: ${tooBig.name}`);
+            if (e.target) e.target.value = '';
+            return;
+        }
+
         try {
-            // 1. Process local compression for immediate zero-latency UI preview & OCR
-            const compressedResults = await Promise.all(
-                files.map(file => compressImageFile(file, 1800, 0.90))
-            );
+            // 1. Photos are compressed; PDF pages are rendered to JPEGs, so they are stored and
+            //    shown like photos. The AI reads the original PDF (text layer) instead of its pages.
+            const compressedResults = [];
+            const ocrSources = [];
+            let pdfPagesCut = false;
+            for (const file of files) {
+                if (isPdfFile(file)) {
+                    const { pages, totalPages } = await pdfFileToPageImages(file, 1800, 0.90);
+                    if (totalPages > MAX_PDF_PAGES) pdfPagesCut = true;
+                    compressedResults.push(...pages);
+                    ocrSources.push(await readFileAsDataUrl(file, 'application/pdf'));
+                } else {
+                    const r = await compressImageFile(file, 1800, 0.90);
+                    compressedResults.push(r);
+                    ocrSources.push(r.base64);
+                }
+            }
 
             const base64List = compressedResults.map(r => r.base64);
             const initialCombined = joinReceiptUrls(base64List);
             setReceiptImage(initialCombined);
             setZoomPageIndex(0);
-            toast.success(`แนบภาพเอกสาร ${files.length} แผ่นเรียบร้อย`);
+            toast.success(`แนบเอกสาร ${base64List.length} แผ่นเรียบร้อย`);
+            if (pdfPagesCut) {
+                toast.info(`PDF ยาวเกิน ${MAX_PDF_PAGES} หน้า เก็บไว้เฉพาะ ${MAX_PDF_PAGES} หน้าแรก`);
+            }
 
             // 2. Auto Trigger AI Scan if enabled
             if (autoScanEnabled && !existingExpense) {
-                handleAiScan(base64List);
+                handleAiScan(ocrSources);
             }
 
             // 3. Concurrently upload to Supabase Storage in background for persistent public URLs
             Promise.all(compressedResults.map(r => uploadReceiptToStorage(r.blob))).then(uploadedUrls => {
                 const validUrls = uploadedUrls.filter(Boolean);
-                if (validUrls.length === files.length) {
+                if (validUrls.length === compressedResults.length) {
                     setReceiptImage(joinReceiptUrls(validUrls));
                 }
             }).catch(err => {
@@ -534,7 +562,7 @@ export default function ExpenseModal({
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf"
                                 multiple
                                 onChange={handleImageUpload}
                                 className="hidden"

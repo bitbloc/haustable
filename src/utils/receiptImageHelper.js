@@ -134,6 +134,64 @@ export function compressImageFile(file, maxDimension = 1800, quality = 0.90) {
     });
 }
 
+// PDF bills (supplier tax invoices, utility bills): pages are stored as JPEGs
+// like photos, so every screen that shows or prints receipts works unchanged.
+// The original PDF goes only to the AI reader, which reads its text layer.
+export const MAX_PDF_BYTES = 8 * 1024 * 1024; // stays under gemini-proxy's request limit once base64-encoded
+export const MAX_PDF_PAGES = 6;
+
+export function isPdfFile(file) {
+    return file?.type === 'application/pdf' || /\.pdf$/i.test(file?.name || '');
+}
+
+export function readFileAsDataUrl(file, mimeOverride = null) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = String(reader.result || '');
+            resolve(mimeOverride ? result.replace(/^data:[^;]*;/, `data:${mimeOverride};`) : result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Renders each PDF page to a compressed JPEG (same shape as compressImageFile).
+ * @returns {Promise<{ pages: { base64: string, blob: Blob }[], totalPages: number }>}
+ */
+export async function pdfFileToPageImages(file, maxDimension = 1800, quality = 0.90) {
+    const pdfjs = await import('pdfjs-dist');
+    const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+    const doc = await loadingTask.promise;
+    const pages = [];
+    try {
+        const count = Math.min(doc.numPages, MAX_PDF_PAGES);
+        for (let i = 1; i <= count; i++) {
+            const page = await doc.getPage(i);
+            const base = page.getViewport({ scale: 1 });
+            const scale = maxDimension / Math.max(base.width, base.height);
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(viewport.width);
+            canvas.height = Math.round(viewport.height);
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; // PDF pages without a background would turn black as JPEG
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+            const base64 = canvas.toDataURL('image/jpeg', quality);
+            const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', quality));
+            pages.push({ base64, blob });
+        }
+        return { pages, totalPages: doc.numPages };
+    } finally {
+        await loadingTask.destroy();
+    }
+}
+
 /**
  * Uploads an image blob or file to Supabase Storage 'receipts' bucket.
  * @param {Blob|File} fileOrBlob 
