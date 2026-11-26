@@ -2,8 +2,8 @@
  * Stock summary card for the LINE bot (commands stday / stback / sthour).
  *
  * One line per item, grouped by category: what came in, what went out, how often it was
- * counted, and the stock left NOW. Part-opened stock reads as whole units plus a quarter
- * the eye can check (¼ ½ ¾); the database keeps its exact numbers.
+ * counted, and the stock left NOW, written as the web count sheet writes it
+ * ("1 กก. 700 ก.", "2 ขวด + เปิดอยู่ 1 เหลือ 40%", "ติดลบ 3 ขวด"); the database keeps exact numbers.
  *
  * Pure module (no Deno APIs) so the unit tests can run it under vitest.
  */
@@ -142,8 +142,10 @@ export function quarterText(value: number): string {
  */
 export function remainingText(qty: number, units?: string | StockUnits | null): string {
   const item: StockUnits = typeof units === 'object' && units ? units : { unit: units as string | null }
-  const u = unitLabel(item.unit || item.pack_unit)
-  const v = Math.max(0, Number(qty) || 0)
+  const n = Number(qty) || 0
+  // Sold more than was received: say so, never show it as "หมด" (same as the web count sheet)
+  if (n < -EPS) return `ติดลบ ${remainingText(-n, item)}`
+  const v = Math.max(0, n)
   if (v <= EPS) return 'หมด'
   const per = piecesPerUnit(item)
   if (per) {
@@ -154,25 +156,67 @@ export function remainingText(qty: number, units?: string | StockUnits | null): 
     const said = piecesText(v, item, per)
     return whole ? `${total} ${unitLabel(item.usage_unit)} (${said})` : `${total} ${unitLabel(item.usage_unit)}`
   }
-  const whole = Math.floor(v + EPS)
-  const rest = v - whole
-  const part = quarterText(rest)
-  const hasPart = rest > 0.02 && part !== '0'
-  if (whole === 0) return `เปิดแล้ว ${part} ${u}`.trim()
-  if (!hasPart || part === '1') return `${quarterText(v)} ${u}`.trim()
-  return `${whole} ${u} + เปิด ${part}`.replace(/\s+/g, ' ').trim()
+  return amountText(v, item)
 }
 
 export function changeText(delta: number, units?: string | StockUnits | null): string {
   const item: StockUnits = typeof units === 'object' && units ? units : { unit: units as string | null }
   const v = Number(delta) || 0
   if (Math.abs(v) <= EPS) return '0'
+  const sign = v > 0 ? '+' : '-'
   const per = piecesPerUnit(item)
   if (per) {
     const said = piecesText(v, item, per)
-    return said ? `${v > 0 ? '+' : '-'}${said}` : '0'
+    return said ? `${sign}${said}` : '0'
   }
-  return `${v > 0 ? '+' : '-'}${quarterText(v)} ${unitLabel(item.unit || item.pack_unit)}`.trim()
+  // Packs of grams / ml read as packs and loose rest; a change in counted units is a plain
+  // number ("-0.65 กล่อง"), since "opened one, 35% left" describes a shelf, not a movement.
+  const low = (x: unknown) => String(x ?? '').trim().toLowerCase()
+  if (Number(item.conversion_factor) > 1 && LOOSE_UNIT[low(item.usage_unit)]) {
+    const text = amountText(Math.abs(v), item)
+    return text === '0' ? '0' : `${sign}${text}`
+  }
+  const r = Math.round(Math.abs(v) * 100) / 100
+  return r ? `${sign}${r.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${unitLabel(item.unit || item.pack_unit)}`.trim() : '0'
+}
+
+// Short units for the loose remainder, as the web writes them ("1 กก. 700 ก.")
+const LOOSE_UNIT: Record<string, string> = { g: 'ก.', ml: 'มล.' }
+const MEASURED_UNITS = new Set(['kg', 'g', 'l', 'ml', 'litre', 'liter', 'กก', 'กก.', 'กรัม', 'ลิตร', 'มล.', 'มล'])
+
+/**
+ * A positive amount the way the web count sheet says it (src/utils/stockCount.js):
+ * - packs of grams / millilitres: whole packs and the loose rest, "1 กก. 700 ก.", "5 แกลลอน 967 มล."
+ * - weighed or poured with no pack size: the number, "2.35 กก."
+ * - counted units: whole units, and an opened one by how much is left, "2 ขวด + เปิดอยู่ 1 เหลือ 40%"
+ */
+function amountText(v: number, item: StockUnits): string {
+  const low = (x: unknown) => String(x ?? '').trim().toLowerCase()
+  const unit = item.unit || item.pack_unit
+  const u = unitLabel(unit)
+  const usage = low(item.usage_unit)
+  const f = Number(item.conversion_factor) || 0
+  if (f > 1 && LOOSE_UNIT[usage]) {
+    const totalUsage = Math.round(v * f)
+    let packs = Math.floor((totalUsage + 1e-9) / f)
+    let rest = Math.round(totalUsage - packs * f)
+    if (rest >= f) { packs += 1; rest = 0 }
+    if (!packs && !rest) return `<1 ${LOOSE_UNIT[usage]}`
+    const parts: string[] = []
+    if (packs > 0) parts.push(`${packs.toLocaleString('th-TH')} ${u}`.trim())
+    if (rest > 0) parts.push(`${rest.toLocaleString('th-TH')} ${LOOSE_UNIT[usage]}`)
+    return parts.join(' ')
+  }
+  if (MEASURED_UNITS.has(low(unit))) {
+    const r = Math.round(v * 100) / 100
+    return r ? `${r.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ${u}`.trim() : '0'
+  }
+  let whole = Math.floor(v + EPS)
+  let pct = Math.round((v - whole) * 100)
+  if (pct >= 100) { whole += 1; pct = 0 }
+  if (!pct) return whole ? `${whole.toLocaleString('th-TH')} ${u}`.trim() : '0'
+  const open = `เปิดอยู่ 1 เหลือ ${pct}%`
+  return whole ? `${whole.toLocaleString('th-TH')} ${u} + ${open}` : open
 }
 
 type Status = 'out' | 'low' | 'reorder' | 'ok'
@@ -260,7 +304,7 @@ function activityText(s: ItemSummary): string {
     const adj = Math.abs(s.countAdjust) > EPS && changeText(s.countAdjust, s.units) !== '0' ? ` (${changeText(s.countAdjust, s.units)})` : ''
     parts.push(s.counts > 1 ? `นับ ${s.counts} ครั้ง${adj}` : `นับแล้ว${adj}`)
   }
-  return parts.join(' · ') || 'ไม่มีการเปลี่ยนแปลง'
+  return parts.join(', ') || 'ไม่มีการเปลี่ยนแปลง'
 }
 
 function itemRow(s: ItemSummary, detail: string = activityText(s)) {
@@ -281,14 +325,14 @@ function itemRow(s: ItemSummary, detail: string = activityText(s)) {
       {
         type: 'box', layout: 'vertical', flex: 4, contents: [
           { type: 'text', text: remainingText(s.current, s.units), size: 'sm', weight: 'bold', color: s.status === 'ok' ? C.ink : st.color, align: 'end', wrap: true },
-          ...(st.label && st.label !== remainingText(s.current, s.units) ? [{ type: 'text', text: st.label, size: 'xs', weight: 'bold', color: st.color, align: 'end', margin: 'xs' }] : []),
+          ...(st.label && st.label !== remainingText(s.current, s.units) && !remainingText(s.current, s.units).startsWith('ติดลบ') ? [{ type: 'text', text: st.label, size: 'xs', weight: 'bold', color: st.color, align: 'end', margin: 'xs' }] : []),
         ],
       },
     ],
   }
 }
 
-function bubble(title: string, subtitle: string, body: any[], tag = 'STOCK') {
+function bubble(title: string, subtitle: string, body: any[], _tag = '') {
   return {
     type: 'bubble',
     size: 'mega',
@@ -297,7 +341,6 @@ function bubble(title: string, subtitle: string, body: any[], tag = 'STOCK') {
       contents: [
         { type: 'text', text: title, size: 'lg', weight: 'bold', color: C.onPlum, wrap: true },
         { type: 'text', text: subtitle || '-', size: 'sm', color: C.onPlum2, margin: 'sm', wrap: true },
-        { type: 'text', text: tag, size: 'xxs', color: C.onPlum2, margin: 'md' },
       ],
     },
     body: { type: 'box', layout: 'vertical', paddingAll: '20px', paddingTop: '8px', backgroundColor: C.paper, contents: body },
@@ -369,7 +412,7 @@ export function buildStockSummaryMessage(transactions: StockTx[], periodTitle: s
     for (let p = 0; p < pages; p++) {
       const slice = g.items.slice(p * ITEMS_PER_BUBBLE, (p + 1) * ITEMS_PER_BUBBLE)
       const title = pages > 1 ? `${g.label} (${p + 1}/${pages})` : g.label
-      bubbles.push(bubble(title, `${g.items.length} รายการ · ${dateStr}`, [columnHead, { type: 'separator', margin: 'sm', color: C.rule }, ...slice.map(s => itemRow(s))], 'STOCK'))
+      bubbles.push(bubble(title, `${g.items.length} รายการ, ${dateStr}`, [columnHead, { type: 'separator', margin: 'sm', color: C.rule }, ...slice.map(s => itemRow(s))], 'STOCK'))
     }
   }
 
@@ -386,7 +429,7 @@ export function buildStockSummaryMessage(transactions: StockTx[], periodTitle: s
 
   return {
     type: 'flex',
-    altText: `${periodTitle} · ${all.length} รายการ${attention.length ? ` · ต้องดูแล ${attention.length}` : ''}`.slice(0, 400),
+    altText: `${periodTitle}, ${all.length} รายการ${attention.length ? `, ต้องดูแล ${attention.length}` : ''}`.slice(0, 400),
     contents: { type: 'carousel', contents: shown },
   }
 }
@@ -411,7 +454,7 @@ export function buildRestockMessage(items: RestockItem[], periodTitle: string, d
   if (need.length === 0) {
     return {
       type: 'flex',
-      altText: `${periodTitle} · ไม่มีของต้องซื้อ`,
+      altText: `${periodTitle}, ไม่มีของต้องซื้อ`,
       contents: bubble(periodTitle, dateStr, [
         { type: 'text', text: 'ไม่มีของต้องซื้อ ทุกรายการยังอยู่เหนือจุดสั่ง', size: 'sm', color: C.ink, wrap: true, margin: 'md' },
       ], 'RESTOCK'),
@@ -452,7 +495,7 @@ export function buildRestockMessage(items: RestockItem[], periodTitle: string, d
         )
       }
       body.push(columnHead, { type: 'separator', margin: 'sm', color: C.rule }, ...slice.map(s => itemRow(s, detail(s))))
-      bubbles.push(bubble(title, `${periodTitle} · ${dateStr}`, body, 'RESTOCK'))
+      bubbles.push(bubble(title, `${periodTitle}, ${dateStr}`, body, 'RESTOCK'))
     }
   }
 
@@ -468,7 +511,7 @@ export function buildRestockMessage(items: RestockItem[], periodTitle: string, d
 
   return {
     type: 'flex',
-    altText: `${periodTitle} · ต้องซื้อ ${all.length} รายการ`.slice(0, 400),
+    altText: `${periodTitle}, ต้องซื้อ ${all.length} รายการ`.slice(0, 400),
     contents: shown.length === 1 ? shown[0] : { type: 'carousel', contents: shown },
   }
 }
