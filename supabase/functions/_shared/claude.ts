@@ -6,6 +6,7 @@
 // AI_PROVIDER=gemini) to go back to Gemini once the project is restored.
 
 import Anthropic from 'npm:@anthropic-ai/sdk'
+import { logAiUsage } from './aiUsage.ts'
 
 // Model per job (owner decision 2026-11-26): accuracy work (receipt OCR, the
 // sales briefing) runs on Claude Opus 5.5; high-volume work (Yuzu slip reading)
@@ -83,12 +84,12 @@ function toBlocks(parts: any[]): any[] {
  */
 export async function generateWithClaude(
   request: any,
-  opts: { timeoutMs?: number; model?: string } = {},
+  opts: { timeoutMs?: number; model?: string; maxRetries?: number; retryWithoutSchema?: boolean; feature?: string } = {},
 ): Promise<any> {
   const client = new Anthropic({
     apiKey: Deno.env.get('ANTHROPIC_API_KEY'),
     timeout: opts.timeoutMs ?? 90_000,
-    maxRetries: 1,
+    maxRetries: opts.maxRetries ?? 1,
   })
   const model = opts.model || Deno.env.get('CLAUDE_MODEL') || DEFAULT_MODEL
   // Server-side refusal fallbacks exist for Opus/Sonnet; Haiku 5.5 has none.
@@ -137,7 +138,7 @@ export async function generateWithClaude(
       response = await (client.beta.messages.create as any)({ ...params, ...outputConfig })
     } catch (err) {
       // Schema rejected: retry once as plain JSON-by-instruction so the feature keeps working.
-      if (!schema || !(err instanceof Anthropic.BadRequestError)) throw err
+      if (!schema || opts.retryWithoutSchema === false || !(err instanceof Anthropic.BadRequestError)) throw err
       console.warn('[Claude] structured output rejected, retrying without schema:', err.message)
       response = await (client.beta.messages.create as any)({
         ...params,
@@ -151,6 +152,9 @@ export async function generateWithClaude(
     }
     throw new ClaudeCallError(0, `NETWORK: ${(err as Error)?.message ?? err}`)
   }
+
+  // Every answered call is billed, refusals included: log it before any check.
+  await logAiUsage({ source: 'haustable', feature: opts.feature || 'other', model: response.model || model, usage: response.usage || {} })
 
   if (response.stop_reason === 'refusal') {
     throw new ClaudeCallError(422, `REFUSED: ${response.stop_details?.category ?? 'unknown'}`)

@@ -23,6 +23,7 @@ import { withoutSecretSettings } from './utils/secretSettingKeys'
 const AdminExecutiveDataVizDashboard = lazy(() => import('./components/admin/overview/AdminExecutiveDataVizDashboard'))
 const IntradayVelocityDaypartCockpit = lazy(() => import('./components/admin/financial/IntradayVelocityDaypartCockpit'))
 const LaborVsSalesCard = lazy(() => import('./components/admin/overview/LaborVsSalesCard'))
+const AiCostCard = lazy(() => import('./components/admin/overview/AiCostCard'))
 const LiveFloorQuickStatus = lazy(() => import('./components/admin/overview/LiveFloorQuickStatus'))
 const AdminShiftsLedgerTab = lazy(() => import('./components/admin/overview/AdminShiftsLedgerTab'))
 const AllDailyBillsHub = lazy(() => import('./components/admin/overview/AllDailyBillsHub'))
@@ -845,6 +846,9 @@ export default function AdminDashboard() {
 
                         {/* 0.5 Labour vs sales (analytics only, owner 2026-11-26; hides without HR data) */}
                         <LaborVsSalesCard selectedDate={selectedDate} />
+
+                        {/* 0.6 Estimated AI spend (analytics only, owner 2026-11-26; admin only) */}
+                        <AiCostCard selectedDate={selectedDate} />
 
                         {/* 1. Omni-Date Online & Advance Orders Hub */}
                         <OnlineAdvanceOrdersHub 
