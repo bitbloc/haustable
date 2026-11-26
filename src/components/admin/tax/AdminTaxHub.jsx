@@ -23,6 +23,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { formatTaxId, formatBranch, toBangkokDateKey, bangkokYearStartIso, isTaxableSale, bookingSaleAmount } from '../../../utils/thaiTaxHelper';
 import { toast } from 'sonner';
 import { logStaffActivity } from '../../../utils/auditLogger';
+import { SECRET_SETTING_KEYS, withoutSecretSettings } from '../../../utils/secretSettingKeys';
 
 // Sub Tabs Components
 import SalesTaxReportTab from './SalesTaxReportTab';
@@ -130,9 +131,10 @@ export default function AdminTaxHub() {
                     .select('key, value');
 
                 if (isMounted && settingsData) {
+                    // Secrets (API keys, LINE token, PIN) stay out of page state and localStorage
                     const mapped = {};
                     settingsData.forEach(item => {
-                        mapped[item.key] = item.value;
+                        if (!SECRET_SETTING_KEYS.has(item.key)) mapped[item.key] = item.value;
                     });
                     setCompanySettings(mapped);
                     localStorage.setItem('onhaus_tax_settings', JSON.stringify(mapped));
@@ -140,7 +142,7 @@ export default function AdminTaxHub() {
             } catch {
                 if (isMounted) {
                     const localSettings = localStorage.getItem('onhaus_tax_settings');
-                    if (localSettings) setCompanySettings(JSON.parse(localSettings));
+                    if (localSettings) setCompanySettings(withoutSecretSettings(JSON.parse(localSettings)));
                 }
             }
 

@@ -25,7 +25,8 @@ import {
 import { supabase } from '../../../lib/supabaseClient';
 import { validateThaiTaxId, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
 import { saveTaxCustomerProfile } from '../../../utils/taxCustomerDirectory';
-import { GEMINI_SUPPORTED_MODELS } from '../../../utils/geminiOcrHelper';
+import { GEMINI_SUPPORTED_MODELS, saveGeminiApiKey } from '../../../utils/geminiOcrHelper';
+import { withoutSecretSettings } from '../../../utils/secretSettingKeys';
 import { toast } from 'sonner';
 
 export default function TaxSettingsTab({ 
@@ -55,10 +56,11 @@ export default function TaxSettingsTab({
         tax_signature_position: 'ผู้จัดการร้าน / กรรมการผู้มีอำนาจ',
         tax_signature_image: localStorage.getItem('onhaus_tax_signature_image') || '',
         tax_signature_enabled: 'true',
-        gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || '',
         gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-4-argon'
     });
 
+    // Write-only: a new key typed here is saved, the stored key is never shown
+    const [newGeminiKey, setNewGeminiKey] = useState('');
     const [saving, setSaving] = useState(false);
     const [signatureMode, setSignatureMode] = useState('draw'); // 'draw' | 'upload'
     const canvasRef = useRef(null);
@@ -75,7 +77,7 @@ export default function TaxSettingsTab({
         if (companySettings && Object.keys(companySettings).length > 0) {
             setSettings(prev => ({
                 ...prev,
-                ...companySettings
+                ...withoutSecretSettings(companySettings)
             }));
         }
         fetchCustomerDirectory();
@@ -205,7 +207,7 @@ export default function TaxSettingsTab({
     const handleSaveSettings = async () => {
         setSaving(true);
         try {
-            const entries = Object.entries(settings).map(([key, value]) => ({
+            const entries = Object.entries(withoutSecretSettings(settings)).map(([key, value]) => ({
                 key,
                 value: String(value)
             }));
@@ -217,13 +219,15 @@ export default function TaxSettingsTab({
                 console.warn('app_settings upsert error:', e);
             }
 
+            if (newGeminiKey.trim()) {
+                await saveGeminiApiKey(newGeminiKey.trim());
+                setNewGeminiKey('');
+            }
+
             // 2. LocalStorage Sync
-            localStorage.setItem('onhaus_tax_settings', JSON.stringify(settings));
+            localStorage.setItem('onhaus_tax_settings', JSON.stringify(withoutSecretSettings(settings)));
             if (settings.tax_signature_image) {
                 localStorage.setItem('onhaus_tax_signature_image', settings.tax_signature_image);
-            }
-            if (settings.gemini_api_key) {
-                localStorage.setItem('onhaus_gemini_api_key', settings.gemini_api_key.trim());
             }
             if (settings.gemini_model) {
                 localStorage.setItem('onhaus_gemini_model', settings.gemini_model.trim());
@@ -874,14 +878,15 @@ export default function TaxSettingsTab({
                         <div className="relative">
                             <input
                                 type="password"
-                                value={settings.gemini_api_key}
-                                onChange={(e) => handleSettingChange('gemini_api_key', e.target.value)}
-                                placeholder="AIzaSy..."
+                                value={newGeminiKey}
+                                onChange={(e) => setNewGeminiKey(e.target.value)}
+                                autoComplete="off"
+                                placeholder="กรอกเฉพาะเมื่อต้องการเปลี่ยน key"
                                 className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                             />
                         </div>
                         <span className="text-xs text-[var(--color-neutral)] tabular-nums mt-1 block">
-                            สมัครและรับ API Key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
+                            Key เก็บไว้ที่เซิร์ฟเวอร์ ไม่แสดงในหน้านี้และไม่อยู่ในเครื่อง ตอนสร้าง key ให้จำกัดใช้ได้เฉพาะ Generative Language API · รับ API Key ได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
                         </span>
                     </div>
 

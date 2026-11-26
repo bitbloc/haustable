@@ -17,6 +17,7 @@ import SimplifiedBillsSummaryList from './components/admin/overview/SimplifiedBi
 import { AdminSkeletonRows } from './components/admin/AdminKit'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from './utils/tableTransferHelper'
 import { computeDailyOverviewMetrics } from './utils/overviewMetricsHelper'
+import { withoutSecretSettings } from './utils/secretSettingKeys'
 
 // Pro Analytics blocks load only when that mode is opened (keeps Live Now light)
 const AdminExecutiveDataVizDashboard = lazy(() => import('./components/admin/overview/AdminExecutiveDataVizDashboard'))
@@ -125,7 +126,8 @@ export default function AdminDashboard() {
             try {
                 const { data } = await supabase.from('app_settings').select('key, value');
                 if (data && data.length > 0) {
-                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    // Secrets stay out of page state and localStorage
+                    const settingsMap = withoutSecretSettings(data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {}));
                     setCompanySettings(settingsMap);
                     try {
                         localStorage.setItem('onhaus_tax_settings', JSON.stringify(settingsMap));
