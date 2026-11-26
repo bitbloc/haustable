@@ -358,7 +358,7 @@ export default function ExpenseLedgerPrintView({
                                         <div className="space-y-1 text-right">
                                             <div>
                                                 <span className="text-zinc-600 font-mono">เลขประจำตัวผู้เสียภาษีอากร: </span>
-                                                <strong className="font-mono text-zinc-950 font-bold whitespace-nowrap">{formatTaxId(companySettings?.tax_id || '1120100144907')}</strong>
+                                                <strong className="font-mono text-zinc-950 font-bold whitespace-nowrap">{formatTaxId(companySettings?.tax_id || '')}</strong>
                                             </div>
                                             <div>
                                                 <span className="text-zinc-600 font-mono">สถานประกอบการ: </span>

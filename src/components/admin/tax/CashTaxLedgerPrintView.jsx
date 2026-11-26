@@ -338,7 +338,7 @@ export default function CashTaxLedgerPrintView({
                                     <div className="text-right">
                                         <span className="text-zinc-500 font-medium">เลขประจำตัวประชาชน: </span>
                                         <span className="font-mono font-bold text-zinc-900 tracking-wider">
-                                            {formatTaxId(companySettings.tax_citizen_id || companySettings.tax_id || '1120100144907')}
+                                            {formatTaxId(companySettings.tax_citizen_id || companySettings.tax_id || '')}
                                         </span>
                                     </div>
                                     <div>
@@ -348,7 +348,7 @@ export default function CashTaxLedgerPrintView({
                                     <div className="text-right">
                                         <span className="text-zinc-500 font-medium">เลขประจำตัวผู้เสียภาษีอากร: </span>
                                         <span className="font-mono font-bold text-zinc-900 tracking-wider">
-                                            {formatTaxId(companySettings.tax_id || '1120100144907')}
+                                            {formatTaxId(companySettings.tax_id || '')}
                                         </span>
                                     </div>
                                     <div className="col-span-2">

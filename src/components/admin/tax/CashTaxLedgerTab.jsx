@@ -479,7 +479,7 @@ export default function CashTaxLedgerTab({
                         <span>•</span>
                         <span>ผู้มีเงินได้ / ร้านค้า: <strong className="text-[var(--color-ink)]">{companySettings.tax_company_name || companySettings.company_name || 'ร้านในบ้าน นครพนม'}</strong></span>
                         <span>•</span>
-                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-[var(--color-ink)]">{formatTaxId(companySettings.tax_id || '1120100144907')}</strong></span>
+                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-[var(--color-ink)]">{formatTaxId(companySettings.tax_id || '')}</strong></span>
                         <span>•</span>
                         <span>สถานะภาษี: <strong className="text-[var(--color-ink)]">{isVatRegistered ? 'จดทะเบียน VAT 7%' : '[บุคคลธรรมดา]'}</strong></span>
                     </div>
@@ -961,7 +961,7 @@ export default function CashTaxLedgerTab({
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-[var(--color-neutral)]">เลขประจำตัวประชาชน:</span>
-                                <span className="font-bold text-[var(--color-ink)]">{formatTaxId(companySettings.tax_citizen_id || companySettings.tax_id || '1120100144907')}</span>
+                                <span className="font-bold text-[var(--color-ink)]">{formatTaxId(companySettings.tax_citizen_id || companySettings.tax_id || '')}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-[var(--color-neutral)]">สถานประกอบการ:</span>

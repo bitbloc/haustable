@@ -268,7 +268,7 @@ async function runSeedQ2() {
         { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 900.00 }
       ],
       issuer_name: 'ร้านในบ้าน นครพนม',
-      issuer_tax_id: '1120100144907',
+      issuer_tax_id: '1234567890121',
       issuer_branch: '00000',
       issuer_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม',
       status: 'issued',
@@ -298,7 +298,7 @@ async function runSeedQ2() {
         { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 1362.00 }
       ],
       issuer_name: 'ร้านในบ้าน นครพนม',
-      issuer_tax_id: '1120100144907',
+      issuer_tax_id: '1234567890121',
       issuer_branch: '00000',
       issuer_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม',
       status: 'issued',
@@ -328,7 +328,7 @@ async function runSeedQ2() {
         { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 382.00 }
       ],
       issuer_name: 'ร้านในบ้าน นครพนม',
-      issuer_tax_id: '1120100144907',
+      issuer_tax_id: '1234567890121',
       issuer_branch: '00000',
       issuer_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม',
       status: 'issued',
