@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   // 3. While the Google project is suspended, run the same request on Claude.
   if (claudeEnabled()) {
     try {
-      const data = await generateWithClaude(body.request)
+      const data = await generateWithClaude(body.request, { feature: `admin:${String(body?.feature || 'ocr').replace(/[^a-z0-9_-]/gi, '').slice(0, 40)}` })
       return reply({ ok: true, status: 200, data, provider: 'claude' })
     } catch (e) {
       const err = e as ClaudeCallError
