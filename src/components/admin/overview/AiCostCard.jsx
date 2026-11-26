@@ -16,6 +16,7 @@ const count = (n) => (Number(n) || 0).toLocaleString('th-TH')
 const label = 'block text-xs leading-5 text-[var(--color-neutral)]'
 const figure = 'block mt-1 font-mono text-2xl leading-8 tabular-nums'
 const note = 'block mt-1 text-xs leading-5 text-[var(--color-neutral)] tabular-nums'
+// Instant focus ring, plum on paper (14:1).
 const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-plum)]'
 
 function Breakdown({ title, rows }) {
@@ -26,8 +27,9 @@ function Breakdown({ title, rows }) {
                 {rows.map((r) => (
                     <li key={r.key} className="flex items-baseline justify-between gap-4 py-1.5 border-b border-[var(--color-rule)] last:border-b-0">
                         <span className="text-sm leading-6 text-[var(--color-ink)]">{r.label}</span>
-                        <span className="font-mono text-sm leading-6 tabular-nums text-[var(--color-muted)] whitespace-nowrap">
-                            {bahtFine(r.thb)} <span className="text-[var(--color-neutral)]">({count(r.calls)} ครั้ง)</span>
+                        <span className="text-sm leading-6 whitespace-nowrap">
+                            <span className="font-mono tabular-nums text-[var(--color-muted)]">{bahtFine(r.thb)}</span>
+                            <span className="ml-2 text-xs text-[var(--color-neutral)]"><span className="font-mono tabular-nums">{count(r.calls)}</span> ครั้ง</span>
                         </span>
                     </li>
                 ))}
@@ -66,17 +68,20 @@ function GeminiCompare({ projection, baseline, onSaved }) {
                         value={value}
                         onChange={(e) => setValue(e.target.value.replace(/[^\d.]/g, ''))}
                         placeholder="บาท"
-                        className={`min-w-0 flex-1 h-12 px-3 font-mono text-base tabular-nums bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] ${focus}`}
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby="gemini-baseline-help"
+                        className={`min-w-0 flex-1 h-12 px-3 font-mono text-base tabular-nums bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-neutral)] text-[var(--color-ink)] placeholder:text-[var(--color-neutral)] ${focus}`}
                     />
                     <button
                         type="submit"
-                        disabled={saving || !value}
-                        className={`h-12 px-4 text-sm font-semibold bg-[var(--brand-plum)] text-[var(--color-cream)] disabled:opacity-50 cursor-pointer disabled:cursor-default ${focus}`}
+                        disabled={saving}
+                        aria-busy={saving || undefined}
+                        className={`h-12 px-4 text-sm font-semibold bg-[var(--brand-plum)] text-[var(--color-cream)] hover:bg-[var(--brand-plum-2)] active:bg-[var(--brand-plum-3)] cursor-pointer disabled:cursor-default ${focus}`}
                     >
                         {saving ? 'กำลังบันทึก…' : 'บันทึก'}
                     </button>
                 </div>
-                <span className={error ? 'block mt-1 text-xs leading-5 text-[var(--error-red)]' : note}>
+                <span id="gemini-baseline-help" role={error ? 'alert' : undefined} className={error ? 'block mt-1 text-xs leading-5 text-[var(--error-red)]' : note}>
                     {error || 'ใส่ครั้งเดียว ใช้เทียบกับค่า Claude ที่คาดไว้'}
                 </span>
             </form>
@@ -91,12 +96,12 @@ function GeminiCompare({ projection, baseline, onSaved }) {
             <span className={note}>
                 {share === null
                     ? `Gemini เดิม ${baht(baseline)} ต่อเดือน รอผลคาดการณ์ก่อน`
-                    : `${share <= 100 ? 'ถูกกว่า' : 'แพงกว่า'} Gemini เดิม (${baht(baseline)} ต่อเดือน)`}
+                    : `ของ ${baht(baseline)} ต่อเดือน ${projection <= baseline ? 'ถูกกว่า' : 'แพงกว่า'} ${baht(Math.abs(baseline - projection))}`}
             </span>
             <button
                 type="button"
                 onClick={() => { setValue(String(baseline)); setEditing(true) }}
-                className={`mt-2 min-h-12 text-sm leading-6 underline underline-offset-4 text-[var(--brand-plum)] cursor-pointer ${focus}`}
+                className={`mt-2 min-h-12 text-sm leading-6 underline underline-offset-4 text-[var(--brand-plum)] hover:decoration-2 active:opacity-80 cursor-pointer ${focus}`}
             >
                 แก้ค่า Gemini
             </button>
