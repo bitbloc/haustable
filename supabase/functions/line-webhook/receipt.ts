@@ -11,6 +11,7 @@
 // bill already recorded is merged instead of inserted twice.
 
 import { BRAND } from './brand.ts'
+import { claudeEnabled, generateWithClaude, ClaudeCallError } from '../_shared/claude.ts'
 
 type SupabaseClient = any
 
@@ -123,7 +124,7 @@ Return ONLY this JSON:
   "vendor_name": "issuer name as printed",
   "vendor_tax_id": "issuer 13-digit tax ID digits only, or empty",
   "doc_type": "tax_invoice",    // tax_invoice (ใบกำกับภาษี), cash_bill (บิลเงินสด), receipt_voucher (ใบสำคัญรับเงิน / statement), slip_only (bank transfer slip only)
-  "vat_included": true,         // true if VAT is part of the total
+  "vat_included": false,        // true only when a VAT amount is printed on the document
   "payment_method": "TRANSFER", // TRANSFER by default; CASH only if the document marks cash (เงินสด ticked); CREDIT only for card
   "notes": "line items in Thai, e.g. 'แก๊สหุงต้ม 15 กก. 1 ถัง 465.00'",
   "confidence": 0.95
@@ -160,6 +161,79 @@ class OcrError extends Error {
   }
 }
 
+// The fields buildPrompt asks for. On Claude this is enforced (structured
+// outputs), so a reply can no longer fail to parse.
+const RECEIPT_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    is_receipt: { type: 'BOOLEAN' },
+    title: { type: 'STRING' },
+    currency: { type: 'STRING', enum: ['THB', 'USD', 'EUR', 'SGD', 'JPY', 'GBP'] },
+    original_amount: { type: 'NUMBER' },
+    amount: { type: 'NUMBER' },
+    vat_amount: { type: 'NUMBER' },
+    expense_date: { type: 'STRING', description: 'YYYY-MM-DD, Gregorian year' },
+    category: { type: 'STRING', enum: CATEGORIES },
+    vendor_name: { type: 'STRING' },
+    vendor_tax_id: { type: 'STRING' },
+    doc_type: { type: 'STRING', enum: DOC_TYPES },
+    vat_included: { type: 'BOOLEAN' },
+    payment_method: { type: 'STRING', enum: PAY_METHODS },
+    notes: { type: 'STRING' },
+    confidence: { type: 'NUMBER' },
+  },
+  required: [
+    'is_receipt', 'title', 'currency', 'original_amount', 'amount', 'vat_amount', 'expense_date',
+    'category', 'vendor_name', 'vendor_tax_id', 'doc_type', 'vat_included', 'payment_method', 'notes', 'confidence',
+  ],
+}
+
+// Same request on Claude while the Google project is suspended (see _shared/claude.ts).
+async function scanWithClaude(
+  parts: { mime: string; base64: string }[],
+  todayIso: string,
+  shopTaxId: string,
+): Promise<{ result: any; model: string; ms: number }> {
+  const started = Date.now()
+  const body = {
+    ...buildReceiptRequest(parts, todayIso, shopTaxId),
+    // Reading a bill needs little reasoning: low effort answers faster.
+    generationConfig: { response_mime_type: 'application/json', responseSchema: RECEIPT_SCHEMA, thinkingConfig: { thinkingLevel: 'low' } },
+  }
+  let json: any
+  try {
+    json = await generateWithClaude(body, { timeoutMs: 60_000, maxRetries: 0, retryWithoutSchema: false, feature: 'line:receipt' })
+  } catch (err: any) {
+    const status = err instanceof ClaudeCallError ? err.status : 0
+    console.warn(`[Claude] ${status} after ${Date.now() - started} ms:`, String(err?.message).slice(0, 300))
+    if (status === 401 || status === 403) throw new OcrError('key', `Claude key rejected (${status})`)
+    if (status === 429 || status === 529 || status >= 500 || status === 0) throw new OcrError('busy', String(status))
+    throw new OcrError('other', String(err?.message || status))
+  }
+  const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  try {
+    const result = JSON.parse(rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
+    const ms = Date.now() - started
+    console.log(`[Claude] ${json.modelVersion} read ${parts.length} part(s) in ${ms} ms`)
+    return { result, model: json.modelVersion, ms }
+  } catch {
+    throw new OcrError('other', 'Claude returned text that is not JSON')
+  }
+}
+
+function buildReceiptRequest(parts: { mime: string; base64: string }[], todayIso: string, shopTaxId: string) {
+  return {
+    contents: [{
+      role: 'user',
+      parts: [
+        { text: `Read these ${parts.length} document(s) as one expense and return the JSON.` },
+        ...parts.map((p) => ({ inline_data: { mime_type: p.mime, data: p.base64 } })),
+      ],
+    }],
+    system_instruction: { parts: [{ text: buildPrompt(parts.length, todayIso, shopTaxId) }] },
+  }
+}
+
 async function scanWithGemini(
   parts: { mime: string; base64: string }[],
   apiKey: string,
@@ -168,17 +242,7 @@ async function scanWithGemini(
   shopTaxId: string,
 ): Promise<{ result: any; model: string; ms: number }> {
   const started = Date.now()
-  const prompt = buildPrompt(parts.length, todayIso, shopTaxId)
-  const baseBody = {
-    contents: [{
-      role: 'user',
-      parts: [
-        { text: `Read these ${parts.length} document(s) as one expense and return the JSON.` },
-        ...parts.map((p) => ({ inline_data: { mime_type: p.mime, data: p.base64 } })),
-      ],
-    }],
-    system_instruction: { parts: [{ text: prompt }] },
-  }
+  const baseBody = buildReceiptRequest(parts, todayIso, shopTaxId)
 
   // Flash first (accurate on crumpled Thai bills), lite when flash is overloaded,
   // then one more round after a short pause: 503 "high demand" usually clears in seconds.
@@ -422,11 +486,11 @@ async function sendToLine(token: string, replyToken: string | undefined, source:
 function failureText(kind: OcrError['kind'] | 'download' | 'save' | 'unreadable' | 'too_big'): string {
   switch (kind) {
     case 'busy':
-      return 'อ่านบิลไม่สำเร็จ ระบบ AI ของ Google คนใช้เยอะอยู่ (ลองแล้ว 4 ครั้ง)\nส่งรูปเดิมอีกครั้งในอีก 2-3 นาที'
+      return 'อ่านบิลไม่สำเร็จ ระบบอ่านบิลไม่ว่างหรือตอบช้า\nส่งรูปเดิมอีกครั้งในอีก 2-3 นาที'
     case 'quota':
-      return 'อ่านบิลไม่สำเร็จ โควต้า Gemini API หมด\nเจ้าของร้านต้องเช็กเครดิตใน Google AI Studio'
+      return 'อ่านบิลไม่สำเร็จ เครดิตระบบ AI หมด\nเจ้าของร้านต้องเติมเครดิตก่อน'
     case 'key':
-      return 'อ่านบิลไม่สำเร็จ คีย์ Gemini API ใช้ไม่ได้\nเจ้าของร้านต้องตั้งคีย์ใหม่ในหลังบ้าน'
+      return 'อ่านบิลไม่สำเร็จ คีย์ระบบ AI ใช้ไม่ได้\nแจ้งเจ้าของร้านให้ตรวจการตั้งค่า'
     case 'download':
       return 'อ่านบิลไม่สำเร็จ ดึงรูปจาก LINE ไม่ได้\nส่งรูปใหม่อีกครั้ง'
     case 'save':
@@ -469,7 +533,8 @@ async function downloadAndStore(ev: any, idx: number, token: string, supabaseAdm
   const mime = isFile ? (FILE_MIME[ext] || headerMime) : (headerMime.startsWith('image/') ? headerMime : 'image/jpeg')
 
   // messageId is part of the path so a redelivered event can be recognised later.
-  const path = `${bangkokNow().toISOString().slice(0, 7)}/${Date.now()}_${idx}_${messageId}.${ext === 'jpeg' ? 'jpg' : ext}`
+  const setTag = ev.message?.imageSet?.id ? `set-${String(ev.message.imageSet.id).replace(/[^A-Za-z0-9]/g, '')}_` : ''
+  const path = `${bangkokNow().toISOString().slice(0, 7)}/${setTag}${Date.now()}_${idx}_${messageId}.${ext === 'jpeg' ? 'jpg' : ext}`
   let imageUrl = ''
   try {
     const { error } = await supabaseAdmin.storage.from('receipts').upload(path, bytes, { contentType: mime, upsert: true })
@@ -492,6 +557,62 @@ async function alreadyRecorded(supabaseAdmin: SupabaseClient, messageIds: string
     if (data?.length) return true
   }
   return false
+}
+
+/** Year in Buddhist era, a date more than a day ahead or over 400 days old: use today. */
+export function sanitizeExpenseDate(raw: any, todayIso: string): { date: string; replaced: boolean } {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw || '').trim())
+  if (!m) return { date: todayIso, replaced: Boolean(raw) && String(raw) !== todayIso }
+  let year = Number(m[1])
+  if (year > 2400) year -= 543
+  const date = `${year}-${m[2]}-${m[3]}`
+  const t = Date.parse(`${date}T00:00:00Z`)
+  const today = Date.parse(`${todayIso}T00:00:00Z`)
+  if (!Number.isFinite(t) || t > today + 86_400_000 || t < today - 400 * 86_400_000) return { date: todayIso, replaced: true }
+  return { date, replaced: false }
+}
+
+const normVendor = (v: any) => String(v || '').toLowerCase().replace(/[\s.,()\-_/]|บริษัท|จำกัด|มหาชน|สาขา.*$/g, '')
+
+/** Same vendor: tax IDs equal when both are known, otherwise the same normalised name. */
+export function sameVendor(record: any, vendorName: string, vendorTaxId: string | null): boolean {
+  if (record.vendor_tax_id && vendorTaxId) return record.vendor_tax_id === vendorTaxId
+  const a = normVendor(record.vendor_name)
+  const b = normVendor(vendorName)
+  if (!a || !b || a === normVendor('ไม่ระบุ')) return false
+  return a === b
+}
+
+const setTagsOf = (evList: any[]) =>
+  [...new Set(evList.map((e) => e.message?.imageSet?.id).filter(Boolean).map((id: any) => `set-${String(id).replace(/[^A-Za-z0-9]/g, '')}_`))]
+
+/** Pages of the same LINE image set already saved for a recent bill get this page's picture too. */
+async function attachSetPages(supabaseAdmin: SupabaseClient, evList: any[], imageUrl: string | null) {
+  if (!imageUrl) return
+  for (const tag of setTagsOf(evList)) {
+    const { data } = await supabaseAdmin.from('store_expenses').select('id, receipt_image_url')
+      .like('receipt_image_url', `%${tag}%`).gte('created_at', new Date(Date.now() - MERGE_WINDOW_MS).toISOString())
+      .order('created_at', { ascending: false }).limit(1)
+    const row = data?.[0]
+    if (!row) continue
+    const urls = [...new Set([...String(row.receipt_image_url || '').split(','), ...imageUrl.split(',')].filter(Boolean))].join(',')
+    await supabaseAdmin.from('store_expenses').update({ receipt_image_url: urls }).eq('id', row.id)
+    console.log(`[Receipt] page of image set added to expense ${row.id}`)
+  }
+}
+
+/** Earlier pages of the same set (saved before this page with the total arrived). */
+async function earlierSetPageUrls(supabaseAdmin: SupabaseClient, evList: any[]): Promise<string[]> {
+  const urls: string[] = []
+  for (const tag of setTagsOf(evList)) {
+    const folder = bangkokNow().toISOString().slice(0, 7)
+    const { data } = await supabaseAdmin.storage.from('receipts').list(folder, { search: tag, limit: 20 })
+    for (const f of data || []) {
+      const url = supabaseAdmin.storage.from('receipts').getPublicUrl(`${folder}/${f.name}`)?.data?.publicUrl
+      if (url) urls.push(url)
+    }
+  }
+  return urls
 }
 
 export async function handleReceiptEvents(
@@ -533,7 +654,7 @@ export async function handleReceiptEvents(
         console.log('[Receipt] already recorded (LINE redelivery), skipping')
         continue
       }
-      if (!geminiApiKey) {
+      if (!geminiApiKey && !claudeEnabled()) {
         await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText('key') }])
         continue
       }
@@ -549,12 +670,14 @@ export async function handleReceiptEvents(
         continue
       }
       const pageCount = parts.length
-      const receiptImageUrl = parts.map((p) => p.imageUrl).filter(Boolean).join(',') || null
+      let receiptImageUrl = parts.map((p) => p.imageUrl).filter(Boolean).join(',') || null
 
       const todayIso = bangkokNow().toISOString().slice(0, 10)
       let ocr: any
       try {
-        const scanned = await scanWithGemini(parts, geminiApiKey, preferredModel, todayIso, shopTaxId)
+        const scanned = claudeEnabled()
+          ? await scanWithClaude(parts, todayIso, shopTaxId)
+          : await scanWithGemini(parts, geminiApiKey, preferredModel, todayIso, shopTaxId)
         ocr = scanned.result
       } catch (err: any) {
         const kind = err instanceof OcrError ? err.kind : 'other'
@@ -570,8 +693,10 @@ export async function handleReceiptEvents(
         continue
       }
       if (rawAmount <= 0) {
-        // Page 1 of a multi-photo set often has no total; the later page carries it.
-        if (!inImageSet) await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText('unreadable') }])
+        // A page of a multi-photo set without a total: add its picture to the bill of the same
+        // set if that bill is already saved; if not, the page carrying the total picks it up.
+        if (inImageSet) await attachSetPages(supabaseAdmin, evList, receiptImageUrl)
+        else await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText('unreadable') }])
         continue
       }
 
@@ -588,13 +713,13 @@ export async function handleReceiptEvents(
         conversionInfo = { currency, symbol: { USD: '$', EUR: '€', GBP: '£' }[currency] || '', originalAmount, rate }
       }
 
-      const vatIncluded = ocr.vat_included ?? true
+      // VAT only as printed on a THB bill. Never computed: the shop is not VAT-registered and a
+      // made-up 7/107 share would read as VAT the bill does not show (fixed 2026-11-26).
       const printedVat = Number(ocr.vat_amount) || 0
-      const vatAmount = printedVat > 0 && currency === 'THB'
-        ? Number(printedVat.toFixed(2))
-        : (vatIncluded ? Number(((amount * 7) / 107).toFixed(2)) : 0)
+      const vatAmount = printedVat > 0 && currency === 'THB' ? Number(printedVat.toFixed(2)) : 0
+      const vatIncluded = vatAmount > 0
 
-      const expenseDate = /^\d{4}-\d{2}-\d{2}$/.test(ocr.expense_date || '') ? ocr.expense_date : todayIso
+      const { date: expenseDate, replaced: dateReplaced } = sanitizeExpenseDate(ocr.expense_date, todayIso)
       let title = ocr.title || 'ค่าใช้จ่ายร้าน'
       if (pageCount > 1 && !/ชุด|แผ่น|รูป/.test(title)) title = `${title} (${pageCount} รูป)`
       const category = CATEGORIES.includes(ocr.category) ? ocr.category : (currency !== 'THB' ? 'software_service' : 'other')
@@ -606,9 +731,16 @@ export async function handleReceiptEvents(
         ? String(ocr.payment_method).toUpperCase()
         : 'TRANSFER'
       let notes = ocr.notes || ''
+      if (dateReplaced) notes = notes ? `${notes} (อ่านวันที่ในบิลไม่ได้ ใช้วันที่ส่งแทน)` : 'อ่านวันที่ในบิลไม่ได้ ใช้วันที่ส่งแทน'
       if (conversionInfo) {
         const note = `แปลงจาก ${conversionInfo.symbol}${originalAmount.toFixed(2)} ${currency} @ ${conversionInfo.rate.toFixed(2)} บาท/${currency}`
         if (!notes.includes(note)) notes = notes ? `${notes} · ${note}` : note
+      }
+
+      // Pages of the same LINE image set that arrived earlier without a total join this bill.
+      if (inImageSet) {
+        const extra = await earlierSetPageUrls(supabaseAdmin, evList)
+        receiptImageUrl = [...new Set([...(receiptImageUrl || '').split(','), ...extra].filter(Boolean))].join(',') || null
       }
 
       // Same bill photographed twice (or the 2nd page sent as its own message):
@@ -622,8 +754,9 @@ export async function handleReceiptEvents(
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(5)
-      // Two different shops can share a total; a different vendor tax ID means a different bill.
-      const existing = (recent || []).find((r: any) => !(r.vendor_tax_id && vendorTaxId && r.vendor_tax_id !== vendorTaxId))
+      // Two different bills can share a total (ice then vegetables, both 100): merge only when the
+      // vendor is the same too, by tax ID when both have one, otherwise by name (fixed 2026-11-26).
+      const existing = (recent || []).find((r: any) => sameVendor(r, vendorName, vendorTaxId))
 
       let saved: any
       let merged = false
