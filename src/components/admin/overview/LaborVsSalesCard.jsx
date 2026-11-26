@@ -32,7 +32,7 @@ export default function LaborVsSalesCard({ selectedDate }) {
     const d = state.data
 
     return (
-        <section className="font-sans border border-[var(--color-rule)] bg-[var(--color-paper)] mb-6" aria-label="ค่าแรงเทียบยอดขาย">
+        <section className="font-sans border border-[var(--color-rule)] bg-[var(--color-paper)]" aria-label="ค่าแรงเทียบยอดขาย">
             <div className="flex items-baseline justify-between gap-4 px-4 py-3 border-b border-[var(--color-rule)]">
                 <h2 className="text-base font-semibold leading-7 text-[var(--color-ink)]">ค่าแรงเทียบยอดขาย</h2>
                 <span className="text-xs leading-5 text-[var(--color-neutral)]">ค่าแรงจากระบบ HR ดูค่าเฉลี่ยเป็นหลัก</span>
