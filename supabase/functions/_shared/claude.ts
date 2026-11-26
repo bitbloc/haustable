@@ -100,10 +100,14 @@ export async function generateWithClaude(
   let system = systemParts.map((p: any) => p?.text || '').filter(Boolean).join('\n\n')
   const gen = request?.generationConfig || {}
   const wantsJson = /json/i.test(String(gen.response_mime_type || gen.responseMimeType || ''))
+  // Gemini's thinkingConfig.thinkingLevel maps to Claude effort. Reading a bill needs
+  // little reasoning: 'low' answers faster. Claude Opus 5.5 defaults to 'medium'.
+  const level = String(gen.thinkingConfig?.thinkingLevel || gen.thinking_config?.thinking_level || '').toLowerCase()
+  const effort = ['low', 'medium', 'high'].includes(level) ? level : null
   const schema = gen.responseSchema || gen.response_schema
   // With a schema, structured outputs guarantee parseable JSON in that shape.
   const outputConfig = schema
-    ? { output_config: { format: { type: 'json_schema', schema: geminiSchemaToJsonSchema(schema) } } }
+    ? { output_config: { format: { type: 'json_schema', schema: geminiSchemaToJsonSchema(schema) }, ...(effort ? { effort } : {}) } }
     : {}
   if (wantsJson && !schema) {
     system = `${system}\n\nReturn only the JSON object: no markdown fences, no text before or after it.`.trim()
@@ -124,6 +128,7 @@ export async function generateWithClaude(
     max_tokens: maxTokens,
     ...(system ? { system } : {}),
     messages,
+    ...(effort && !schema ? { output_config: { effort } } : {}),
     ...fallbackParams,
   }
   let response: any
