@@ -11,7 +11,7 @@
 // bill already recorded is merged instead of inserted twice.
 
 import { BRAND } from './brand.ts'
-import { claudeEnabled, generateWithClaude, ClaudeCallError } from '../_shared/claude.ts'
+import { claudeEnabled, generateWithClaude, ClaudeCallError, CLAUDE_FAST_MODEL } from '../_shared/claude.ts'
 
 type SupabaseClient = any
 
@@ -29,6 +29,10 @@ const FILE_MIME: Record<string, string> = {
   heif: 'image/heif',
 }
 const MAX_FILE_BYTES = 15 * 1024 * 1024
+// Claude reads images up to 5 MB each (PDFs go up to the 15 MB above).
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+// Claude cannot read HEIC/HEIF; LINE turns photos sent as pictures into JPEG, files stay as they are.
+const UNREADABLE_IMAGE = new Set(['heic', 'heif'])
 const OCR_BUDGET_MS = 90_000 // whole retry chain; the edge function wall clock is 150 s
 const MERGE_WINDOW_MS = 15 * 60 * 1000
 
@@ -483,7 +487,9 @@ async function sendToLine(token: string, replyToken: string | undefined, source:
   if (!resp.ok) console.error('[Receipt] push failed:', (await resp.text()).slice(0, 200))
 }
 
-function failureText(kind: OcrError['kind'] | 'download' | 'save' | 'unreadable' | 'too_big'): string {
+type FailureKind = OcrError['kind'] | 'download' | 'save' | 'unreadable' | 'too_big' | 'image_too_big' | 'heic'
+
+function failureText(kind: FailureKind): string {
   switch (kind) {
     case 'busy':
       return 'อ่านบิลไม่สำเร็จ ระบบอ่านบิลไม่ว่างหรือตอบช้า\nส่งรูปเดิมอีกครั้งในอีก 2-3 นาที'
@@ -499,8 +505,12 @@ function failureText(kind: OcrError['kind'] | 'download' | 'save' | 'unreadable'
       return 'เห็นว่าเป็นบิล แต่อ่านยอดรวมไม่ออก\nถ่ายใหม่ให้เห็นยอดรวมชัดๆ แล้วส่งอีกครั้ง'
     case 'too_big':
       return 'ไฟล์ใหญ่เกิน 15 MB อ่านไม่ได้\nส่งเป็นรูปถ่ายแทน'
+    case 'image_too_big':
+      return 'รูปนี้ส่งมาเป็นไฟล์และใหญ่เกิน 5 MB อ่านไม่ได้\nส่งใหม่แบบรูปภาพ (ไม่ใช่ไฟล์)'
+    case 'heic':
+      return 'ไฟล์ HEIC อ่านไม่ได้\nส่งใหม่แบบรูปภาพ (ไม่ใช่ไฟล์) หรือแปลงเป็น JPG ก่อน'
     default:
-      return 'อ่านบิลไม่สำเร็จ ระบบ AI ตอบกลับผิดรูปแบบ\nส่งรูปเดิมอีกครั้ง'
+      return 'อ่านบิลไม่สำเร็จ\nส่งรูปเดิมอีกครั้ง ถ้ายังไม่ได้ให้กรอกเองในหลังบ้าน'
   }
 }
 
@@ -512,10 +522,18 @@ type Downloaded = {
   mime: string
   base64: string
   imageUrl: string
+  isPhoto: boolean
+  bytes: Uint8Array
+  path: string
 }
 
-async function downloadAndStore(ev: any, idx: number, token: string, supabaseAdmin: SupabaseClient): Promise<Downloaded | 'too_big' | null> {
+type DownloadFailure = 'too_big' | 'image_too_big' | 'heic' | null
+
+async function downloadPart(ev: any, idx: number, token: string): Promise<Downloaded | DownloadFailure> {
   const messageId = ev.message.id
+  const isFile = ev.message.type === 'file'
+  const ext = isFile ? fileExt(ev.message.fileName) : 'jpg'
+  if (UNREADABLE_IMAGE.has(ext)) return 'heic'
   const resp = await fetch(`https://api-data.line.me/v2/bot/message/${messageId}/content`, {
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(20_000),
@@ -527,24 +545,58 @@ async function downloadAndStore(ev: any, idx: number, token: string, supabaseAdm
   const bytes = new Uint8Array(await resp.arrayBuffer())
   if (bytes.byteLength > MAX_FILE_BYTES) return 'too_big'
 
-  const isFile = ev.message.type === 'file'
-  const ext = isFile ? fileExt(ev.message.fileName) : 'jpg'
   const headerMime = (resp.headers.get('content-type') || '').split(';')[0].trim()
   const mime = isFile ? (FILE_MIME[ext] || headerMime) : (headerMime.startsWith('image/') ? headerMime : 'image/jpeg')
+  if (mime.startsWith('image/') && bytes.byteLength > MAX_IMAGE_BYTES) return 'image_too_big'
 
   // messageId is part of the path so a redelivered event can be recognised later.
   const setTag = ev.message?.imageSet?.id ? `set-${String(ev.message.imageSet.id).replace(/[^A-Za-z0-9]/g, '')}_` : ''
   const path = `${bangkokNow().toISOString().slice(0, 7)}/${setTag}${Date.now()}_${idx}_${messageId}.${ext === 'jpeg' ? 'jpg' : ext}`
-  let imageUrl = ''
+  return { messageId, mime, base64: toBase64(bytes), imageUrl: '', isPhoto: !isFile, bytes, path }
+}
+
+/** Upload to the receipts bucket (public URLs, shown in the back office). Only for bills. */
+async function storePart(part: Downloaded, supabaseAdmin: SupabaseClient): Promise<void> {
   try {
-    const { error } = await supabaseAdmin.storage.from('receipts').upload(path, bytes, { contentType: mime, upsert: true })
+    const { error } = await supabaseAdmin.storage.from('receipts').upload(part.path, part.bytes, { contentType: part.mime, upsert: true })
     if (error) console.error('[Receipt] storage upload error:', error)
-    else imageUrl = supabaseAdmin.storage.from('receipts').getPublicUrl(path)?.data?.publicUrl || ''
+    else part.imageUrl = supabaseAdmin.storage.from('receipts').getPublicUrl(part.path)?.data?.publicUrl || ''
   } catch (err) {
     console.error('[Receipt] storage upload exception:', err)
   }
+}
 
-  return { messageId, mime, base64: toBase64(bytes), imageUrl }
+/**
+ * Photos in the staff group are mostly food, people and the shop. Before the accurate
+ * (and costly) reader runs, Claude's fast model answers one question: is any of these a
+ * work document? If not, the bot stays silent and stores nothing (owner rule 2026-11-26:
+ * answer work only). If this check itself fails, the bill reader still runs, so a real
+ * bill is never dropped because of it.
+ */
+async function looksLikeWorkDocument(parts: Downloaded[]): Promise<boolean> {
+  try {
+    const json = await generateWithClaude({
+      system_instruction: { parts: [{ text:
+        'You sort photos sent to a restaurant staff chat. Answer true only if at least one image is a work document: ' +
+        'a receipt, bill, tax invoice, invoice, quotation, delivery note, purchase order, or a bank transfer / payment slip. ' +
+        'Food, drinks, people, the shop, menus, stock on shelves, chat screenshots and memes are false.' }] },
+      contents: [{ role: 'user', parts: [
+        { text: `Is any of these ${parts.length} image(s) a work document?` },
+        ...parts.map((p) => ({ inline_data: { mime_type: p.mime, data: p.base64 } })),
+      ] }],
+      generationConfig: {
+        response_mime_type: 'application/json',
+        responseSchema: { type: 'OBJECT', properties: { is_work_document: { type: 'BOOLEAN' } }, required: ['is_work_document'] },
+        thinkingConfig: { thinkingLevel: 'low' },
+        maxOutputTokens: 1024,
+      },
+    }, { model: CLAUDE_FAST_MODEL, timeoutMs: 20_000, maxRetries: 0, feature: 'line:receipt-gate' })
+    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    return JSON.parse(text)?.is_work_document !== false
+  } catch (err) {
+    console.warn('[Receipt] work-document check failed, reading anyway:', (err as Error)?.message)
+    return true
+  }
 }
 
 async function alreadyRecorded(supabaseAdmin: SupabaseClient, messageIds: string[]): Promise<boolean> {
@@ -659,16 +711,27 @@ export async function handleReceiptEvents(
         continue
       }
 
-      const downloaded = await Promise.all(evList.map((ev, i) => downloadAndStore(ev, i, token, supabaseAdmin)))
-      if (downloaded.includes('too_big')) {
-        await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText('too_big') }])
+      const downloaded = await Promise.all(evList.map((ev, i) => downloadPart(ev, i, token)))
+      const sizeOrFormat = (['heic', 'too_big', 'image_too_big'] as const).find((k) => downloaded.includes(k))
+      if (sizeOrFormat) {
+        // Only files land here (LINE shrinks and converts photos), so someone meant to send a document.
+        await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText(sizeOrFormat) }])
         continue
       }
-      const parts = downloaded.filter(Boolean) as Downloaded[]
+      const parts = downloaded.filter((d): d is Downloaded => typeof d === 'object' && d !== null)
       if (parts.length === 0) {
-        await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText('download') }])
+        // A photo we could not fetch may be anything: only answer when a file (a document) failed.
+        if (evList.some((e) => e.message?.type === 'file')) {
+          await sendToLine(token, replyToken, source, [{ type: 'text', text: failureText('download') }])
+        }
         continue
       }
+      // Photos only: skip anything that is not a work document before the costly read.
+      if (claudeEnabled() && parts.every((p) => p.isPhoto) && !(await looksLikeWorkDocument(parts))) {
+        console.log(`[Receipt] ${parts.length} photo(s) are not work documents: no reply, nothing stored (${Date.now() - t0} ms)`)
+        continue
+      }
+      await Promise.all(parts.map((p) => storePart(p, supabaseAdmin)))
       const pageCount = parts.length
       let receiptImageUrl = parts.map((p) => p.imageUrl).filter(Boolean).join(',') || null
 

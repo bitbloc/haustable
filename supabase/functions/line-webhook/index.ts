@@ -758,7 +758,7 @@ Deno.serve(async (req) => {
                  await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] })
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nลองใหม่อีกครั้ง หรือดูในหลังบ้าน` }] })
                 })
               }
             }
@@ -767,7 +767,7 @@ Deno.serve(async (req) => {
             await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการซื้อของ: ' + err.message }] })
+              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการซื้อของ\nลองใหม่อีกครั้งในอีกสักครู่' }] })
             })
           }
           continue
@@ -884,7 +884,7 @@ Deno.serve(async (req) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
                   },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nError: ${txt.substring(0, 100)}` }] }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nลองใหม่อีกครั้ง หรือดูในหลังบ้าน` }] }),
                 })
                 if (!pushResp.ok) console.error('LINE Push Failed:', await pushResp.text())
               }
@@ -899,7 +899,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อความผิดพลาดในการดึงข้อมูลสต็อก: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงข้อมูลสต็อก\nลองใหม่อีกครั้งในอีกสักครู่' }]
               }),
             })
           }
@@ -1090,7 +1090,7 @@ Deno.serve(async (req) => {
                  await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nลองใหม่อีกครั้ง หรือดูในหลังบ้าน` }] }),
                 })
               }
             }
@@ -1104,7 +1104,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลพนักงานได้: ' + apiErr.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลพนักงานได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               }),
             })
           }
@@ -1435,7 +1435,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -1651,7 +1651,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการคำนวณเมนูฮิต: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการคำนวณเมนูฮิต\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -1885,7 +1885,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลราคากลางได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลราคากลางได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               }),
             })
           }
@@ -2082,7 +2082,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย: ' + err.message }]
+                messages: [{ type: 'text', text: 'เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -2293,7 +2293,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงยอดขายได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงยอดขายได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -2685,7 +2685,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถประมวลผลการทำนายได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถประมวลผลการทำนายได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -2827,7 +2827,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายการบิลล่าสุดได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายการบิลล่าสุดได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -3027,7 +3027,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงสถานะโต๊ะได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงสถานะโต๊ะได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -3232,7 +3232,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลกะ POS ได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงข้อมูลกะ POS ได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
@@ -3349,7 +3349,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายงานบิลยกเลิกได้: ' + err.message }]
+                messages: [{ type: 'text', text: 'ไม่สามารถดึงรายงานบิลยกเลิกได้\nลองใหม่อีกครั้งในอีกสักครู่' }]
               })
             })
           }
