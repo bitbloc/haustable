@@ -5,6 +5,7 @@
 // Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
 import { useEffect, useState } from 'react'
 import { fetchHrLabor, fetchMonthDailySales, laborVsSales } from '../../../utils/monthlyOwnerReport'
+import LaborGauge from '../LaborGauge'
 
 const pct = (n) => (n === null || n === undefined ? '—' : `${n.toLocaleString('th-TH', { maximumFractionDigits: 1 })}%`)
 const baht = (n) => `฿${Math.round(Number(n) || 0).toLocaleString('th-TH')}`
@@ -39,6 +40,12 @@ export default function LaborVsSalesCard({ selectedDate }) {
             {state.status === 'loading' ? (
                 <p className="px-4 py-3 text-sm leading-6 text-[var(--color-neutral)]">กำลังโหลดค่าแรง…</p>
             ) : (
+                <>
+                {d.monthToDate && (
+                    <div className="px-4 pt-4 pb-2 border-b border-[var(--color-rule)]">
+                        <LaborGauge pct={d.monthToDate.pct} caption="ค่าเฉลี่ยเดือนนี้" />
+                    </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)]">
                     <div className="p-4">
                         <span className="block text-xs leading-5 text-[var(--color-neutral)]">เฉลี่ยเดือนนี้</span>
@@ -62,6 +69,7 @@ export default function LaborVsSalesCard({ selectedDate }) {
                         </span>
                     </div>
                 </div>
+                </>
             )}
             <p className="px-4 pb-3 text-xs leading-5 text-[var(--color-neutral)]">
                 รายวันขึ้นลงตามยอดขาย วันเงียบจะดูสูงเป็นปกติ ค่าแรงรายวันเป็นค่าประมาณ (ค่าแรงกะคิดตามวันที่ทำงาน ส่วนเงินเดือนประจำเฉลี่ยทั้งเดือน)

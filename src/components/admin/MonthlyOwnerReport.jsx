@@ -7,6 +7,7 @@ import AdminPageHeader from './AdminPageHeader'
 import { AdminSkeletonRows } from './AdminKit'
 import { bangkokMonthNow, buildMonthlyOwnerReport, buildReportPrompt, fetchHrLabor, fetchMonthDailySales, fetchMonthlyStock, laborVsSales, splitStockLoss, stepMonth } from '../../utils/monthlyOwnerReport'
 import { callGemini } from '../../utils/geminiOcrHelper'
+import LaborGauge from './LaborGauge'
 import { exportElementImage, downloadDataUrl } from '../../utils/reportImageExport'
 
 const baht = (n) => `฿${Math.round(Number(n) || 0).toLocaleString('th-TH')}`
@@ -336,6 +337,9 @@ export default function MonthlyOwnerReport() {
                             {laborState === 'unavailable' && <Note>อ่านข้อมูลจากระบบ HR ไม่ได้ในตอนนี้ ยอดสรุปด้านบนจึงยังไม่รวมค่าแรง</Note>}
                             {hr && (
                                 <>
+                                    <div className="pb-3 mb-3 border-b border-[var(--color-rule)]">
+                                        <LaborGauge pct={laborRatio?.monthToDate?.pct} caption={`ค่าเฉลี่ยทั้งเดือน ${pctText(laborRatio?.monthToDate?.pct)}`} />
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4 pb-3 mb-1 border-b border-[var(--color-rule)]">
                                         <div>
                                             <span className="block text-xs leading-5 text-[var(--color-neutral)]">เฉลี่ยทั้งเดือน</span>
