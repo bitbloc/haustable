@@ -22,6 +22,7 @@ import { withoutSecretSettings } from './utils/secretSettingKeys'
 // Pro Analytics blocks load only when that mode is opened (keeps Live Now light)
 const AdminExecutiveDataVizDashboard = lazy(() => import('./components/admin/overview/AdminExecutiveDataVizDashboard'))
 const IntradayVelocityDaypartCockpit = lazy(() => import('./components/admin/financial/IntradayVelocityDaypartCockpit'))
+const LaborVsSalesCard = lazy(() => import('./components/admin/overview/LaborVsSalesCard'))
 const LiveFloorQuickStatus = lazy(() => import('./components/admin/overview/LiveFloorQuickStatus'))
 const AdminShiftsLedgerTab = lazy(() => import('./components/admin/overview/AdminShiftsLedgerTab'))
 const AllDailyBillsHub = lazy(() => import('./components/admin/overview/AllDailyBillsHub'))
@@ -841,6 +842,9 @@ export default function AdminDashboard() {
                             onSwitchToLiveNow={() => handleSetOverviewMode('simplified')}
                             onOpenDailySlip={() => setShowDailySummaryModal(true)}
                         />
+
+                        {/* 0.5 Labour vs sales (analytics only, owner 2026-11-26; hides without HR data) */}
+                        <LaborVsSalesCard selectedDate={selectedDate} />
 
                         {/* 1. Omni-Date Online & Advance Orders Hub */}
                         <OnlineAdvanceOrdersHub 
