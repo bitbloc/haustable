@@ -8,6 +8,7 @@ import { AdminSkeletonRows } from './AdminKit'
 import { bangkokMonthNow, buildMonthlyOwnerReport, buildReportPrompt, fetchHrLabor, fetchMonthDailySales, fetchMonthlyStock, laborVsSales, splitStockLoss, stepMonth } from '../../utils/monthlyOwnerReport'
 import { callGemini } from '../../utils/geminiOcrHelper'
 import LaborGauge from './LaborGauge'
+import { postRecurringExpenses } from '../../utils/recurringExpenses'
 import { exportElementImage, downloadDataUrl } from '../../utils/reportImageExport'
 
 const baht = (n) => `฿${Math.round(Number(n) || 0).toLocaleString('th-TH')}`
@@ -150,6 +151,7 @@ export default function MonthlyOwnerReport() {
             .then((st) => { setStock({ ym, ...st }); setStockState('done') })
             .catch((err) => { console.error('Monthly stock error:', err); setStockState('error') })
         try {
+            await postRecurringExpenses(ym) // fixed costs due this month count in the report
             setReport(await buildMonthlyOwnerReport(ym))
         } catch (err) {
             console.error('Monthly report error:', err)

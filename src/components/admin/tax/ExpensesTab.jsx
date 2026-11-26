@@ -15,6 +15,8 @@ import {
     FileText
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
+import RecurringExpensesPanel from './RecurringExpensesPanel';
+import { postRecurringExpenses } from '../../../utils/recurringExpenses';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
 import { findDuplicateClusters } from '../../../utils/duplicateDetector';
@@ -109,6 +111,8 @@ export default function ExpensesTab({
     const loadExpenses = useCallback(async (silent = false) => {
         if (!silent) setLoading(true);
         try {
+            // Recurring fixed costs due this month are posted before reading the list.
+            await postRecurringExpenses();
             const { data, error } = await supabase
                 .from('store_expenses')
                 .select('*')
@@ -349,6 +353,8 @@ export default function ExpensesTab({
     return (
         <div className="space-y-6 font-sans text-[var(--color-ink)]">
             
+            <RecurringExpensesPanel onPosted={() => loadExpenses(true)} />
+
             {/* 1. Structural Metric Grid: Rams High-Contrast Performance Readout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-[var(--color-rule)] divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
                 
