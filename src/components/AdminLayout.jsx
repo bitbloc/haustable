@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt, Lock, ShieldCheck, ShoppingBag, PanelLeftClose, PanelLeft } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt, Lock, ShieldCheck, ShoppingBag, PanelLeftClose, PanelLeft, FileText } from 'lucide-react'
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -267,6 +267,14 @@ export default function AdminLayout() {
             icon: TrendingUp, 
             label: 'Financial & Insights',
             isActive: (pathname) => pathname === '/admin/financial'
+        },
+        {
+            key: 'financial',
+            group: 2,
+            path: '/admin/monthly-report',
+            icon: FileText,
+            label: 'รายงานประจำเดือน',
+            isActive: (pathname) => pathname === '/admin/monthly-report'
         },
         { 
             key: 'tax',

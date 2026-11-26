@@ -7,7 +7,7 @@ export const ADMIN_MODULES = [
     { key: 'bookings', label: 'Bookings & Orders', path: '/admin/bookings', match: (p) => p.startsWith('/admin/bookings') },
     { key: 'hausmade', label: 'HAUSMADE Retail', path: '/admin/hausmade', match: (p) => p.startsWith('/admin/hausmade') },
     { key: 'menu', label: 'Menu & Lab', path: '/admin/menu', match: (p) => p.startsWith('/admin/menu') || p.startsWith('/admin/costing') || p.startsWith('/admin/lab') || p.startsWith('/admin/sop') || p.startsWith('/admin/stock-recon') },
-    { key: 'financial', label: 'Financial & Insights', path: '/admin/financial', match: (p) => p === '/admin/financial' },
+    { key: 'financial', label: 'Financial & Insights', path: '/admin/financial', match: (p) => p === '/admin/financial' || p === '/admin/monthly-report' },
     { key: 'tax', label: 'Tax & Invoices', path: '/admin/tax', match: (p) => p.startsWith('/admin/tax') },
     { key: 'marketing', label: 'Marketing & Loyalty', path: '/admin/marketing', match: (p) => p.startsWith('/admin/marketing') || p.startsWith('/admin/promotions') || p.startsWith('/admin/rewards') || p.startsWith('/admin/members') || p.startsWith('/admin/arcade') || p.startsWith('/admin/songs') || p.startsWith('/admin/stamps') },
     { key: 'logs', label: 'Staff Activity Logs', path: '/admin/logs', match: (p) => p.startsWith('/admin/logs') },
