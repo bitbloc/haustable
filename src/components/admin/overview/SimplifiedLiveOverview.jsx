@@ -12,6 +12,7 @@ import { playAdminOrderAlert } from '../../../utils/audioHelper'
 import OnlineAdvanceOrdersHub from './OnlineAdvanceOrdersHub'
 import { AdminFilterChips } from '../AdminKit'
 import AdminPopover, { AdminPopoverGroup } from '../AdminPopover'
+import LaborVsSalesCard from './LaborVsSalesCard'
 
 // Shared live clock listener to eliminate dozens of concurrent setInterval instances across table cards
 const globalClockListeners = new Set()
@@ -1480,6 +1481,9 @@ export default function SimplifiedLiveOverview({
                     </div>
                 </div>
             </div>
+
+            {/* 1.2 Labour vs sales (admin only; hides itself when HR labour is unavailable) */}
+            {!hideHeroKpis && !isFullscreen && <LaborVsSalesCard selectedDate={selectedDate} />}
 
             {/* 1.5 Omni-Date Online & Advance Orders Hub (Any date online bookings & pickups) */}
             {!hideOnlineHub && (
