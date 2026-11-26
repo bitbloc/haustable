@@ -578,7 +578,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                                 <div className="mt-0.5 text-[10pt] text-zinc-800 leading-snug max-w-lg">
                                                     <p>{companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
                                                     <div className="flex flex-wrap gap-x-2.5 mt-0.5 font-mono text-[9.5pt]">
-                                                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
+                                                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '')}</strong></span>
                                                         <span>สถานประกอบการ: <strong className="text-zinc-950 font-bold">{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
                                                     </div>
                                                     <div className="flex flex-wrap gap-x-2.5 font-mono text-[9pt] text-zinc-600 mt-0.5">

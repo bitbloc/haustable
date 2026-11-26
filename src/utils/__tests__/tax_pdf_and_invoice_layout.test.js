@@ -9,7 +9,7 @@ describe('taxPdfHelper & Mobile Invoicing Logic', () => {
     });
 
     it('formatTaxId properly formats 13-digit Thai tax ID', () => {
-        expect(formatTaxId('1120100144907')).toBe('1-1201-00144-90-7');
+        expect(formatTaxId('1234567890121')).toBe('1-2345-67890-12-1');
         expect(formatTaxId('')).toBe('-');
     });
 

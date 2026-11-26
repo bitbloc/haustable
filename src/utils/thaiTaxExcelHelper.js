@@ -183,7 +183,7 @@ export async function exportCashTaxTemplateExcel({
     
     const citizenId = companySettings.tax_citizen_id || 
                       companySettings.tax_id || 
-                      '1120100144907';
+                      '';
 
     const establishmentName = companySettings.tax_establishment_name || 
                               companySettings.tax_company_name || 

@@ -201,7 +201,7 @@ async function runSeed() {
   const settingsEntries = [
     { key: 'tax_company_name', value: 'ร้านในบ้าน นครพนม' },
     { key: 'tax_company_name_en', value: 'IN THE HAUS NAKHON PHANOM' },
-    { key: 'tax_id', value: '1120100144907' },
+    { key: 'tax_id', value: '1234567890121' },
     { key: 'tax_branch_type', value: 'head_office' },
     { key: 'tax_branch_code', value: '00000' },
     { key: 'tax_address', value: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000' },
@@ -274,7 +274,7 @@ async function runSeed() {
         { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 134.00 }
       ],
       issuer_name: 'ร้านในบ้าน นครพนม',
-      issuer_tax_id: '1120100144907',
+      issuer_tax_id: '1234567890121',
       issuer_branch: '00000',
       issuer_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม',
       status: 'issued',
@@ -304,7 +304,7 @@ async function runSeed() {
         { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 314.00 }
       ],
       issuer_name: 'ร้านในบ้าน นครพนม',
-      issuer_tax_id: '1120100144907',
+      issuer_tax_id: '1234567890121',
       issuer_branch: '00000',
       issuer_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม',
       status: 'issued',

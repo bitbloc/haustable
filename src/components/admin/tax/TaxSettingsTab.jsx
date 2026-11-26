@@ -39,9 +39,9 @@ export default function TaxSettingsTab({
         tax_company_name: 'ร้านในบ้าน นครพนม',
         tax_company_name_en: 'IN THE HAUS NAKHON PHANOM',
         tax_proprietor_name: 'นายธนภัทร บุญเจริญ',
-        tax_citizen_id: '1120100144907',
+        tax_citizen_id: '',
         tax_establishment_name: 'ร้านในบ้าน นครพนม',
-        tax_id: '1120100144907',
+        tax_id: '',
         tax_branch_type: 'head_office',
         tax_branch_code: '00000',
         tax_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000',
@@ -521,7 +521,7 @@ export default function TaxSettingsTab({
                             type="text"
                             value={settings.tax_citizen_id}
                             onChange={(e) => handleSettingChange('tax_citizen_id', e.target.value)}
-                            placeholder="1120100144907"
+                            placeholder="เลข 13 หลัก"
                             maxLength={17}
                             className="w-full px-3 py-2 border border-[var(--color-rule)] rounded-lg tabular-nums text-xs focus:border-zinc-900 focus:outline-none"
                         />
