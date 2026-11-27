@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchAllRows } from '../../utils/fetchAllRows';
 import { fetchAndSortMenu } from '../../utils/menuHelper';
-import { calculateRecipeCost } from '../../utils/costUtils';
+import { calculateRealUnitCost, calculateRecipeCost } from '../../utils/costUtils';
 import { buildLiveCostResolver } from '../../utils/recipeGraph';
+import { componentsBySet, setComponentsCost } from '../../utils/setComponents';
 import RecipeReadinessPanel from './RecipeReadinessPanel';
 import RecipeUnitCheckPanel from './RecipeUnitCheckPanel';
 import CostAnomalyPanel from './CostAnomalyPanel';
@@ -74,6 +75,19 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
             ]);
             const liveCost = buildLiveCostResolver(allStock || [], nestedRows || []);
 
+            // Set menus are made of other menus: their cost is those menus' recipes, plus the
+            // option choices the set fixes on them. A failed read leaves sets without a cost
+            // rather than the whole page empty.
+            const { data: setRows, error: setErr } = await supabase.from('menu_set_components').select('*');
+            if (setErr) console.warn('Could not load menu_set_components:', setErr);
+            const setsByMenu = componentsBySet(setRows || []);
+            const fixedChoiceIds = [...new Set((setRows || []).flatMap(r => r.choice_ids || []))];
+            const { data: fixedRules } = fixedChoiceIds.length
+                ? await supabase.from('option_choice_ingredients').select('*').in('choice_id', fixedChoiceIds)
+                : { data: [] };
+            const unitCostOf = (id) => calculateRealUnitCost(liveCost.getItem(id));
+            const menuNames = new Map((data || []).map(m => [String(m.id), m.name]));
+
             // 4. Map Recipe to Menu ID
             const recipesByMenu = {};
             if (recipeLinks) {
@@ -112,8 +126,23 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     { qFactorPercent: 0 }
                 );
 
-                const cost = breakdown.totalCost;
-                const takeawayExtraCost = takeawayBreakdown.totalCost;
+                const components = setsByMenu[String(item.id)] || [];
+                const inSet = setComponentsCost(components, {
+                    recipeRowsByMenu: recipesByMenu,
+                    ruleRows: fixedRules || [],
+                    unitCostOf
+                });
+                const setLines = inSet.lines.map(line => ({
+                    id: `menu_${line.menuId}`,
+                    name: menuNames.get(String(line.menuId)) || `เมนู #${line.menuId}`,
+                    qty: line.quantity,
+                    unit: 'ที่',
+                    unitCost: line.unitCost,
+                    total: line.total
+                }));
+
+                const cost = breakdown.totalCost + inSet.cost * (1 + (Number(item.q_factor_percent) || 0) / 100);
+                const takeawayExtraCost = takeawayBreakdown.totalCost + inSet.takeawayExtraCost;
                 const price = Number(item.price) || 0;
                 const profit = price - cost;
                 const margin = price > 0 ? (profit / price) * 100 : 0;
@@ -126,9 +155,10 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                     profit,
                     margin,
                     costPercent,
-                    costLines: breakdown.ingredients,
-                    ingredientCount: ingredients.length,
-                    hasRecipe: ingredients.length > 0
+                    costLines: [...breakdown.ingredients, ...setLines],
+                    ingredientCount: ingredients.length + components.length,
+                    isSet: components.length > 0,
+                    hasRecipe: ingredients.length > 0 || components.length > 0
                 };
             });
 
@@ -822,7 +852,7 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
                                                                 )}
                                                                 {item.hasRecipe && (
                                                                     <span className="text-xs text-[var(--color-neutral)]">
-                                                                        {item.ingredientCount} วัตถุดิบ
+                                                                        {item.isSet ? `เซต ${item.ingredientCount} รายการ` : `${item.ingredientCount} วัตถุดิบ`}
                                                                     </span>
                                                                 )}
                                                             </div>

@@ -30,3 +30,33 @@ describe('menuMaterialCost', () => {
         expect(menuMaterialCost([], [flour], [])).toEqual({ cost: 0, takeawayExtraCost: 0 });
     });
 });
+
+describe('menuMaterialCost for a set', () => {
+    it('adds the recipes of the menus in the set, by servings', () => {
+        // dish 7: 200 g flour (20 baht) and a box when taken away; the set holds 2 of it
+        const componentRecipeRows = [
+            { parent_menu_item_id: 7, ingredient_id: 'flour', quantity: 200, order_scope: 'all' },
+            { parent_menu_item_id: 7, ingredient_id: 'box', quantity: 1, order_scope: 'takeaway' },
+        ];
+        const components = [{ component_menu_item_id: 7, quantity: 2, choice_ids: [] }];
+        const { cost, takeawayExtraCost } = menuMaterialCost([], [flour, box], [], { components, componentRecipeRows });
+        expect(cost).toBeCloseTo(40, 5);
+        expect(takeawayExtraCost).toBeCloseTo(10, 5);
+    });
+
+    it('adds what a fixed choice of a component deducts', () => {
+        const componentRecipeRows = [{ parent_menu_item_id: 7, ingredient_id: 'flour', quantity: 100, order_scope: 'all' }];
+        const components = [{ component_menu_item_id: 7, quantity: 1, choice_ids: ['c1'] }];
+        const ruleRows = [{ choice_id: 'c1', menu_item_id: null, stock_item_id: 'flour', quantity: 50 }];
+        const { cost } = menuMaterialCost([], [flour, box], [], { components, componentRecipeRows, ruleRows });
+        expect(cost).toBeCloseTo(15, 5);
+    });
+
+    it('keeps the set\'s own recipe lines too', () => {
+        const rows = [{ ingredient_id: 'box', quantity: 1, unit: 'unit', order_scope: 'all' }];
+        const componentRecipeRows = [{ parent_menu_item_id: 7, ingredient_id: 'flour', quantity: 100, order_scope: 'all' }];
+        const components = [{ component_menu_item_id: 7, quantity: 1 }];
+        const { cost } = menuMaterialCost(rows, [flour, box], [], { components, componentRecipeRows });
+        expect(cost).toBeCloseTo(15, 5);
+    });
+});

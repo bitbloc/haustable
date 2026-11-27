@@ -117,3 +117,38 @@ describe('summarizeChoiceIngredients', () => {
         ]);
     });
 });
+
+describe('fixed choices of a linked menu', () => {
+    it('keeps them on a linked-menu row and not on a stock row', () => {
+        const { rows, errors } = validateChoiceIngredients([
+            { key: 'a', linked_menu_item_id: 55, linked_choice_ids: ['iced', 'bean', 'iced'], menu_item_id: null, sign: 'plus', amount: '1' },
+            { key: 'b', stock_item_id: 's1', linked_choice_ids: [], menu_item_id: null, sign: 'plus', amount: '2' }
+        ]);
+        expect(errors).toEqual({});
+        expect(rows[0].linked_choice_ids).toEqual(['iced', 'bean']);
+        expect(rows[1]).not.toHaveProperty('linked_choice_ids');
+    });
+
+    it('updates a row when only its fixed choices changed', () => {
+        const existing = [{ id: 'r1', choice_id: 'c', stock_item_id: null, linked_menu_item_id: 55, menu_item_id: null, quantity: 1, linked_choice_ids: ['iced'] }];
+        const same = planChoiceIngredientSave('c', existing, [
+            { id: 'r1', stock_item_id: null, linked_menu_item_id: 55, menu_item_id: null, quantity: 1, linked_choice_ids: ['iced'] }
+        ]);
+        expect(same.updates).toHaveLength(0);
+
+        const changed = planChoiceIngredientSave('c', existing, [
+            { id: 'r1', stock_item_id: null, linked_menu_item_id: 55, menu_item_id: null, quantity: 1, linked_choice_ids: ['iced', 'bean'] }
+        ]);
+        expect(changed.updates).toHaveLength(1);
+        expect(changed.updates[0].linked_choice_ids).toEqual(['iced', 'bean']);
+    });
+
+    it('leaves the column alone when the editor did not send it', () => {
+        const existing = [{ id: 'r1', choice_id: 'c', stock_item_id: null, linked_menu_item_id: 55, menu_item_id: null, quantity: 1, linked_choice_ids: ['iced'] }];
+        const plan = planChoiceIngredientSave('c', existing, [
+            { id: 'r1', stock_item_id: null, linked_menu_item_id: 55, menu_item_id: null, quantity: 2 }
+        ]);
+        expect(plan.updates).toHaveLength(1);
+        expect(plan.updates[0]).not.toHaveProperty('linked_choice_ids');
+    });
+});

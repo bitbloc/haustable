@@ -85,6 +85,10 @@ export const validateChoiceIngredients = (draft = []) => {
                 id: d.id || null,
                 stock_item_id: hasStock ? d.stock_item_id : null,
                 ...(hasLinkedMenu ? { linked_menu_item_id: Number(d.linked_menu_item_id) } : {}),
+                // Choices of the linked menu that are always deducted with its recipe
+                ...(hasLinkedMenu && Array.isArray(d.linked_choice_ids)
+                    ? { linked_choice_ids: [...new Set(d.linked_choice_ids)] }
+                    : {}),
                 menu_item_id: d.menu_item_id ?? null,
                 quantity
             };
@@ -98,6 +102,12 @@ export const validateChoiceIngredients = (draft = []) => {
         }
     }
     return { rows, errors };
+};
+
+const sameIds = (a = [], b = []) => {
+    const x = [...(a || [])].sort();
+    const y = [...(b || [])].sort();
+    return x.length === y.length && x.every((v, i) => v === y[i]);
 };
 
 /**
@@ -119,7 +129,8 @@ export const planChoiceIngredientSave = (choiceId, existing = [], rows = []) => 
                 ? { linked_menu_item_id: r.linked_menu_item_id ?? null }
                 : {}),
             menu_item_id: r.menu_item_id,
-            quantity: r.quantity
+            quantity: r.quantity,
+            ...(Array.isArray(r.linked_choice_ids) ? { linked_choice_ids: r.linked_choice_ids } : {})
         };
         if (!old) {
             inserts.push(payload);
@@ -127,7 +138,8 @@ export const planChoiceIngredientSave = (choiceId, existing = [], rows = []) => 
             (old.stock_item_id ?? null) !== (r.stock_item_id ?? null) ||
             (old.linked_menu_item_id ?? null) !== (r.linked_menu_item_id ?? null) ||
             (old.menu_item_id ?? null) !== (r.menu_item_id ?? null) ||
-            Number(old.quantity) !== r.quantity
+            Number(old.quantity) !== r.quantity ||
+            (Array.isArray(r.linked_choice_ids) && !sameIds(old.linked_choice_ids, r.linked_choice_ids))
         ) {
             updates.push({ id: r.id, ...payload });
         }

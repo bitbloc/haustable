@@ -11,6 +11,8 @@ import {
     stepOptionAmount,
     validateChoiceIngredients
 } from '../../utils/optionIngredients'
+import { useMenuChoiceGroups } from '../../hooks/useMenuChoiceGroups'
+import FixedChoiceEditor from '../../components/recipes/FixedChoiceEditor'
 
 const INK = 'text-[var(--color-ink)]'
 const MUTED = 'text-[var(--color-muted)]'
@@ -26,6 +28,7 @@ const toDraft = (row) => ({
     id: row.id || null,
     stock_item_id: row.stock_item_id || '',
     linked_menu_item_id: row.linked_menu_item_id ?? null,
+    linked_choice_ids: row.linked_choice_ids || [],
     menu_item_id: row.menu_item_id ?? null,
     sign: Number(row.quantity) < 0 ? 'minus' : 'plus',
     amount: row.quantity ? String(Math.abs(Number(row.quantity))) : ''
@@ -93,6 +96,13 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
 
     const itemsById = useMemo(() => new Map(stockItems.map(i => [i.id, i])), [stockItems])
     const menusById = useMemo(() => new Map(allMenus.map(m => [Number(m.id), m])), [allMenus])
+
+    // Option choices of the menus this choice deducts, so the ones always used can be fixed
+    const linkedMenuIds = useMemo(() => draft
+        .map(r => r.linked_menu_item_id)
+        .filter(v => v !== null && v !== undefined && v !== '')
+        .map(Number), [draft])
+    const linked = useMenuChoiceGroups(linkedMenuIds)
 
     const matches = useMemo(() => {
         const q = search.trim().toLowerCase()
@@ -239,6 +249,18 @@ export default function ChoiceIngredientsModal({ choice, group, onClose, onSaved
                                                     ลบ
                                                 </button>
                                             </div>
+
+                                            {isLinkedMenu && (
+                                                <div className="mt-2 empty:hidden">
+                                                    <FixedChoiceEditor
+                                                        menuName={titleName}
+                                                        groups={linked.groupsByMenu[String(row.linked_menu_item_id)] || []}
+                                                        value={row.linked_choice_ids || []}
+                                                        loading={linked.loading}
+                                                        onChange={(next) => updateRow(row.key, { linked_choice_ids: next })}
+                                                    />
+                                                </div>
+                                            )}
 
                                             <div className="flex flex-wrap items-center gap-2 mt-3">
                                                 <div className={`inline-flex border ${RULE} divide-x divide-[var(--color-rule)] rounded-xs overflow-hidden text-xs font-bold shrink-0`} role="group" aria-label="เพิ่มหรือลด">
