@@ -26,17 +26,24 @@ Deno.serve(async (req) => {
   try { body = JSON.parse(raw) } catch { return reply({ ok: false, error: 'BAD_JSON' }, 400) }
 
   const rows = (Array.isArray(body) ? body : [body]).slice(0, 20)
-  let logged = 0
-  for (const r of rows) {
-    const model = String(r?.model ?? '')
-    if (!/^claude-[a-z0-9.-]{1,60}$/.test(model)) continue
-    await logAiUsage({
-      source: 'yuzu',
-      feature: `yuzu:${String(r?.feature || 'chat').replace(/[^a-z0-9_:-]/gi, '').slice(0, 40)}`,
-      model,
-      usage: r?.usage || {},
-    })
-    logged++
-  }
+  const valid = rows.filter((r: any) => /^claude-[a-z0-9.-]{1,60}$/.test(String(r?.model ?? '')))
+  // Reply first, write after: Yuzu waits only 1.5 s, and the rate lookup plus the
+  // insert took up to ~1.4 s on a cold start, so some reports were cut off and
+  // never counted (one Opus call on 2026-11-27, found against the Console bill).
+  const work = (async () => {
+    for (const r of valid) {
+      await logAiUsage({
+        source: 'yuzu',
+        feature: `yuzu:${String(r?.feature || 'chat').replace(/[^a-z0-9_:-]/gi, '').slice(0, 40)}`,
+        model: String(r.model),
+        usage: r?.usage || {},
+      })
+    }
+  })()
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime
+  if (runtime?.waitUntil) runtime.waitUntil(work)
+  else await work
+  const logged = valid.length
   return reply({ ok: true, logged })
 })

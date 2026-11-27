@@ -32,6 +32,19 @@ describe('summarizeAiUsage', () => {
         expect(s.daysTracked).toBe(5)
         expect(s.projection).toBeCloseTo(30)
     })
+    it('counts backfilled Console spend in the total once, not in the daily rate or calls', () => {
+        const rows = [
+            { ...row('2026-11-26', 'haustable', 'claude-opus-5-5', 1, 12, 0.36), feature: 'backfill:console' },
+            row('2026-11-26', 'haustable', 'claude-opus-5-5', 4, 3, 0.09),
+            row('2026-11-28', 'yuzu', 'claude-haiku-5-5', 10, 3, 0.09),
+        ]
+        const s = summarizeAiUsage(rows, '2026-11', '2026-11-28')
+        expect(s.thb).toBeCloseTo(18)
+        expect(s.calls).toBe(14)
+        expect(s.perDay).toBeCloseTo(2)
+        expect(s.projection).toBeCloseTo(2 * 30 + 12)
+        expect(s.byModel[0].calls).toBe(4)
+    })
 })
 
 describe('compareToGemini / monthBounds', () => {

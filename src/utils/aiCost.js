@@ -44,6 +44,11 @@ const MODEL_LABEL = [
 export const modelLabel = (m) => (MODEL_LABEL.find(([p]) => String(m).startsWith(p)) || [null, m])[1]
 export const sourceLabel = (s) => (s === 'yuzu' ? 'Yuzu (HR)' : 'Haustable')
 
+// Rows whose feature starts with this were added by hand from the Console bill for
+// calls made before logging began (setup tests on 2026-11-26). They count toward
+// the month's total but are one-off: not calls, and not part of the daily rate.
+export const isBackfill = (feature) => String(feature || '').startsWith('backfill:')
+
 /**
  * rows: ai_usage_summary output for one month.
  * todayIso: the Bangkok date used as "today" (projection runs to the month's end).
@@ -51,28 +56,32 @@ export const sourceLabel = (s) => (s === 'yuzu' ? 'Yuzu (HR)' : 'Haustable')
 export function summarizeAiUsage(rows, ym, todayIso) {
     const { daysInMonth } = monthBounds(ym)
     const num = (v) => Number(v) || 0
-    let thb = 0, usd = 0, calls = 0
+    let thb = 0, usd = 0, calls = 0, oneOffThb = 0
     const byDay = new Map(), bySource = new Map(), byModel = new Map()
     for (const r of rows) {
         const t = num(r.cost_thb)
-        thb += t; usd += num(r.cost_usd); calls += num(r.calls)
+        const oneOff = isBackfill(r.feature)
+        thb += t; usd += num(r.cost_usd)
+        if (oneOff) oneOffThb += t
+        else calls += num(r.calls)
         byDay.set(r.day, (byDay.get(r.day) || 0) + t)
         const s = bySource.get(r.source) || { thb: 0, calls: 0 }
-        bySource.set(r.source, { thb: s.thb + t, calls: s.calls + num(r.calls) })
+        bySource.set(r.source, { thb: s.thb + t, calls: s.calls + (oneOff ? 0 : num(r.calls)) })
         const label = modelLabel(r.model)
         const m = byModel.get(label) || { thb: 0, calls: 0 }
-        byModel.set(label, { thb: m.thb + t, calls: m.calls + num(r.calls) })
+        byModel.set(label, { thb: m.thb + t, calls: m.calls + (oneOff ? 0 : num(r.calls)) })
     }
-    if (calls === 0) return { calls: 0 }
+    if (calls === 0 && oneOffThb === 0) return { calls: 0 }
 
     // Average per day over the days since logging started this month, quiet days included.
+    // One-off backfill is left out of the rate and added back once to the projection.
     const firstDay = [...byDay.keys()].sort()[0]
     const end = todayIso && todayIso.slice(0, 7) === ym ? todayIso : `${ym}-${pad(daysInMonth)}`
     const daysTracked = Math.max(1, Math.round((Date.parse(end) - Date.parse(firstDay)) / 86400000) + 1)
-    const perDay = thb / daysTracked
+    const perDay = (thb - oneOffThb) / daysTracked
     const isCurrentMonth = todayIso && todayIso.slice(0, 7) === ym
     const projection = daysTracked >= MIN_DAYS_FOR_PROJECTION
-        ? (isCurrentMonth ? perDay * daysInMonth : thb * (daysInMonth / daysTracked))
+        ? (isCurrentMonth ? perDay * daysInMonth : (thb - oneOffThb) * (daysInMonth / daysTracked)) + oneOffThb
         : null
 
     const sortDesc = (map) => [...map.entries()].map(([key, v]) => ({ key, ...v })).sort((a, b) => b.thb - a.thb)
