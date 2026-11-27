@@ -17,6 +17,7 @@ const INK = 'text-[var(--color-ink)]';
 const MUTED = 'text-[var(--color-muted)]';
 const NEUTRAL = 'text-[var(--color-neutral)]';
 const RULE = 'border-[var(--color-rule)]';
+const FIELD = 'border-[var(--color-neutral)]'; // a field's edge needs 3:1 to read as a field
 const FOCUS = 'focus-visible:outline-2 focus-visible:outline-[var(--brand-plum)]';
 
 // How many search results a choice shows before asking for a narrower term
@@ -409,8 +410,8 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                             <div className={`pl-3 border-l ${RULE} @3xl/panel:pl-0 @3xl/panel:border-l-0 space-y-2`}>
                                                 {rows.length === 0 && (
                                                     generic.length ? (
-                                                        <div className={`text-[13px] leading-5 ${MUTED}`}>
-                                                            <div className={`font-medium ${INK}`}>ใช้ค่ากลางทุกเมนู</div>
+                                                        <div className={`text-[13px] leading-5 ${INK}`}>
+                                                            <div className="font-semibold">ตัดตามค่ากลาง (ใช้กับทุกเมนู)</div>
                                                             {generic.map(r => {
                                                                 const sign = Number(r.quantity) > 0 ? '+' : '−';
                                                                 if (r.linked_menu_item_id != null) {
@@ -419,7 +420,7 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                                     return (
                                                                         <div key={r.id} className="tabular-nums">
                                                                             {sign}{fmt(Math.abs(r.quantity))} ที่ สูตรเมนู: {m?.name || `#${r.linked_menu_item_id}`}
-                                                                            {fixed.length > 0 && <span className={NEUTRAL}> (ใช้เสมอ: {fixed.join(', ')})</span>}
+                                                                            {fixed.length > 0 && <span className={MUTED}> (ใช้เสมอ: {fixed.join(', ')})</span>}
                                                                         </div>
                                                                     );
                                                                 }
@@ -557,7 +558,7 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                         value={search[c.id] || ''}
                                                         onChange={e => setSearch(prev => ({ ...prev, [c.id]: e.target.value }))}
                                                         placeholder={rows.length === 0 && generic.length ? '+ ตั้งค่าเฉพาะเมนูนี้ (แทนค่ากลาง)' : '+ เพิ่มวัตถุดิบ หรือ พิมพ์ชื่อเมนูขาย'}
-                                                        className={`h-11 w-full px-3 border ${RULE} bg-[var(--color-paper)] text-base @3xl/panel:text-sm ${INK} placeholder:text-[var(--color-neutral)] outline-none focus:border-[var(--brand-plum)]`}
+                                                        className={`h-11 w-full px-3 border ${FIELD} bg-[var(--color-paper)] text-base @3xl/panel:text-sm ${INK} placeholder:text-[var(--color-neutral)] outline-none focus:border-[var(--brand-plum)]`}
                                                     />
                                                     {(stockMatches.length > 0 || menuMatches.length > 0) && (
                                                         <ul className="absolute z-20 left-0 right-0 mt-1 border border-[var(--color-ink)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)]">
