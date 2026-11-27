@@ -98,10 +98,10 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             {/* Control Panel Section Header */}
             <div className="flex items-center justify-between w-full p-4 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                 <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                    [ CONTROL PANEL // SERVICES ]
+                    CONTROL PANEL SERVICES
                 </span>
                 <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                    SELECT SERVICE // เลือกบริการ
+                    SELECT SERVICE เลือกบริการ
                 </span>
             </div>
 
@@ -113,7 +113,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                             <div className="flex flex-col text-left min-w-0 pr-4">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono text-[10px] sm:text-[11px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
-                                        {act.num} // {act.labelEn}
+                                        {act.num} {act.labelEn}
                                     </span>
                                     {act.badgeText && (
                                         <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 border border-[var(--color-hallmark-ink)] text-[var(--color-hallmark-ink)] bg-[var(--color-hallmark-paper-dark)]">
@@ -133,7 +133,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                             <div className="flex items-center flex-shrink-0">
                                 {act.isOpen ? (
                                     <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink)] px-3 py-1.5 border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] group-hover:bg-[var(--color-hallmark-ink)] group-hover:text-[var(--color-hallmark-paper)] group-hover:border-[var(--color-hallmark-ink)] transition-all">
-                                        [ {act.cta} ➔ ]
+                                        {act.cta} ➔
                                     </span>
                                 ) : (
                                     <span className="font-mono text-[10px] font-bold px-2.5 py-1 bg-[var(--color-accent-red)] text-white">
@@ -165,7 +165,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             {(!isDepositRequired || isPayAtStoreEnabled) && (
                 <div className="w-full px-4 py-3 border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="text-[11px] sm:text-[12px] text-[var(--color-hallmark-ink)] leading-relaxed">
-                        <span className="font-mono font-bold uppercase tracking-wider mr-1.5">[ NOTICE ]</span>
+                        <span className="font-mono font-bold uppercase tracking-wider mr-1.5">NOTICE</span>
                         <span>
                             การจองโต๊ะแบบไม่มีค่าใช้จ่าย และ การสั่งรับหน้าร้านแบบจ่ายที่ร้าน <strong>ต้องได้รับการยืนยันจากทางร้านเสมอ</strong> หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ที่แจ้ง
                         </span>
@@ -174,7 +174,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                         href={`tel:${cleanShopPhone}`}
                         className="font-mono text-[10px] font-bold px-2.5 py-1.5 border border-[var(--color-hallmark-ink)] bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center"
                     >
-                        [ TEL: {shopPhone} ]
+                        TEL: {shopPhone}
                     </a>
                 </div>
             )}
@@ -182,7 +182,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             {/* 2. Secondary Interactive Hub Header */}
             <div className="flex items-center justify-between w-full p-3 border-y border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                 <span className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
-                    [ QUICK ACCESS // EXPERIENCES ]
+                    QUICK ACCESS EXPERIENCES
                 </span>
                 <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
                     3 MODULES

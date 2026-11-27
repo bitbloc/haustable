@@ -49,7 +49,7 @@ export default function HomeNavigation({
                             className="w-full h-12 flex items-center justify-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors cursor-pointer px-2"
                         >
                             <span className="font-mono text-[11px] font-black uppercase truncate">
-                                [ {displayName} ]
+                                {displayName}
                             </span>
                         </button>
                     ) : (
@@ -58,7 +58,7 @@ export default function HomeNavigation({
                             className="w-full h-12 flex items-center justify-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors cursor-pointer px-2"
                         >
                             <span className="font-mono text-[11px] font-black uppercase">
-                                [ SIGN IN ]
+                                SIGN IN
                             </span>
                         </button>
                     )}
@@ -108,7 +108,7 @@ export default function HomeNavigation({
                                     className="flex items-center justify-between px-3.5 py-3 text-[11px] font-mono font-bold text-white bg-[var(--color-accent-red)] hover:opacity-90 w-full text-left transition-opacity cursor-pointer"
                                 >
                                     <span>SIGN OUT</span>
-                                    <span>[ ✕ ]</span>
+                                    <span>✕</span>
                                 </button>
                             </motion.div>
                         )}
@@ -128,7 +128,7 @@ export default function HomeNavigation({
                         className="relative w-full h-12 flex items-center justify-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors cursor-pointer px-2"
                     >
                         <span className={`font-mono text-[11px] font-black uppercase ${hasActiveOrder ? 'text-[var(--color-brand)]' : ''}`}>
-                            [ TICKETS ]
+                            TICKETS
                         </span>
                         
                         {/* Live active order ping dot */}
@@ -146,7 +146,7 @@ export default function HomeNavigation({
                         className="w-full h-12 flex items-center justify-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors cursor-pointer px-2"
                     >
                         <span className="font-mono text-[11px] font-black uppercase">
-                            [ MENU ]
+                            MENU
                         </span>
                     </a>
                 </div>

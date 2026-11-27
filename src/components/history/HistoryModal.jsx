@@ -37,14 +37,14 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                     <div className="p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
                             <span className="font-mono text-[11px] font-black uppercase tracking-wider text-[var(--color-ink)]">
-                                [ TICKETS // ORDER HISTORY ]
+                                TICKETS ORDER HISTORY
                             </span>
                         </div>
                         <button 
                             onClick={onClose}
                             className="font-mono text-[11px] font-bold px-2.5 py-1 border border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] transition-colors cursor-pointer"
                         >
-                            [ ✕ CLOSE ]
+                            ✕ CLOSE
                         </button>
                     </div>
 
@@ -59,7 +59,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                         ) : (activeOrders.length === 0 && pastOrders.length === 0) ? (
                             <div className="text-center py-12 border border-dashed border-[var(--color-rule)] p-6 bg-[var(--color-paper-2)]">
                                 <span className="font-mono text-[11px] font-bold text-[var(--color-neutral)] uppercase block">
-                                    [ NO ORDER TICKETS FOUND ]
+                                    NO ORDER TICKETS FOUND
                                 </span>
                                 <p className="text-[12px] text-[var(--color-muted)] mt-1">
                                     ยังไม่มีประวัติการจองโต๊ะหรือสั่งอาหาร
@@ -181,7 +181,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                             onClick={onClose}
                                                             className="font-mono text-[10px] font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] underline"
                                                         >
-                                                            [ RECEIPT ➔ ]
+                                                            RECEIPT ➔
                                                         </Link>
                                                     )}
                                                 </div>
@@ -236,35 +236,35 @@ function StatusBadge({ status }) {
     if (['confirmed', 'paid', 'approved'].includes(s)) {
         return (
             <span className="px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase bg-[oklch(90%_0.04_250)] text-[oklch(35%_0.12_250)] border border-[oklch(80%_0.08_250)]">
-                [ {status} ]
+                {status}
             </span>
         )
     }
     if (['preparing', 'kitchen'].includes(s)) {
         return (
             <span className="px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase bg-[oklch(92%_0.06_60)] text-[oklch(40%_0.14_60)] border border-[oklch(82%_0.10_60)] animate-pulse">
-                [ {status} ]
+                {status}
             </span>
         )
     }
     if (['ready', 'served', 'completed'].includes(s)) {
         return (
             <span className="px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase bg-[oklch(92%_0.05_140)] text-[oklch(35%_0.12_140)] border border-[oklch(80%_0.08_140)]">
-                [ {status} ]
+                {status}
             </span>
         )
     }
     if (['cancelled', 'void', 'rejected'].includes(s)) {
         return (
             <span className="px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase bg-[oklch(92%_0.06_25)] text-[oklch(40%_0.15_25)] border border-[oklch(80%_0.10_25)]">
-                [ {status} ]
+                {status}
             </span>
         )
     }
     
     return (
         <span className="px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase bg-[var(--color-paper)] text-[var(--color-neutral)] border border-[var(--color-rule)]">
-            [ {status || 'PENDING'} ]
+            {status || 'PENDING'}
         </span>
     )
 }

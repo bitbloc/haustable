@@ -557,7 +557,7 @@ export default function TrackingPage() {
                                   <a href={`tel:${settings.contact_phone || '0812345678'}`} className="bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 text-[10px] font-bold flex items-center gap-1">
                                       <Phone size={12}/> {t('callShop')}
                                   </a>
-                                  <a href={settings.contact_line_url || "#"} className="bg-[#06C755] text-white px-3 py-1.5 text-[10px] font-bold flex items-center gap-1">
+                                  <a href={settings.contact_line_url || "#"} className="bg-[var(--brand-plum)] text-[var(--cream)] px-3 py-1.5 text-[10px] font-bold flex items-center gap-1">
                                       <Share2 size={12}/> {t('lineChat')}
                                   </a>
                               </div>

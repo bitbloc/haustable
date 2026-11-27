@@ -26,7 +26,7 @@ export default function HomeHeader({ t, status }) {
                             IN THE HAUS
                         </span>
                         <span className="font-mono text-[9.5px] text-white/60 tracking-wider">
-                            [ 17.4064° N, 104.7818° E ]
+                            17.4064° N, 104.7818° E
                         </span>
                     </div>
                 </div>
