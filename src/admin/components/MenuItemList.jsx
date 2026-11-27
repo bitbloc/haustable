@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { AdminFilterChips, AdminSearch, AdminToolbar } from '../../components/admin/AdminKit'
 import { supabase } from '../../lib/supabaseClient'
@@ -458,6 +458,9 @@ export default function MenuItemList() {
 
     const [loading, setLoading] = useState(true)
     const [isSavingOrder, setIsSavingOrder] = useState(false)
+    // The ref blocks a second tap before React re-renders; the state drives the button.
+    const savingRef = useRef(false)
+    const [isSaving, setIsSaving] = useState(false)
     const [viewMode, setViewMode] = useState(() => localStorage.getItem('menu_admin_view_mode') || 'grid')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
@@ -1014,6 +1017,12 @@ export default function MenuItemList() {
             return
         }
 
+        // One save at a time: a repeated tap used to run delete-then-insert on
+        // menu_item_options twice (409 duplicate key) and could create the menu twice.
+        if (savingRef.current) return
+        savingRef.current = true
+        setIsSaving(true)
+
         try {
             let imageUrl = previewUrl
 
@@ -1126,6 +1135,9 @@ export default function MenuItemList() {
         } catch (err) {
             console.error('Save menu item error:', err)
             toast.error('บันทึกไม่สำเร็จ: ' + err.message)
+        } finally {
+            savingRef.current = false
+            setIsSaving(false)
         }
     }
 
@@ -1765,9 +1777,11 @@ export default function MenuItemList() {
                             <button 
                                 type="button"
                                 onClick={handleSubmit} 
+                                disabled={isSaving}
+                                aria-busy={isSaving}
                                 className="admin-btn is-primary h-9 flex-1"
                             >
-                                บันทึกเมนู
+                                {isSaving ? 'กำลังบันทึก...' : 'บันทึกเมนู'}
                             </button>
                         </div>
                     </div>
