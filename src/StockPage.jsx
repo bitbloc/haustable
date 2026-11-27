@@ -2,6 +2,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
+import { fetchAllRows } from './utils/fetchAllRows';
 import { stockStatus, STOCK_STATUS_LABEL, packCapacity } from './utils/stockUtils';
 import { qtyInWords, displayUnit, shopDayOf, addDays } from './utils/stockCount';
 import { stockHealth } from './utils/stockHealth';
@@ -119,7 +120,7 @@ export default function StockPage() {
             const since7d = addDays(shopDayOf(new Date()), -6);
             const since14dIso = new Date(`${addDays(shopDayOf(new Date()), -13)}T05:00:00+07:00`).toISOString();
             const [recRes, shadowRes, countRes] = await Promise.all([
-                supabase.from('recipe_ingredients').select('ingredient_id'),
+                fetchAllRows(() => supabase.from('recipe_ingredients').select('ingredient_id')),
                 supabase.from('sale_stock_shadow_daily')
                     .select('stock_item_id, shop_day, quantity')
                     .gte('shop_day', since7d),

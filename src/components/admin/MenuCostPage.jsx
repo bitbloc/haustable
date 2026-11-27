@@ -1,6 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { fetchAllRows } from '../../utils/fetchAllRows';
 import { fetchAndSortMenu } from '../../utils/menuHelper';
 import { calculateRecipeCost } from '../../utils/costUtils';
 import { buildLiveCostResolver } from '../../utils/recipeGraph';
@@ -48,14 +49,16 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
             }
 
             // 3. Fetch All Recipe Links (bulk calculation)
-            const { data: recipeLinks, error: recipeErr } = await supabase
+            // Paged: a plain select stops at 1000 rows and menus past that showed "รอผูกสูตร".
+            const { data: recipeLinks, error: recipeErr } = await fetchAllRows(() => supabase
                 .from('recipe_ingredients')
                 .select(`
                     *,
                     ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
-                `);
+                `)
+                .not('parent_menu_item_id', 'is', null));
 
             if (recipeErr) {
                 console.error('Error fetching recipe ingredients:', recipeErr);
@@ -65,9 +68,9 @@ export default function MenuCostPage({ isEmbedded = false, onOpenMethod = null }
             // today's prices instead of the cost saved when their recipe was last edited.
             const [{ data: allStock }, { data: nestedRows }] = await Promise.all([
                 supabase.from('stock_items').select('*'),
-                supabase.from('recipe_ingredients')
+                fetchAllRows(() => supabase.from('recipe_ingredients')
                     .select('parent_stock_item_id, ingredient_id, quantity')
-                    .not('parent_stock_item_id', 'is', null)
+                    .not('parent_stock_item_id', 'is', null))
             ]);
             const liveCost = buildLiveCostResolver(allStock || [], nestedRows || []);
 

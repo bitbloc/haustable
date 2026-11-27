@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
+import { fetchAllRows } from '../../utils/fetchAllRows';
 import StockItemForm from './StockItemForm';
 import { stockHealth, readMergeResult, unitLine, sameUnitSetup, suggestMergeRatio, mergedQuantity, ratioUnitOptions, ratioInKeepUnits } from '../../utils/stockHealth';
 import { displayUnit, qtyInWords } from '../../utils/stockCount';
@@ -40,7 +41,7 @@ export default function StockCheckPage() {
         try {
             const [itemsRes, recipesRes, catsRes] = await Promise.all([
                 supabase.from('stock_items').select('*').order('name'),
-                supabase.from('recipe_ingredients').select('ingredient_id'),
+                fetchAllRows(() => supabase.from('recipe_ingredients').select('ingredient_id')),
                 supabase.from('stock_categories').select('*').order('sort_order'),
             ]);
             if (itemsRes.error) throw itemsRes.error;
