@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabaseClient';
+import { fetchAllRows } from '../../utils/fetchAllRows';
 import { findRecipeUnitIssues } from '../../utils/recipeUnits';
 
 const RULE = 'border-[var(--color-rule)]';
@@ -22,7 +23,7 @@ export default function RecipeUnitCheckPanel({ onOpenRecipe, onFixed }) {
     const load = useCallback(async () => {
         setLoading(true);
         const [rows, items, menus] = await Promise.all([
-            supabase.from('recipe_ingredients').select('id, parent_menu_item_id, parent_stock_item_id, ingredient_id, quantity, unit').not('ingredient_id', 'is', null),
+            fetchAllRows(() => supabase.from('recipe_ingredients').select('id, parent_menu_item_id, parent_stock_item_id, ingredient_id, quantity, unit').not('ingredient_id', 'is', null)),
             supabase.from('stock_items').select('id, name, usage_unit, item_type'),
             supabase.from('menu_items').select('id, name')
         ]);
