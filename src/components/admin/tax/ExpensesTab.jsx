@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import RecurringExpensesPanel from './RecurringExpensesPanel';
+import PayrollExpensePanel from './PayrollExpensePanel';
 import { postRecurringExpenses } from '../../../utils/recurringExpenses';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
@@ -354,6 +355,8 @@ export default function ExpensesTab({
         <div className="space-y-6 font-sans text-[var(--color-ink)]">
             
             <RecurringExpensesPanel onPosted={() => loadExpenses(true)} />
+
+            <PayrollExpensePanel expenses={expenses} onPosted={() => loadExpenses(true)} />
 
             {/* 1. Structural Metric Grid: Rams High-Contrast Performance Readout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-[var(--color-rule)] divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
