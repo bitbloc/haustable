@@ -10,6 +10,8 @@ import {
     stepOptionAmount,
     validateChoiceIngredients
 } from '../../utils/optionIngredients';
+import { useMenuChoiceGroups } from '../../hooks/useMenuChoiceGroups';
+import FixedChoiceEditor from './FixedChoiceEditor';
 
 const INK = 'text-[var(--color-ink)]';
 const MUTED = 'text-[var(--color-muted)]';
@@ -58,6 +60,7 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
         .filter(r => r.choice_id === choiceId && String(r.menu_item_id) === String(menuId))
         .map(r => ({
             key: key(), id: r.id, stock_item_id: r.stock_item_id || '', linked_menu_item_id: r.linked_menu_item_id ?? null, menu_item_id: menuId,
+            linked_choice_ids: r.linked_choice_ids || [],
             sign: Number(r.quantity) < 0 ? 'minus' : 'plus', amount: String(Math.abs(Number(r.quantity)))
         })), [menuId]);
 
@@ -106,6 +109,21 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
     const sweetGroups = groups.filter(isSweetGroup);
     const otherGroups = groups.filter(g => !isSweetGroup(g));
     const allChoices = useMemo(() => groups.flatMap(g => g.option_choices), [groups]);
+
+    // Menus whose recipe a choice deducts (set drink pairing): their own option choices,
+    // so the ones always used with them (iced, the house bean) can be fixed on the rule
+    const linkedMenuIds = useMemo(() => [
+        ...Object.values(drafts).flat().map(r => r.linked_menu_item_id),
+        ...existing.map(r => r.linked_menu_item_id)
+    ].filter(v => v !== null && v !== undefined && v !== '').map(Number), [drafts, existing]);
+    const linked = useMenuChoiceGroups(linkedMenuIds);
+    const linkedChoiceNames = useMemo(() => {
+        const map = new Map();
+        for (const list of Object.values(linked.groupsByMenu)) {
+            for (const g of list) for (const c of g.option_choices || []) map.set(c.id, String(c.name || '').trim());
+        }
+        return map;
+    }, [linked.groupsByMenu]);
 
     // Recipe lines with their stock item, for the sweetener list and previews
     const recipeLines = useMemo(() => recipe
@@ -397,7 +415,13 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                                 const sign = Number(r.quantity) > 0 ? '+' : '−';
                                                                 if (r.linked_menu_item_id != null) {
                                                                     const m = menusById.get(Number(r.linked_menu_item_id));
-                                                                    return <div key={r.id} className="tabular-nums">{sign}{fmt(Math.abs(r.quantity))} ที่ สูตรเมนู: {m?.name || `#${r.linked_menu_item_id}`}</div>;
+                                                                    const fixed = (r.linked_choice_ids || []).map(id => linkedChoiceNames.get(id)).filter(Boolean);
+                                                                    return (
+                                                                        <div key={r.id} className="tabular-nums">
+                                                                            {sign}{fmt(Math.abs(r.quantity))} ที่ สูตรเมนู: {m?.name || `#${r.linked_menu_item_id}`}
+                                                                            {fixed.length > 0 && <span className={NEUTRAL}> (ใช้เสมอ: {fixed.join(', ')})</span>}
+                                                                        </div>
+                                                                    );
                                                                 }
                                                                 const it = itemsById.get(r.stock_item_id);
                                                                 return <div key={r.id} className="tabular-nums">{sign}{fmt(Math.abs(r.quantity))} {unitLabel(it?.usage_unit)} {it?.name || ''}</div>;
@@ -504,8 +528,20 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                                         ลบ
                                                                     </button>
 
+                                                                    {isLinkedMenu && (
+                                                                        <div className="order-4 basis-full empty:hidden">
+                                                                            <FixedChoiceEditor
+                                                                                menuName={linkedMenu?.name || ''}
+                                                                                groups={linked.groupsByMenu[String(r.linked_menu_item_id)] || []}
+                                                                                value={r.linked_choice_ids || []}
+                                                                                loading={linked.loading}
+                                                                                onChange={(next) => updateDraft(c.id, cur => cur.map(x => x.key === r.key ? { ...x, linked_choice_ids: next } : x), r.key)}
+                                                                            />
+                                                                        </div>
+                                                                    )}
+
                                                                     {err && (
-                                                                        <p className="order-4 basis-full text-[13px] text-[var(--error-red)] leading-5" role="alert">{err}</p>
+                                                                        <p className="order-5 basis-full text-[13px] text-[var(--error-red)] leading-5" role="alert">{err}</p>
                                                                     )}
                                                                 </div>
                                                             );
@@ -542,7 +578,7 @@ const MenuOptionStockPanel = forwardRef(function MenuOptionStockPanel({ menuId, 
                                                                 <li key={`menu_${m.id}`}>
                                                                     <button type="button"
                                                                         onClick={() => {
-                                                                            updateDraft(c.id, cur => [...cur, { key: key(), id: null, stock_item_id: '', linked_menu_item_id: Number(m.id), menu_item_id: menuId, sign: 'plus', amount: '1' }]);
+                                                                            updateDraft(c.id, cur => [...cur, { key: key(), id: null, stock_item_id: '', linked_menu_item_id: Number(m.id), linked_choice_ids: [], menu_item_id: menuId, sign: 'plus', amount: '1' }]);
                                                                             setSearch(prev => ({ ...prev, [c.id]: '' }));
                                                                         }}
                                                                         className={`w-full min-h-11 text-left px-3 py-2.5 flex items-baseline justify-between gap-2 text-sm ${INK} hover:bg-[var(--color-paper-2)] cursor-pointer ${FOCUS}`}>

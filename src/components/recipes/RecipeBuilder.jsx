@@ -25,6 +25,7 @@ import { saveRecipeVersion, ORDER_SCOPES, ORDER_SCOPE_LABELS, normalizeOrderScop
 import RecipeHistoryModal from './RecipeHistoryModal';
 import MakroPriceSheet from '../stock/MakroPriceSheet';
 import MenuOptionStockPanel from './MenuOptionStockPanel';
+import MenuSetComponentsPanel from './MenuSetComponentsPanel';
 import { makroPickPatch, describeMakroPick } from '../../utils/makroUnits';
 import { recomputeMenuShadow, RECOMPUTE_DAYS } from '../../utils/stockShadowRecompute';
 
@@ -906,6 +907,11 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     // Option stock rules live in their own panel; the save button below saves them too
     const optionPanelRef = useRef(null);
 
+    // A set menu: the menus it is made of, saved by the same button. The panel reports
+    // what they cost so the total and the price simulator count them.
+    const setPanelRef = useRef(null);
+    const [setInfo, setSetInfo] = useState({ count: 0, cost: 0, takeawayExtraCost: 0 });
+
     // Sold lines keep the usage of the day they were sold. Ticked: this save also rewrites
     // the last 30 days of this menu's sales with the recipe being saved.
     const [applyToPast, setApplyToPast] = useState(false);
@@ -1051,9 +1057,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             unit: i.unit
         })), lookup);
 
-        setTotalCost(baseBreakdown.totalCost);
-        setTakeawayExtraCost(takeawayBreakdown.totalCost);
-    }, [ingredients, liveCost, parentType]);
+        const inSet = parentType === 'menu' ? setInfo : { cost: 0, takeawayExtraCost: 0 };
+        setTotalCost(baseBreakdown.totalCost + (inSet.cost || 0));
+        setTakeawayExtraCost(takeawayBreakdown.totalCost + (inSet.takeawayExtraCost || 0));
+    }, [ingredients, liveCost, parentType, setInfo]);
 
     const isPrep = parentType === 'stock' && portionForm.itemType === ITEM_TYPES.PREP;
     const yieldQtyNum = parseFloat(portionForm.yieldQty);
@@ -1103,6 +1110,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
         // An option row left incomplete stops the save before anything is written
         if (optionPanelRef.current && !optionPanelRef.current.validate()) {
+            return;
+        }
+        if (setPanelRef.current && !setPanelRef.current.validate()) {
             return;
         }
         setLoading(true);
@@ -1198,6 +1208,13 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             const optionsSaved = optionPanelRef.current ? await optionPanelRef.current.saveAll() : true;
             if (!optionsSaved) {
                 toast.warning('บันทึกสูตรแล้ว แต่ตัวเลือกบางรายการยังไม่ได้บันทึก ตรวจรายการที่ขึ้นสีแดงแล้วกดบันทึกอีกครั้ง', { duration: 8000 });
+                return;
+            }
+
+            // The menus of a set go with this save too
+            const setSaved = setPanelRef.current ? await setPanelRef.current.saveAll() : true;
+            if (!setSaved) {
+                toast.warning('บันทึกสูตรแล้ว แต่เมนูในเซตยังไม่ได้บันทึก ตรวจรายการที่ขึ้นสีแดงแล้วกดบันทึกอีกครั้ง', { duration: 8000 });
                 return;
             }
 
@@ -1692,7 +1709,11 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                 {/* Layer Stack Items */}
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 pb-6 md:pb-4">
-                    {ingredients.length === 0 ? (
+                    {ingredients.length === 0 && parentType === 'menu' && setInfo.count > 0 ? (
+                        <p className="px-3 py-3 border border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[13px] leading-5 text-[var(--color-muted)]">
+                            เซตนี้ไม่มีวัตถุดิบของตัวเอง ตัดสต๊อกตามสูตรของเมนูในเซตด้านล่าง ถ้ามีของที่ใช้เฉพาะกับเซต (เช่น กล่องเซต) เพิ่มจากแผงวัตถุดิบได้
+                        </p>
+                    ) : ingredients.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] p-8 tabular-nums text-xs text-center space-y-2">
                             <Layers className="w-12 h-12 opacity-30 text-[var(--color-neutral)]" />
                             <p className="text-sm font-medium text-[var(--color-ink)]">ยังไม่มีส่วนผสม</p>
@@ -1729,6 +1750,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                 })}
                             </SortableContext>
                         </DndContext>
+                    )}
+
+                    {/* A set menu: the menus it is made of */}
+                    {parentType === 'menu' && parentId && (
+                        <div className="pt-6">
+                            <MenuSetComponentsPanel
+                                ref={setPanelRef}
+                                menuId={parentId}
+                                unitCostOf={(id) => calculateRealUnitCost(resolveItem(id, null))}
+                                onChange={setSetInfo}
+                                disabled={loading}
+                            />
+                        </div>
                     )}
 
                     {/* Hot/iced, sweetness and other options: what they change in stock, for this menu */}
